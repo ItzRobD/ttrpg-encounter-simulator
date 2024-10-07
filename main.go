@@ -3,12 +3,18 @@ package main
 import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/monster"
+	"dnd5e-encounter-simulator-backend/pkg/class"
 	"fmt"
 )
 
 func main() {
-	database.InitDb()
+	dbErr := database.InitDb()
+
+	if dbErr != nil {
+		fmt.Println(dbErr)
+		return
+	}
+
 	defer database.CloseDb()
 
 	//// Example query using the armorData package
@@ -39,19 +45,21 @@ func main() {
 	//}
 	//fmt.Print("Weapon: ", result)
 
-	//var result class.Class
-	//params := class.ClassQueryParams{Name: "Barbarian"}
-	//result, err = class.QueryClassData(ctx, params)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	//fmt.Print("Class: ", result)
-
-	var result monster.MonsterBase
-	params := monster.MonsterQueryParams{ID: 5}
-	result, err = monster.QueryMonsterData(ctx, params)
+	var result class.Class
+	params := class.ClassQueryParams{Name: "Barbarian"}
+	result, err = class.QueryClassData(ctx, params)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Print("MonsterBase: ", result)
+	fmt.Print("Class: ", result)
+
+	//var result monster.Monster
+	////params := monster.MonsterQueryParams{ID: 5}
+	////params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
+	//params := monster.MonsterQueryParams{Name: "barbed devil"}
+	//result, err = monster.QueryMonsterData(ctx, params)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Print("Monster: ", result)
 }

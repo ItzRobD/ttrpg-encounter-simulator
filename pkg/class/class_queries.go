@@ -4,6 +4,7 @@ import (
 	"context"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func getClassByName(ctx context.Context, name string) (Class, error) {
@@ -20,9 +21,13 @@ func getClassByName(ctx context.Context, name string) (Class, error) {
 	if err != nil {
 		return classResult, fmt.Errorf("failed to query class by name: %w", err)
 	}
-	err = row.Scan(&classResult.ID, &classResult.Name, &classResult.HitDie, &classResult.SpellcastingMod)
+	var spellmod pgtype.Text
+	err = row.Scan(&classResult.ID, &classResult.Name, &classResult.HitDie, &spellmod)
 	if err != nil {
 		return classResult, fmt.Errorf("failed to scan class by name: %w", err)
+	}
+	if spellmod.Valid {
+		classResult.SpellcastingMod = spellmod.String
 	}
 
 	return classResult, nil
@@ -42,9 +47,13 @@ func getClassByID(ctx context.Context, id int) (Class, error) {
 	if err != nil {
 		return classResult, fmt.Errorf("failed to query class by id: %w", err)
 	}
-	err = row.Scan(&classResult.ID, &classResult.Name, &classResult.HitDie, &classResult.SpellcastingMod)
+	var spellmod pgtype.Text
+	err = row.Scan(&classResult.ID, &classResult.Name, &classResult.HitDie, &spellmod)
 	if err != nil {
 		return classResult, fmt.Errorf("failed to scan class by id: %w", err)
+	}
+	if spellmod.Valid {
+		classResult.SpellcastingMod = spellmod.String
 	}
 
 	return classResult, nil

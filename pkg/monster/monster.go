@@ -16,6 +16,18 @@ type MonsterBase struct {
 	IsInnateSpellcaster bool
 	AbilityScores       shared.AbilityScores
 	HP                  shared.MonsterHP
+	SaveProficiencies   shared.SaveProficiencies
+}
+
+type MonsterDamageModifier struct {
+	DamageType   string
+	ModifierType string
+}
+
+type Monster struct {
+	MonsterBase
+	DamageModifiers []MonsterDamageModifier
+	ResistBreakers  []shared.DamageBreaker
 }
 
 type MonsterQueryParams struct {
