@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/weapon"
+	"dnd5e-encounter-simulator-backend/pkg/class"
 	"fmt"
 )
 
@@ -30,12 +30,20 @@ func main() {
 	//	fmt.Println(err)
 	//}
 	//fmt.Print("Armor: ", result, "")
+	//
+	//var result weapon.Weapon
+	//params := weapon.WeaponQueryParams{Name: "Warhammer"}
+	//result, err = weapon.QueryWeaponData(ctx, params)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Print("Weapon: ", result)
 
-	var result weapon.Weapon
-	params := weapon.WeaponQueryParams{ID: 7}
-	result, err = weapon.QueryWeaponData(ctx, params)
+	var result class.Class
+	params := class.ClassQueryParams{Name: "Barbarian"}
+	result, err = class.QueryClassData(ctx, params)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Print("Weapon: ", result)
+	fmt.Print("Class: ", result)
 }
