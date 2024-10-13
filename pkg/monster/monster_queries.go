@@ -5,6 +5,9 @@ import (
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
+
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
+	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -230,6 +233,32 @@ func getMonsterResistBreakersByID(ctx context.Context, id int) ([]shared.DamageB
 	}
 
 	return monsterResistBreakers, nil
+}
+
+func getMonsterActionsByID(ctx context.Context, id int) ([]MonsterAction, error) {
+	var monsterActions []MonsterAction
+	stmt := SELECT(
+		MonsterActions.ActionID,
+		MonsterActions.Name,
+		MonsterActions.RechargeValue,
+		MonsterActions.HasDc,
+		MonsterActions.Index,
+	).FROM(
+		MonsterActions,
+	).WHERE(
+		MonsterActions.MonsterID.EQ(Int(5)),
+	).ORDER_BY(
+		MonsterActions.ActionID.ASC())
+
+	query, args := stmt.Sql()
+	fmt.Println(query)
+	fmt.Println(args)
+	rows, err := database.Query(ctx, query, args...)
+	if err != nil {
+		return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", err)
+	}
+	defer rows.Close()
+
 }
 
 func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, error) {

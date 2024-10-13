@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/class"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
+	"reflect"
 )
 
 func main() {
@@ -45,21 +46,53 @@ func main() {
 	//}
 	//fmt.Print("Weapon: ", result)
 
-	var result class.Class
-	params := class.ClassQueryParams{Name: "Barbarian"}
-	result, err = class.QueryClassData(ctx, params)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Print("Class: ", result)
-
-	//var result monster.Monster
-	////params := monster.MonsterQueryParams{ID: 5}
-	////params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
-	//params := monster.MonsterQueryParams{Name: "barbed devil"}
-	//result, err = monster.QueryMonsterData(ctx, params)
+	//var result class.Class
+	//params := class.ClassQueryParams{Name: "Barbarian"}
+	//result, err = class.QueryClassData(ctx, params)
 	//if err != nil {
 	//	fmt.Println(err)
 	//}
-	//fmt.Print("Monster: ", result)
+	//fmt.Print("Class: ", result)
+
+	var result monster.Monster
+	//params := monster.MonsterQueryParams{ID: 5}
+	//params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
+	params := monster.MonsterQueryParams{Name: "barbed devil"}
+	result, err = monster.QueryMonsterData(ctx, params)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("Monster:")
+	printStructFields(result, "MonsterBase")
+
+}
+
+func printStructFields(v interface{}, prefix string) {
+	val := reflect.ValueOf(v)
+	typ := val.Type()
+
+	// Handle pointer to struct
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+		typ = val.Type()
+	}
+
+	// Ensure the input is a struct
+	if typ.Kind() == reflect.Struct {
+		for i := 0; i < val.NumField(); i++ {
+			field := val.Field(i)
+			fieldType := typ.Field(i)
+			fieldName := fieldType.Name
+
+			// Check if the field is an embedded struct
+			if fieldType.Anonymous {
+				// Recursive call for embedded struct
+				printStructFields(field.Interface(), prefix+fieldName+".")
+			} else {
+				fmt.Printf("%s%s: %v\n", prefix, fieldName, field.Interface())
+			}
+		}
+	} else {
+		fmt.Println("Provided value is not a struct")
+	}
 }

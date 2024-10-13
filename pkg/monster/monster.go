@@ -1,6 +1,8 @@
 package monster
 
-import "dnd5e-encounter-simulator-backend/pkg/shared"
+import (
+	"dnd5e-encounter-simulator-backend/pkg/shared"
+)
 
 type MonsterBase struct {
 	ID                  int
@@ -22,6 +24,25 @@ type MonsterBase struct {
 type MonsterDamageModifier struct {
 	DamageType   string
 	ModifierType string
+}
+
+type MonsterAction struct {
+	ActionID      int
+	Name          string
+	RechargeValue int
+	HasDC         bool // Used to determine if embedded struct is of value
+	Index         int
+	NumberOfDice  int
+	Die           int
+	AmountToAdd   int
+	AttackBonus   int
+	MonsterActionDC
+}
+
+type MonsterActionDC struct {
+	Ability   string
+	OnSuccess string
+	DC        int
 }
 
 type Monster struct {
