@@ -296,7 +296,7 @@ func getMonsterActionsByID(ctx context.Context, id int) ([]MonsterAction, error)
 	defer rows.Close()
 	monsterActions, err = pgx.CollectRows(rows, pgx.RowToStructByPos[MonsterAction])
 	if err != nil {
-		return monsterActions, fmt.Errorf("failed to query monster actions by id collect rows: %w", err)
+		return monsterActions, fmt.Errorf("failed to scan monster actions by id: %w", err)
 	}
 
 	return monsterActions, nil
@@ -327,6 +327,98 @@ func getMonsterMultiattacksByID(ctx context.Context, id int) ([]MonsterMultiatta
 	}
 
 	return monsterMultiattacks, nil
+}
+
+func getMonsterLegendaryActionsByID(ctx context.Context, id int) ([]LegendaryAction, error) {
+	var monsterLegendaryActions []LegendaryAction
+	stmt := SELECT(
+		MonsterActionsLegendary.ActionCost,
+		MonsterActions.ActionID,
+		MonsterActions.Name,
+		MonsterActions.RechargeValue,
+		MonsterActions.HasDc,
+		MonsterActions.Index,
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.NumberOfDice).
+			ELSE(MonsterDcDamageBlocks.NumberOfDice),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.Die).
+			ELSE(MonsterDcDamageBlocks.Die),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.AmountToAdd).
+			ELSE(MonsterDcDamageBlocks.AmountToAdd),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.AttackBonus).
+			ELSE(Int(0)),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.DmgType).
+			ELSE(MonsterDcDamageBlocks.DmgType),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(true))).
+			THEN(MonsterDcDamageBlocks.Ability).
+			ELSE(enum.Abilityscore.None),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(true))).
+			THEN(MonsterDcDamageBlocks.OnSuccess).
+			ELSE(enum.Dcsuccess.None),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(true))).
+			THEN(MonsterDcDamageBlocks.DcValue).
+			ELSE(Int(0)),
+	).FROM(
+		MonsterActionsLegendary.
+			LEFT_JOIN(MonsterActions, MonsterActionsLegendary.ActionID.EQ(MonsterActions.ActionID)).
+			LEFT_JOIN(MonsterAttackBonusBlocks, MonsterActions.ActionID.EQ(MonsterAttackBonusBlocks.ActionID)).
+			LEFT_JOIN(MonsterDcDamageBlocks, MonsterActions.ActionID.EQ(MonsterDcDamageBlocks.ActionID)),
+	).WHERE(
+		MonsterActionsLegendary.MonsterID.EQ(Int(int64(id))),
+	).ORDER_BY(
+		MonsterActionsLegendary.ActionID.ASC())
+
+	query, args := stmt.Sql()
+	rows, err := database.Query(ctx, query, args...)
+	if err != nil {
+		return monsterLegendaryActions, fmt.Errorf("failed to query monster legendary actions by id: %w", err)
+	}
+	defer rows.Close()
+	monsterLegendaryActions, err = pgx.CollectRows(rows, pgx.RowToStructByPos[LegendaryAction])
+	if err != nil {
+		return monsterLegendaryActions, fmt.Errorf("failed to assign legendary actions by id: %w", err)
+	}
+
+	return monsterLegendaryActions, nil
+}
+
+func getMonsterSpecialAbilities(ctx context.Context, id int) ([]SpecialAbility, error) {
+	var specialAbilities []SpecialAbility
+	stmt := SELECT(
+		MonsterSpecialAbilities.Name,
+		MonsterSpecialAbilities.UsageCount,
+		MonsterSpecialAbilities.Description,
+	).FROM(
+		MonsterSpecialAbilities,
+	).WHERE(
+		MonsterSpecialAbilities.MonsterID.EQ(Int(int64(id))),
+	).ORDER_BY(
+		MonsterSpecialAbilities.Name.ASC())
+
+	query, args := stmt.Sql()
+	rows, err := database.Query(ctx, query, args...)
+	if err != nil {
+		return specialAbilities, fmt.Errorf("failed to query monster special abilities by id: %w")
+	}
+	defer rows.Close()
+	specialAbilities, err = pgx.CollectRows(rows, pgx.RowToStructByPos[SpecialAbility])
+	if err != nil {
+		return specialAbilities, fmt.Errorf("failed to scan monster special abilities by id: %w", err)
+	}
+
+	return specialAbilities, nil
 }
 
 func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, error) {
@@ -374,7 +466,20 @@ func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, 
 		}
 		monsterResult.Multiattacks = monsterMultiattacks
 
-		// TODO: IF monster is legendary then get legendary actions
+		var mSpecialAbilities []SpecialAbility
+		mSpecialAbilities, err = getMonsterSpecialAbilities(ctx, monsterBaseResult.ID)
+		if err != nil {
+			return monsterResult, err
+		}
+		monsterResult.SpecialAbilities = mSpecialAbilities
+
+		if monsterResult.IsLegendary {
+			monsterLegendaryActions, err := getMonsterLegendaryActionsByID(ctx, monsterBaseResult.ID)
+			if err != nil {
+				return monsterResult, err
+			}
+			monsterResult.LegendaryActions = monsterLegendaryActions
+		}
 	} else {
 		err = fmt.Errorf("invalid monster id to query additional data")
 		return monsterResult, err

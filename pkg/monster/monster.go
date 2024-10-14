@@ -53,12 +53,25 @@ type MonsterMultiattack struct {
 	OptionIndex int
 }
 
+type LegendaryAction struct {
+	Cost int
+	MonsterAction
+}
+
+type SpecialAbility struct {
+	Name        string
+	UsageCount  int
+	Description string
+}
+
 type Monster struct {
 	MonsterBase
-	DamageModifiers []MonsterDamageModifier
-	ResistBreakers  []shared.DamageBreaker
-	Actions         []MonsterAction
-	Multiattacks    []MonsterMultiattack
+	DamageModifiers  []MonsterDamageModifier
+	ResistBreakers   []shared.DamageBreaker
+	Actions          []MonsterAction
+	Multiattacks     []MonsterMultiattack
+	LegendaryActions []LegendaryAction
+	SpecialAbilities []SpecialAbility
 }
 
 type MonsterQueryParams struct {

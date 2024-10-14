@@ -55,9 +55,9 @@ func main() {
 	//fmt.Print("Class: ", result)
 
 	var result monster.Monster
-	//params := monster.MonsterQueryParams{ID: 5}
+	params := monster.MonsterQueryParams{ID: 5}
 	//params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
-	params := monster.MonsterQueryParams{Name: "barbed devil"}
+	//params := monster.MonsterQueryParams{Name: "barbed devil"}
 	result, err = monster.QueryMonsterData(ctx, params)
 	if err != nil {
 		fmt.Println(err)
