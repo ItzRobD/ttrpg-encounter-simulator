@@ -2,12 +2,13 @@ package monster
 
 import (
 	"context"
+	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
-
-	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	. "github.com/go-jet/jet/v2/postgres"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -243,10 +244,45 @@ func getMonsterActionsByID(ctx context.Context, id int) ([]MonsterAction, error)
 		MonsterActions.RechargeValue,
 		MonsterActions.HasDc,
 		MonsterActions.Index,
-	).FROM(
-		MonsterActions,
-	).WHERE(
-		MonsterActions.MonsterID.EQ(Int(5)),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.NumberOfDice).
+			ELSE(MonsterDcDamageBlocks.NumberOfDice),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.Die).
+			ELSE(MonsterDcDamageBlocks.Die),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.AmountToAdd).
+			ELSE(MonsterDcDamageBlocks.AmountToAdd),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.AttackBonus).
+			ELSE(Int(0)),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(false))).
+			THEN(MonsterAttackBonusBlocks.DmgType).
+			ELSE(MonsterDcDamageBlocks.DmgType),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(true))).
+			THEN(MonsterDcDamageBlocks.Ability).
+			ELSE(enum.Abilityscore.None),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(true))).
+			THEN(MonsterDcDamageBlocks.OnSuccess).
+			ELSE(enum.Dcsuccess.None),
+		CASE().
+			WHEN(MonsterActions.HasDc.EQ(Bool(true))).
+			THEN(MonsterDcDamageBlocks.DcValue).
+			ELSE(Int(0)),
+	).
+		FROM(
+			MonsterActions.
+				LEFT_JOIN(MonsterAttackBonusBlocks, MonsterActions.ActionID.EQ(MonsterAttackBonusBlocks.ActionID)).
+				LEFT_JOIN(MonsterDcDamageBlocks, MonsterActions.ActionID.EQ(MonsterDcDamageBlocks.ActionID)),
+		).WHERE(
+		MonsterActions.MonsterID.EQ(Int(int64(id))),
 	).ORDER_BY(
 		MonsterActions.ActionID.ASC())
 
@@ -258,7 +294,23 @@ func getMonsterActionsByID(ctx context.Context, id int) ([]MonsterAction, error)
 		return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", err)
 	}
 	defer rows.Close()
+	//for rows.Next() {
+	//	var monsterAction MonsterAction
+	//	err = rows.Scan(&monsterAction)
+	//	if err != nil {
+	//		return monsterActions, fmt.Errorf("failed to scan monster actions by id: %w", err)
+	//	}
+	//	monsterActions = append(monsterActions, monsterAction)
+	//}
+	monsterActions, err = pgx.CollectRows(rows, pgx.RowToStructByPos[MonsterAction])
+	if err != nil {
+		return monsterActions, fmt.Errorf("failed to query monster actions by id collect rows: %w", err)
+	}
 
+	//if err := rows.Err(); err != nil {
+	//	return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", err)
+	//}
+	return monsterActions, nil
 }
 
 func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, error) {
@@ -275,6 +327,8 @@ func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, 
 		return monsterResult, err
 	}
 
+	monsterResult.MonsterBase = monsterBaseResult
+
 	if monsterBaseResult.ID != 0 {
 		var monsterDamageModifiers []MonsterDamageModifier
 		monsterDamageModifiers, err = getMonsterDamageModifiersByID(ctx, monsterBaseResult.ID)
@@ -289,12 +343,17 @@ func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, 
 			return monsterResult, err
 		}
 		monsterResult.ResistBreakers = monsterResistBreakers
+
+		var monsterActions []MonsterAction
+		monsterActions, err = getMonsterActionsByID(ctx, monsterBaseResult.ID)
+		if err != nil {
+			return monsterResult, err
+		}
+		monsterResult.Actions = monsterActions
 	} else {
 		err = fmt.Errorf("invalid monster id to query additional data")
 		return monsterResult, err
 	}
-
-	monsterResult.MonsterBase = monsterBaseResult
 
 	return monsterResult, err
 }

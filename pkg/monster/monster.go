@@ -19,6 +19,7 @@ type MonsterBase struct {
 	AbilityScores       shared.AbilityScores
 	HP                  shared.MonsterHP
 	SaveProficiencies   shared.SaveProficiencies
+	Actions             []MonsterAction
 }
 
 type MonsterDamageModifier struct {
@@ -36,6 +37,7 @@ type MonsterAction struct {
 	Die           int
 	AmountToAdd   int
 	AttackBonus   int
+	DamageType    string
 	MonsterActionDC
 }
 

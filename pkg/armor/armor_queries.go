@@ -10,11 +10,11 @@ func getArmorByName(ctx context.Context, name string) (Armor, error) {
 	var armorResult Armor
 	query := `
 		SELECT
-		    name, 
+		    name,
 		    armor_class,
 		    dex_bonus,
-		    max_bonus, 
-		    minimum_str 
+		    max_bonus,
+		    minimum_str
 		FROM equipment_armor WHERE name ILIKE $1`
 
 	row, err := database.QueryRow(ctx, query, name)
