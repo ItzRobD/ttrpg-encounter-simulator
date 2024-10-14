@@ -19,7 +19,6 @@ type MonsterBase struct {
 	AbilityScores       shared.AbilityScores
 	HP                  shared.MonsterHP
 	SaveProficiencies   shared.SaveProficiencies
-	Actions             []MonsterAction
 }
 
 type MonsterDamageModifier struct {
@@ -47,10 +46,19 @@ type MonsterActionDC struct {
 	DC        int
 }
 
+type MonsterMultiattack struct {
+	ActionID    int
+	AttackCount int
+	IsOption    bool
+	OptionIndex int
+}
+
 type Monster struct {
 	MonsterBase
 	DamageModifiers []MonsterDamageModifier
 	ResistBreakers  []shared.DamageBreaker
+	Actions         []MonsterAction
+	Multiattacks    []MonsterMultiattack
 }
 
 type MonsterQueryParams struct {

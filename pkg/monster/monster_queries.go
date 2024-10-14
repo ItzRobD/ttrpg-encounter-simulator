@@ -294,23 +294,39 @@ func getMonsterActionsByID(ctx context.Context, id int) ([]MonsterAction, error)
 		return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", err)
 	}
 	defer rows.Close()
-	//for rows.Next() {
-	//	var monsterAction MonsterAction
-	//	err = rows.Scan(&monsterAction)
-	//	if err != nil {
-	//		return monsterActions, fmt.Errorf("failed to scan monster actions by id: %w", err)
-	//	}
-	//	monsterActions = append(monsterActions, monsterAction)
-	//}
 	monsterActions, err = pgx.CollectRows(rows, pgx.RowToStructByPos[MonsterAction])
 	if err != nil {
 		return monsterActions, fmt.Errorf("failed to query monster actions by id collect rows: %w", err)
 	}
 
-	//if err := rows.Err(); err != nil {
-	//	return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", err)
-	//}
 	return monsterActions, nil
+}
+
+func getMonsterMultiattacksByID(ctx context.Context, id int) ([]MonsterMultiattack, error) {
+	var monsterMultiattacks []MonsterMultiattack
+	stmt := SELECT(
+		MonsterMultiattacks.ActionID,
+		MonsterMultiattacks.AttackCount,
+		MonsterMultiattacks.IsOption,
+		MonsterMultiattacks.OptionIndex,
+	).FROM(
+		MonsterMultiattacks,
+	).WHERE(
+		MonsterMultiattacks.MonsterID.EQ(Int(int64(id))),
+	).ORDER_BY(MonsterMultiattacks.ActionID.ASC())
+
+	query, args := stmt.Sql()
+	rows, err := database.Query(ctx, query, args...)
+	if err != nil {
+		return monsterMultiattacks, fmt.Errorf("failed to query monster multiattacks by id: %w", err)
+	}
+	defer rows.Close()
+	monsterMultiattacks, err = pgx.CollectRows(rows, pgx.RowToStructByPos[MonsterMultiattack])
+	if err != nil {
+		return monsterMultiattacks, fmt.Errorf("failed to query monster multiattacks by id collect rows: %w", err)
+	}
+
+	return monsterMultiattacks, nil
 }
 
 func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, error) {
@@ -350,6 +366,15 @@ func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, 
 			return monsterResult, err
 		}
 		monsterResult.Actions = monsterActions
+
+		var monsterMultiattacks []MonsterMultiattack
+		monsterMultiattacks, err = getMonsterMultiattacksByID(ctx, monsterBaseResult.ID)
+		if err != nil {
+			return monsterResult, err
+		}
+		monsterResult.Multiattacks = monsterMultiattacks
+
+		// TODO: IF monster is legendary then get legendary actions
 	} else {
 		err = fmt.Errorf("invalid monster id to query additional data")
 		return monsterResult, err
