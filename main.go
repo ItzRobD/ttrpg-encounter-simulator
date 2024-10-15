@@ -65,15 +65,26 @@ func main() {
 	//fmt.Println("Monster:")
 	//printStructFields(result, "MonsterBase")
 
-	var sResult spell.Spell
-	params := spell.SpellQueryParams{Name: "Fireball", Level: 10}
-	sResult, err = spell.QuerySpellData(ctx, params)
-	//sResult, err = spell.GetSpellByID(ctx, 119, 6)
+	//var sResult spell.Spell
+	//params := spell.SpellQueryParams{Name: "Eldritch Blast", Level: 5}
+	////params := spell.SpellQueryParams{ID: 40, Level: 4}
+	//sResult, err = spell.QuerySpellData(ctx, params)
+	////sResult, err = spell.GetSpellByID(ctx, 119, 6)
+	//if err != nil {
+	//	fmt.Printf("error %w", err)
+	//}
+	//fmt.Println("Spell:")
+	//printStructFields(sResult, "")
+
+	spells, err := spell.GetSpellsUsableByClassID(ctx, 12)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("Spell:")
-	printStructFields(sResult, "")
+	fmt.Println("Spells:")
+	fmt.Println(spells)
+	for _, s := range spells {
+		printStructFields(s, "")
+	}
 }
 
 func printStructFields(v interface{}, prefix string) {

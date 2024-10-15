@@ -1,5 +1,7 @@
 package spell
 
+import "database/sql"
+
 type Spell struct {
 	ID              int
 	Name            string
@@ -17,8 +19,8 @@ type Spell struct {
 }
 
 type SpellDC struct {
-	Ability   string
-	OnSuccess string
+	Ability   sql.NullString
+	OnSuccess sql.NullString
 }
 
 type CastFormula struct {
