@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/monster"
+	"dnd5e-encounter-simulator-backend/pkg/spell"
 	"fmt"
 	"reflect"
 )
@@ -54,17 +54,26 @@ func main() {
 	//}
 	//fmt.Print("Class: ", result)
 
-	var result monster.Monster
-	params := monster.MonsterQueryParams{ID: 5}
-	//params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
-	//params := monster.MonsterQueryParams{Name: "barbed devil"}
-	result, err = monster.QueryMonsterData(ctx, params)
+	//var result monster.Monster
+	//params := monster.MonsterQueryParams{ID: 5}
+	////params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
+	////params := monster.MonsterQueryParams{Name: "barbed devil"}
+	//result, err = monster.QueryMonsterData(ctx, params)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Println("Monster:")
+	//printStructFields(result, "MonsterBase")
+
+	var sResult spell.Spell
+	params := spell.SpellQueryParams{Name: "Fireball", Level: 10}
+	sResult, err = spell.QuerySpellData(ctx, params)
+	//sResult, err = spell.GetSpellByID(ctx, 119, 6)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("Monster:")
-	printStructFields(result, "MonsterBase")
-
+	fmt.Println("Spell:")
+	printStructFields(sResult, "")
 }
 
 func printStructFields(v interface{}, prefix string) {

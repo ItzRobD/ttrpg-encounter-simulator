@@ -485,5 +485,5 @@ func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, 
 		return monsterResult, err
 	}
 
-	return monsterResult, err
+	return monsterResult, nil
 }
