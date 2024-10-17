@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/spell"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
 	"reflect"
 )
@@ -30,16 +30,9 @@ func main() {
 
 	ctx := context.Background()
 
-	//var result armor.Armor
-	//params := armor.ArmorQueryParams{Name: "Breastplate"}
-	//result, err = armor.QueryArmorData(ctx, params)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	//fmt.Print("Armor: ", result, "")
-	//
 	//var result weapon.Weapon
 	//params := weapon.WeaponQueryParams{Name: "Warhammer"}
+	////params := weapon.WeaponQueryParams{ID: 7}
 	//result, err = weapon.QueryWeaponData(ctx, params)
 	//if err != nil {
 	//	fmt.Println(err)
@@ -47,23 +40,24 @@ func main() {
 	//fmt.Print("Weapon: ", result)
 
 	//var result class.Class
-	//params := class.ClassQueryParams{Name: "Barbarian"}
+	////params := class.ClassQueryParams{Name: "Artificer"}
+	//params := class.ClassQueryParams{}
 	//result, err = class.QueryClassData(ctx, params)
 	//if err != nil {
 	//	fmt.Println(err)
 	//}
 	//fmt.Print("Class: ", result)
 
-	//var result monster.Monster
+	var result monster.Monster
 	//params := monster.MonsterQueryParams{ID: 5}
-	////params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
-	////params := monster.MonsterQueryParams{Name: "barbed devil"}
-	//result, err = monster.QueryMonsterData(ctx, params)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	//fmt.Println("Monster:")
-	//printStructFields(result, "MonsterBase")
+	params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
+	//params := monster.MonsterQueryParams{Name: "Barbed Devil"}
+	result, err = monster.QueryMonsterData(ctx, params)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("Monster:")
+	printStructFields(result, "MonsterBase")
 
 	//var sResult spell.Spell
 	//params := spell.SpellQueryParams{Name: "Eldritch Blast", Level: 5}
@@ -76,15 +70,15 @@ func main() {
 	//fmt.Println("Spell:")
 	//printStructFields(sResult, "")
 
-	spells, err := spell.GetSpellsUsableByClassID(ctx, 12)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("Spells:")
-	fmt.Println(spells)
-	for _, s := range spells {
-		printStructFields(s, "")
-	}
+	//spells, err := spell.GetSpellsUsableByClassID(ctx, 12)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Println("Spells:")
+	//fmt.Println(spells)
+	//for _, s := range spells {
+	//	printStructFields(s, "")
+	//}
 }
 
 func printStructFields(v interface{}, prefix string) {

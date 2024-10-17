@@ -12,121 +12,65 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func getMonsterBaseDataByName(ctx context.Context, name string) (MonsterBase, error) {
-	var monsterResult MonsterBase
-	query := `
-		SELECT
-		    m.id,
-			m.name,
-			m.size,
-			m.type,
-			m.armor_class,
-			m.proficiency_bonus,
-			m.cr,
-			m.api_url,
-			m.is_legendary,
-			m.is_spellcaster,
-			m.is_innate_caster,
-			masb.strength,
-			masb.dexterity,
-			masb.constitution,
-			masb.intelligence,
-			masb.wisdom,
-			masb.charisma,
-			mhp.hp_average,
-			mhp.number_of_dice,
-		    mhp.die,
-		    mhp.amount_to_add,
-		    msp.strength,
-		    msp.dexterity,
-		    msp.constitution,
-		    msp.intelligence,
-		    msp.wisdom,
-		    msp.charisma
-		FROM monsters m
-		JOIN monster_ability_score_block masb ON masb.monster_id = m.id
-		JOIN monster_hit_point_formulas mhp ON mhp.monster_id = m.id
-		JOIN monster_save_proficiencies msp ON msp.monster_id = m.id
-		WHERE name ILIKE $1`
+func getMonsterIDByName(ctx context.Context, name string) (int, error) {
+	var id int
+	stmt := SELECT(
+		Monsters.ID,
+	).FROM(
+		Monsters,
+	).WHERE(Monsters.Name.EQ(String(name)))
 
-	row, err := database.QueryRow(ctx, query, name)
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
-		return monsterResult, fmt.Errorf("failed to query monster base data by name: %w", err)
+		return id, fmt.Errorf("failed to query monster base data by name: %w", err)
 	}
-	err = row.Scan(
-		&monsterResult.ID,
-		&monsterResult.Name,
-		&monsterResult.Size,
-		&monsterResult.Type,
-		&monsterResult.AC,
-		&monsterResult.ProficiencyBonus,
-		&monsterResult.CR,
-		&monsterResult.ApiURL,
-		&monsterResult.IsLegendary,
-		&monsterResult.IsSpellcaster,
-		&monsterResult.IsInnateSpellcaster,
-		&monsterResult.AbilityScores.Strength,
-		&monsterResult.AbilityScores.Dexterity,
-		&monsterResult.AbilityScores.Constitution,
-		&monsterResult.AbilityScores.Intelligence,
-		&monsterResult.AbilityScores.Wisdom,
-		&monsterResult.AbilityScores.Charisma,
-		&monsterResult.HP.HPAverage,
-		&monsterResult.HP.NumberOfDice,
-		&monsterResult.HP.Die,
-		&monsterResult.HP.AmountToAdd,
-		&monsterResult.SaveProficiencies.Strength,
-		&monsterResult.SaveProficiencies.Dexterity,
-		&monsterResult.SaveProficiencies.Constitution,
-		&monsterResult.SaveProficiencies.Intelligence,
-		&monsterResult.SaveProficiencies.Wisdom,
-		&monsterResult.SaveProficiencies.Charisma,
-	)
+	err = row.Scan(&id)
 	if err != nil {
-		return monsterResult, fmt.Errorf("failed to scan monster base data by name: %w", err)
+		return id, fmt.Errorf("failed to scan monster base data by name: %w", err)
 	}
 
-	return monsterResult, nil
+	return id, nil
 }
 
 func getMonsterBaseDataByID(ctx context.Context, id int) (MonsterBase, error) {
 	var monsterResult MonsterBase
-	query := `
-		SELECT
-		    m.id,
-			m.name,
-			m.size,
-			m.type,
-			m.armor_class,
-			m.proficiency_bonus,
-			m.cr,
-			m.api_url,
-			m.is_legendary,
-			m.is_spellcaster,
-			m.is_innate_caster,
-			masb.strength,
-			masb.dexterity,
-			masb.constitution,
-			masb.intelligence,
-			masb.wisdom,
-			masb.charisma,
-			mhp.hp_average,
-			mhp.number_of_dice,
-		    mhp.die,
-		    mhp.amount_to_add,
-		    msp.strength,
-		    msp.dexterity,
-		    msp.constitution,
-		    msp.intelligence,
-		    msp.wisdom,
-		    msp.charisma
-		FROM monsters m
-		JOIN monster_ability_score_block masb ON masb.monster_id = m.id
-		JOIN monster_hit_point_formulas mhp ON mhp.monster_id = m.id
-		JOIN monster_save_proficiencies msp ON msp.monster_id = m.id
-		WHERE id = $1`
+	stmt := SELECT(
+		Monsters.ID,
+		Monsters.Name,
+		Monsters.Size,
+		Monsters.Type,
+		Monsters.ArmorClass,
+		Monsters.ProficiencyBonus,
+		Monsters.Cr,
+		Monsters.APIURL,
+		Monsters.IsLegendary,
+		Monsters.IsSpellcaster,
+		Monsters.IsInnateCaster,
+		MonsterAbilityScoreBlock.Strength,
+		MonsterAbilityScoreBlock.Dexterity,
+		MonsterAbilityScoreBlock.Constitution,
+		MonsterAbilityScoreBlock.Intelligence,
+		MonsterAbilityScoreBlock.Wisdom,
+		MonsterAbilityScoreBlock.Charisma,
+		MonsterHitPointFormulas.HpAverage,
+		MonsterHitPointFormulas.NumberOfDice,
+		MonsterHitPointFormulas.Die,
+		MonsterHitPointFormulas.AmountToAdd,
+		MonsterSaveProficiencies.Strength,
+		MonsterSaveProficiencies.Dexterity,
+		MonsterSaveProficiencies.Constitution,
+		MonsterSaveProficiencies.Intelligence,
+		MonsterSaveProficiencies.Wisdom,
+		MonsterSaveProficiencies.Charisma,
+	).FROM(Monsters.
+		LEFT_JOIN(MonsterAbilityScoreBlock, Monsters.ID.EQ(MonsterAbilityScoreBlock.MonsterID)).
+		LEFT_JOIN(MonsterHitPointFormulas, Monsters.ID.EQ(MonsterHitPointFormulas.MonsterID)).
+		LEFT_JOIN(MonsterSaveProficiencies, Monsters.ID.EQ(MonsterSaveProficiencies.MonsterID))).
+		WHERE(Monsters.ID.EQ(Int(int64(id))))
 
-	row, err := database.QueryRow(ctx, query, id)
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
 		return monsterResult, fmt.Errorf("failed to query monster base data by id: %w", err)
 	}
@@ -168,15 +112,17 @@ func getMonsterBaseDataByID(ctx context.Context, id int) (MonsterBase, error) {
 
 func getMonsterDamageModifiersByID(ctx context.Context, id int) ([]MonsterDamageModifier, error) {
 	var monsterDamageModifiers []MonsterDamageModifier
-	query := `
-		SELECT
-			mdm.damage_type,
-			mdm.modifier_type
-		FROM monsters m
-		JOIN monster_damage_modifiers mdm ON m.id = mdm.monster_id
-		WHERE m.id = $1`
+	stmt := SELECT(
+		MonsterDamageModifiers.DamageType,
+		MonsterDamageModifiers.ModifierType,
+	).
+		FROM(
+			MonsterDamageModifiers,
+		).WHERE(
+		MonsterDamageModifiers.MonsterID.EQ(Int(int64(id))))
 
-	rows, err := database.Query(ctx, query, id)
+	query, args := stmt.Sql()
+	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
 		return monsterDamageModifiers, fmt.Errorf("failed to query monster damage modifiers by id: %w", err)
 	}
@@ -200,17 +146,18 @@ func getMonsterDamageModifiersByID(ctx context.Context, id int) ([]MonsterDamage
 
 func getMonsterResistBreakersByID(ctx context.Context, id int) ([]shared.DamageBreaker, error) {
 	var monsterResistBreakers []shared.DamageBreaker
-	query := `
-		SELECT
-		    mdm.damage_type,
-			mrb.resist_breaker_type
-		FROM monsters m
-		JOIN monster_damage_modifiers mdm ON m.id = mdm.monster_id
-		LEFT JOIN monster_damage_resist_breakers mdrb ON mdrb.modifier_id = mdm.modifier_id
-		LEFT JOIN monster_resist_breakers mrb ON mrb.resist_breaker_id = mdrb.resist_breaker_id
-		WHERE m.id = $1`
+	stmt := SELECT(
+		MonsterDamageModifiers.DamageType,
+		MonsterResistBreakers.ResistBreakerType,
+	).FROM(
+		Monsters.
+			INNER_JOIN(MonsterDamageModifiers, Monsters.ID.EQ(MonsterDamageModifiers.MonsterID)).
+			LEFT_JOIN(MonsterDamageResistBreakers, MonsterDamageResistBreakers.ModifierID.EQ(MonsterDamageModifiers.ModifierID)).
+			LEFT_JOIN(MonsterResistBreakers, MonsterResistBreakers.ResistBreakerID.EQ(MonsterDamageResistBreakers.ResistBreakerID))).
+		WHERE(Monsters.ID.EQ(Int(int64(id))))
 
-	rows, err := database.Query(ctx, query, id)
+	query, args := stmt.Sql()
+	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
 		return monsterResistBreakers, fmt.Errorf("failed to query monster resist breakers by id: %w", err)
 	}
@@ -287,8 +234,6 @@ func getMonsterActionsByID(ctx context.Context, id int) ([]MonsterAction, error)
 		MonsterActions.ActionID.ASC())
 
 	query, args := stmt.Sql()
-	fmt.Println(query)
-	fmt.Println(args)
 	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
 		return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", err)
@@ -429,7 +374,15 @@ func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, 
 	if params.ID != 0 {
 		monsterBaseResult, err = getMonsterBaseDataByID(ctx, params.ID)
 	} else if params.Name != "" {
-		monsterBaseResult, err = getMonsterBaseDataByName(ctx, params.Name)
+		var id int
+		id, err = getMonsterIDByName(ctx, params.Name)
+		if err != nil {
+			return monsterResult, err
+		}
+		monsterBaseResult, err = getMonsterBaseDataByID(ctx, id)
+		if err != nil {
+			return monsterResult, err
+		}
 	} else {
 		err = fmt.Errorf("no name or id provided for monster data query")
 		return monsterResult, err

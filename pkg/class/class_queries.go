@@ -5,32 +5,31 @@ import (
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgtype"
+
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
+	. "github.com/go-jet/jet/v2/postgres"
 )
 
-func getClassByName(ctx context.Context, name string) (Class, error) {
-	var classResult Class
-	query := `
-		SELECT
-		    id,
-		    class_name,
-		    hit_die,
-		    spellmod		    
-		FROM classes WHERE class_name ILIKE $1`
+func getClassIDByName(ctx context.Context, name string) (int, error) {
+	var id int
+	stmt := SELECT(
+		Classes.ID,
+	).FROM(
+		Classes,
+	).WHERE(
+		Classes.ClassName.EQ(String(name)))
 
-	row, err := database.QueryRow(ctx, query, name)
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
-		return classResult, fmt.Errorf("failed to query class by name: %w", err)
+		return id, fmt.Errorf("failed to query class id by name: %w", err)
 	}
-	var spellmod pgtype.Text
-	err = row.Scan(&classResult.ID, &classResult.Name, &classResult.HitDie, &spellmod)
+	err = row.Scan(&id)
 	if err != nil {
-		return classResult, fmt.Errorf("failed to scan class by name: %w", err)
-	}
-	if spellmod.Valid {
-		classResult.SpellcastingMod = spellmod.String
+		return id, fmt.Errorf("failed to scan class id by name: %w", err)
 	}
 
-	return classResult, nil
+	return id, nil
 }
 
 func getClassByID(ctx context.Context, id int) (Class, error) {
@@ -43,7 +42,17 @@ func getClassByID(ctx context.Context, id int) (Class, error) {
 		    spellmod		    
 		FROM classes WHERE id = $1`
 
-	row, err := database.QueryRow(ctx, query, id)
+	stmt := SELECT(
+		Classes.ID,
+		Classes.ClassName,
+		Classes.HitDie,
+		Classes.Spellmod,
+	).FROM(
+		Classes,
+	).WHERE(Classes.ID.EQ(Int(int64(id))))
+
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
 		return classResult, fmt.Errorf("failed to query class by id: %w", err)
 	}
@@ -66,7 +75,12 @@ func QueryClassData(ctx context.Context, params ClassQueryParams) (Class, error)
 	if params.ID != 0 {
 		classResult, err = getClassByID(ctx, params.ID)
 	} else if params.Name != "" {
-		classResult, err = getClassByName(ctx, params.Name)
+		var id int
+		id, err = getClassIDByName(ctx, params.Name)
+		if err != nil {
+			return classResult, err
+		}
+		classResult, err = getClassByID(ctx, id)
 	} else {
 		return classResult, fmt.Errorf("no name or id provided for class query")
 	}

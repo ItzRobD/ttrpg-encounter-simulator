@@ -2,50 +2,50 @@ package weapon
 
 import (
 	"context"
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"fmt"
+	. "github.com/go-jet/jet/v2/postgres"
 )
 
-func getWeaponByName(ctx context.Context, name string) (Weapon, error) {
-	var weaponResult Weapon
-	query := `
-		SELECT
-			w.name,
-			w.is_versatile,
-			ewdb.number_of_dice,
-			ewdb.die,
-			ewdb.dmg_type
-		FROM equipment_weapons w
-		JOIN public.equipment_weapons_damage_blocks ewdb on w.id = ewdb.weapon_id
-		WHERE w.name ILIKE $1`
+func getWeaponIDByName(ctx context.Context, name string) (int, error) {
+	var id int
+	stmt := SELECT(
+		EquipmentWeapons.ID,
+	).
+		FROM(EquipmentWeapons).
+		WHERE(EquipmentWeapons.Name.EQ(String(name)))
 
-	row, err := database.QueryRow(ctx, query, name)
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
-		return weaponResult, fmt.Errorf("error getting weaponResult by name: %w", err)
+		return id, fmt.Errorf("error getting weapon id by name: %w", err)
 	}
-	err = row.Scan(&weaponResult.Name, &weaponResult.IsVersatile, &weaponResult.NumberOfDice,
-		&weaponResult.Die, &weaponResult.DamageType)
+	err = row.Scan(&id)
 	if err != nil {
-		return weaponResult, fmt.Errorf("error scanning weaponResult by name: %w", err)
+		return id, fmt.Errorf("error scanning weapon id by name: %w", err)
 	}
 
-	return weaponResult, nil
+	return id, nil
 }
 
 func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 	var weaponResult Weapon
-	query := `
-		SELECT
-			w.name,
-			w.is_versatile,
-			ewdb.number_of_dice,
-			ewdb.die,
-			ewdb.dmg_type
-		FROM equipment_weapons w
-		JOIN public.equipment_weapons_damage_blocks ewdb on w.id = ewdb.weapon_id
-		WHERE w.id = $1`
+	stmt := SELECT(
+		EquipmentWeapons.Name,
+		EquipmentWeapons.IsVersatile,
+		EquipmentWeaponsDamageBlocks.NumberOfDice,
+		EquipmentWeaponsDamageBlocks.Die,
+		EquipmentWeaponsDamageBlocks.DmgType,
+	).FROM(
+		EquipmentWeapons.
+			LEFT_JOIN(EquipmentWeaponsDamageBlocks, EquipmentWeapons.ID.EQ(EquipmentWeaponsDamageBlocks.WeaponID))).
+		WHERE(
+			EquipmentWeapons.ID.EQ(Int(int64(id))),
+		)
 
-	row, err := database.QueryRow(ctx, query, id)
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
 		return weaponResult, fmt.Errorf("error getting weaponResult by id: %w", err)
 	}
@@ -65,7 +65,9 @@ func QueryWeaponData(ctx context.Context, params WeaponQueryParams) (Weapon, err
 	if params.ID != 0 {
 		weaponResult, err = getWeaponByID(ctx, params.ID)
 	} else if params.Name != "" {
-		weaponResult, err = getWeaponByName(ctx, params.Name)
+		var id int
+		id, err = getWeaponIDByName(ctx, params.Name)
+		weaponResult, err = getWeaponByID(ctx, id)
 	} else {
 		err = fmt.Errorf("no name or id provided for weapon query")
 	}

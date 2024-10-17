@@ -4,43 +4,48 @@ import (
 	"context"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"fmt"
+
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
+	. "github.com/go-jet/jet/v2/postgres"
 )
 
-func getArmorByName(ctx context.Context, name string) (Armor, error) {
-	var armorResult Armor
-	query := `
-		SELECT
-		    name,
-		    armor_class,
-		    dex_bonus,
-		    max_bonus,
-		    minimum_str
-		FROM equipment_armor WHERE name ILIKE $1`
+func getArmorIDByName(ctx context.Context, name string) (int, error) {
+	var id int
+	stmt := SELECT(
+		EquipmentArmor.ID,
+	).FROM(
+		EquipmentArmor,
+	).
+		WHERE(EquipmentArmor.Name.EQ(String(name)))
 
-	row, err := database.QueryRow(ctx, query, name)
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
-		return armorResult, fmt.Errorf("error getting armorResult by name: %w", err)
+		return id, fmt.Errorf("error getting armor ID by name: %w", err)
 	}
-	err = row.Scan(&armorResult.Name, &armorResult.ArmorClass, &armorResult.DexBonus, &armorResult.MaxBonus, &armorResult.MinimumStr)
+	err = row.Scan(&id)
 	if err != nil {
-		return armorResult, fmt.Errorf("error scanning armorResult by name: %w", err)
+		return id, fmt.Errorf("error scanning armorResult by name: %w", err)
 	}
 
-	return armorResult, nil
+	return id, nil
 }
 
 func getArmorByID(ctx context.Context, id int) (Armor, error) {
 	var armorResult Armor
-	query := `
-		SELECT
-		    name, 
-		    armor_class,
-		    dex_bonus,
-		    max_bonus, 
-		    minimum_str 
-		FROM equipment_armor WHERE id ILIKE $1`
+	stmt := SELECT(
+		EquipmentArmor.Name,
+		EquipmentArmor.ArmorClass,
+		EquipmentArmor.DexBonus,
+		EquipmentArmor.MaxBonus,
+		EquipmentArmor.MinimumStr,
+	).FROM(
+		EquipmentArmor,
+	).
+		WHERE(EquipmentArmor.ID.EQ(Int(int64(id))))
 
-	row, err := database.QueryRow(ctx, query, id)
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
 		return armorResult, fmt.Errorf("error getting armorResult by id: %w", err)
 	}
@@ -59,7 +64,12 @@ func QueryArmorData(ctx context.Context, params ArmorQueryParams) (Armor, error)
 	if params.ID != 0 {
 		armorResult, err = getArmorByID(ctx, params.ID)
 	} else if params.Name != "" {
-		armorResult, err = getArmorByName(ctx, params.Name)
+		var id int
+		id, err = getArmorIDByName(ctx, params.Name)
+		if err != nil {
+			return armorResult, err
+		}
+		armorResult, err = getArmorByID(ctx, id)
 	} else {
 		err = fmt.Errorf("no name or id provided for armor query")
 	}
