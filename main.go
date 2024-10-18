@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/spells"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
 	"reflect"
 )
@@ -48,16 +48,16 @@ func main() {
 	//}
 	//fmt.Print("Class: ", result)
 
-	//var result monster.Monster
-	////params := monster.MonsterQueryParams{ID: 5}
+	var result monster.Monster
+	//params := monster.MonsterQueryParams{ID: 2}
 	//params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
-	////params := monster.MonsterQueryParams{Name: "Barbed Devil"}
-	//result, err = monster.QueryMonsterData(ctx, params)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	//fmt.Println("Monster:")
-	//printStructFields(result, "MonsterBase")
+	params := monster.MonsterQueryParams{Name: "Archmage"}
+	result, err = monster.QueryMonsterData(ctx, params)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("Monster:")
+	printStructFields(result, "MonsterBase")
 
 	//var sResult spells.Spell
 	////params := spells.SpellQueryParams{Name: "Eldritch Blast", Level: 5}
@@ -78,15 +78,15 @@ func main() {
 	//}
 	//printStructFields(sResult, "")
 
-	var cs []spells.Spell
-	cs, err = spells.GetUsableSpellSliceByClassID(ctx, 12)
-	if err != nil {
-		fmt.Printf("error %w", err)
-	}
-	fmt.Println("Spells:")
-	for _, s := range cs {
-		printStructFields(s, "")
-	}
+	//var cs []spells.Spell
+	//cs, err = spells.GetUsableSpellSliceByClassID(ctx, 12)
+	//if err != nil {
+	//	fmt.Printf("error %w", err)
+	//}
+	//fmt.Println("Spells:")
+	//for _, s := range cs {
+	//	printStructFields(s, "")
+	//}
 }
 
 func printStructFields(v interface{}, prefix string) {

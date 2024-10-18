@@ -2,6 +2,7 @@ package monster
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/shared"
+	"dnd5e-encounter-simulator-backend/pkg/spells"
 )
 
 type MonsterBase struct {
@@ -64,6 +65,26 @@ type SpecialAbility struct {
 	Description string
 }
 
+type Spellcasting struct {
+	CastingLevel   int
+	Ability        string
+	AttackModifier int
+	SaveDC         int
+	InnateSpells   []InnateSpell
+	SC             StandardSC
+}
+
+type InnateSpell struct {
+	Spell      spells.Spell
+	TimePerDay int
+}
+
+type StandardSC struct {
+	Spells        []spells.Spell
+	SpellSlots    map[int]int // Current available spell slots
+	MaxSpellSlots map[int]int // Max spell slots - do not change
+}
+
 type Monster struct {
 	MonsterBase
 	DamageModifiers  []MonsterDamageModifier
@@ -72,6 +93,7 @@ type Monster struct {
 	Multiattacks     []MonsterMultiattack
 	LegendaryActions []LegendaryAction
 	SpecialAbilities []SpecialAbility
+	Spellcasting     Spellcasting
 }
 
 type MonsterQueryParams struct {

@@ -2,6 +2,7 @@ package spells
 
 import (
 	"context"
+	"database/sql"
 	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
 	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
@@ -38,7 +39,6 @@ func getSpellCastLevelsByID(ctx context.Context, id int) ([]int, error) {
 }
 
 func getSpellTypeByID(ctx context.Context, id int) (string, error) {
-	//fmt.Printf("getSpellTypeByID(%d)\n", id)
 	var levelType string
 	stmt := SELECT(
 		SpellFormulas.LevelType,
@@ -83,7 +83,6 @@ func getMinimumSpellLevelByID(ctx context.Context, id int) (int, error) {
 		return level, fmt.Errorf("failed to collect minimum spells level by id: %d - %w", id, err)
 	}
 
-	fmt.Printf("getMinimumSpellLevelByID(%d) = %d\n", id, level)
 	return level, nil
 }
 
@@ -139,6 +138,8 @@ func getSpellByID(ctx context.Context, id int, level int) (Spell, error) {
 	if err != nil {
 		return spell, fmt.Errorf("failed to query spells: %w", err)
 	}
+	var ability sql.NullString
+	var onSuccess sql.NullString
 	err = pgx.Row.Scan(row,
 		&spell.ID,
 		&spell.Name,
@@ -151,8 +152,8 @@ func getSpellByID(ctx context.Context, id int, level int) (Spell, error) {
 		&spell.IsAOE,
 		&spell.HasDC,
 		&spell.ApiURL,
-		&spell.Ability,
-		&spell.OnSuccess,
+		&ability,
+		&onSuccess,
 		&spell.CastLevel,
 		&spell.LevelType,
 		&spell.NumberOfDice,
@@ -163,6 +164,17 @@ func getSpellByID(ctx context.Context, id int, level int) (Spell, error) {
 	)
 	if err != nil {
 		return spell, fmt.Errorf("failed to collect spells: %w", err)
+	}
+
+	if ability.Valid {
+		spell.Ability = ability.String
+	} else {
+		spell.Ability = ""
+	}
+	if onSuccess.Valid {
+		spell.OnSuccess = onSuccess.String
+	} else {
+		spell.OnSuccess = ""
 	}
 
 	return spell, nil
@@ -192,7 +204,6 @@ func getSpellQueryLevel(ctx context.Context, id int, paramLevel int) (int, error
 	var sType string
 	var err error
 	minLevel, err = getMinimumSpellLevelByID(ctx, id)
-	fmt.Println(minLevel)
 	if err != nil {
 		return 0, err
 	}
@@ -245,7 +256,6 @@ func QuerySpellData(ctx context.Context, params SpellQueryParams) (Spell, error)
 		}
 	}
 	queryLevel, err = getSpellQueryLevel(ctx, queryID, params.Level)
-	fmt.Printf("queryID = %d\n queryLevel = %d\n", queryID, queryLevel)
 	if err != nil {
 		return spell, err
 	}
