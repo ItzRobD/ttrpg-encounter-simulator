@@ -1,4 +1,4 @@
-package spell
+package spells
 
 import "database/sql"
 

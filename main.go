@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/monster"
+	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"reflect"
 )
@@ -48,37 +48,45 @@ func main() {
 	//}
 	//fmt.Print("Class: ", result)
 
-	var result monster.Monster
-	//params := monster.MonsterQueryParams{ID: 5}
-	params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
-	//params := monster.MonsterQueryParams{Name: "Barbed Devil"}
-	result, err = monster.QueryMonsterData(ctx, params)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("Monster:")
-	printStructFields(result, "MonsterBase")
+	//var result monster.Monster
+	////params := monster.MonsterQueryParams{ID: 5}
+	//params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
+	////params := monster.MonsterQueryParams{Name: "Barbed Devil"}
+	//result, err = monster.QueryMonsterData(ctx, params)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Println("Monster:")
+	//printStructFields(result, "MonsterBase")
 
-	//var sResult spell.Spell
-	//params := spell.SpellQueryParams{Name: "Eldritch Blast", Level: 5}
-	////params := spell.SpellQueryParams{ID: 40, Level: 4}
-	//sResult, err = spell.QuerySpellData(ctx, params)
-	////sResult, err = spell.GetSpellByID(ctx, 119, 6)
+	//var sResult spells.Spell
+	////params := spells.SpellQueryParams{Name: "Eldritch Blast", Level: 5}
+	//params := spells.SpellQueryParams{ID: 40, Level: 4}
+	//sResult, err = spells.QuerySpellData(ctx, params)
+	////sResult, err = spells.GetSpellByID(ctx, 119, 6)
 	//if err != nil {
 	//	fmt.Printf("error %w", err)
 	//}
 	//fmt.Println("Spell:")
 	//printStructFields(sResult, "")
 
-	//spells, err := spell.GetSpellsUsableByClassID(ctx, 12)
+	//var sResult spells.Spell
+	//params := spells.SpellQueryParams{ID: 30, Level: 5}
+	//sResult, err = spells.QuerySpellData(ctx, params)
 	//if err != nil {
-	//	fmt.Println(err)
+	//	fmt.Printf("error %w", err)
 	//}
-	//fmt.Println("Spells:")
-	//fmt.Println(spells)
-	//for _, s := range spells {
-	//	printStructFields(s, "")
-	//}
+	//printStructFields(sResult, "")
+
+	var cs []spells.Spell
+	cs, err = spells.GetUsableSpellSliceByClassID(ctx, 12)
+	if err != nil {
+		fmt.Printf("error %w", err)
+	}
+	fmt.Println("Spells:")
+	for _, s := range cs {
+		printStructFields(s, "")
+	}
 }
 
 func printStructFields(v interface{}, prefix string) {

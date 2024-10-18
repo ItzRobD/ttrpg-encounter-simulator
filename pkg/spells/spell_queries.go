@@ -1,4 +1,4 @@
-package spell
+package spells
 
 import (
 	"context"
@@ -21,7 +21,7 @@ func getSpellCastLevelsByID(ctx context.Context, id int) ([]int, error) {
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return levels, fmt.Errorf("failed to query spell cast levels by id: %d - %w", id, err)
+		return levels, fmt.Errorf("failed to query spells cast levels by id: %d - %w", id, err)
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -30,7 +30,7 @@ func getSpellCastLevelsByID(ctx context.Context, id int) ([]int, error) {
 			&level,
 		)
 		if err != nil {
-			return levels, fmt.Errorf("failed to collect spell cast levels by id: %d - %w", id, err)
+			return levels, fmt.Errorf("failed to collect spells cast levels by id: %d - %w", id, err)
 		}
 		levels = append(levels, level)
 	}
@@ -38,7 +38,7 @@ func getSpellCastLevelsByID(ctx context.Context, id int) ([]int, error) {
 }
 
 func getSpellTypeByID(ctx context.Context, id int) (string, error) {
-	fmt.Printf("getSpellTypeByID(%d)\n", id)
+	//fmt.Printf("getSpellTypeByID(%d)\n", id)
 	var levelType string
 	stmt := SELECT(
 		SpellFormulas.LevelType,
@@ -48,13 +48,13 @@ func getSpellTypeByID(ctx context.Context, id int) (string, error) {
 	query, args := stmt.Sql()
 	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
-		return levelType, fmt.Errorf("failed to query spell level type by id: %d - %w", id, err)
+		return levelType, fmt.Errorf("failed to query spells level type by id: %d - %w", id, err)
 	}
 	err = pgx.Row.Scan(row,
 		&levelType,
 	)
 	if err != nil {
-		return levelType, fmt.Errorf("failed to collect spell level type by id: %d - %w", id, err)
+		return levelType, fmt.Errorf("failed to collect spells level type by id: %d - %w", id, err)
 	}
 	return levelType, nil
 }
@@ -74,15 +74,16 @@ func getMinimumSpellLevelByID(ctx context.Context, id int) (int, error) {
 	query, args := stmt.Sql()
 	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
-		return level, fmt.Errorf("failed to query minimum spell level by id: %d - %w", id, err)
+		return level, fmt.Errorf("failed to query minimum spells level by id: %d - %w", id, err)
 	}
 	err = pgx.Row.Scan(row,
 		&level,
 	)
 	if err != nil {
-		return level, fmt.Errorf("failed to collect minimum spell level by id: %d - %w", id, err)
+		return level, fmt.Errorf("failed to collect minimum spells level by id: %d - %w", id, err)
 	}
 
+	fmt.Printf("getMinimumSpellLevelByID(%d) = %d\n", id, level)
 	return level, nil
 }
 
@@ -136,7 +137,7 @@ func getSpellByID(ctx context.Context, id int, level int) (Spell, error) {
 	query, args := stmt.Sql()
 	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
-		return spell, fmt.Errorf("failed to query spell: %w", err)
+		return spell, fmt.Errorf("failed to query spells: %w", err)
 	}
 	err = pgx.Row.Scan(row,
 		&spell.ID,
@@ -161,10 +162,9 @@ func getSpellByID(ctx context.Context, id int, level int) (Spell, error) {
 		&spell.UseSpellmod,
 	)
 	if err != nil {
-		return spell, fmt.Errorf("failed to collect spell: %w", err)
+		return spell, fmt.Errorf("failed to collect spells: %w", err)
 	}
 
-	fmt.Print("Returning spell")
 	return spell, nil
 }
 
@@ -177,11 +177,11 @@ func getSpellIDByName(ctx context.Context, name string) (int, error) {
 	query, args := stmt.Sql()
 	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
-		return id, fmt.Errorf("failed to query spell id by name: %w", err)
+		return id, fmt.Errorf("failed to query spells id by name: %w", err)
 	}
 	err = pgx.Row.Scan(row, &id)
 	if err != nil {
-		return id, fmt.Errorf("failed to collect spell id by name: %w", err)
+		return id, fmt.Errorf("failed to collect spells id by name: %w", err)
 	}
 	return id, nil
 }
@@ -191,7 +191,8 @@ func getSpellQueryLevel(ctx context.Context, id int, paramLevel int) (int, error
 	var minLevel int
 	var sType string
 	var err error
-	minLevel, err = getMinimumSpellLevelByID(ctx, paramLevel)
+	minLevel, err = getMinimumSpellLevelByID(ctx, id)
+	fmt.Println(minLevel)
 	if err != nil {
 		return 0, err
 	}
@@ -244,6 +245,7 @@ func QuerySpellData(ctx context.Context, params SpellQueryParams) (Spell, error)
 		}
 	}
 	queryLevel, err = getSpellQueryLevel(ctx, queryID, params.Level)
+	fmt.Printf("queryID = %d\n queryLevel = %d\n", queryID, queryLevel)
 	if err != nil {
 		return spell, err
 	}
@@ -255,46 +257,54 @@ func QuerySpellData(ctx context.Context, params SpellQueryParams) (Spell, error)
 	return spell, nil
 }
 
-func GetSpellsUsableByClassID(ctx context.Context, classID int) ([]Spell, error) {
-	// TODO: Fix - queries are using spell levels rather than spell ID - likely due to package refactor
-	var csIDs []int
+func GetUsableSpellIDsByClassID(ctx context.Context, classID int) ([]int, error) {
+	var ids []int
 	stmt := SELECT(
 		Spells.ID,
-	).
-		FROM(
-			Spells.INNER_JOIN(SpellUsers, Spells.ID.EQ(SpellUsers.SpellID)),
-		).
-		WHERE(
-			SpellUsers.ClassID.EQ(Int(int64(classID))).
-				AND(Spells.SpellType.NOT_EQ(enum.Stype.Support)).
-				AND(Spells.SpellType.NOT_EQ(enum.Stype.Other)),
-		).ORDER_BY(Spells.ID)
+	).FROM(
+		Spells.
+			INNER_JOIN(SpellUsers, Spells.ID.EQ(SpellUsers.SpellID)),
+	).WHERE(
+		SpellUsers.ClassID.EQ(Int(int64(classID))).
+			AND(
+				Spells.SpellType.EQ(enum.Stype.Damage).
+					OR(Spells.SpellType.EQ(enum.Stype.Healing)),
+			),
+	)
 
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query spells usable by class id (%d): %w", classID, err)
+		return nil, fmt.Errorf("failed to query spells usable by class id: %d - %w", classID, err)
 	}
 	defer rows.Close()
+
 	for rows.Next() {
-		var spellID int
-		err = rows.Scan(&spellID)
+		var id int
+		err = rows.Scan(&id)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan spell id: %w", err)
+			return nil, fmt.Errorf("failed to collect spells usable by class id: %d - %w", classID, err)
 		}
-		csIDs = append(csIDs, spellID)
+		ids = append(ids, id)
 	}
 
+	return ids, nil
+}
+
+func GetUsableSpellSliceByClassID(ctx context.Context, classID int) ([]Spell, error) {
 	var spells []Spell
-	for _, spellID := range csIDs {
-		params := SpellQueryParams{ID: spellID, Level: 0}
-		spell, err2 := QuerySpellData(ctx, params)
+	var err error
+	var ids []int
+	ids, err = GetUsableSpellIDsByClassID(ctx, classID)
+	if err != nil {
+		return spells, err
+	}
+	for _, id := range ids {
+		spell, err2 := QuerySpellData(ctx, SpellQueryParams{ID: id, Level: 0})
 		if err2 != nil {
-			fmt.Println(err2)
-			return nil, fmt.Errorf("failed to get spell by id (%d): %w", spellID, err2)
+			return spells, err2
 		}
 		spells = append(spells, spell)
 	}
-
 	return spells, nil
 }
