@@ -65,7 +65,7 @@ type SpecialAbility struct {
 	Description string
 }
 
-type Spellcasting struct {
+type MSpellcasting struct {
 	CastingLevel   int
 	Ability        string
 	AttackModifier int
@@ -93,7 +93,7 @@ type Monster struct {
 	Multiattacks     []MonsterMultiattack
 	LegendaryActions []LegendaryAction
 	SpecialAbilities []SpecialAbility
-	Spellcasting     Spellcasting
+	Spellcasting     MSpellcasting
 }
 
 type MonsterQueryParams struct {

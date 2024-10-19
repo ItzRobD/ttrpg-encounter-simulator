@@ -379,9 +379,6 @@ func getMonsterSpecialAbilities(ctx context.Context, id int) ([]SpecialAbility, 
 
 		specialAbilities = append(specialAbilities, sa)
 	}
-	if err != nil {
-		return specialAbilities, fmt.Errorf("failed to scan monster special abilities by id: %w", err)
-	}
 
 	return specialAbilities, nil
 }
@@ -448,8 +445,8 @@ func getMonsterSpellsByID(ctx context.Context, id int) ([]int, error) {
 	return spellIDs, nil
 }
 
-func getMonsterSpellcastingByID(ctx context.Context, id int) (Spellcasting, error) {
-	var spellcasting Spellcasting
+func getMonsterSpellcastingByID(ctx context.Context, id int) (MSpellcasting, error) {
+	var spellcasting MSpellcasting
 
 	var isInnateCaster bool
 
@@ -524,9 +521,6 @@ func getMonsterSpellcastingByID(ctx context.Context, id int) (Spellcasting, erro
 			iSpell.TimePerDay = timesPerDay
 			spellcasting.InnateSpells = append(spellcasting.InnateSpells, iSpell)
 		}
-		if err2 != nil {
-			return spellcasting, fmt.Errorf("failed to assign innate spells by id: %w", err2)
-		}
 	} else {
 		// Get all spells
 		spellIDs, err2 := getMonsterSpellsByID(ctx, id)
@@ -542,7 +536,7 @@ func getMonsterSpellcastingByID(ctx context.Context, id int) (Spellcasting, erro
 		// Get spell slots
 		scSlots, err2 := getMonsterSpellcastingSlotsByID(ctx, id)
 		if err2 != nil {
-			return Spellcasting{}, err2
+			return MSpellcasting{}, err2
 		}
 		spellcasting.SC.SpellSlots = scSlots
 		spellcasting.SC.MaxSpellSlots = scSlots
@@ -621,7 +615,7 @@ func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, 
 		}
 
 		if monsterResult.IsSpellcaster || monsterResult.IsInnateSpellcaster {
-			var monsterSpellcasting Spellcasting
+			var monsterSpellcasting MSpellcasting
 			monsterSpellcasting, err = getMonsterSpellcastingByID(ctx, monsterBaseResult.ID)
 			if err != nil {
 				return monsterResult, err

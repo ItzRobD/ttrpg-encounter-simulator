@@ -301,20 +301,26 @@ func GetUsableSpellIDsByClassID(ctx context.Context, classID int) ([]int, error)
 	return ids, nil
 }
 
-func GetUsableSpellSliceByClassID(ctx context.Context, classID int) ([]Spell, error) {
-	var spells []Spell
+func GetHealingAndDamageSpellsByClassID(ctx context.Context, classID int) ([]Spell, []Spell, error) {
+	var healingSpells []Spell
+	var damageSpells []Spell
 	var err error
 	var ids []int
 	ids, err = GetUsableSpellIDsByClassID(ctx, classID)
 	if err != nil {
-		return spells, err
+		return healingSpells, damageSpells, err
 	}
 	for _, id := range ids {
 		spell, err2 := QuerySpellData(ctx, SpellQueryParams{ID: id, Level: 0})
 		if err2 != nil {
-			return spells, err2
+			return healingSpells, damageSpells, err2
 		}
-		spells = append(spells, spell)
+		if spell.SpellType == "healing" {
+			healingSpells = append(healingSpells, spell)
+		}
+		if spell.SpellType == "damage" {
+			damageSpells = append(damageSpells, spell)
+		}
 	}
-	return spells, nil
+	return healingSpells, damageSpells, nil
 }
