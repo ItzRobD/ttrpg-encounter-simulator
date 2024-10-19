@@ -1,4 +1,4 @@
-package dice
+package shared
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ func RollDice(numDice int, numSides int) ([]int, error) {
 	if numDice < 1 {
 		return nil, fmt.Errorf("numDice must be greater than 0")
 	}
-	if numSides != 4 && numSides != 6 && numSides != 8 && numSides != 10 && numSides != 12 && numSides != 20 && numSides != 100 {
+	if !ValidateDie(numSides) {
 		return nil, fmt.Errorf("numSides must be 4, 6, 8, 10, 12, 20, or 100")
 	}
 

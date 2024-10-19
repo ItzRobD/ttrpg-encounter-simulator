@@ -149,6 +149,8 @@ func QueryClassData(ctx context.Context, params ClassQueryParams) (Class, error)
 		}
 
 		classResult.Spellcasting.MaxSpellSlots, err = getClassSpellSlotsByID(ctx, classResult.ID)
+	} else {
+		classResult.SpellcastingMod = "none"
 	}
 
 	return classResult, err

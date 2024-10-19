@@ -71,3 +71,26 @@ func GetAbilityScoreModifier(score int) (int, error) {
 
 	return 0, fmt.Errorf("score modifier not found")
 }
+
+var validDieValues = []int{4, 6, 8, 10, 12, 20, 100}
+
+func ValidateDie(die int) bool {
+	for _, v := range validDieValues {
+		if v == die {
+			return true
+		}
+	}
+	return false
+}
+
+var validDamageTypes = []string{"acid", "bludgeoning", "cold", "fire", "force", "lightning",
+	"necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"}
+
+func ValidateDamageType(damageType string) bool {
+	for _, v := range validDamageTypes {
+		if v == damageType {
+			return true
+		}
+	}
+	return false
+}

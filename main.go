@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
+	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
 	"reflect"
 )
@@ -100,6 +103,57 @@ func main() {
 	//for _, s := range cs {
 	//	printStructFields(s, "")
 	//}
+
+	ctx := context.Background()
+
+	var as shared.AbilityScores
+	as.Strength = 12
+	as.Dexterity = 18
+	as.Constitution = 16
+	as.Intelligence = 10
+	as.Wisdom = 14
+	as.Charisma = 18
+
+	var hp shared.PlayerHP
+	hp.HP = 72
+	hp.MaxHP = 84
+
+	c, err := character.New(ctx, "Frank", 12, 5, as, hp)
+	if err != nil {
+	}
+
+	err = c.AddSRDArmor(ctx, 7)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = c.AddSRDWeapon(ctx, 7, "primary")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = c.AddSRDWeapon(ctx, 10, "secondary")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = c.AddSRDWeapon(ctx, 12, "ranged")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = c.AddCustomWeapon("Bat", true, 1, 20, "bludgeoning", true, "ranged")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = c.AddCustomArmor("Dragonmail", 17, true, true, 12)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = c.AddKnownSpell(ctx, 30)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(c)
 }
 
 func printStructFields(v interface{}, prefix string) {
