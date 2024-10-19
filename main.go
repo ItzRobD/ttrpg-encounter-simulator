@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/class"
 	"fmt"
 	"reflect"
 )
@@ -26,9 +24,21 @@ func main() {
 	//}
 	//fmt.Printf("Armor: %+v\n", armorData)
 
-	var err error
+	//var err error
+	//
+	//ctx := context.Background()
 
-	ctx := context.Background()
+	//bonus, err := shared.GetProficiencyBonus(26)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Println(bonus)
+
+	//modifier, err := shared.GetAbilityScoreModifier(12)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Println(modifier)
 
 	//var result weapon.Weapon
 	//params := weapon.WeaponQueryParams{Name: "Warhammer"}
@@ -39,14 +49,14 @@ func main() {
 	//}
 	//fmt.Print("Weapon: ", result)
 
-	var result class.Class
-	//params := class.ClassQueryParams{Name: "Artificer"}
-	params := class.ClassQueryParams{ID: 13}
-	result, err = class.QueryClassData(ctx, params)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Print("Class: ", result)
+	//var result class.Class
+	////params := class.ClassQueryParams{Name: "Artificer"}
+	//params := class.ClassQueryParams{ID: 13}
+	//result, err = class.QueryClassData(ctx, params)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Print("Class: ", result)
 	//for k, v := range result.Spellcasting.MaxSpellSlots {
 	//	fmt.Printf("Level %d: Slots: %v\n", k, v)
 	//}
