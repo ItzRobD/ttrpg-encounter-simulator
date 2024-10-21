@@ -1,13 +1,15 @@
 package shared
 
-import "fmt"
+import (
+	"fmt"
+)
 
-type ChallengeRatingBonus struct {
+type ChallengeRatingPB struct {
 	Ratings []float64
 	Bonus   int
 }
 
-var proficiencyBonusTable = []ChallengeRatingBonus{
+var monsterPBTable = []ChallengeRatingPB{
 	{[]float64{0, 1.0 / 8, 1.0 / 4, 1.0 / 2, 1, 2, 3, 4}, 2},
 	{[]float64{5, 6, 7, 8}, 3},
 	{[]float64{9, 10, 11, 12}, 4},
@@ -18,12 +20,27 @@ var proficiencyBonusTable = []ChallengeRatingBonus{
 	{[]float64{29, 30}, 9},
 }
 
-func GetProficiencyBonus(challengeRating float64) (int, error) {
+var characterPBTable = map[int]int{
+	1: 2, 2: 2, 3: 2, 4: 2,
+	5: 3, 6: 3, 7: 3, 8: 3,
+	9: 4, 10: 4, 11: 4, 12: 4,
+	13: 5, 14: 5, 15: 5, 16: 5,
+	17: 6, 18: 6, 19: 6, 20: 6,
+}
+
+func GetCharacterProficiencyBonus(level int) (int, error) {
+	if bonus, exists := characterPBTable[level]; exists {
+		return bonus, nil
+	}
+	return 0, fmt.Errorf("level must be between 1 and 20")
+}
+
+func GetMonsterProficiencyBonus(challengeRating float64) (int, error) {
 	if challengeRating < 0 || challengeRating > 30 {
 		return 0, fmt.Errorf("challenge rating must be between 0 and 30")
 	}
 
-	for _, entry := range proficiencyBonusTable {
+	for _, entry := range monsterPBTable {
 		for _, cr := range entry.Ratings {
 			if cr == challengeRating {
 				return entry.Bonus, nil

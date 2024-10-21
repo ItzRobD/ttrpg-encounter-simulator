@@ -34,6 +34,7 @@ func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 	stmt := SELECT(
 		EquipmentWeapons.Name,
 		EquipmentWeapons.IsVersatile,
+		EquipmentWeapons.IsFinesse,
 		EquipmentWeaponsDamageBlocks.NumberOfDice,
 		EquipmentWeaponsDamageBlocks.Die,
 		EquipmentWeaponsDamageBlocks.DmgType,
@@ -49,7 +50,7 @@ func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 	if err != nil {
 		return weaponResult, fmt.Errorf("error getting weaponResult by id: %w", err)
 	}
-	err = row.Scan(&weaponResult.Name, &weaponResult.IsVersatile, &weaponResult.NumberOfDice,
+	err = row.Scan(&weaponResult.Name, &weaponResult.IsVersatile, &weaponResult.IsFinesse, &weaponResult.NumberOfDice,
 		&weaponResult.Die, &weaponResult.DamageType)
 	if err != nil {
 		return weaponResult, fmt.Errorf("error scanning weaponResult by id: %w", err)

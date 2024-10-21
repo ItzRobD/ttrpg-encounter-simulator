@@ -4,6 +4,7 @@ import (
 	"context"
 	"dnd5e-encounter-simulator-backend/pkg/armor"
 	"dnd5e-encounter-simulator-backend/pkg/class"
+	"dnd5e-encounter-simulator-backend/pkg/events"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
@@ -18,6 +19,8 @@ type Character struct {
 	HP            shared.PlayerHP
 	Eq            Equipment
 	KnownSpells   []spells.Spell
+	SpellSlots    map[int]map[int]int
+	EventListener func(events.CombatEvent)
 }
 
 type Equipment struct {
@@ -53,6 +56,7 @@ func New(ctx context.Context, name string, classID int, level int, abilityScores
 		HP:            hp,
 		Eq:            Equipment{},
 		KnownSpells:   []spells.Spell{},
+		SpellSlots:    c.Spellcasting.MaxSpellSlots,
 	}, nil
 }
 
@@ -104,8 +108,8 @@ func (c *Character) AddSRDWeapon(ctx context.Context, weaponID int, slot string)
 	return nil
 }
 
-func (c *Character) AddCustomWeapon(name string, isVersatile bool, numberOfDice int, die int, damageType string, isRanged bool, slot string) error {
-	w, err := weapon.New(name, isVersatile, numberOfDice, die, damageType, isRanged)
+func (c *Character) AddCustomWeapon(name string, isVersatile bool, isFinesse bool, numberOfDice int, die int, damageType string, isRanged bool, slot string) error {
+	w, err := weapon.New(name, isVersatile, isFinesse, numberOfDice, die, damageType, isRanged)
 	if err != nil {
 		return err
 	}
@@ -176,3 +180,31 @@ func (c *Character) AddKnownSpell(ctx context.Context, spellID int) error {
 	c.KnownSpells = append(c.KnownSpells, s)
 	return nil
 }
+
+func (c *Character) IsUnconscious() bool {
+	if c.HP.HP <= 0 {
+		if c.EventListener != nil {
+			event := events.CombatEvent{
+				EventType: events.UnconsciousEvent,
+				Actor:     c.Name,
+			}
+			c.EventListener(event)
+		}
+		return true
+	}
+	return false
+}
+
+func (c *Character) GetName() string {
+	return c.Name
+}
+
+func (c *Character) GetCurrentHP() int {
+	return c.HP.HP
+}
+
+func (c *Character) GetMaxHP() int {
+	return c.HP.MaxHP
+}
+
+var _ shared.Entity = &Character{}

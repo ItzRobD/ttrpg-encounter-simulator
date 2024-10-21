@@ -4,7 +4,9 @@ import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
+	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"fmt"
 	"reflect"
 )
@@ -31,7 +33,7 @@ func main() {
 	//
 	//ctx := context.Background()
 
-	//bonus, err := shared.GetProficiencyBonus(26)
+	//bonus, err := shared.GetMonsterProficiencyBonus(26)
 	//if err != nil {
 	//	fmt.Println(err)
 	//}
@@ -64,14 +66,22 @@ func main() {
 	//	fmt.Printf("Level %d: Slots: %v\n", k, v)
 	//}
 
-	//var result monster.Monster
-	////params := monster.MonsterQueryParams{ID: 2}
-	////params := monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
+	var err error
+	ctx := context.Background()
+	//var m monster.Monster
+	params := monster.MonsterQueryParams{ID: 1}
 	//params := monster.MonsterQueryParams{Name: "Archmage"}
-	//result, err = monster.QueryMonsterData(ctx, params)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
+	m, err := monster.QueryMonsterData(ctx, params)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	params = monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
+	m2, err := monster.QueryMonsterData(ctx, params)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	//fmt.Println("Monster:")
 	//printStructFields(result, "MonsterBase")
 
@@ -104,7 +114,7 @@ func main() {
 	//	printStructFields(s, "")
 	//}
 
-	ctx := context.Background()
+	//ctx := context.Background()
 
 	var as shared.AbilityScores
 	as.Strength = 12
@@ -118,8 +128,9 @@ func main() {
 	hp.HP = 72
 	hp.MaxHP = 84
 
-	c, err := character.New(ctx, "Frank", 12, 5, as, hp)
+	c, err := character.New(ctx, "Frank", 2, 5, as, hp)
 	if err != nil {
+		fmt.Println(err)
 	}
 
 	err = c.AddSRDArmor(ctx, 7)
@@ -138,22 +149,38 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = c.AddCustomWeapon("Bat", true, 1, 20, "bludgeoning", true, "ranged")
+	//err = c.AddCustomWeapon("Bat", true, 1, 20, "bludgeoning", true, "ranged")
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//
+	//err = c.AddCustomArmor("Dragonmail", 17, true, true, 12)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//
+	//err = c.AddKnownSpell(ctx, 30)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//
+	//fmt.Println(c)
+
+	options := simulation.Options{
+		Prioritization: simulation.PrioritizeMostDamaged,
+	}
+	s := simulation.New(options)
+	s.Encounter.AddPartyMember(&c)
+	s.Encounter.AddMonster(&m)
+	s.Encounter.AddMonster(&m2)
+
+	err = s.Simulate()
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	err = c.AddCustomArmor("Dragonmail", 17, true, true, 12)
-	if err != nil {
-		fmt.Println(err)
-	}
+	//s.PrintSimulationLog()
 
-	err = c.AddKnownSpell(ctx, 30)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Println(c)
 }
 
 func printStructFields(v interface{}, prefix string) {
