@@ -112,25 +112,11 @@ func (m *Monster) DetermineMonsterHP(useAverage bool) (int, int, error) {
 		if err != nil {
 			return 0, toAdd, fmt.Errorf("error rolling hp dice: %w", err)
 		}
-		if m.EventListener != nil {
-			event := events.CombatEvent{
-				EventType: events.HPRollEvent,
-				Actor:     m.Name,
-				Value:     s + toAdd,
-				Rolls:     rolls,
-				Added:     toAdd,
-			}
-			m.EventListener(event)
-		}
+
+		m.logHPRollEvent(s, rolls, toAdd)
 		return s + toAdd, toAdd, nil
 	} else {
-		event := events.CombatEvent{
-			EventType: events.HPRollEvent,
-			Actor:     m.Name,
-			Value:     m.HP.HPAverage,
-			Rolls:     []int{m.HP.HPAverage},
-		}
-		m.EventListener(event)
+		m.logHPRollEvent(m.HP.HPAverage, []int{m.HP.HPAverage}, 0)
 		return m.HP.HPAverage, 0, nil
 	}
 }
@@ -159,6 +145,76 @@ func (m *Monster) IsUnconscious() bool {
 	return false
 }
 
+func (m *Monster) SavingThrow(ability string) (int, error) {
+	// roll dice, add save
+	var mod int
+	var err error
+	switch ability {
+	case spells.SpellDCStrength:
+		if m.SaveProficiencies.Strength == 0 {
+			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Strength)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			mod = m.SaveProficiencies.Strength
+		}
+	case spells.SpellDCDexterity:
+		if m.SaveProficiencies.Dexterity == 0 {
+			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Dexterity)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			mod = m.SaveProficiencies.Dexterity
+		}
+	case spells.SpellDCConstitution:
+		if m.SaveProficiencies.Constitution == 0 {
+			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Constitution)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			mod = m.SaveProficiencies.Constitution
+		}
+	case spells.SpellDCIntelligence:
+		if m.SaveProficiencies.Intelligence == 0 {
+			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Intelligence)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			mod = m.SaveProficiencies.Intelligence
+		}
+	case spells.SpellDCWisdom:
+		if m.SaveProficiencies.Wisdom == 0 {
+			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Wisdom)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			mod = m.SaveProficiencies.Wisdom
+		}
+	case spells.SpellDCCharisma:
+		if m.SaveProficiencies.Charisma == 0 {
+			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Charisma)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			mod = m.SaveProficiencies.Charisma
+		}
+	default:
+		return 0, fmt.Errorf("invalid ability: %s", ability)
+	}
+
+	roll, rolls, err := rolling.RollDice(1, 20)
+	save := roll + mod
+	m.logRollEvent(roll, rolls, mod)
+
+	return save, nil
+}
+
 func (m *Monster) GetName() string {
 	return m.Name
 }
@@ -170,6 +226,10 @@ func (m *Monster) GetCurrentHP() int {
 func (m *Monster) GetMaxHP() int {
 	return m.HP.MaxHP
 }
+
+func (m *Monster) GetCR() float64 { return m.CR }
+
+func (m *Monster) GetAC() int { return m.AC }
 
 var _ shared.Entity = &Monster{}
 

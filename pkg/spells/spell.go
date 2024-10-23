@@ -1,5 +1,14 @@
 package spells
 
+const (
+	SpellDCStrength     = "str"
+	SpellDCDexterity    = "dex"
+	SpellDCConstitution = "con"
+	SpellDCIntelligence = "int"
+	SpellDCWisdom       = "wis"
+	SpellDCCharisma     = "cha"
+)
+
 type Spell struct {
 	ID              int
 	Name            string

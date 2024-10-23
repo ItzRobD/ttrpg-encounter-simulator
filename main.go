@@ -167,7 +167,7 @@ func main() {
 	//fmt.Println(c)
 
 	options := simulation.Options{
-		Prioritization: simulation.PrioritizeMostDamaged,
+		Prioritization: simulation.NoPriority,
 	}
 	s := simulation.New(options)
 	s.Encounter.AddPartyMember(&c)

@@ -56,6 +56,8 @@ type Simulation struct {
 func New(options Options) Simulation {
 	dispatcher := NewEventDispatcher()
 	dispatcher.RegisterListener(&AttackHandler{})
+	dispatcher.RegisterListener(&SpellAttack{})
+	dispatcher.RegisterListener(&SpellDC{})
 	dispatcher.RegisterListener(&HealHandler{})
 	dispatcher.RegisterListener(&DeathHandler{})
 	dispatcher.RegisterListener(&DamageHandler{})
@@ -183,7 +185,7 @@ func (s *Simulation) Simulate() error {
 	//	}
 	//}
 
-	for s.Encounter.CurrentRound <= 5 {
+	for s.Encounter.CurrentRound <= 10 {
 		s.Encounter.SimulateRound()
 		s.Encounter.CurrentRound++
 	}
@@ -201,7 +203,7 @@ func (e *Encounter) SimulateRound() {
 			}
 			target, _ := e.ChooseTarget(entity.Creature)
 			if m, ok := target.(*monster.Monster); ok {
-				_, err := c.MakeAttack(m, "primary")
+				_, err := c.MakeWeaponAttack(m, "primary")
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -210,8 +212,11 @@ func (e *Encounter) SimulateRound() {
 			}
 
 		case *monster.Monster:
+			// TODO: Add monster turn logic
 			if c.IsUnconscious() {
 				// Unconscious logic if needed
+			} else {
+				fmt.Printf("Target is not a monster\n")
 			}
 		default:
 			fmt.Printf("Unknown creature type %T\n", c)
@@ -220,69 +225,193 @@ func (e *Encounter) SimulateRound() {
 }
 
 func (e *Encounter) ChooseTarget(actor shared.Entity) (shared.Entity, error) {
-	var target shared.Entity
 	switch actor.(type) {
 	case *character.Character:
-		// TODO: Add logic to determine targeting prioritization
-		// Prioritize Spellcasting Monster
-		// Prioritize Highest CR
-		// Prioritize Lowest CR
-		// Prioritize damaged
-		// prioritize highest vs lowest max hp
+		var target *monster.Monster
+		var monsters []*monster.Monster
+		for _, entity := range e.CombatTracker {
+			switch m := entity.Creature.(type) {
+			case *monster.Monster:
+				monsters = append(monsters, m)
+			default:
+				continue
+			}
+		}
 		switch e.Options.Prioritization {
 		case NoPriority:
 			fmt.Println("No Prioritization")
-			var targets []shared.Entity
-			for _, entity := range e.CombatTracker {
-				switch m := entity.Creature.(type) {
-				case *monster.Monster:
-					targets = append(targets, m)
-				default:
-					continue
-				}
-			}
-			if len(targets) != 0 {
-				t := rand.IntN(len(targets))
-				target = targets[t]
+			if len(monsters) != 0 {
+				t := rand.IntN(len(monsters))
+				target = monsters[t]
 			} else {
 				return nil, fmt.Errorf("no targets available")
 			}
+		case PrioritizeHighestCR:
+			for _, m := range monsters {
+				if target == nil {
+					target = m
+					continue
+				}
+				if m.CR > target.CR {
+					target = m
+				}
+			}
+		case PrioritizeLowestCR:
+			for _, m := range monsters {
+				if target == nil {
+					target = m
+					continue
+				}
+				if m.CR < target.CR {
+					target = m
+				}
+			}
 		case PrioritizeMostDamaged:
-			for _, entity := range e.CombatTracker {
-				switch m := entity.Creature.(type) {
-				case *monster.Monster:
-					if target == nil {
-						target = m
-						continue
-					}
-					if m.GetMaxHP()-m.GetCurrentHP() > target.GetMaxHP()-target.GetCurrentHP() {
-						target = m
-					}
+			for _, m := range monsters {
+				if target == nil {
+					target = m
+					continue
+				}
+				if m.GetMaxHP()-m.GetCurrentHP() > target.GetMaxHP()-target.GetCurrentHP() {
+					target = m
 				}
 			}
 		case PrioritizeLowestHealth:
-			for _, entity := range e.CombatTracker {
-				switch m := entity.Creature.(type) {
-				case *monster.Monster:
-					if target == nil {
-						target = m
-						continue
+			for _, m := range monsters {
+				if target == nil {
+					target = m
+				}
+				if m.GetCurrentHP() < target.GetCurrentHP() {
+					target = m
+				}
+			}
+		case PrioritizeHighestMaxHP:
+			for _, m := range monsters {
+				if target == nil {
+					target = m
+				}
+				if m.HP.MaxHP > target.HP.MaxHP {
+					target = m
+				}
+			}
+		case PrioritizeLowestMaxHP:
+			for _, m := range monsters {
+				if target == nil {
+					target = m
+				}
+				if m.HP.MaxHP < target.HP.MaxHP {
+					target = m
+				}
+			}
+		case PrioritizeHealer:
+		FindMTarget:
+			for _, m := range monsters {
+				if m.IsSpellcaster {
+					for _, s := range m.Spellcasting.SC.Spells {
+						if s.SpellType == "Heal" {
+							target = m
+							break FindMTarget
+						}
 					}
-					fmt.Printf("Target: %d, Current: %d\n", target.GetCurrentHP(), m.GetCurrentHP())
-					if m.GetCurrentHP() < target.GetCurrentHP() {
-						target = m
-					}
-				default:
-					continue
+				}
+			}
+		case PrioritizeSpellcasting:
+			for _, m := range monsters {
+				if m.IsSpellcaster || m.IsInnateSpellcaster {
+					target = m
+					break
 				}
 			}
 		default:
 			panic("unhandled default case")
 		}
+		return target, nil
 	case *monster.Monster:
+		var target *character.Character
+		var characters []*character.Character
+		for _, entity := range e.CombatTracker {
+			switch c := entity.Creature.(type) {
+			case *character.Character:
+				characters = append(characters, c)
+			default:
+				continue
+			}
+		}
+		switch e.Options.Prioritization {
+		case PrioritizeHighestCR:
+			fallthrough
+		case PrioritizeLowestCR:
+			fallthrough
+		case NoPriority:
+			fmt.Println("No Prioritization")
+			if len(characters) != 0 {
+				t := rand.IntN(len(characters))
+				target = characters[t]
+			} else {
+				return nil, fmt.Errorf("no targets available")
+			}
+		case PrioritizeMostDamaged:
+			for _, c := range characters {
+				if target == nil {
+					target = c
+					continue
+				}
+				if c.GetMaxHP()-c.GetCurrentHP() > target.GetMaxHP()-target.GetCurrentHP() {
+					target = c
+				}
+			}
+		case PrioritizeLowestHealth:
+			for _, c := range characters {
+				if target == nil {
+					target = c
+				}
+				if c.GetCurrentHP() < target.GetCurrentHP() {
+					target = c
+				}
+			}
+		case PrioritizeHighestMaxHP:
+			for _, c := range characters {
+				if target == nil {
+					target = c
+				}
+				if c.HP.MaxHP > target.HP.MaxHP {
+					target = c
+				}
+			}
+		case PrioritizeLowestMaxHP:
+			for _, c := range characters {
+				if target == nil {
+					target = c
+				}
+				if c.HP.MaxHP < target.HP.MaxHP {
+					target = c
+				}
+			}
+		case PrioritizeHealer:
+		FindCTarget:
+			for _, c := range characters {
+				if c.Class.SpellcastingMod != "None" {
+					for _, s := range c.KnownSpells {
+						if s.SpellType == "Heal" {
+							target = c
+							break FindCTarget
+						}
+					}
+				}
+			}
+		case PrioritizeSpellcasting:
+			for _, c := range characters {
+				if len(c.KnownSpells) > 0 {
+					target = c
+					break
+				}
+			}
+		default:
+			panic("unhandled default case")
+		}
 	default:
 		fmt.Printf("Unknown creature type %T\n", actor)
 	}
-
-	return target, nil
+	panic("ono")
+	return nil, nil
 }

@@ -9,11 +9,28 @@ type AttackHandler struct{}
 
 func (a *AttackHandler) HandleEvent(event events.CombatEvent) {
 	if event.EventType == events.AttackEvent {
-		fmt.Printf("[Round %d] <Attack> %s attacks %s. %d to hit. Hit: %t\n",
-			event.Round, event.Actor, event.Target, event.Value, event.Hit)
-		if event.IsFatal {
-			fmt.Printf("[Round %d] <Death> %s is slain by %s.\n", event.Round, event.Target, event.Actor)
-		}
+		fmt.Printf("[Round %d] <Attack> %s attacks %s with %s. %d to hit. Hit: %t\n",
+			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.Hit)
+	}
+}
+
+type SpellAttack struct{}
+
+func (a *SpellAttack) HandleEvent(event events.CombatEvent) {
+	if event.EventType == events.SpellAttack {
+		fmt.Printf("[Round %d] <Spell Attack> %s attacks %s with %s. %d to hit. Hit: %t\n",
+			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.Hit)
+
+	}
+}
+
+type SpellDC struct{}
+
+func (a *SpellDC) HandleEvent(event events.CombatEvent) {
+	if event.EventType == events.SpellAttack {
+		fmt.Printf("[Round %d] <Spell DC Attack> %s attacks %s with %s. DC is: %d. Saving throw: %d. Hit: %t\n",
+			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.SavingThrow, event.Hit)
+
 	}
 }
 

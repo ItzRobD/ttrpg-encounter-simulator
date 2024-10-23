@@ -195,6 +195,31 @@ func (c *Character) IsUnconscious() bool {
 	return false
 }
 
+func (c *Character) GetSpellBonus() (int, error) {
+	var mod int
+	var err error
+	switch c.Class.SpellcastingMod {
+	case "int":
+		mod, err = shared.GetAbilityScoreModifier(c.AbilityScores.Intelligence)
+	case "wis":
+		mod, err = shared.GetAbilityScoreModifier(c.AbilityScores.Wisdom)
+	case "cha":
+		mod, err = shared.GetAbilityScoreModifier(c.AbilityScores.Charisma)
+	case "":
+		mod = 0
+	default:
+		err = fmt.Errorf("invalid spellcasting modifier: %s", c.Class.SpellcastingMod)
+	}
+
+	var pb int
+	pb, err = shared.GetCharacterProficiencyBonus(c.Level)
+	if err != nil {
+		return 0, err
+	}
+
+	return mod + pb, nil
+}
+
 func (c *Character) GetName() string {
 	return c.Name
 }

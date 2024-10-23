@@ -4,6 +4,8 @@ type EventType string
 
 const (
 	AttackEvent      EventType = "attack"
+	SpellAttack      EventType = "spellattack"
+	SpellDC          EventType = "spelldc"
 	HealEvent        EventType = "heal"
 	DamageEvent      EventType = "damage"
 	DeathEvent       EventType = "death"
@@ -13,15 +15,18 @@ const (
 )
 
 type CombatEvent struct {
-	Round     int
-	EventType EventType
-	Actor     string
-	Target    string
-	Hit       bool
-	Value     int
-	Rolls     []int
-	IsFatal   bool
-	Added     int
+	Round       int
+	EventType   EventType
+	Actor       string
+	Target      string
+	Attack      string
+	Hit         bool
+	Value       int
+	DamageType  string
+	Rolls       []int
+	IsFatal     bool
+	Added       int
+	SavingThrow int
 }
 
 type CombatLogger interface {
