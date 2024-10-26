@@ -3,15 +3,15 @@ package events
 type EventType string
 
 const (
-	AttackEvent      EventType = "attack"
-	SpellAttack      EventType = "spellattack"
-	SpellDC          EventType = "spelldc"
-	HealEvent        EventType = "heal"
-	DamageEvent      EventType = "damage"
-	DeathEvent       EventType = "death"
-	UnconsciousEvent EventType = "unconscious"
-	RollEvent        EventType = "roll"
-	HPRollEvent      EventType = "hproll"
+	ETAttackEvent      EventType = "attack"
+	ETSpellAttack      EventType = "spellattack"
+	ETSpellDC          EventType = "spelldc"
+	ETHealEvent        EventType = "heal"
+	ETDamageEvent      EventType = "damage"
+	ETDeathEvent       EventType = "death"
+	ETUnconsciousEvent EventType = "unconscious"
+	ETRollEvent        EventType = "roll"
+	ETHPRollEvent      EventType = "hproll"
 )
 
 type CombatEvent struct {

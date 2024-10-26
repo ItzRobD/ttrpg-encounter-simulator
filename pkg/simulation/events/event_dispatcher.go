@@ -1,26 +1,25 @@
-package simulation
+package events
 
 import (
-	"dnd5e-encounter-simulator-backend/pkg/events"
 	"fmt"
 )
 
 // EventDispatcher dispatches events to registered listeners.
 type EventDispatcher struct {
-	listeners []events.CombatListener
+	listeners []CombatListener
 }
 
 func NewEventDispatcher() *EventDispatcher {
 	return &EventDispatcher{
-		listeners: []events.CombatListener{},
+		listeners: []CombatListener{},
 	}
 }
 
-func (d *EventDispatcher) RegisterListener(listener events.CombatListener) {
+func (d *EventDispatcher) RegisterListener(listener CombatListener) {
 	d.listeners = append(d.listeners, listener)
 }
 
-func (d *EventDispatcher) DispatchEvent(event events.CombatEvent) {
+func (d *EventDispatcher) DispatchEvent(event CombatEvent) {
 	for _, listener := range d.listeners {
 		if listener != nil {
 			listener.HandleEvent(event)

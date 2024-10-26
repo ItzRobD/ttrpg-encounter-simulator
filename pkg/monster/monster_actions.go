@@ -1,11 +1,13 @@
 package monster
 
-import "dnd5e-encounter-simulator-backend/pkg/events"
+import (
+	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
+)
 
 func (m *Monster) logHPRollEvent(rollSum int, rolls []int, toAdd int) {
 	if m.EventListener != nil {
 		event := events.CombatEvent{
-			EventType: events.HPRollEvent,
+			EventType: events.ETHPRollEvent,
 			Actor:     m.Name,
 			Value:     rollSum + toAdd,
 			Rolls:     rolls,
@@ -19,7 +21,7 @@ func (m *Monster) logHPRollEvent(rollSum int, rolls []int, toAdd int) {
 func (m *Monster) logRollEvent(rollSum int, rolls []int, toAdd int) {
 	if m.EventListener != nil {
 		event := events.CombatEvent{
-			EventType: events.RollEvent,
+			EventType: events.ETRollEvent,
 			Actor:     m.Name,
 			Value:     rollSum + toAdd,
 			Rolls:     rolls,

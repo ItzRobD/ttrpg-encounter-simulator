@@ -9,6 +9,13 @@ const (
 	SpellDCCharisma     = "cha"
 )
 
+type SpellType string
+
+const (
+	STDamage  SpellType = "damage"
+	STHealing SpellType = "healing"
+)
+
 type Spell struct {
 	ID              int
 	Name            string

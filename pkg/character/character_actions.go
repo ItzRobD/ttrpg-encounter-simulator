@@ -1,10 +1,10 @@
 package character
 
 import (
-	"dnd5e-encounter-simulator-backend/pkg/events"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/rolling"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
+	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"fmt"
@@ -149,6 +149,72 @@ func (c *Character) getWeaponFromSlot(slot string) (*weapon.Weapon, error) {
 	}
 }
 
+func (c *Character) ChooseSpell(spellType spells.SpellType, sp shared.SpellPriority) (*spells.Spell, error) {
+	switch spellType {
+	case spells.STDamage:
+		knownSpells, err := c.getKnownDamageSpells()
+		if err != nil {
+			return nil, err
+		}
+		var selectedSpell spells.Spell
+		if c.SpellPriority == shared.SPNoPreference {
+			switch sp {
+			case shared.SPNoPreference:
+			case shared.SPHighestLevel:
+				for _, s := range knownSpells {
+					if s.Level > selectedSpell.Level {
+						selectedSpell = *s
+						// TODO: Too tired
+						// TODO: Finish spell selection logic -> don't forget to account for available spell slots
+					}
+				}
+			case shared.SPLowestLevel:
+			case shared.SPCantrip:
+			case shared.SPAreaOfEffect:
+			default:
+				return nil, fmt.Errorf("invalid spell priority provided: %s", sp)
+			}
+		}
+
+	case spells.STHealing:
+	default:
+		return nil, fmt.Errorf("invalid spell type provided: %s", spellType)
+	}
+	return &spells.Spell{}, nil
+}
+
+func (c *Character) getKnownHealingSpells() ([]*spells.Spell, error) {
+	if len(c.KnownSpells) <= 0 {
+		return nil, fmt.Errorf("character has no known spells")
+	}
+	var healingSpells []*spells.Spell
+	for _, s := range c.KnownSpells {
+		if s.SpellType == "healing" {
+			healingSpells = append(healingSpells, &s)
+		}
+	}
+	if len(healingSpells) <= 0 {
+		return nil, fmt.Errorf("character has no known healing spells")
+	}
+	return healingSpells, nil
+}
+
+func (c *Character) getKnownDamageSpells() ([]*spells.Spell, error) {
+	if len(c.KnownSpells) <= 0 {
+		return nil, fmt.Errorf("character has no known spells")
+	}
+	var damageSpells []*spells.Spell
+	for _, s := range c.KnownSpells {
+		if s.SpellType == "damage" {
+			damageSpells = append(damageSpells, &s)
+		}
+	}
+	if len(damageSpells) <= 0 {
+		return nil, fmt.Errorf("character has no known damage spells")
+	}
+	return damageSpells, nil
+}
+
 func (c *Character) ModifyHP(amount int) {
 	c.HP.HP += amount
 	if c.HP.HP > c.HP.MaxHP {
@@ -162,7 +228,7 @@ func (c *Character) ModifyHP(amount int) {
 func (c *Character) logWeaponAttackEvent(target *monster.Monster, weapon *weapon.Weapon, attackRoll, attackModifier int, isHit bool) {
 	if c.EventListener != nil {
 		event := events.CombatEvent{
-			EventType: events.AttackEvent,
+			EventType: events.ETAttackEvent,
 			Actor:     c.Name,
 			Target:    target.Name,
 			Attack:    weapon.Name,
@@ -177,7 +243,7 @@ func (c *Character) logWeaponAttackEvent(target *monster.Monster, weapon *weapon
 func (c *Character) logSpellAttackEvent(target *monster.Monster, spell *spells.Spell, attackRoll, attackModifier int, isHit bool) {
 	if c.EventListener != nil {
 		event := events.CombatEvent{
-			EventType: events.AttackEvent,
+			EventType: events.ETAttackEvent,
 			Actor:     c.Name,
 			Target:    target.Name,
 			Attack:    spell.Name,
@@ -192,7 +258,7 @@ func (c *Character) logSpellAttackEvent(target *monster.Monster, spell *spells.S
 func (c *Character) logSpellDCEvent(target *monster.Monster, spell *spells.Spell, dc int, save int, isHit bool) {
 	if c.EventListener != nil {
 		event := events.CombatEvent{
-			EventType:   events.SpellDC,
+			EventType:   events.ETSpellDC,
 			Actor:       c.Name,
 			Target:      target.Name,
 			Attack:      spell.Name,
@@ -207,7 +273,7 @@ func (c *Character) logSpellDCEvent(target *monster.Monster, spell *spells.Spell
 func (c *Character) logDamageEvent(target *monster.Monster, damageType string, damage int, rolls []int) {
 	if c.EventListener != nil {
 		event := events.CombatEvent{
-			EventType:  events.DamageEvent,
+			EventType:  events.ETDamageEvent,
 			Actor:      c.Name,
 			Target:     target.Name,
 			Value:      damage,

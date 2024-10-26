@@ -128,7 +128,7 @@ func main() {
 	hp.HP = 72
 	hp.MaxHP = 84
 
-	c, err := character.New(ctx, "Frank", 2, 5, as, hp)
+	c, err := character.New(ctx, "Frank", 2, 5, as, hp, shared.APNoPreference, shared.SPNoPreference)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -167,7 +167,16 @@ func main() {
 	//fmt.Println(c)
 
 	options := simulation.Options{
-		Prioritization: simulation.NoPriority,
+		CanMonstersCrit:         true,
+		CanPlayersCrit:          true,
+		HasIncreasedCrits:       false,
+		AllowPlayerHeals:        true,
+		AllowMonsterHeals:       true,
+		TargetPriority:          shared.NoPriority,
+		ActionPreference:        shared.APNoPreference,
+		AOEHitsAllEnemies:       true,
+		PlayerHealThresholdPct:  50,
+		MonsterHealThresholdPct: 50,
 	}
 	s := simulation.New(options)
 	s.Encounter.AddPartyMember(&c)

@@ -4,23 +4,25 @@ import (
 	"context"
 	"dnd5e-encounter-simulator-backend/pkg/armor"
 	"dnd5e-encounter-simulator-backend/pkg/class"
-	"dnd5e-encounter-simulator-backend/pkg/events"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
+	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"fmt"
 )
 
 type Character struct {
-	Name          string
-	Class         class.Class
-	Level         int
-	AbilityScores shared.AbilityScores
-	HP            shared.PlayerHP
-	Eq            Equipment
-	KnownSpells   []spells.Spell
-	SpellSlots    map[int]map[int]int
-	EventListener func(events.CombatEvent)
+	Name             string
+	Class            class.Class
+	Level            int
+	AbilityScores    shared.AbilityScores
+	HP               shared.PlayerHP
+	Eq               Equipment
+	KnownSpells      []spells.Spell
+	SpellSlots       map[int]map[int]int
+	ActionPreference shared.ActionPreference
+	SpellPriority    shared.SpellPriority
+	EventListener    func(events.CombatEvent)
 }
 
 type Equipment struct {
@@ -30,7 +32,7 @@ type Equipment struct {
 	Ranged    weapon.Weapon `json:"ranged"`
 }
 
-func New(ctx context.Context, name string, classID int, level int, abilityScores shared.AbilityScores, hp shared.PlayerHP) (Character, error) {
+func New(ctx context.Context, name string, classID int, level int, abilityScores shared.AbilityScores, hp shared.PlayerHP, ap shared.ActionPreference, sp shared.SpellPriority) (Character, error) {
 	if classID < 0 || classID > 13 {
 		return Character{}, fmt.Errorf("invalid class id during character initialization: %d", classID)
 	}
@@ -49,14 +51,16 @@ func New(ctx context.Context, name string, classID int, level int, abilityScores
 	}
 
 	return Character{
-		Name:          name,
-		Class:         c,
-		Level:         level,
-		AbilityScores: abilityScores,
-		HP:            hp,
-		Eq:            Equipment{},
-		KnownSpells:   []spells.Spell{},
-		SpellSlots:    c.Spellcasting.MaxSpellSlots,
+		Name:             name,
+		Class:            c,
+		Level:            level,
+		AbilityScores:    abilityScores,
+		HP:               hp,
+		Eq:               Equipment{},
+		KnownSpells:      []spells.Spell{},
+		SpellSlots:       c.Spellcasting.MaxSpellSlots,
+		ActionPreference: ap,
+		SpellPriority:    sp,
 	}, nil
 }
 
@@ -185,7 +189,7 @@ func (c *Character) IsUnconscious() bool {
 	if c.HP.HP <= 0 {
 		if c.EventListener != nil {
 			event := events.CombatEvent{
-				EventType: events.UnconsciousEvent,
+				EventType: events.ETUnconsciousEvent,
 				Actor:     c.Name,
 			}
 			c.EventListener(event)
@@ -218,6 +222,20 @@ func (c *Character) GetSpellBonus() (int, error) {
 	}
 
 	return mod + pb, nil
+}
+
+func (c *Character) PrefersSpells() bool {
+	if c.Class.ID == 11 || c.Class.ID == 12 || c.Class.ID == 13 {
+		return true
+	}
+	return false
+}
+
+func (c *Character) PrefersRanged() bool {
+	if c.Class.ID == 9 {
+		return true
+	}
+	return false
 }
 
 func (c *Character) GetName() string {

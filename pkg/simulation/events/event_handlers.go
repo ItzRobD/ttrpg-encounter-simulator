@@ -1,14 +1,13 @@
-package simulation
+package events
 
 import (
-	"dnd5e-encounter-simulator-backend/pkg/events"
 	"fmt"
 )
 
 type AttackHandler struct{}
 
-func (a *AttackHandler) HandleEvent(event events.CombatEvent) {
-	if event.EventType == events.AttackEvent {
+func (a *AttackHandler) HandleEvent(event CombatEvent) {
+	if event.EventType == ETAttackEvent {
 		fmt.Printf("[Round %d] <Attack> %s attacks %s with %s. %d to hit. Hit: %t\n",
 			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.Hit)
 	}
@@ -16,8 +15,8 @@ func (a *AttackHandler) HandleEvent(event events.CombatEvent) {
 
 type SpellAttack struct{}
 
-func (a *SpellAttack) HandleEvent(event events.CombatEvent) {
-	if event.EventType == events.SpellAttack {
+func (a *SpellAttack) HandleEvent(event CombatEvent) {
+	if event.EventType == ETSpellAttack {
 		fmt.Printf("[Round %d] <Spell Attack> %s attacks %s with %s. %d to hit. Hit: %t\n",
 			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.Hit)
 
@@ -26,8 +25,8 @@ func (a *SpellAttack) HandleEvent(event events.CombatEvent) {
 
 type SpellDC struct{}
 
-func (a *SpellDC) HandleEvent(event events.CombatEvent) {
-	if event.EventType == events.SpellAttack {
+func (a *SpellDC) HandleEvent(event CombatEvent) {
+	if event.EventType == ETSpellAttack {
 		fmt.Printf("[Round %d] <Spell DC Attack> %s attacks %s with %s. DC is: %d. Saving throw: %d. Hit: %t\n",
 			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.SavingThrow, event.Hit)
 
@@ -36,8 +35,8 @@ func (a *SpellDC) HandleEvent(event events.CombatEvent) {
 
 type DamageHandler struct{}
 
-func (d *DamageHandler) HandleEvent(event events.CombatEvent) {
-	if event.EventType == events.DamageEvent {
+func (d *DamageHandler) HandleEvent(event CombatEvent) {
+	if event.EventType == ETDamageEvent {
 		fmt.Printf("[Round %d] <Damage> %s Does %d damage to %s.\n",
 			event.Round, event.Actor, event.Value, event.Target)
 	}
@@ -45,8 +44,8 @@ func (d *DamageHandler) HandleEvent(event events.CombatEvent) {
 
 type HealHandler struct{}
 
-func (h *HealHandler) HandleEvent(event events.CombatEvent) {
-	if event.EventType == events.HealEvent {
+func (h *HealHandler) HandleEvent(event CombatEvent) {
+	if event.EventType == ETHealEvent {
 		fmt.Printf("[Round %d] <Heal> %s heals %s for %d health.\n",
 			event.Round, event.Actor, event.Target, event.Value)
 	}
@@ -54,32 +53,32 @@ func (h *HealHandler) HandleEvent(event events.CombatEvent) {
 
 type DeathHandler struct{}
 
-func (d *DeathHandler) HandleEvent(event events.CombatEvent) {
-	if event.EventType == events.DeathEvent {
+func (d *DeathHandler) HandleEvent(event CombatEvent) {
+	if event.EventType == ETDeathEvent {
 		fmt.Printf("[Round %d] <Death> %s has died.\n", event.Round, event.Target)
 	}
 }
 
 type UnconsciousHandler struct{}
 
-func (u *UnconsciousHandler) HandleEvent(event events.CombatEvent) {
-	if event.EventType == events.UnconsciousEvent {
+func (u *UnconsciousHandler) HandleEvent(event CombatEvent) {
+	if event.EventType == ETUnconsciousEvent {
 		fmt.Printf("[Round %d] <Unconscious> %s is unconscious.\n", event.Round, event.Actor)
 	}
 }
 
 type RollHandler struct{}
 
-func (r *RollHandler) HandleEvent(event events.CombatEvent) {
-	if event.EventType == events.RollEvent {
+func (r *RollHandler) HandleEvent(event CombatEvent) {
+	if event.EventType == ETRollEvent {
 		fmt.Printf("[Round %d] <Roll> %s rolls %d, rolls: %v.\n", event.Round, event.Actor, event.Value, event.Rolls)
 	}
 }
 
 type HPRollHandler struct{}
 
-func (hp *HPRollHandler) HandleEvent(event events.CombatEvent) {
-	if event.EventType == events.HPRollEvent {
+func (hp *HPRollHandler) HandleEvent(event CombatEvent) {
+	if event.EventType == ETHPRollEvent {
 		fmt.Printf("[Round %d] HP <Roll> %s rolls %d, rolls: %v, amount to add: %d\n", event.Round, event.Actor, event.Value, event.Rolls, event.Added)
 	}
 }

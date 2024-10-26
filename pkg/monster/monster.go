@@ -1,9 +1,9 @@
 package monster
 
 import (
-	"dnd5e-encounter-simulator-backend/pkg/events"
 	"dnd5e-encounter-simulator-backend/pkg/rolling"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
+	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 )
@@ -135,7 +135,7 @@ func (m *Monster) IsUnconscious() bool {
 	if m.HP.HP <= 0 {
 		if m.EventListener != nil {
 			event := events.CombatEvent{
-				EventType: events.UnconsciousEvent,
+				EventType: events.ETUnconsciousEvent,
 				Actor:     m.Name,
 			}
 			m.EventListener(event)
