@@ -3,7 +3,6 @@ package simulation
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
-	"dnd5e-encounter-simulator-backend/pkg/rolling"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"fmt"
@@ -68,7 +67,7 @@ func (e *Encounter) SetupCombatTracker() error {
 	}
 
 	for _, m := range e.Monsters {
-		initiative, err := rolling.InitiativeRoll(m.AbilityScores.Dexterity)
+		initiative, err := shared.InitiativeRoll(m.AbilityScores.Dexterity)
 		if err != nil {
 			return err
 		}
@@ -81,7 +80,7 @@ func (e *Encounter) SetupCombatTracker() error {
 		}
 	}
 	for _, p := range e.Party {
-		initiative, err := rolling.InitiativeRoll(p.AbilityScores.Dexterity)
+		initiative, err := shared.InitiativeRoll(p.AbilityScores.Dexterity)
 		if err != nil {
 			return err
 		}
@@ -113,7 +112,7 @@ func (e *Encounter) SimulateRound() {
 			if creature.IsUnconscious() {
 				continue // Skip if the monster is unconscious
 			}
-			e.handleMonsterTurn(creature) // TODO: Implement monster logic
+			//e.handleMonsterTurn(creature) // TODO: Implement monster logic
 		default:
 			fmt.Printf("Unknown creature type %T\n", creature)
 		}
@@ -129,23 +128,15 @@ func (e *Encounter) handleCharacterTurn(character *character.Character) {
 
 	switch actionType {
 	case shared.ATHeal:
-		// Implement healing logic
-		// For example:
-		// target := e.getLowestHPCharacter()
-		// choose a healing spell
-		// cast spell
+		e.performCharacterHealAction(character)
 		return
-
 	case shared.ATRanged:
 		e.performCharacterRangedAttack(character)
-
 	case shared.ATMelee:
 		e.performCharacterMeleeAttack(character)
-
 	case shared.ATSpell:
 		// Implement spell logic
 		return
-
 	case shared.ATNoAction:
 		fallthrough
 	default:
@@ -155,7 +146,7 @@ func (e *Encounter) handleCharacterTurn(character *character.Character) {
 }
 
 func (e *Encounter) performCharacterRangedAttack(character *character.Character) {
-	target, _ := e.ChooseTarget(character)
+	target, _ := e.chooseDamageTarget(character)
 	if monsterTarget, ok := target.(*monster.Monster); ok {
 		_, err := character.MakeWeaponAttack(monsterTarget, "ranged")
 		if err != nil {
@@ -167,14 +158,29 @@ func (e *Encounter) performCharacterRangedAttack(character *character.Character)
 }
 
 func (e *Encounter) performCharacterMeleeAttack(character *character.Character) {
-	target, _ := e.ChooseTarget(character)
+	target, _ := e.chooseDamageTarget(character)
 	if monsterTarget, ok := target.(*monster.Monster); ok {
+		// TODO: Add secondary slot
 		_, err := character.MakeWeaponAttack(monsterTarget, "primary")
 		if err != nil {
 			fmt.Println(err)
 		}
 	} else {
 		fmt.Printf("Target is not a monster\n")
+	}
+}
+
+func (e *Encounter) performCharacterHealAction(c *character.Character) {
+	target, _ := e.chooseHealTarget(c)
+	healingSpell, err := e.chooseBestHealingSpell(c, target)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	_, err = c.MakeSpellHeal(target, healingSpell)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 }
 

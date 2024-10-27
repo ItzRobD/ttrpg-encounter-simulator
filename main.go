@@ -125,13 +125,14 @@ func main() {
 	as.Charisma = 18
 
 	var hp shared.PlayerHP
-	hp.HP = 72
+	hp.HP = 20
 	hp.MaxHP = 84
 
-	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APNoPreference, shared.SPNoPreference)
+	c, err := character.New(ctx, "Frank", 8, 10, as, hp, shared.APPreferMelee, shared.SPNoPreference)
 	if err != nil {
 		fmt.Println(err)
 	}
+	//fmt.Println(c)
 
 	err = c.AddSRDArmor(ctx, 7)
 	if err != nil {
@@ -159,15 +160,15 @@ func main() {
 	//	fmt.Println(err)
 	//}
 	//
-	err = c.AddKnownSpell(ctx, 116)
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = c.AddKnownSpell(ctx, 35)
-	if err != nil {
-		fmt.Println(err)
-	}
-	err = c.AddKnownSpell(ctx, 119)
+	//err = c.AddKnownSpell(ctx, 116)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//err = c.AddKnownSpell(ctx, 35)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	err = c.AddKnownSpell(ctx, 70)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -186,8 +187,8 @@ func main() {
 	//
 	//fmt.Println(c)
 
-	fmt.Println("Spell slots:")
-	fmt.Println(c.GetSpellSlots())
+	//fmt.Println("Spell slots:")
+	//fmt.Println(c.GetSpellSlots())
 	//fmt.Println("Max spell slots:")
 	//fmt.Println(c.Class.Spellcasting.MaxSpellSlots)
 

@@ -8,7 +8,7 @@ import (
 	"math/rand/v2"
 )
 
-func (e *Encounter) ChooseTarget(actor shared.Entity) (shared.Entity, error) {
+func (e *Encounter) chooseDamageTarget(actor shared.Entity) (shared.Entity, error) {
 	switch actor.(type) {
 	case *character.Character:
 		monsters := e.filterMonsters()
@@ -30,11 +30,36 @@ func (e *Encounter) ChooseTarget(actor shared.Entity) (shared.Entity, error) {
 	panic("unhandled actor type")
 }
 
+func (e *Encounter) chooseHealTarget(actor shared.Entity) (shared.Entity, error) {
+	switch actor.(type) {
+	case *character.Character:
+		characters := e.filterCharacters()
+		if len(characters) == 0 {
+			return nil, fmt.Errorf("no targets available")
+		}
+
+		var lowestHP shared.Entity
+		for _, c := range characters {
+			if lowestHP == nil || c.GetCurrentHP() < lowestHP.GetCurrentHP() {
+				lowestHP = c
+			}
+			if c.GetCurrentHP() == lowestHP.GetCurrentHP() {
+				if len(c.Class.Spellcasting.ClassHealingSpells) > 0 {
+					lowestHP = c
+				}
+			}
+		}
+		return lowestHP, nil
+	}
+	// TODO: Add monsters
+	return nil, nil
+}
+
 func (e *Encounter) selectMonsterByPriority(monsters []*monster.Monster) (*monster.Monster, error) {
 	var target *monster.Monster
 	switch e.Options.TargetPriority {
 	case shared.NoPriority:
-		fmt.Println("No TargetPriority")
+		//fmt.Println("No TargetPriority")
 		target = monsters[rand.IntN(len(monsters))]
 	case shared.PrioritizeHighestCR:
 		for _, m := range monsters {

@@ -221,4 +221,9 @@ func (c *Character) GetMaxHP() int {
 	return c.HP.MaxHP
 }
 
+func (c *Character) GetCurrentHPPct() int {
+	hpPct := int(float64(c.HP.HP) / float64(c.HP.MaxHP) * 100)
+	return hpPct
+}
+
 var _ shared.Entity = &Character{}

@@ -3,9 +3,10 @@ package shared
 type Entity interface {
 	ModifyHP(amount int)
 	IsUnconscious() bool
-	GetName() string
 	GetCurrentHP() int
+	GetCurrentHPPct() int
 	GetMaxHP() int
+	GetName() string
 }
 
 type Combatant struct {

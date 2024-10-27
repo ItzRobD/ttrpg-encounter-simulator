@@ -33,14 +33,14 @@ const (
 	APPreferSpells
 )
 
-type ActionType int
+type ActionType string
 
 const (
-	ATNoAction ActionType = iota
-	ATMelee
-	ATRanged
-	ATSpell
-	ATHeal
+	ATNoAction ActionType = "no action"
+	ATMelee               = "melee attack"
+	ATRanged              = "ranged attack"
+	ATSpell               = "spell attack"
+	ATHeal                = "healing"
 )
 
 func GetActionFromPreference(pref ActionPreference) ActionType {

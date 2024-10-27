@@ -1,7 +1,6 @@
 package monster
 
 import (
-	"dnd5e-encounter-simulator-backend/pkg/rolling"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
@@ -108,7 +107,7 @@ type MonsterQueryParams struct {
 func (m *Monster) DetermineMonsterHP(useAverage bool) (int, int, error) {
 	if !useAverage {
 		toAdd := m.HP.AmountToAdd
-		s, rolls, err := rolling.RollDice(m.HP.NumberOfDice, m.HP.Die)
+		s, rolls, err := shared.RollDice(m.HP.NumberOfDice, m.HP.Die)
 		if err != nil {
 			return 0, toAdd, fmt.Errorf("error rolling hp dice: %w", err)
 		}
@@ -208,7 +207,7 @@ func (m *Monster) SavingThrow(ability string) (int, error) {
 		return 0, fmt.Errorf("invalid ability: %s", ability)
 	}
 
-	roll, rolls, err := rolling.RollDice(1, 20)
+	roll, rolls, err := shared.RollDice(1, 20)
 	save := roll + mod
 	m.logRollEvent(roll, rolls, mod)
 
@@ -221,6 +220,11 @@ func (m *Monster) GetName() string {
 
 func (m *Monster) GetCurrentHP() int {
 	return m.HP.HP
+}
+
+func (m *Monster) GetCurrentHPPct() int {
+	hpPct := int(float64(m.HP.HP) / float64(m.HP.MaxHP) * 100)
+	return hpPct
 }
 
 func (m *Monster) GetMaxHP() int {

@@ -39,6 +39,7 @@ func New(options Options) Simulation {
 	dispatcher.RegisterListener(&events.HPRollHandler{})
 	dispatcher.RegisterListener(&events.ActionChoiceHandler{})
 	dispatcher.RegisterListener(&events.SpellChoiceHandler{})
+	dispatcher.RegisterListener(&events.HPModifiedHandler{})
 
 	var s Simulation
 	s.Encounter.Options = options
@@ -78,7 +79,7 @@ func (s *Simulation) Simulate() error {
 	//	}
 	//}
 
-	for s.Encounter.CurrentRound <= 10 {
+	for s.Encounter.CurrentRound <= 4 {
 		s.Encounter.SimulateRound()
 		s.Encounter.CurrentRound++
 	}

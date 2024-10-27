@@ -19,6 +19,7 @@ const (
 	ETHPRollEvent       EventType = "hproll"
 	ETActionChoiceEvent EventType = "actionchoice"
 	ETSpellChoiceEvent  EventType = "spellchoice"
+	ETHPModifiedEvent   EventType = "hpmodified"
 )
 
 type CombatEvent struct {
@@ -34,6 +35,8 @@ type CombatEvent struct {
 	IsFatal      bool
 	Added        int
 	SavingThrow  int
+	CurrentHP    int
+	PreviousHP   int
 	ActionChoice shared.ActionType
 	SpellChoice  *spells.Spell
 }

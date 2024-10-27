@@ -4,6 +4,7 @@ import (
 	"context"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
+	"math"
 	"math/rand/v2"
 )
 
@@ -192,4 +193,33 @@ func (c *Character) getHighestAvailableSpellSlot() int {
 		}
 	}
 	return highestSlot
+}
+
+func (c *Character) GetMostEfficientHealingSpell(healTarget int) (*spells.Spell, error) {
+	if healTarget <= 0 {
+		return nil, fmt.Errorf("target does not require healing")
+	}
+	var mostEfficientSpell *spells.Spell
+	var smallestDiff float64 = -1
+
+	spellPool, err := c.getKnownHealingSpells()
+	if err != nil {
+		return nil, fmt.Errorf("error getting known healing spells: %w", err)
+	}
+
+	for _, s := range spellPool {
+		avgAmount := s.GetAverageAmount()
+		diff := math.Abs(float64(avgAmount) - float64(healTarget))
+
+		if mostEfficientSpell == nil || diff < smallestDiff {
+			mostEfficientSpell = s
+			smallestDiff = diff
+		}
+	}
+
+	if mostEfficientSpell == nil {
+		return nil, fmt.Errorf("no healing spells available")
+	}
+
+	return mostEfficientSpell, nil
 }
