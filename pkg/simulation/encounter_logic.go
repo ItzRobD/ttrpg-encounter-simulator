@@ -13,6 +13,7 @@ func (e *Encounter) ChooseCharacterActionType(actor *character.Character) (share
 			return shared.ATHeal, nil
 		}
 	}
+
 	return e.chooseCharacterDamageAction(actor)
 }
 

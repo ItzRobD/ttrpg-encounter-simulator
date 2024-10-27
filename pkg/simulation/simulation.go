@@ -29,14 +29,16 @@ type Simulation struct {
 func New(options Options) Simulation {
 	dispatcher := events.NewEventDispatcher()
 	dispatcher.RegisterListener(&events.AttackHandler{})
-	dispatcher.RegisterListener(&events.SpellAttack{})
-	dispatcher.RegisterListener(&events.SpellDC{})
+	dispatcher.RegisterListener(&events.SpellAttackHandler{})
+	dispatcher.RegisterListener(&events.SpellDCHandler{})
 	dispatcher.RegisterListener(&events.HealHandler{})
 	dispatcher.RegisterListener(&events.DeathHandler{})
 	dispatcher.RegisterListener(&events.DamageHandler{})
 	dispatcher.RegisterListener(&events.UnconsciousHandler{})
 	dispatcher.RegisterListener(&events.RollHandler{})
 	dispatcher.RegisterListener(&events.HPRollHandler{})
+	dispatcher.RegisterListener(&events.ActionChoiceHandler{})
+	dispatcher.RegisterListener(&events.SpellChoiceHandler{})
 
 	var s Simulation
 	s.Encounter.Options = options

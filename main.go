@@ -128,7 +128,7 @@ func main() {
 	hp.HP = 72
 	hp.MaxHP = 84
 
-	c, err := character.New(ctx, "Frank", 2, 5, as, hp, shared.APNoPreference, shared.SPNoPreference)
+	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APNoPreference, shared.SPNoPreference)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -159,12 +159,37 @@ func main() {
 	//	fmt.Println(err)
 	//}
 	//
-	//err = c.AddKnownSpell(ctx, 30)
-	//if err != nil {
-	//	fmt.Println(err)
+	err = c.AddKnownSpell(ctx, 116)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = c.AddKnownSpell(ctx, 35)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = c.AddKnownSpell(ctx, 119)
+	if err != nil {
+		fmt.Println(err)
+	}
+	//var f *spells.CastFormula
+	//f, err2 := spells.GetSpellFormulaByLevel(ctx, 119, 3)
+	//if err2 != nil {
+	//	fmt.Println(err2)
 	//}
+	//c.KnownSpells[2].CastFormula = *f
+	//fmt.Println(c.KnownSpells[2].CastFormula)
+
+	//for _, s := range c.KnownSpells {
+	//	fmt.Println(s.CastFormula)
+	//}
+
 	//
 	//fmt.Println(c)
+
+	fmt.Println("Spell slots:")
+	fmt.Println(c.GetSpellSlots())
+	//fmt.Println("Max spell slots:")
+	//fmt.Println(c.Class.Spellcasting.MaxSpellSlots)
 
 	options := simulation.Options{
 		CanMonstersCrit:         true,

@@ -17,6 +17,11 @@ func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell) (bool, 
 		return false, fmt.Errorf("spell is not a damage spell")
 	}
 
+	// This is done first. This may cause an issue in the future
+	if s.Level != 0 {
+		c.ExpendSpellSlot(s.Level)
+	}
+
 	if s.HasDC {
 		sBonus, err := c.GetSpellBonus()
 		if err != nil {
@@ -57,6 +62,7 @@ func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell) (bool, 
 			c.logSpellDCEvent(t, s, charDC, saveVal, true)
 
 			c.logDamageEvent(t, s.DamageType, damage, rolls)
+
 			return true, nil
 		}
 		return false, fmt.Errorf("spell has DC")
@@ -149,72 +155,6 @@ func (c *Character) getWeaponFromSlot(slot string) (*weapon.Weapon, error) {
 	}
 }
 
-func (c *Character) ChooseSpell(spellType spells.SpellType, sp shared.SpellPriority) (*spells.Spell, error) {
-	switch spellType {
-	case spells.STDamage:
-		knownSpells, err := c.getKnownDamageSpells()
-		if err != nil {
-			return nil, err
-		}
-		var selectedSpell spells.Spell
-		if c.SpellPriority == shared.SPNoPreference {
-			switch sp {
-			case shared.SPNoPreference:
-			case shared.SPHighestLevel:
-				for _, s := range knownSpells {
-					if s.Level > selectedSpell.Level {
-						selectedSpell = *s
-						// TODO: Too tired
-						// TODO: Finish spell selection logic -> don't forget to account for available spell slots
-					}
-				}
-			case shared.SPLowestLevel:
-			case shared.SPCantrip:
-			case shared.SPAreaOfEffect:
-			default:
-				return nil, fmt.Errorf("invalid spell priority provided: %s", sp)
-			}
-		}
-
-	case spells.STHealing:
-	default:
-		return nil, fmt.Errorf("invalid spell type provided: %s", spellType)
-	}
-	return &spells.Spell{}, nil
-}
-
-func (c *Character) getKnownHealingSpells() ([]*spells.Spell, error) {
-	if len(c.KnownSpells) <= 0 {
-		return nil, fmt.Errorf("character has no known spells")
-	}
-	var healingSpells []*spells.Spell
-	for _, s := range c.KnownSpells {
-		if s.SpellType == "healing" {
-			healingSpells = append(healingSpells, &s)
-		}
-	}
-	if len(healingSpells) <= 0 {
-		return nil, fmt.Errorf("character has no known healing spells")
-	}
-	return healingSpells, nil
-}
-
-func (c *Character) getKnownDamageSpells() ([]*spells.Spell, error) {
-	if len(c.KnownSpells) <= 0 {
-		return nil, fmt.Errorf("character has no known spells")
-	}
-	var damageSpells []*spells.Spell
-	for _, s := range c.KnownSpells {
-		if s.SpellType == "damage" {
-			damageSpells = append(damageSpells, &s)
-		}
-	}
-	if len(damageSpells) <= 0 {
-		return nil, fmt.Errorf("character has no known damage spells")
-	}
-	return damageSpells, nil
-}
-
 func (c *Character) ModifyHP(amount int) {
 	c.HP.HP += amount
 	if c.HP.HP > c.HP.MaxHP {
@@ -223,6 +163,14 @@ func (c *Character) ModifyHP(amount int) {
 	if c.HP.HP < 0 {
 		c.HP.HP = 0
 	}
+}
+
+func (c *Character) ExpendSpellSlot(level int) error {
+	if level == 0 || level > 9 {
+		return fmt.Errorf("invalid spell slot level provided: %d", level)
+	}
+	c.SpellSlots[level] -= 1
+	return nil
 }
 
 func (c *Character) logWeaponAttackEvent(target *monster.Monster, weapon *weapon.Weapon, attackRoll, attackModifier int, isHit bool) {
@@ -235,6 +183,28 @@ func (c *Character) logWeaponAttackEvent(target *monster.Monster, weapon *weapon
 			Value:     attackRoll + attackModifier,
 			Rolls:     []int{attackRoll},
 			Hit:       isHit,
+		}
+		c.EventListener(event)
+	}
+}
+
+func (c *Character) logActionChoiceEvent(choice shared.ActionType) {
+	if c.EventListener != nil {
+		event := events.CombatEvent{
+			EventType:    events.ETActionChoiceEvent,
+			Actor:        c.Name,
+			ActionChoice: choice,
+		}
+		c.EventListener(event)
+	}
+}
+
+func (c *Character) logSpellChoiceEvent(spell *spells.Spell) {
+	if c.EventListener != nil {
+		event := events.CombatEvent{
+			EventType:   events.ETSpellChoiceEvent,
+			Actor:       c.Name,
+			SpellChoice: spell,
 		}
 		c.EventListener(event)
 	}

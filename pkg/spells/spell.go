@@ -1,5 +1,9 @@
 package spells
 
+import (
+	"math"
+)
+
 const (
 	SpellDCStrength     = "str"
 	SpellDCDexterity    = "dex"
@@ -51,4 +55,13 @@ type SpellQueryParams struct {
 	Name  string
 	ID    int
 	Level int
+}
+
+func (s Spell) GetAverageAmount() int {
+	if s.Die <= 0 {
+		return 0
+	}
+	dieAvg := float64(s.Die+1) / 2.0
+	spellAvg := dieAvg * float64(s.NumberOfDice)
+	return int(math.Floor(spellAvg))
 }

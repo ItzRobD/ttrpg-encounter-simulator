@@ -86,6 +86,30 @@ func getMinimumSpellLevelByID(ctx context.Context, id int) (int, error) {
 	return level, nil
 }
 
+func getMaxFormulaLevelBySpellID(ctx context.Context, spellID, formulaLevel int) (int, error) {
+	var maxFormulaLevel int
+	stmt := SELECT(
+		MAX(SpellFormulas.FormulaLevel),
+	).FROM(
+		SpellFormulas,
+	).WHERE(
+		SpellFormulas.SpellID.EQ(Int(int64(spellID))).
+			AND(SpellFormulas.FormulaLevel.LT_EQ(Int(int64(formulaLevel)))),
+	)
+
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query max formula level for spellID: %d - %w", spellID, err)
+	}
+	err = row.Scan(&maxFormulaLevel)
+	if err != nil {
+		return 0, fmt.Errorf("failed to collect max formula level for spellID: %d - %w", spellID, err)
+	}
+
+	return maxFormulaLevel, nil
+}
+
 func getSpellByID(ctx context.Context, id int, level int) (Spell, error) {
 	var spell Spell
 	stmt := SELECT(
@@ -265,6 +289,50 @@ func QuerySpellData(ctx context.Context, params SpellQueryParams) (Spell, error)
 	}
 
 	return spell, nil
+}
+
+func GetSpellFormulaByLevel(ctx context.Context, spellID int, formulaLevel int) (*CastFormula, error) {
+	minLevel, err := getMinimumSpellLevelByID(ctx, spellID)
+	if err != nil {
+		return nil, err
+	}
+	if formulaLevel < minLevel {
+		return nil, fmt.Errorf("spell formula level must be greater than or equal to minimum spell level")
+	}
+
+	maxLevel, err := getMaxFormulaLevelBySpellID(ctx, spellID, formulaLevel)
+	if err != nil {
+		return nil, err
+	}
+
+	var formula CastFormula
+
+	stmt := SELECT(
+		SpellFormulas.FormulaLevel,
+		SpellFormulas.LevelType,
+		SpellDamage.NumberOfDice,
+		SpellDamage.Die,
+		SpellDamage.AmountToAdd,
+		SpellDamage.UseSpellmod,
+		SpellDamage.DamageType,
+	).FROM(
+		Spells.INNER_JOIN(SpellFormulas, Spells.ID.EQ(SpellFormulas.SpellID)).
+			INNER_JOIN(SpellDamage, SpellFormulas.FormulaID.EQ(SpellDamage.SpellFormulaID)),
+	).WHERE(
+		Spells.ID.EQ(Int(int64(spellID))).
+			AND(SpellFormulas.FormulaLevel.EQ(Int(int64(maxLevel)))),
+	)
+
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query spell formula by level: %w", err)
+	}
+	err = row.Scan(&formula.CastLevel, &formula.LevelType, &formula.NumberOfDice, &formula.Die, &formula.AmountToAdd, &formula.UseSpellmod, &formula.DamageType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect spell formula by level: %w", err)
+	}
+	return &formula, nil
 }
 
 func GetUsableSpellIDsByClassID(ctx context.Context, classID int) ([]int, error) {

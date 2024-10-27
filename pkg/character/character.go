@@ -11,6 +11,13 @@ import (
 	"fmt"
 )
 
+// SpellSlots Definition
+// Spell slots are handled as maps
+// Max Spell slots are of type map[int]map[int]int where the outer value is the character level
+// and the inner value is a map of spell slots which are of type map[int]int
+// where the key is the spell slot level and the value is the number of slots
+type SpellSlots map[int]int
+
 type Character struct {
 	Name             string
 	Class            class.Class
@@ -19,7 +26,7 @@ type Character struct {
 	HP               shared.PlayerHP
 	Eq               Equipment
 	KnownSpells      []spells.Spell
-	SpellSlots       map[int]map[int]int
+	SpellSlots       SpellSlots
 	ActionPreference shared.ActionPreference
 	SpellPriority    shared.SpellPriority
 	EventListener    func(events.CombatEvent)
@@ -58,7 +65,7 @@ func New(ctx context.Context, name string, classID int, level int, abilityScores
 		HP:               hp,
 		Eq:               Equipment{},
 		KnownSpells:      []spells.Spell{},
-		SpellSlots:       c.Spellcasting.MaxSpellSlots,
+		SpellSlots:       c.Spellcasting.MaxSpellSlots[level],
 		ActionPreference: ap,
 		SpellPriority:    sp,
 	}, nil
@@ -145,46 +152,6 @@ func (c *Character) addWeapon(w weapon.Weapon, slot string) error {
 	}
 }
 
-func spellExists(spells []spells.Spell, spellID int) bool {
-	for _, s := range spells {
-		if s.ID == spellID {
-			return true
-		}
-	}
-	return false
-}
-
-func isValidSpell(c *Character, spellID int) bool {
-	if spellID < 0 || spellID > 319 {
-		return false
-	}
-
-	if spellExists(c.Class.Spellcasting.ClassHealingSpells, spellID) {
-		return true
-	}
-	if spellExists(c.Class.Spellcasting.ClassDamageSpells, spellID) {
-		return true
-	}
-
-	return false
-}
-
-func (c *Character) AddKnownSpell(ctx context.Context, spellID int) error {
-	if !isValidSpell(c, spellID) {
-		return fmt.Errorf("spell id invalid or not available to class: %d", spellID)
-	}
-	var params spells.SpellQueryParams
-	params.ID = spellID
-	// TODO: This might cause an issue: if the spell is a cantrip or a leveled spell lower than the character level
-	params.Level = c.Level
-	s, err := spells.QuerySpellData(ctx, params)
-	if err != nil {
-		return fmt.Errorf("error querying spell data: %w", err)
-	}
-	c.KnownSpells = append(c.KnownSpells, s)
-	return nil
-}
-
 func (c *Character) IsUnconscious() bool {
 	if c.HP.HP <= 0 {
 		if c.EventListener != nil {
@@ -236,6 +203,10 @@ func (c *Character) PrefersRanged() bool {
 		return true
 	}
 	return false
+}
+
+func (c *Character) GetSpellSlots() SpellSlots {
+	return c.SpellSlots
 }
 
 func (c *Character) GetName() string {
