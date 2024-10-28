@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
@@ -10,7 +11,7 @@ import (
 
 func (e *Encounter) ChooseCharacterActionType(actor *character.Character) (shared.ActionType, error) {
 	// Choose between a damage action or a healing action
-	if e.Options.AllowPlayerHeals {
+	if e.Options.AllowPlayerHeals && actor.HasHealingSpells() {
 		if e.doesAPlayerNeedHealing() {
 			events.LogCharacterActionChoiceEvent(actor, shared.ATHeal, actor.EventListener)
 			return shared.ATHeal, nil
@@ -28,7 +29,6 @@ func (e *Encounter) chooseCharacterDamageAction(actor *character.Character) (sha
 			return chooseFromHasSpellsPreference(actor)
 		}
 	case shared.APPreferMelee:
-
 		events.LogCharacterActionChoiceEvent(actor, shared.ATMelee, actor.EventListener)
 		return shared.ATMelee, nil
 	case shared.APPreferRanged:
@@ -104,6 +104,22 @@ func (e *Encounter) chooseBestHealingSpell(actor shared.Entity, target shared.En
 	}
 
 	// TODO: Add monsters
+	return nil, fmt.Errorf("unknown actor type %T", actor)
+}
+
+func (e *Encounter) chooseDamageSpell(actor shared.Entity, priority shared.SpellPriority) (*spells.Spell, error) {
+	switch a := actor.(type) {
+	case *character.Character:
+		damageSpell, err := a.ChooseDamageSpell(priority)
+		if err != nil {
+			return nil, err
+		}
+		events.LogSpellChoiceEvent(a, damageSpell, a.EventListener)
+		return damageSpell, nil
+	case *monster.Monster:
+		// TODO: Add monster spell choice, if spellcaster/if innate
+		break
+	}
 	return nil, fmt.Errorf("unknown actor type %T", actor)
 }
 

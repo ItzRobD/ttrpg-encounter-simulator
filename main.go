@@ -128,7 +128,7 @@ func main() {
 	hp.HP = 20
 	hp.MaxHP = 84
 
-	c, err := character.New(ctx, "Frank", 8, 10, as, hp, shared.APPreferMelee, shared.SPNoPreference)
+	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferSpells, shared.SPNoPreference)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -159,16 +159,20 @@ func main() {
 	//if err != nil {
 	//	fmt.Println(err)
 	//}
-	//
-	//err = c.AddKnownSpell(ctx, 116)
+
+	err = c.AddKnownSpell(ctx, 116) // fire bolt
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = c.AddKnownSpell(ctx, 35) // burning hands
+	if err != nil {
+		fmt.Println(err)
+	}
+	//err = c.AddKnownSpell(ctx, 70) // cure wounds
 	//if err != nil {
 	//	fmt.Println(err)
 	//}
-	//err = c.AddKnownSpell(ctx, 35)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	err = c.AddKnownSpell(ctx, 70)
+	err = c.AddKnownSpell(ctx, 119) // fireball
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -200,7 +204,7 @@ func main() {
 		AllowMonsterHeals:       true,
 		TargetPriority:          shared.NoPriority,
 		ActionPreference:        shared.APNoPreference,
-		AOEHitsAllEnemies:       true,
+		AOEHitsAllEnemies:       false,
 		PlayerHealThresholdPct:  50,
 		MonsterHealThresholdPct: 50,
 	}
@@ -209,7 +213,7 @@ func main() {
 	s.Encounter.AddMonster(&m)
 	s.Encounter.AddMonster(&m2)
 
-	err = s.Simulate()
+	err = s.Simulate(10)
 	if err != nil {
 		fmt.Println(err)
 	}

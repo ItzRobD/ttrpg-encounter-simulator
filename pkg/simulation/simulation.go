@@ -61,7 +61,7 @@ func (s *Simulation) PrintSimulationLog() {
 	}
 }
 
-func (s *Simulation) Simulate() error {
+func (s *Simulation) Simulate(maxximumRounds int) error {
 	s.Encounter.CurrentRound = 1
 	err := s.Encounter.SetupCombatTracker()
 	if err != nil {
@@ -79,7 +79,7 @@ func (s *Simulation) Simulate() error {
 	//	}
 	//}
 
-	for s.Encounter.CurrentRound <= 4 {
+	for s.Encounter.CurrentRound <= maxximumRounds {
 		s.Encounter.SimulateRound()
 		s.Encounter.CurrentRound++
 	}

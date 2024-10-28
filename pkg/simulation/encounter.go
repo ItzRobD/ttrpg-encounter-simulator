@@ -135,7 +135,7 @@ func (e *Encounter) handleCharacterTurn(character *character.Character) {
 	case shared.ATMelee:
 		e.performCharacterMeleeAttack(character)
 	case shared.ATSpell:
-		// Implement spell logic
+		e.performCharacterSpellAttack(character)
 		return
 	case shared.ATNoAction:
 		fallthrough
@@ -181,6 +181,22 @@ func (e *Encounter) performCharacterHealAction(c *character.Character) {
 	if err != nil {
 		fmt.Println(err)
 		return
+	}
+}
+
+func (e *Encounter) performCharacterSpellAttack(c *character.Character) {
+	if !e.Options.AOEHitsAllEnemies {
+		target, _ := e.chooseDamageTarget(c)
+		damageSpell, err := e.chooseDamageSpell(c, shared.SPHighestLevel)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if monsterTarget, ok := target.(*monster.Monster); ok {
+			_, err2 := c.MakeSpellAttack(monsterTarget, damageSpell)
+			if err2 != nil {
+				fmt.Println(err2)
+			}
+		}
 	}
 }
 

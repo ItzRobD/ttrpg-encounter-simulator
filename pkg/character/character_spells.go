@@ -2,6 +2,7 @@ package character
 
 import (
 	"context"
+	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"math"
@@ -144,14 +145,37 @@ func (c *Character) hasSpellSlotAvailable(level int) bool {
 	return false
 }
 
+func (c *Character) getHighestAverageAOESpell(spellPool []*spells.Spell) (*spells.Spell, error) {
+	if len(spellPool) <= 0 {
+		return nil, fmt.Errorf("character has no known spells")
+	}
+	var highestSpell *spells.Spell
+	for _, s := range spellPool {
+		if !c.hasSpellSlotAvailable(s.Level) {
+			// Character does not have a spell slot to cast this level of a spell
+			// TODO: Add logging for spell selection
+			continue
+		}
+		if s.IsAOE {
+			if highestSpell == nil || s.GetAverageAmount() > highestSpell.GetAverageAmount() {
+				highestSpell = s
+			}
+		}
+	}
+	if highestSpell == nil {
+		// TODO: Create a way to handle running out of spell slots -> resort to cantrips
+		return nil, fmt.Errorf("character has no known spells of highest level")
+	}
+	return highestSpell, nil
+}
+
 func (c *Character) getHighestAverageSpell(spellPool []*spells.Spell) (*spells.Spell, error) {
 	if len(spellPool) <= 0 {
 		return nil, fmt.Errorf("character has no known spells")
 	}
 	var highestSpell *spells.Spell
 	for _, s := range spellPool {
-		sLvl := s.Level
-		if !c.hasSpellSlotAvailable(sLvl) {
+		if !c.hasSpellSlotAvailable(s.Level) {
 			// Character does not have a spell slot to cast this level of a spell
 			// TODO: Add logging for spell selection
 			continue
@@ -164,6 +188,28 @@ func (c *Character) getHighestAverageSpell(spellPool []*spells.Spell) (*spells.S
 		return nil, fmt.Errorf("character has no known spells of highest level")
 	}
 	return highestSpell, nil
+}
+
+func (c *Character) getLowestAverageSpell(spellPool []*spells.Spell) (*spells.Spell, error) {
+	if len(spellPool) <= 0 {
+		return nil, fmt.Errorf("character has no known spells")
+	}
+
+	var lowestSpell *spells.Spell
+	for _, s := range spellPool {
+		if !c.hasSpellSlotAvailable(s.Level) {
+			// Character does not have a spell slot to cast this level of a spell
+			// TODO: Add logging for spell selection
+			continue
+		}
+		if lowestSpell == nil || s.GetAverageAmount() < lowestSpell.GetAverageAmount() {
+			lowestSpell = s
+		}
+	}
+	if lowestSpell == nil {
+		return nil, fmt.Errorf("character has no known spells of lowest level")
+	}
+	return lowestSpell, nil
 }
 
 func (c *Character) getHighestCastableVersion(spell spells.Spell) (*spells.Spell, error) {
@@ -195,6 +241,22 @@ func (c *Character) getHighestAvailableSpellSlot() int {
 	return highestSlot
 }
 
+func (c *Character) hasSpellSlotAvailableForLevel(level int) bool {
+	if c.SpellSlots[level] > 0 {
+		return true
+	}
+	return false
+}
+
+func (c *Character) hasSpellSlots() bool {
+	for _, count := range c.SpellSlots {
+		if count > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *Character) GetMostEfficientHealingSpell(healTarget int) (*spells.Spell, error) {
 	if healTarget <= 0 {
 		return nil, fmt.Errorf("target does not require healing")
@@ -222,4 +284,37 @@ func (c *Character) GetMostEfficientHealingSpell(healTarget int) (*spells.Spell,
 	}
 
 	return mostEfficientSpell, nil
+}
+
+func (c *Character) ChooseDamageSpell(priority shared.SpellPriority) (*spells.Spell, error) {
+	if !c.hasSpellSlots() {
+		return nil, fmt.Errorf("character does not have spell slots")
+	}
+	spellPool, err := c.getKnownDamageSpells()
+	if err != nil {
+		return nil, fmt.Errorf("error getting known damage spells: %w", err)
+	}
+
+	switch priority {
+	case shared.SPNoPreference:
+		return c.getRandomSpell(spellPool)
+	case shared.SPHighestLevel:
+		return c.getHighestAverageSpell(spellPool)
+	case shared.SPLowestLevel:
+		return c.getLowestAverageSpell(spellPool)
+	case shared.SPCantrip:
+		return c.getRandomCantrip(spellPool)
+	case shared.SPAreaOfEffect:
+		return c.getHighestAverageAOESpell(spellPool)
+	default:
+		return c.getRandomSpell(spellPool)
+	}
+}
+
+func (c *Character) HasHealingSpells() bool {
+	spellPool, err := c.getKnownHealingSpells()
+	if err != nil {
+		return false
+	}
+	return len(spellPool) > 0
 }
