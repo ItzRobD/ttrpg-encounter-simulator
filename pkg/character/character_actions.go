@@ -219,7 +219,7 @@ func (c *Character) ExpendSpellSlot(level int) error {
 //			Attack:    weapon.Name,
 //			Value:     attackRoll + attackModifier,
 //			Rolls:     []int{attackRoll},
-//			Hit:       isHit,
+//			Success:       isHit,
 //		}
 //		c.EventListener(event)
 //	}
@@ -256,7 +256,7 @@ func (c *Character) ExpendSpellSlot(level int) error {
 //			Attack:    spell.Name,
 //			Value:     attackRoll + attackModifier,
 //			Rolls:     []int{attackRoll},
-//			Hit:       isHit,
+//			Success:       isHit,
 //		}
 //		c.EventListener(event)
 //	}
@@ -271,7 +271,7 @@ func (c *Character) ExpendSpellSlot(level int) error {
 //			Attack:      spell.Name,
 //			Value:       dc,
 //			SavingThrow: save,
-//			Hit:         isHit,
+//			Success:         isHit,
 //		}
 //		c.EventListener(event)
 //	}

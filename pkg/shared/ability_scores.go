@@ -1,12 +1,14 @@
 package shared
 
+type AbilityScore string
+
 const (
-	AbilityStrength     = "strength"
-	AbilityDexterity    = "dexterity"
-	AbilityConstitution = "constitution"
-	AbilityIntelligence = "intelligence"
-	AbilityWisdom       = "wisdom"
-	AbilityCharisma     = "charisma"
+	AbilityStrength     AbilityScore = "strength"
+	AbilityDexterity    AbilityScore = "dexterity"
+	AbilityConstitution AbilityScore = "constitution"
+	AbilityIntelligence AbilityScore = "intelligence"
+	AbilityWisdom       AbilityScore = "wisdom"
+	AbilityCharisma     AbilityScore = "charisma"
 )
 
 type AbilityScores struct {

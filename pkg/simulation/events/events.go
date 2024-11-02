@@ -19,26 +19,31 @@ const (
 	ETHPRollEvent       EventType = "hproll"
 	ETActionChoiceEvent EventType = "actionchoice"
 	ETSpellChoiceEvent  EventType = "spellchoice"
+	ETSpellSlotsEvent   EventType = "spellslots"
 	ETHPModifiedEvent   EventType = "hpmodified"
+	ETSavingThrowEvent  EventType = "savingthrow"
 )
 
+// TODO: Create Event structs for specific purposes. One catch all is not a smart way to handle this
 type CombatEvent struct {
 	Round        int
 	EventType    EventType
 	Actor        string
 	Target       string
 	Attack       string
-	Hit          bool
+	Success      bool
 	Value        int
 	DamageType   string
 	Rolls        []int
 	IsFatal      bool
-	Added        int
+	Modifier     int
 	SavingThrow  int
 	CurrentHP    int
 	PreviousHP   int
 	ActionChoice shared.ActionType
 	SpellChoice  *spells.Spell
+	HasSlots     bool
+	SpellSlots   shared.SpellSlots
 }
 
 type CombatLogger interface {

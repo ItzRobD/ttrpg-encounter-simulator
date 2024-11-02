@@ -11,13 +11,6 @@ import (
 	"fmt"
 )
 
-// SpellSlots Definition
-// Spell slots are handled as maps
-// Max Spell slots are of type map[int]map[int]int where the outer value is the character level
-// and the inner value is a map of spell slots which are of type map[int]int
-// where the key is the spell slot level and the value is the number of slots
-type SpellSlots map[int]int
-
 type Character struct {
 	Name             string
 	Class            class.Class
@@ -26,7 +19,7 @@ type Character struct {
 	HP               shared.PlayerHP
 	Eq               Equipment
 	KnownSpells      []spells.Spell
-	SpellSlots       SpellSlots
+	SpellSlots       shared.SpellSlots
 	ActionPreference shared.ActionPreference
 	SpellPriority    shared.SpellPriority
 	EventListener    func(events.CombatEvent)
@@ -205,7 +198,7 @@ func (c *Character) PrefersRanged() bool {
 	return false
 }
 
-func (c *Character) GetSpellSlots() SpellSlots {
+func (c *Character) GetSpellSlots() shared.SpellSlots {
 	return c.SpellSlots
 }
 
@@ -224,6 +217,14 @@ func (c *Character) GetMaxHP() int {
 func (c *Character) GetCurrentHPPct() int {
 	hpPct := int(float64(c.HP.HP) / float64(c.HP.MaxHP) * 100)
 	return hpPct
+}
+
+func (c *Character) GetAC() int {
+	return c.Eq.Armor.ArmorClass
+}
+
+func (c *Character) GetEventListener() func(events.CombatEvent) {
+	return c.EventListener
 }
 
 var _ shared.Entity = &Character{}

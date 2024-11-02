@@ -9,6 +9,7 @@ import (
 	"fmt"
 )
 
+// ChooseCharacterActionType selects the action type for a character, preferring healing if available and needed.
 func (e *Encounter) ChooseCharacterActionType(actor *character.Character) (shared.ActionType, error) {
 	// Choose between a damage action or a healing action
 	if e.Options.AllowPlayerHeals && actor.HasHealingSpells() {
@@ -114,7 +115,7 @@ func (e *Encounter) chooseDamageSpell(actor shared.Entity, priority shared.Spell
 		if err != nil {
 			return nil, err
 		}
-		events.LogSpellChoiceEvent(a, damageSpell, a.EventListener)
+		events.LogSpellChoiceEvent(a, damageSpell, true, a.EventListener)
 		return damageSpell, nil
 	case *monster.Monster:
 		// TODO: Add monster spell choice, if spellcaster/if innate

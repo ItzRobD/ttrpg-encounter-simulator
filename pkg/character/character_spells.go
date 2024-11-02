@@ -3,6 +3,7 @@ package character
 import (
 	"context"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
+	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"math"
@@ -133,9 +134,18 @@ func (c *Character) getRandomSpell(spellPool []*spells.Spell) (*spells.Spell, er
 	if len(spellPool) <= 0 {
 		return nil, fmt.Errorf("character has no known spells")
 	}
-	rand.NewPCG(rand.Uint64(), rand.Uint64())
-	i := rand.IntN(len(spellPool))
-	return spellPool[i], nil
+	// TODO: Implement similar functionality to all spell choices
+	for {
+		rand.NewPCG(rand.Uint64(), rand.Uint64())
+		i := rand.IntN(len(spellPool))
+		selectedSpell := spellPool[i]
+		if selectedSpell.Level == 0 {
+			return selectedSpell, nil
+		}
+		if c.SpellSlots[selectedSpell.Level] > 0 {
+			return selectedSpell, nil
+		}
+	}
 }
 
 func (c *Character) hasSpellSlotAvailable(level int) bool {
@@ -153,7 +163,7 @@ func (c *Character) getHighestAverageAOESpell(spellPool []*spells.Spell) (*spell
 	for _, s := range spellPool {
 		if !c.hasSpellSlotAvailable(s.Level) {
 			// Character does not have a spell slot to cast this level of a spell
-			// TODO: Add logging for spell selection
+			c.logNoSpellSlots()
 			continue
 		}
 		if s.IsAOE {
@@ -284,6 +294,11 @@ func (c *Character) GetMostEfficientHealingSpell(healTarget int) (*spells.Spell,
 	}
 
 	return mostEfficientSpell, nil
+}
+
+func (c *Character) logNoSpellSlots() {
+	events.LogSpellChoiceEvent(c, &spells.Spell{Name: "No Spell"}, false, c.EventListener)
+	events.LogSpellSlotsEvent(c, c.SpellSlots, c.EventListener)
 }
 
 func (c *Character) ChooseDamageSpell(priority shared.SpellPriority) (*spells.Spell, error) {

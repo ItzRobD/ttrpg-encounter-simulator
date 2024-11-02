@@ -28,8 +28,8 @@ type AttackHandler struct{}
 
 func (h *AttackHandler) HandleEvent(event CombatEvent) {
 	if event.EventType == ETAttackEvent {
-		fmt.Printf("[Round %d] <Attack> %s attacks %s with %s. %d to hit. Hit: %t\n",
-			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.Hit)
+		fmt.Printf("[Round %d] <Attack> %s attacks %s with %s. %d to hit. Success: %t\n",
+			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.Success)
 	}
 }
 
@@ -37,8 +37,8 @@ type SpellAttackHandler struct{}
 
 func (h *SpellAttackHandler) HandleEvent(event CombatEvent) {
 	if event.EventType == ETSpellAttack {
-		fmt.Printf("[Round %d] <Spell Attack> %s attacks %s with %s. %d to hit. Hit: %t\n",
-			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.Hit)
+		fmt.Printf("[Round %d] <Spell Attack> %s attacks %s with %s. %d to hit. Success: %t\n",
+			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.Success)
 
 	}
 }
@@ -47,8 +47,8 @@ type SpellDCHandler struct{}
 
 func (h *SpellDCHandler) HandleEvent(event CombatEvent) {
 	if event.EventType == ETSpellAttack {
-		fmt.Printf("[Round %d] <Spell DC Attack> %s attacks %s with %s. DC is: %d. Saving throw: %d. Hit: %t\n",
-			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.SavingThrow, event.Hit)
+		fmt.Printf("[Round %d] <Spell DC Attack> %s attacks %s with %s. DC is: %d. Saving throw: %d. Success: %t\n",
+			event.Round, event.Actor, event.Target, event.Attack, event.Value, event.SavingThrow, event.Success)
 
 	}
 }
@@ -107,6 +107,6 @@ type HPRollHandler struct{}
 
 func (h *HPRollHandler) HandleEvent(event CombatEvent) {
 	if event.EventType == ETHPRollEvent {
-		fmt.Printf("[Round %d] HP <Roll> %s rolls %d, rolls: %v, amount to add: %d\n", event.Round, event.Actor, event.Value, event.Rolls, event.Added)
+		fmt.Printf("[Round %d] HP <Roll> %s rolls %d, rolls: %v, amount to add: %d\n", event.Round, event.Actor, event.Value, event.Rolls, event.Modifier)
 	}
 }

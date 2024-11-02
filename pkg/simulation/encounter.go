@@ -100,6 +100,7 @@ func (e *Encounter) SetupCombatTracker() error {
 	return nil
 }
 
+// SimulateRound processes a single round of the encounter. It iterates through all entities in the combat tracker and executes their turns.
 func (e *Encounter) SimulateRound() {
 	for _, entity := range e.CombatTracker {
 		switch creature := entity.Creature.(type) {
@@ -107,6 +108,10 @@ func (e *Encounter) SimulateRound() {
 			if creature.IsUnconscious() {
 				continue // Skip if the character is unconscious
 			}
+			// TODO: I want to split turn logic, specifically spellcasting, into the shared package
+			//       Since both monsters and characters will need to choose spells. Choosing actions
+			//       Should be handled through the interface -> Add GetAction() or some similar method
+			//       Move any shared logic with rolls etc to the shared package
 			e.handleCharacterTurn(creature)
 		case *monster.Monster:
 			if creature.IsUnconscious() {
@@ -119,6 +124,7 @@ func (e *Encounter) SimulateRound() {
 	}
 }
 
+// handleCharacterTurn manages the actions of a character during their turn in an encounter.
 func (e *Encounter) handleCharacterTurn(character *character.Character) {
 	actionType, err := e.ChooseCharacterActionType(character)
 	if err != nil {
