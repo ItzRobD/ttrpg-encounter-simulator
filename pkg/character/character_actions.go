@@ -1,16 +1,17 @@
 package character
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
-	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"fmt"
 	"math"
 )
 
-func (c *Character) MakeSpellHeal(t shared.Entity, s *spells.Spell) (bool, error) {
+func (c *Character) MakeSpellHeal(t core.Entity, s *spells.Spell) (bool, error) {
 	if s.SpellType != "healing" {
 		return false, fmt.Errorf("spell is not a heal spell")
 	}
@@ -58,7 +59,7 @@ func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell) (bool, 
 			return false, err
 		}
 		charDC := 8 + sBonus + pb
-		saveVal, err := t.SavingThrow(s.SpellDC.Ability)
+		saveVal, err := t.GetSavingThrowRollResult(s.SpellDC.Ability)
 		if err != nil {
 			return false, err
 		}
@@ -210,6 +211,10 @@ func (c *Character) ExpendSpellSlot(level int) error {
 	return nil
 }
 
+func (c *Character) GetSavingThrowRollResult(ability string) (int, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+
 //func (c *Character) logWeaponAttackEvent(target *monster.Monster, weapon *weapon.Weapon, attackRoll, attackModifier int, isHit bool) {
 //	if c.EventListener != nil {
 //		event := events.CombatEvent{
@@ -270,7 +275,7 @@ func (c *Character) ExpendSpellSlot(level int) error {
 //			Target:      target.Name,
 //			Attack:      spell.Name,
 //			Value:       dc,
-//			SavingThrow: save,
+//			GetSavingThrowRollResult: save,
 //			Success:         isHit,
 //		}
 //		c.EventListener(event)

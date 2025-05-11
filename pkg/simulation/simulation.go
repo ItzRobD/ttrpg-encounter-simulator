@@ -1,8 +1,8 @@
 package simulation
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
-	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"fmt"
 )
 
@@ -69,8 +69,10 @@ func (s *Simulation) Simulate(maximumRounds int) error {
 	}
 
 	for _, c := range s.Encounter.Party {
-		c.EventListener = func(event events.CombatEvent) {
-			s.LogEvent(event)
+		c.EventListener = func(event interface{}) {
+			if evt, ok := event.(events.CombatEvent); ok {
+				s.LogEvent(evt)
+			}
 		}
 	}
 	//for _, m := range s.Encounter.Monsters {

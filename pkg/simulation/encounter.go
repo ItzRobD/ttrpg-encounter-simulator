@@ -2,9 +2,10 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
-	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"fmt"
 	"sort"
 )
@@ -13,7 +14,7 @@ type Encounter struct {
 	sim           *Simulation
 	Party         []*character.Character
 	Monsters      []*monster.Monster
-	CombatTracker []shared.Combatant
+	CombatTracker []core.Combatant
 	Options       Options
 	CurrentRound  int
 }
@@ -25,7 +26,7 @@ func (e *Encounter) PrintCombatTracker() {
 	}
 }
 
-func (e *Encounter) AddCombatant(c shared.Combatant) error {
+func (e *Encounter) AddCombatant(c core.Combatant) error {
 	if c.InitiativeScore <= 0 {
 		return fmt.Errorf("initiative score must be greater than zero")
 	}
@@ -41,8 +42,10 @@ func (e *Encounter) AddPartyMember(c *character.Character) {
 }
 
 func (e *Encounter) AddMonster(m *monster.Monster) error {
-	m.EventListener = func(event events.CombatEvent) {
-		e.sim.LogEvent(event)
+	m.EventListener = func(event interface{}) {
+		if evt, ok := event.(events.CombatEvent); ok {
+			e.sim.LogEvent(evt)
+		}
 	}
 	if e.Options.UseMonsterHPAverage {
 		hp, _, err := m.DetermineMonsterHP(true)
@@ -63,7 +66,7 @@ func (e *Encounter) AddMonster(m *monster.Monster) error {
 
 func (e *Encounter) SetupCombatTracker() error {
 	if e.CombatTracker == nil {
-		e.CombatTracker = []shared.Combatant{}
+		e.CombatTracker = []core.Combatant{}
 	}
 
 	for _, m := range e.Monsters {
@@ -71,7 +74,7 @@ func (e *Encounter) SetupCombatTracker() error {
 		if err != nil {
 			return err
 		}
-		err = e.AddCombatant(shared.Combatant{
+		err = e.AddCombatant(core.Combatant{
 			InitiativeScore: initiative,
 			Creature:        m,
 		})
@@ -84,7 +87,7 @@ func (e *Encounter) SetupCombatTracker() error {
 		if err != nil {
 			return err
 		}
-		err = e.AddCombatant(shared.Combatant{
+		err = e.AddCombatant(core.Combatant{
 			InitiativeScore: initiative,
 			Creature:        p,
 		})

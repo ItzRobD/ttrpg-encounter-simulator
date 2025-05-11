@@ -2,8 +2,8 @@ package character
 
 import (
 	"context"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
-	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"math"
@@ -268,6 +268,7 @@ func (c *Character) hasSpellSlots() bool {
 }
 
 func (c *Character) GetMostEfficientHealingSpell(healTarget int) (*spells.Spell, error) {
+	// TODO: Need to account for spell slots. If the most efficient spell isn't possible, choose the next?
 	if healTarget <= 0 {
 		return nil, fmt.Errorf("target does not require healing")
 	}
@@ -302,6 +303,9 @@ func (c *Character) logNoSpellSlots() {
 }
 
 func (c *Character) ChooseDamageSpell(priority shared.SpellPriority) (*spells.Spell, error) {
+	// TODO: Need to account for spell slots. If the most efficient spell isn't possible, choose the next?
+	// 		Also, need to account for the ability to upcast. If fireball is available but no level 3 slots are
+	//		Should we cast it at a higher level?
 	if !c.hasSpellSlots() {
 		return nil, fmt.Errorf("character does not have spell slots")
 	}

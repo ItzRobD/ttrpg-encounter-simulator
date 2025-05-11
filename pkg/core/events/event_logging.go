@@ -1,12 +1,13 @@
 package events
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
 )
 
-func LogCharacterActionChoiceEvent(actor shared.Entity, choice shared.ActionType, listener func(event CombatEvent)) {
+func LogCharacterActionChoiceEvent(actor core.Entity, choice shared.ActionType, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType:    ETActionChoiceEvent,
@@ -17,7 +18,7 @@ func LogCharacterActionChoiceEvent(actor shared.Entity, choice shared.ActionType
 	}
 }
 
-func LogWeaponAttackEvent(actor shared.Entity, target shared.Entity, weapon *weapon.Weapon, attackRoll, attackModifier int, isHit bool, listener func(event CombatEvent)) {
+func LogWeaponAttackEvent(actor core.Entity, target core.Entity, weapon *weapon.Weapon, attackRoll, attackModifier int, isHit bool, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType: ETAttackEvent,
@@ -32,7 +33,7 @@ func LogWeaponAttackEvent(actor shared.Entity, target shared.Entity, weapon *wea
 	}
 }
 
-func LogSpellChoiceEvent(actor shared.Entity, spell *spells.Spell, hasSlots bool, listener func(event CombatEvent)) {
+func LogSpellChoiceEvent(actor core.Entity, spell *spells.Spell, hasSlots bool, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType:   ETSpellChoiceEvent,
@@ -44,7 +45,7 @@ func LogSpellChoiceEvent(actor shared.Entity, spell *spells.Spell, hasSlots bool
 	}
 }
 
-func LogSpellSlotsEvent(actor shared.Entity, spellSlots shared.SpellSlots, listener func(event CombatEvent)) {
+func LogSpellSlotsEvent(actor core.Entity, spellSlots shared.SpellSlots, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType:  ETSpellSlotsEvent,
@@ -55,7 +56,7 @@ func LogSpellSlotsEvent(actor shared.Entity, spellSlots shared.SpellSlots, liste
 	}
 }
 
-func LogSpellAttackEvent(actor shared.Entity, target shared.Entity, spell *spells.Spell, attackRoll, attackModifier int, isHit bool, listener func(event CombatEvent)) {
+func LogSpellAttackEvent(actor core.Entity, target core.Entity, spell *spells.Spell, attackRoll, attackModifier int, isHit bool, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType: ETAttackEvent,
@@ -70,7 +71,7 @@ func LogSpellAttackEvent(actor shared.Entity, target shared.Entity, spell *spell
 	}
 }
 
-func LogSpellDCEvent(actor shared.Entity, target shared.Entity, spell *spells.Spell, dc int, save int, isHit bool, listener func(event CombatEvent)) {
+func LogSpellDCEvent(actor core.Entity, target core.Entity, spell *spells.Spell, dc int, save int, isHit bool, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType:   ETSpellDC,
@@ -85,7 +86,7 @@ func LogSpellDCEvent(actor shared.Entity, target shared.Entity, spell *spells.Sp
 	}
 }
 
-func LogDamageEvent(actor shared.Entity, target shared.Entity, damageType string, damage int, rolls []int, listener func(event CombatEvent)) {
+func LogDamageEvent(actor core.Entity, target core.Entity, damageType string, damage int, rolls []int, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType:  ETDamageEvent,
@@ -99,7 +100,7 @@ func LogDamageEvent(actor shared.Entity, target shared.Entity, damageType string
 	}
 }
 
-func LogHealEvent(actor shared.Entity, target shared.Entity, amt int, rolls []int, listener func(event CombatEvent)) {
+func LogHealEvent(actor core.Entity, target core.Entity, amt int, rolls []int, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType: ETHealEvent,
@@ -112,7 +113,7 @@ func LogHealEvent(actor shared.Entity, target shared.Entity, amt int, rolls []in
 	}
 }
 
-func LogHPModifiedEvent(actor shared.Entity, amt int, prevHP int, newHP int, listener func(event CombatEvent)) {
+func LogHPModifiedEvent(actor core.Entity, amt int, prevHP int, newHP int, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType:  ETHPModifiedEvent,
@@ -125,7 +126,7 @@ func LogHPModifiedEvent(actor shared.Entity, amt int, prevHP int, newHP int, lis
 	}
 }
 
-func LogHPRollEvent(actor shared.Entity, rollSum int, rolls []int, toAdd int, listener func(event CombatEvent)) {
+func LogHPRollEvent(actor core.Entity, rollSum int, rolls []int, toAdd int, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType: ETHPRollEvent,
@@ -138,7 +139,7 @@ func LogHPRollEvent(actor shared.Entity, rollSum int, rolls []int, toAdd int, li
 	}
 }
 
-func LogDiceRollEvent(actor shared.Entity, rollSum int, rolls []int, listener func(event CombatEvent)) {
+func LogDiceRollEvent(actor core.Entity, rollSum int, rolls []int, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType: ETRollEvent,
@@ -150,7 +151,7 @@ func LogDiceRollEvent(actor shared.Entity, rollSum int, rolls []int, listener fu
 	}
 }
 
-func LogSavingThrowEvent(actor shared.Entity, result int, rolls []int, modifier int, success bool, listener func(event CombatEvent)) {
+func LogSavingThrowEvent(actor core.Entity, result int, rolls []int, modifier int, success bool, listener func(event interface{})) {
 	if listener != nil {
 		event := CombatEvent{
 			EventType: ETSavingThrowEvent,

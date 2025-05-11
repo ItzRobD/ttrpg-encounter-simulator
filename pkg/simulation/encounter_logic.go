@@ -2,9 +2,10 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
-	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 )
@@ -39,6 +40,7 @@ func (e *Encounter) chooseCharacterDamageAction(actor *character.Character) (sha
 		if len(actor.KnownSpells) == 0 {
 			return chooseFromNoSpellsPreference(actor)
 		}
+		// TODO: There is a logic issue here where if spells are preferred but there are no spell slots available it tries anyway
 		events.LogCharacterActionChoiceEvent(actor, shared.ATSpell, actor.EventListener)
 		return shared.ATSpell, nil
 	default:
@@ -92,12 +94,12 @@ func chooseFromHasSpellsPreference(actor *character.Character) (shared.ActionTyp
 	return shared.GetActionFromPreference(actor.ActionPreference), nil
 }
 
-func (e *Encounter) chooseBestHealingSpell(actor shared.Entity, target shared.Entity) (*spells.Spell, error) {
+func (e *Encounter) chooseBestHealingSpell(actor core.Entity, target core.Entity) (*spells.Spell, error) {
 	switch a := actor.(type) {
 	case *character.Character:
 		hpDiff := target.GetMaxHP() - target.GetCurrentHP()
 		s, err := a.GetMostEfficientHealingSpell(hpDiff)
-		events.LogSpellChoiceEvent(a, s, a.EventListener)
+		events.LogSpellChoiceEvent(a, s, true, a.EventListener)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +110,7 @@ func (e *Encounter) chooseBestHealingSpell(actor shared.Entity, target shared.En
 	return nil, fmt.Errorf("unknown actor type %T", actor)
 }
 
-func (e *Encounter) chooseDamageSpell(actor shared.Entity, priority shared.SpellPriority) (*spells.Spell, error) {
+func (e *Encounter) chooseDamageSpell(actor core.Entity, priority shared.SpellPriority) (*spells.Spell, error) {
 	switch a := actor.(type) {
 	case *character.Character:
 		damageSpell, err := a.ChooseDamageSpell(priority)

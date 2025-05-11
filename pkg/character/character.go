@@ -4,8 +4,9 @@ import (
 	"context"
 	"dnd5e-encounter-simulator-backend/pkg/armor"
 	"dnd5e-encounter-simulator-backend/pkg/class"
+	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
-	"dnd5e-encounter-simulator-backend/pkg/simulation/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"fmt"
@@ -22,7 +23,7 @@ type Character struct {
 	SpellSlots       shared.SpellSlots
 	ActionPreference shared.ActionPreference
 	SpellPriority    shared.SpellPriority
-	EventListener    func(events.CombatEvent)
+	EventListener    func(event interface{})
 }
 
 type Equipment struct {
@@ -223,8 +224,8 @@ func (c *Character) GetAC() int {
 	return c.Eq.Armor.ArmorClass
 }
 
-func (c *Character) GetEventListener() func(events.CombatEvent) {
+func (c *Character) GetEventListener() func(event interface{}) {
 	return c.EventListener
 }
 
-var _ shared.Entity = &Character{}
+var _ core.Entity = &Character{}

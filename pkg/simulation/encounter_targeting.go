@@ -2,13 +2,14 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
 	"math/rand/v2"
 )
 
-func (e *Encounter) chooseDamageTarget(actor shared.Entity) (shared.Entity, error) {
+func (e *Encounter) chooseDamageTarget(actor core.Entity) (core.Entity, error) {
 	switch actor.(type) {
 	case *character.Character:
 		monsters := e.filterMonsters()
@@ -30,7 +31,7 @@ func (e *Encounter) chooseDamageTarget(actor shared.Entity) (shared.Entity, erro
 	panic("unhandled actor type")
 }
 
-func (e *Encounter) chooseHealTarget(actor shared.Entity) (shared.Entity, error) {
+func (e *Encounter) chooseHealTarget(actor core.Entity) (core.Entity, error) {
 	switch actor.(type) {
 	case *character.Character:
 		characters := e.filterCharacters()
@@ -38,7 +39,7 @@ func (e *Encounter) chooseHealTarget(actor shared.Entity) (shared.Entity, error)
 			return nil, fmt.Errorf("no targets available")
 		}
 
-		var lowestHP shared.Entity
+		var lowestHP core.Entity
 		for _, c := range characters {
 			if lowestHP == nil || c.GetCurrentHP() < lowestHP.GetCurrentHP() {
 				lowestHP = c
