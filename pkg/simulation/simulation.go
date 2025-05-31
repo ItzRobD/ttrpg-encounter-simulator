@@ -67,6 +67,8 @@ func (s *Simulation) Simulate(maximumRounds int) error {
 	if err != nil {
 		return err
 	}
+	s.Encounter.PrintCombatTracker()
+	//s.Encounter.PrintEncounterMembers()
 
 	for _, c := range s.Encounter.Party {
 		c.EventListener = func(event interface{}) {
@@ -85,7 +87,6 @@ func (s *Simulation) Simulate(maximumRounds int) error {
 		s.Encounter.SimulateRound()
 		s.Encounter.CurrentRound++
 	}
-	s.Encounter.PrintCombatTracker()
 
 	return nil
 }

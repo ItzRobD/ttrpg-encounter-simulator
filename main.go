@@ -8,7 +8,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"fmt"
-	"reflect"
 )
 
 func main() {
@@ -83,7 +82,7 @@ func main() {
 	}
 
 	//fmt.Println("Monster:")
-	//printStructFields(result, "MonsterBase")
+	//helpers.PrintStructFields(m2, "MonsterBase")
 
 	//var sResult spells.Spell
 	////params := spells.SpellQueryParams{Name: "Eldritch Blast", Level: 5}
@@ -128,7 +127,7 @@ func main() {
 	hp.HP = 20
 	hp.MaxHP = 84
 
-	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferSpells, shared.SPNoPreference)
+	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferMelee, shared.SPNoPreference)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -220,34 +219,4 @@ func main() {
 
 	//s.PrintSimulationLog()
 
-}
-
-func printStructFields(v interface{}, prefix string) {
-	val := reflect.ValueOf(v)
-	typ := val.Type()
-
-	// Handle pointer to struct
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-		typ = val.Type()
-	}
-
-	// Ensure the input is a struct
-	if typ.Kind() == reflect.Struct {
-		for i := 0; i < val.NumField(); i++ {
-			field := val.Field(i)
-			fieldType := typ.Field(i)
-			fieldName := fieldType.Name
-
-			// Check if the field is an embedded struct
-			if fieldType.Anonymous {
-				// Recursive call for embedded struct
-				printStructFields(field.Interface(), prefix+fieldName+".")
-			} else {
-				fmt.Printf("%s%s: %v\n", prefix, fieldName, field.Interface())
-			}
-		}
-	} else {
-		fmt.Println("Provided value is not a struct")
-	}
 }

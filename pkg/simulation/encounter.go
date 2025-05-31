@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"dnd5e-encounter-simulator-backend/internal/helpers"
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
@@ -23,6 +24,18 @@ func (e *Encounter) PrintCombatTracker() {
 	fmt.Println("Combat Tracker")
 	for _, c := range e.CombatTracker {
 		fmt.Printf("Initiative: %d, Name: %s\n", c.InitiativeScore, c.Creature.GetName())
+	}
+}
+
+func (e *Encounter) PrintEncounterMembers() {
+	fmt.Println("Encounter Members")
+	for _, c := range e.Party {
+		fmt.Printf("Name: %s\n", c)
+		helpers.PrintStructFields(c, "")
+	}
+	for _, m := range e.Monsters {
+		fmt.Printf("Name: %s\n", m.GetName())
+		helpers.PrintStructFields(m, "")
 	}
 }
 
