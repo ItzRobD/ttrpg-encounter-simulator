@@ -54,10 +54,14 @@ func isRangedWeapon(id int) bool {
 	return false
 }
 
-func (w *Weapon) GetAttackModifier(as *shared.AbilityScores, clvl int) (int, error) {
+func (w *Weapon) GetAttackModifier(as *shared.AbilityScores, clvl int, isProficient bool) (int, error) {
 	mod, err := w.GetWeaponModifier(as)
 	if err != nil {
 		return 0, err
+	}
+
+	if !isProficient {
+		return mod, nil
 	}
 
 	pb, err := shared.GetCharacterProficiencyBonus(clvl)

@@ -5,15 +5,15 @@ import (
 	"math/rand/v2"
 )
 
-type RollAdvantage int
+type AdvantageType int
 
 const (
-	Normal RollAdvantage = iota
-	Advantage
-	Disadvantage
+	RollNormal AdvantageType = iota
+	RollAdvantage
+	RollDisadvantage
 )
 
-func InitiativeRoll(dexterity int, bonus int, advantage RollAdvantage) (int, error) {
+func InitiativeRoll(dexterity int, bonus int, advantage AdvantageType) (int, error) {
 	if dexterity < 1 || dexterity > 30 {
 		return 0, fmt.Errorf("initiative roll - dexterity must be between 1 and 30")
 	}
@@ -30,21 +30,21 @@ func InitiativeRoll(dexterity int, bonus int, advantage RollAdvantage) (int, err
 	return roll + modifier + bonus, nil
 }
 
-func RollD20WithAdvantage(advantage RollAdvantage) (int, error) {
+func RollD20WithAdvantage(advantage AdvantageType) (int, error) {
 	switch advantage {
-	case Normal:
+	case RollNormal:
 		_, rolls, err := RollDice(1, 20)
 		if err != nil {
 			return 0, err
 		}
 		return rolls[0], nil
-	case Advantage:
+	case RollAdvantage:
 		_, rolls, err := RollDice(2, 20)
 		if err != nil {
 			return 0, err
 		}
 		return max(rolls[0], rolls[1]), nil
-	case Disadvantage:
+	case RollDisadvantage:
 		_, rolls, err := RollDice(2, 20)
 		if err != nil {
 			return 0, err
@@ -55,7 +55,7 @@ func RollD20WithAdvantage(advantage RollAdvantage) (int, error) {
 	}
 }
 
-func AttackRoll(modifier int, advantage RollAdvantage) (int, error) {
+func AttackRoll(modifier int, advantage AdvantageType) (int, error) {
 	roll, err := RollD20WithAdvantage(advantage)
 	if err != nil {
 		return 0, err
@@ -63,7 +63,11 @@ func AttackRoll(modifier int, advantage RollAdvantage) (int, error) {
 	return roll + modifier, nil
 }
 
-func AttackHits(ar int, ac int) bool {
+func AttackRollD20(advantage AdvantageType) (int, error) {
+	return RollD20WithAdvantage(advantage)
+}
+
+func DoesAttackHit(ar int, ac int) bool {
 	if ar >= ac {
 		return true
 	}

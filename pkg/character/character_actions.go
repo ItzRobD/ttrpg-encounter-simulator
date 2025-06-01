@@ -35,7 +35,7 @@ func (c *Character) MakeSpellHeal(t core.Entity, s *spells.Spell) (bool, error) 
 	return true, nil
 }
 
-func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell) (bool, error) {
+func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell, advantage shared.AdvantageType) (bool, error) {
 	// returns true if damage will be dealt
 	if s.SpellType != "damage" {
 		return false, fmt.Errorf("spell is not a damage spell")
@@ -103,12 +103,12 @@ func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell) (bool, 
 		if err != nil {
 			return false, err
 		}
-		ar, err := shared.AttackRoll(aMod)
+		ar, err := shared.AttackRoll(aMod, advantage)
 		if err != nil {
 			return false, err
 		}
 
-		didHit := shared.AttackHits(ar+aMod, t.AC)
+		didHit := shared.DoesAttackHit(ar+aMod, t.AC)
 		//c.logSpellAttackEvent(t, s, ar, aMod, didHit)
 		events.LogSpellAttackEvent(c, t, s, ar, aMod, didHit, c.EventListener)
 
@@ -135,47 +135,49 @@ func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell) (bool, 
 	}
 }
 
-func (c *Character) MakeWeaponAttack(t *monster.Monster, slot string) (bool, error) {
-	// returns true if damage will be dealt
+// TODO: I think the parameter shouldn't be monster but an entity - consider this later
+func (c *Character) MakeWeaponAttack(t *monster.Monster, slot string, advantage shared.AdvantageType) (bool, int, error) {
+	// returns true if damage will be dealt, damage amount, error
 	w, err := c.getWeaponFromSlot(slot)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
-
-	aMod, err := w.GetAttackModifier(&c.AbilityScores, c.Level)
+	wProf, err := c.GetWeaponProficiencyFromSlot(slot)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
-
-	ar, err := shared.AttackRoll(aMod)
+	aMod, err := w.GetAttackModifier(&c.AbilityScores, c.Level, wProf)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
-	attackValue := ar + aMod
+	attackValue, err := shared.AttackRoll(aMod, advantage)
+	if err != nil {
+		return false, 0, err
+	}
 
-	didHit := shared.AttackHits(attackValue, t.AC)
-	//c.logWeaponAttackEvent(t, w, ar, aMod, didHit)
-	events.LogWeaponAttackEvent(c, t, w, ar, aMod, didHit, c.EventListener)
+	didHit := shared.DoesAttackHit(attackValue, t.AC)
+
+	events.LogWeaponAttackEvent(c, t, w, attackValue, aMod, didHit, c.EventListener)
 
 	if didHit {
 		damageModifier, err := w.GetWeaponModifier(&c.AbilityScores)
 		if err != nil {
-			return false, err
+			return false, 0, err
 		}
 
 		damage, rolls, err := shared.DiceRollWithModifier(w.NumberOfDice, w.Die, damageModifier)
 		if err != nil {
-			return false, err
+			return false, 0, err
 		}
 
-		//c.logDamageEvent(t, w.DamageType, damage, rolls)
 		events.LogDamageEvent(c, t, w.DamageType, damage, rolls, c.EventListener)
 
-		return true, nil
-	} else {
-		return false, nil
+		return true, damage, nil
 	}
+
+	return false, 0, nil
+
 }
 
 func (c *Character) getWeaponFromSlot(slot string) (*weapon.Weapon, error) {

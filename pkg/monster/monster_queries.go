@@ -545,8 +545,93 @@ func getMonsterSpellcastingByID(ctx context.Context, id int) (MSpellcasting, err
 	return spellcasting, nil
 }
 
-func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, error) {
-	var monsterResult Monster
+// DEPRECATED
+//func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, error) {
+//	var monsterResult Monster
+//	var monsterBaseResult MonsterBase
+//	var err error
+//
+//	if params.ID != 0 {
+//		monsterBaseResult, err = getMonsterBaseDataByID(ctx, params.ID)
+//	} else if params.Name != "" {
+//		var id int
+//		id, err = getMonsterIDByName(ctx, params.Name)
+//		if err != nil {
+//			return monsterResult, err
+//		}
+//		monsterBaseResult, err = getMonsterBaseDataByID(ctx, id)
+//		if err != nil {
+//			return monsterResult, err
+//		}
+//	} else {
+//		err = fmt.Errorf("no name or id provided for monster data query")
+//		return monsterResult, err
+//	}
+//
+//	monsterResult.MonsterBase = monsterBaseResult
+//
+//	if monsterBaseResult.ID != 0 {
+//		var monsterDamageModifiers []MonsterDamageModifier
+//		monsterDamageModifiers, err = getMonsterDamageModifiersByID(ctx, monsterBaseResult.ID)
+//		if err != nil {
+//			return monsterResult, err
+//		}
+//		monsterResult.DamageModifiers = monsterDamageModifiers
+//
+//		var monsterResistBreakers []shared.DamageBreaker
+//		monsterResistBreakers, err = getMonsterResistBreakersByID(ctx, monsterBaseResult.ID)
+//		if err != nil {
+//			return monsterResult, err
+//		}
+//		monsterResult.ResistBreakers = monsterResistBreakers
+//
+//		var monsterActions []MonsterAction
+//		monsterActions, err = getMonsterActionsByID(ctx, monsterBaseResult.ID)
+//		if err != nil {
+//			return monsterResult, err
+//		}
+//		monsterResult.Actions = monsterActions
+//
+//		var monsterMultiattacks []MonsterMultiattack
+//		monsterMultiattacks, err = getMonsterMultiattacksByID(ctx, monsterBaseResult.ID)
+//		if err != nil {
+//			return monsterResult, err
+//		}
+//		monsterResult.Multiattacks = monsterMultiattacks
+//
+//		var mSpecialAbilities []SpecialAbility
+//		mSpecialAbilities, err = getMonsterSpecialAbilities(ctx, monsterBaseResult.ID)
+//		if err != nil {
+//			return monsterResult, err
+//		}
+//		monsterResult.SpecialAbilities = mSpecialAbilities
+//
+//		if monsterResult.IsLegendary {
+//			var monsterLegendaryActions []LegendaryAction
+//			monsterLegendaryActions, err = getMonsterLegendaryActionsByID(ctx, monsterBaseResult.ID)
+//			if err != nil {
+//				return monsterResult, err
+//			}
+//			monsterResult.LegendaryActions = monsterLegendaryActions
+//		}
+//
+//		if monsterResult.IsSpellcaster || monsterResult.IsInnateSpellcaster {
+//			var monsterSpellcasting MSpellcasting
+//			monsterSpellcasting, err = getMonsterSpellcastingByID(ctx, monsterBaseResult.ID)
+//			if err != nil {
+//				return monsterResult, err
+//			}
+//			monsterResult.Spellcasting = monsterSpellcasting
+//		}
+//	} else {
+//		err = fmt.Errorf("invalid monster id to query additional data")
+//		return monsterResult, err
+//	}
+//
+//	return monsterResult, nil
+//}
+
+func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (MonsterBase, error) {
 	var monsterBaseResult MonsterBase
 	var err error
 
@@ -556,76 +641,16 @@ func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, 
 		var id int
 		id, err = getMonsterIDByName(ctx, params.Name)
 		if err != nil {
-			return monsterResult, err
+			return monsterBaseResult, err
 		}
 		monsterBaseResult, err = getMonsterBaseDataByID(ctx, id)
 		if err != nil {
-			return monsterResult, err
+			return monsterBaseResult, err
 		}
 	} else {
 		err = fmt.Errorf("no name or id provided for monster data query")
-		return monsterResult, err
+		return MonsterBase{}, err
 	}
 
-	monsterResult.MonsterBase = monsterBaseResult
-
-	if monsterBaseResult.ID != 0 {
-		var monsterDamageModifiers []MonsterDamageModifier
-		monsterDamageModifiers, err = getMonsterDamageModifiersByID(ctx, monsterBaseResult.ID)
-		if err != nil {
-			return monsterResult, err
-		}
-		monsterResult.DamageModifiers = monsterDamageModifiers
-
-		var monsterResistBreakers []shared.DamageBreaker
-		monsterResistBreakers, err = getMonsterResistBreakersByID(ctx, monsterBaseResult.ID)
-		if err != nil {
-			return monsterResult, err
-		}
-		monsterResult.ResistBreakers = monsterResistBreakers
-
-		var monsterActions []MonsterAction
-		monsterActions, err = getMonsterActionsByID(ctx, monsterBaseResult.ID)
-		if err != nil {
-			return monsterResult, err
-		}
-		monsterResult.Actions = monsterActions
-
-		var monsterMultiattacks []MonsterMultiattack
-		monsterMultiattacks, err = getMonsterMultiattacksByID(ctx, monsterBaseResult.ID)
-		if err != nil {
-			return monsterResult, err
-		}
-		monsterResult.Multiattacks = monsterMultiattacks
-
-		var mSpecialAbilities []SpecialAbility
-		mSpecialAbilities, err = getMonsterSpecialAbilities(ctx, monsterBaseResult.ID)
-		if err != nil {
-			return monsterResult, err
-		}
-		monsterResult.SpecialAbilities = mSpecialAbilities
-
-		if monsterResult.IsLegendary {
-			var monsterLegendaryActions []LegendaryAction
-			monsterLegendaryActions, err = getMonsterLegendaryActionsByID(ctx, monsterBaseResult.ID)
-			if err != nil {
-				return monsterResult, err
-			}
-			monsterResult.LegendaryActions = monsterLegendaryActions
-		}
-
-		if monsterResult.IsSpellcaster || monsterResult.IsInnateSpellcaster {
-			var monsterSpellcasting MSpellcasting
-			monsterSpellcasting, err = getMonsterSpellcastingByID(ctx, monsterBaseResult.ID)
-			if err != nil {
-				return monsterResult, err
-			}
-			monsterResult.Spellcasting = monsterSpellcasting
-		}
-	} else {
-		err = fmt.Errorf("invalid monster id to query additional data")
-		return monsterResult, err
-	}
-
-	return monsterResult, nil
+	return monsterBaseResult, nil
 }

@@ -50,22 +50,26 @@ func (e *Encounter) chooseCharacterDamageAction(actor *character.Character) (sha
 
 func chooseFromNoSpellsPreference(actor *character.Character) (shared.ActionType, error) {
 	if actor.ActionPreference == shared.APNoPreference {
-		if actor.PrefersRanged() {
-			events.LogCharacterActionChoiceEvent(actor, shared.ATRanged, actor.EventListener)
-			return shared.ATRanged, nil
-		}
+		// TODO: This is simply checking if the character class is a ranger which may not prefer ranged attacks
+		//if actor.PrefersRanged() {
+		//	events.LogCharacterActionChoiceEvent(actor, shared.ATRanged, actor.EventListener)
+		//	return shared.ATRanged, nil
+		//}
 		r, _, err := shared.RollDice(1, 100)
 		if err != nil {
 			return shared.ATNoAction, nil
 		}
-		if r < 50 {
+		if r <= 50 {
 			events.LogCharacterActionChoiceEvent(actor, shared.ATMelee, actor.EventListener)
 			return shared.ATMelee, nil
 		}
 		events.LogCharacterActionChoiceEvent(actor, shared.ATRanged, actor.EventListener)
 		return shared.ATRanged, nil
 	}
-	return shared.GetActionFromPreference(actor.ActionPreference), nil
+	actionType := shared.GetActionFromPreference(actor.ActionPreference)
+	events.LogCharacterActionChoiceEvent(actor, actionType, actor.EventListener)
+	return actionType, nil
+
 }
 
 func chooseFromHasSpellsPreference(actor *character.Character) (shared.ActionType, error) {
@@ -91,7 +95,9 @@ func chooseFromHasSpellsPreference(actor *character.Character) (shared.ActionTyp
 		events.LogCharacterActionChoiceEvent(actor, shared.ATRanged, actor.EventListener)
 		return shared.ATRanged, nil
 	}
-	return shared.GetActionFromPreference(actor.ActionPreference), nil
+	actionType := shared.GetActionFromPreference(actor.ActionPreference)
+	events.LogCharacterActionChoiceEvent(actor, actionType, actor.EventListener)
+	return actionType, nil
 }
 
 func (e *Encounter) chooseBestHealingSpell(actor core.Entity, target core.Entity) (*spells.Spell, error) {

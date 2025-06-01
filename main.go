@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
+	"dnd5e-encounter-simulator-backend/internal/helpers"
 	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
@@ -70,16 +72,22 @@ func main() {
 	//var m monster.Monster
 	params := monster.MonsterQueryParams{ID: 1}
 	//params := monster.MonsterQueryParams{Name: "Archmage"}
-	m, err := monster.QueryMonsterData(ctx, params)
-	if err != nil {
-		fmt.Println(err)
-	}
+	//m, err := monster.QueryMonsterData(ctx, params)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
 
-	params = monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
-	m2, err := monster.QueryMonsterData(ctx, params)
+	m, err := monster.NewSRDMonster(ctx, params, core.EntityModifiers{InitiativeAdvantage: shared.RollNormal, InitiativeBonus: 0})
 	if err != nil {
 		fmt.Println(err)
 	}
+	helpers.PrintStructFields(m, "")
+
+	//params = monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
+	//m2, err := monster.QueryMonsterData(ctx, params)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
 
 	//fmt.Println("Monster:")
 	//helpers.PrintStructFields(m2, "MonsterBase")
@@ -127,11 +135,23 @@ func main() {
 	hp.HP = 20
 	hp.MaxHP = 84
 
-	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferMelee, shared.SPNoPreference)
+	weaponProf := character.WeaponProficiencies{
+		Primary:   true,
+		Secondary: true,
+		Ranged:    true,
+	}
+
+	entityModifiers := core.EntityModifiers{
+		InitiativeAdvantage: shared.RollNormal,
+		InitiativeBonus:     0,
+	}
+
+	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferMelee, shared.SPNoPreference, entityModifiers)
 	if err != nil {
 		fmt.Println(err)
 	}
 	//fmt.Println(c)
+	c.SetWeaponProficiencies(weaponProf)
 
 	err = c.AddSRDArmor(ctx, 7)
 	if err != nil {
@@ -209,8 +229,8 @@ func main() {
 	}
 	s := simulation.New(options)
 	s.Encounter.AddPartyMember(&c)
-	s.Encounter.AddMonster(&m)
-	s.Encounter.AddMonster(&m2)
+	s.Encounter.AddMonster(m)
+	//s.Encounter.AddMonster(&m2)
 
 	err = s.Simulate(10)
 	if err != nil {

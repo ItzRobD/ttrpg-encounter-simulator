@@ -1,15 +1,20 @@
 package monster
 
 import (
+	"context"
+	"dnd5e-encounter-simulator-backend/internal/helpers"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
+	"strings"
 )
 
 type Monster struct {
 	MonsterBase
+	CombatState      core.CombatState
+	EntityModifiers  core.EntityModifiers
 	DamageModifiers  []MonsterDamageModifier
 	ResistBreakers   []shared.DamageBreaker
 	Actions          []MonsterAction
@@ -103,6 +108,82 @@ type StandardSC struct {
 type MonsterQueryParams struct {
 	Name string
 	ID   int
+}
+
+func NewSRDMonster(ctx context.Context, params MonsterQueryParams, em core.EntityModifiers) (*Monster, error) {
+	var err error
+	base, err := QueryMonsterData(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	damageModifiers, err := getMonsterDamageModifiersByID(ctx, base.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	resistBreakers, err := getMonsterResistBreakersByID(ctx, base.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	actions, err := getMonsterActionsByID(ctx, base.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	multiattacks, err := getMonsterMultiattacksByID(ctx, base.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	specialAbilities, err := getMonsterSpecialAbilities(ctx, base.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	legendaryActions, err := getMonsterLegendaryActionsByID(ctx, base.ID)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	spellcasting, err := getMonsterSpellcastingByID(ctx, base.ID)
+	if err != nil {
+		if !strings.Contains(err.Error(), "no rows in result set") {
+			fmt.Println(err)
+		}
+	}
+	helpers.PrintStructFields(spellcasting, "")
+
+	cs := core.CombatState{
+		CurrentHP: base.HP.MaxHP,
+		MaxHP:     base.HP.MaxHP,
+		TempHP:    0,
+
+		HasUsedAction:         false,
+		HasUsedBonusAction:    false,
+		HasUsedReaction:       false,
+		LegendaryActionPoints: 3,
+	}
+
+	monster := &Monster{
+		MonsterBase:      base,
+		CombatState:      cs,
+		EntityModifiers:  em,
+		DamageModifiers:  damageModifiers,
+		ResistBreakers:   resistBreakers,
+		Actions:          actions,
+		Multiattacks:     multiattacks,
+		LegendaryActions: legendaryActions,
+		SpecialAbilities: specialAbilities,
+		Spellcasting:     spellcasting,
+	}
+
+	return monster, nil
+}
+
+func (m *Monster) SetEntityModifiers(em core.EntityModifiers) {
+	m.EntityModifiers = em
 }
 
 func (m *Monster) DetermineMonsterHP(useAverage bool) (int, int, error) {

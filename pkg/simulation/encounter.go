@@ -83,7 +83,7 @@ func (e *Encounter) SetupCombatTracker() error {
 	}
 
 	for _, m := range e.Monsters {
-		initiative, err := shared.InitiativeRoll(m.AbilityScores.Dexterity)
+		initiative, err := shared.InitiativeRoll(m.AbilityScores.Dexterity, m.EntityModifiers.InitiativeBonus, m.EntityModifiers.InitiativeAdvantage)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,14 @@ func (e *Encounter) SetupCombatTracker() error {
 		}
 	}
 	for _, p := range e.Party {
-		initiative, err := shared.InitiativeRoll(p.AbilityScores.Dexterity)
+		initiative, err := shared.InitiativeRoll(p.AbilityScores.Dexterity, p.EntityModifiers.InitiativeBonus, p.EntityModifiers.InitiativeAdvantage)
+		if err != nil {
+			return err
+		}
+		err = e.AddCombatant(core.Combatant{
+			InitiativeScore: initiative,
+			Creature:        p,
+		})
 		if err != nil {
 			return err
 		}
@@ -128,7 +135,7 @@ func (e *Encounter) SimulateRound() {
 			//       Since both monsters and characters will need to choose spells. Choosing actions
 			//       Should be handled through the interface -> Add GetAction() or some similar method
 			//       Move any shared logic with rolls etc to the shared package
-			e.handleCharacterTurn(creature)
+			e.handleCharacterTurn(creature, shared.RollNormal)
 		case *monster.Monster:
 			if creature.IsUnconscious() {
 				continue // Skip if the monster is unconscious
@@ -141,7 +148,7 @@ func (e *Encounter) SimulateRound() {
 }
 
 // handleCharacterTurn manages the actions of a character during their turn in an encounter.
-func (e *Encounter) handleCharacterTurn(character *character.Character) {
+func (e *Encounter) handleCharacterTurn(character *character.Character, advantage shared.AdvantageType) {
 	actionType, err := e.ChooseCharacterActionType(character)
 	if err != nil {
 		fmt.Println(err)
@@ -153,11 +160,11 @@ func (e *Encounter) handleCharacterTurn(character *character.Character) {
 		e.performCharacterHealAction(character)
 		return
 	case shared.ATRanged:
-		e.performCharacterRangedAttack(character)
+		e.performCharacterRangedAttack(character, advantage)
 	case shared.ATMelee:
-		e.performCharacterMeleeAttack(character)
+		e.performCharacterMeleeAttack(character, advantage)
 	case shared.ATSpell:
-		e.performCharacterSpellAttack(character)
+		e.performCharacterSpellAttack(character, advantage)
 		return
 	case shared.ATNoAction:
 		fallthrough
@@ -167,10 +174,10 @@ func (e *Encounter) handleCharacterTurn(character *character.Character) {
 	}
 }
 
-func (e *Encounter) performCharacterRangedAttack(character *character.Character) {
+func (e *Encounter) performCharacterRangedAttack(character *character.Character, advantage shared.AdvantageType) {
 	target, _ := e.chooseDamageTarget(character)
 	if monsterTarget, ok := target.(*monster.Monster); ok {
-		_, err := character.MakeWeaponAttack(monsterTarget, "ranged")
+		_, _, err := character.MakeWeaponAttack(monsterTarget, "ranged", advantage)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -179,11 +186,11 @@ func (e *Encounter) performCharacterRangedAttack(character *character.Character)
 	}
 }
 
-func (e *Encounter) performCharacterMeleeAttack(character *character.Character) {
+func (e *Encounter) performCharacterMeleeAttack(character *character.Character, advantage shared.AdvantageType) {
 	target, _ := e.chooseDamageTarget(character)
 	if monsterTarget, ok := target.(*monster.Monster); ok {
 		// TODO: Add secondary slot
-		_, err := character.MakeWeaponAttack(monsterTarget, "primary")
+		_, _, err := character.MakeWeaponAttack(monsterTarget, "primary", advantage)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -206,7 +213,7 @@ func (e *Encounter) performCharacterHealAction(c *character.Character) {
 	}
 }
 
-func (e *Encounter) performCharacterSpellAttack(c *character.Character) {
+func (e *Encounter) performCharacterSpellAttack(c *character.Character, advantage shared.AdvantageType) {
 	if !e.Options.AOEHitsAllEnemies {
 		target, _ := e.chooseDamageTarget(c)
 		damageSpell, err := e.chooseDamageSpell(c, shared.SPHighestLevel)
@@ -214,7 +221,7 @@ func (e *Encounter) performCharacterSpellAttack(c *character.Character) {
 			fmt.Println(err)
 		}
 		if monsterTarget, ok := target.(*monster.Monster); ok {
-			_, err2 := c.MakeSpellAttack(monsterTarget, damageSpell)
+			_, err2 := c.MakeSpellAttack(monsterTarget, damageSpell, advantage)
 			if err2 != nil {
 				fmt.Println(err2)
 			}

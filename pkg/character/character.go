@@ -13,17 +13,19 @@ import (
 )
 
 type Character struct {
-	Name             string
-	Class            class.Class
-	Level            int
-	AbilityScores    shared.AbilityScores
-	HP               shared.PlayerHP
-	Eq               Equipment
-	KnownSpells      []spells.Spell
-	SpellSlots       shared.SpellSlots
-	ActionPreference shared.ActionPreference
-	SpellPriority    shared.SpellPriority
-	EventListener    func(event interface{})
+	Name              string
+	Class             class.Class
+	Level             int
+	AbilityScores     shared.AbilityScores
+	HP                shared.PlayerHP
+	Eq                Equipment
+	WeaponProficiency WeaponProficiencies
+	KnownSpells       []spells.Spell
+	SpellSlots        shared.SpellSlots
+	ActionPreference  shared.ActionPreference
+	SpellPriority     shared.SpellPriority
+	EntityModifiers   core.EntityModifiers
+	EventListener     func(event interface{})
 }
 
 type Equipment struct {
@@ -33,7 +35,13 @@ type Equipment struct {
 	Ranged    weapon.Weapon `json:"ranged"`
 }
 
-func New(ctx context.Context, name string, classID int, level int, abilityScores shared.AbilityScores, hp shared.PlayerHP, ap shared.ActionPreference, sp shared.SpellPriority) (Character, error) {
+type WeaponProficiencies struct {
+	Primary   bool
+	Secondary bool
+	Ranged    bool
+}
+
+func New(ctx context.Context, name string, classID int, level int, abilityScores shared.AbilityScores, hp shared.PlayerHP, ap shared.ActionPreference, sp shared.SpellPriority, em core.EntityModifiers) (Character, error) {
 	if classID < 0 || classID > 13 {
 		return Character{}, fmt.Errorf("invalid class id during character initialization: %d", classID)
 	}
@@ -62,6 +70,7 @@ func New(ctx context.Context, name string, classID int, level int, abilityScores
 		SpellSlots:       c.Spellcasting.MaxSpellSlots[level],
 		ActionPreference: ap,
 		SpellPriority:    sp,
+		EntityModifiers:  em,
 	}, nil
 }
 
@@ -125,6 +134,16 @@ func (c *Character) AddCustomWeapon(name string, isVersatile bool, isFinesse boo
 	}
 
 	return nil
+}
+
+func (c *Character) SetWeaponProficiencies(p WeaponProficiencies) {
+	c.WeaponProficiency.Primary = p.Primary
+	c.WeaponProficiency.Secondary = p.Secondary
+	c.WeaponProficiency.Ranged = p.Ranged
+}
+
+func (c *Character) SetEntityModifiers(em core.EntityModifiers) {
+	c.EntityModifiers = em
 }
 
 func (c *Character) addWeapon(w weapon.Weapon, slot string) error {
@@ -222,6 +241,19 @@ func (c *Character) GetCurrentHPPct() int {
 
 func (c *Character) GetAC() int {
 	return c.Eq.Armor.ArmorClass
+}
+
+func (c *Character) GetWeaponProficiencyFromSlot(slot string) (bool, error) {
+	switch slot {
+	case "primary":
+		return c.WeaponProficiency.Primary, nil
+	case "secondary":
+		return c.WeaponProficiency.Secondary, nil
+	case "ranged":
+		return c.WeaponProficiency.Ranged, nil
+	default:
+		return false, fmt.Errorf("invalid slot identifier provided: %s", slot)
+	}
 }
 
 func (c *Character) GetEventListener() func(event interface{}) {
