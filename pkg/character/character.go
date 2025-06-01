@@ -168,10 +168,8 @@ func (c *Character) addWeapon(w weapon.Weapon, slot string) error {
 func (c *Character) IsUnconscious() bool {
 	if c.HP.HP <= 0 {
 		if c.EventListener != nil {
-			event := events.CombatEvent{
-				EventType: events.ETUnconsciousEvent,
-				Actor:     c.Name,
-			}
+			event := &events.UnconsciousEvent{}
+			event.SetActor(c.Name)
 			c.EventListener(event)
 		}
 		return true

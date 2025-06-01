@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	database "dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/internal/helpers"
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
@@ -81,7 +80,6 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	helpers.PrintStructFields(m, "")
 
 	//params = monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
 	//m2, err := monster.QueryMonsterData(ctx, params)

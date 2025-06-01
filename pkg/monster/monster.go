@@ -2,7 +2,6 @@ package monster
 
 import (
 	"context"
-	"dnd5e-encounter-simulator-backend/internal/helpers"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
@@ -153,7 +152,6 @@ func NewSRDMonster(ctx context.Context, params MonsterQueryParams, em core.Entit
 			fmt.Println(err)
 		}
 	}
-	helpers.PrintStructFields(spellcasting, "")
 
 	cs := core.CombatState{
 		CurrentHP: base.HP.MaxHP,
@@ -308,10 +306,8 @@ func (m *Monster) GetAC() int { return m.AC }
 func (m *Monster) IsUnconscious() bool {
 	if m.HP.HP <= 0 {
 		if m.EventListener != nil {
-			event := events.CombatEvent{
-				EventType: events.ETUnconsciousEvent,
-				Actor:     m.Name,
-			}
+			event := &events.UnconsciousEvent{}
+			event.SetActor(m.Name)
 			m.EventListener(event)
 		}
 		return true

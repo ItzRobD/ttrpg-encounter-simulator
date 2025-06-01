@@ -55,12 +55,14 @@ func RollD20WithAdvantage(advantage AdvantageType) (int, error) {
 	}
 }
 
-func AttackRoll(modifier int, advantage AdvantageType) (int, error) {
+// AttackRoll calculates the attack roll value by adding a roll of a D20 (considering advantage/disadvantage) to a modifier.
+// Returns the final attack roll value, the raw roll value, and an error if rolling fails.
+func AttackRoll(modifier int, advantage AdvantageType) (int, int, error) {
 	roll, err := RollD20WithAdvantage(advantage)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
-	return roll + modifier, nil
+	return roll + modifier, roll, nil
 }
 
 func AttackRollD20(advantage AdvantageType) (int, error) {

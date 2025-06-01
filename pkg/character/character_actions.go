@@ -103,14 +103,14 @@ func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell, advanta
 		if err != nil {
 			return false, err
 		}
-		ar, err := shared.AttackRoll(aMod, advantage)
+		attackTotal, attackRoll, err := shared.AttackRoll(aMod, advantage)
 		if err != nil {
 			return false, err
 		}
 
-		didHit := shared.DoesAttackHit(ar+aMod, t.AC)
+		didHit := shared.DoesAttackHit(attackTotal, t.AC)
 		//c.logSpellAttackEvent(t, s, ar, aMod, didHit)
-		events.LogSpellAttackEvent(c, t, s, ar, aMod, didHit, c.EventListener)
+		events.LogSpellAttackEvent(c, t, s, attackRoll, aMod, didHit, c.EventListener)
 
 		if didHit {
 			damageModifier, err2 := c.GetSpellBonus()
@@ -129,7 +129,7 @@ func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell, advanta
 			return true, nil
 		} else { // Miss
 			//c.logSpellAttackEvent(t, s, ar, aMod, didHit)
-			events.LogSpellAttackEvent(c, t, s, ar, aMod, didHit, c.EventListener)
+			events.LogSpellAttackEvent(c, t, s, attackRoll, aMod, didHit, c.EventListener)
 			return false, nil
 		}
 	}
@@ -146,19 +146,19 @@ func (c *Character) MakeWeaponAttack(t *monster.Monster, slot string, advantage 
 	if err != nil {
 		return false, 0, err
 	}
-	aMod, err := w.GetAttackModifier(&c.AbilityScores, c.Level, wProf)
+	attackModifier, err := w.GetAttackModifier(&c.AbilityScores, c.Level, wProf)
 	if err != nil {
 		return false, 0, err
 	}
 
-	attackValue, err := shared.AttackRoll(aMod, advantage)
+	attackTotal, attackRoll, err := shared.AttackRoll(attackModifier, advantage)
 	if err != nil {
 		return false, 0, err
 	}
 
-	didHit := shared.DoesAttackHit(attackValue, t.AC)
+	didHit := shared.DoesAttackHit(attackTotal, t.AC)
 
-	events.LogWeaponAttackEvent(c, t, w, attackValue, aMod, didHit, c.EventListener)
+	events.LogWeaponAttackEvent(c, t, w, attackRoll, attackModifier, didHit, c.EventListener)
 
 	if didHit {
 		damageModifier, err := w.GetWeaponModifier(&c.AbilityScores)

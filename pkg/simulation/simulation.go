@@ -28,18 +28,18 @@ type Simulation struct {
 
 func New(options Options) Simulation {
 	dispatcher := events.NewEventDispatcher()
-	dispatcher.RegisterListener(&events.AttackHandler{})
-	dispatcher.RegisterListener(&events.SpellAttackHandler{})
-	dispatcher.RegisterListener(&events.SpellDCHandler{})
-	dispatcher.RegisterListener(&events.HealHandler{})
-	dispatcher.RegisterListener(&events.DeathHandler{})
-	dispatcher.RegisterListener(&events.DamageHandler{})
-	dispatcher.RegisterListener(&events.UnconsciousHandler{})
-	dispatcher.RegisterListener(&events.RollHandler{})
-	dispatcher.RegisterListener(&events.HPRollHandler{})
-	dispatcher.RegisterListener(&events.ActionChoiceHandler{})
-	dispatcher.RegisterListener(&events.SpellChoiceHandler{})
-	dispatcher.RegisterListener(&events.HPModifiedHandler{})
+	dispatcher.RegisterHandler(&events.AttackHandler{})
+	dispatcher.RegisterHandler(&events.SpellAttackHandler{})
+	dispatcher.RegisterHandler(&events.SpellDCHandler{})
+	dispatcher.RegisterHandler(&events.HealHandler{})
+	dispatcher.RegisterHandler(&events.DeathHandler{})
+	dispatcher.RegisterHandler(&events.DamageHandler{})
+	dispatcher.RegisterHandler(&events.UnconsciousHandler{})
+	dispatcher.RegisterHandler(&events.RollHandler{})
+	dispatcher.RegisterHandler(&events.HPRollHandler{})
+	dispatcher.RegisterHandler(&events.ActionChoiceHandler{})
+	dispatcher.RegisterHandler(&events.SpellChoiceHandler{})
+	dispatcher.RegisterHandler(&events.HPModifiedHandler{})
 
 	var s Simulation
 	s.Encounter.Options = options
@@ -49,7 +49,7 @@ func New(options Options) Simulation {
 }
 
 func (s *Simulation) LogEvent(e events.CombatEvent) {
-	e.Round = s.Encounter.CurrentRound
+	e.SetRound(s.Encounter.CurrentRound)
 	s.simLog = append(s.simLog, e)
 	s.dispatcher.DispatchEvent(e)
 }

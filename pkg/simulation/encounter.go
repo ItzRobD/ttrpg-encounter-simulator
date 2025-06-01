@@ -100,10 +100,6 @@ func (e *Encounter) SetupCombatTracker() error {
 		if err != nil {
 			return err
 		}
-		err = e.AddCombatant(core.Combatant{
-			InitiativeScore: initiative,
-			Creature:        p,
-		})
 		if err != nil {
 			return err
 		}
