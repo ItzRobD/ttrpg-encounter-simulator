@@ -4,7 +4,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
-	"dnd5e-encounter-simulator-backend/pkg/weapon"
 )
 
 func LogCharacterActionChoiceEvent(actor core.Entity, choice shared.ActionType, listener func(event interface{})) {
@@ -18,10 +17,10 @@ func LogCharacterActionChoiceEvent(actor core.Entity, choice shared.ActionType, 
 	}
 }
 
-func LogWeaponAttackEvent(actor core.Entity, target core.Entity, weapon *weapon.Weapon, attackRoll, attackModifier int, isHit bool, listener func(event interface{})) {
-	event := &AttackEvent{
+func LogMeleeAttackEvent(actor core.Entity, target core.Entity, attack string, attackRoll, attackModifier int, isHit bool, listener func(event interface{})) {
+	event := &MeleeAttackEvent{
 		Target:         target.GetName(),
-		WeaponName:     weapon.Name,
+		AttackName:     attack,
 		AttackRoll:     attackRoll,
 		AttackModifier: attackModifier,
 		AttackTotal:    attackRoll + attackModifier,
@@ -141,10 +140,12 @@ func LogHPRollEvent(actor core.Entity, rollSum int, rolls []int, toAdd int, list
 	}
 }
 
-func LogDiceRollEvent(actor core.Entity, rollSum int, rolls []int, listener func(event interface{})) {
+func LogDiceRollEvent(actor core.Entity, rollSum int, rolls []int, rollType shared.DiceRollType, modifier int, listener func(event interface{})) {
 	event := &DiceRollEvent{
-		Value: rollSum,
-		Rolls: rolls,
+		RollType: rollType,
+		Value:    rollSum,
+		Rolls:    rolls,
+		Modifier: modifier,
 	}
 	event.SetActor(actor.GetName())
 
@@ -155,13 +156,24 @@ func LogDiceRollEvent(actor core.Entity, rollSum int, rolls []int, listener func
 
 func LogSavingThrowEvent(actor core.Entity, result int, roll int, modifier int, success bool, listener func(event interface{})) {
 	event := &SavingThrowEvent{
-		EventType: ETSavingThrowEvent,
-		Actor:     actor.GetName(),
-		Result:    result,
-		Roll:      roll,
-		Modifier:  modifier,
-		Success:   success,
+		Actor:    actor.GetName(),
+		Result:   result,
+		Roll:     roll,
+		Modifier: modifier,
+		Success:  success,
 	}
+
+	if listener != nil {
+		listener(event)
+	}
+}
+
+func LogTargetChoiceEvent(actor core.Entity, target core.Entity, listener func(event interface{})) {
+	event := &TargetChoiceEvent{
+		Target: target.GetName(),
+	}
+	event.SetActor(actor.GetName())
+
 	if listener != nil {
 		listener(event)
 	}

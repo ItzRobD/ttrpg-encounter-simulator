@@ -5,6 +5,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/armor"
 	"dnd5e-encounter-simulator-backend/pkg/class"
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/combat"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
@@ -241,17 +242,48 @@ func (c *Character) GetAC() int {
 	return c.Eq.Armor.ArmorClass
 }
 
-func (c *Character) GetWeaponProficiencyFromSlot(slot string) (bool, error) {
+func (c *Character) GetWeaponProficiencyFromSlot(slot shared.WeaponSlot) (bool, error) {
 	switch slot {
-	case "primary":
+	case shared.WSPrimary:
 		return c.WeaponProficiency.Primary, nil
-	case "secondary":
+	case shared.WSSecondary:
 		return c.WeaponProficiency.Secondary, nil
-	case "ranged":
+	case shared.WSRanged:
 		return c.WeaponProficiency.Ranged, nil
 	default:
 		return false, fmt.Errorf("invalid slot identifier provided: %s", slot)
 	}
+}
+
+func (c *Character) CreateWeaponAttackInfo(slot shared.WeaponSlot) (combat.AttackInfo, error) {
+	w, err := c.getWeaponFromSlot(slot)
+	if err != nil {
+		return combat.AttackInfo{}, err
+	}
+
+	prof, err := c.GetWeaponProficiencyFromSlot(slot)
+	if err != nil {
+		return combat.AttackInfo{}, err
+	}
+
+	attackMod, err := w.GetAttackModifier(&c.AbilityScores, c.Level, prof)
+	if err != nil {
+		return combat.AttackInfo{}, err
+	}
+
+	damageMod, err := w.GetWeaponModifier(&c.AbilityScores)
+	if err != nil {
+		return combat.AttackInfo{}, err
+	}
+
+	return combat.AttackInfo{
+		Name:           w.Name,
+		NumberOfDice:   w.NumberOfDice,
+		Die:            w.Die,
+		AttackModifier: attackMod,
+		DamageModifier: damageMod,
+		DamageType:     w.DamageType,
+	}, nil
 }
 
 func (c *Character) GetEventListener() func(event interface{}) {

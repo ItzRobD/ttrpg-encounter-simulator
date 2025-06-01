@@ -19,7 +19,7 @@ type Entity interface {
 
 type Combatant struct {
 	InitiativeScore int
-	Creature        Entity
+	Entity          Entity
 }
 
 type EntityModifiers struct {

@@ -110,10 +110,10 @@ func getMaxFormulaLevelBySpellID(ctx context.Context, spellID, formulaLevel int)
 	return maxFormulaLevel, nil
 }
 
-func getSpellByID(ctx context.Context, id int, level int) (Spell, error) {
+func getSpellByID(ctx context.Context, id int) (Spell, error) {
 	var spell Spell
 	stmt := SELECT(
-		Spells.AllColumns,
+		Spells.AllColumns, SpellFormulas.LevelType,
 		CASE().
 			WHEN(Spells.SpellType.EQ(enum.Stype.Damage)).
 			THEN(SpellDc.Ability).
@@ -122,8 +122,76 @@ func getSpellByID(ctx context.Context, id int, level int) (Spell, error) {
 			WHEN(Spells.SpellType.EQ(enum.Stype.Damage)).
 			THEN(SpellDc.OnSuccess).
 			ELSE(enum.Dcsuccess.None),
+	).
+		FROM(
+			Spells.
+				LEFT_JOIN(SpellDc, Spells.ID.EQ(SpellDc.SpellID)).
+				LEFT_JOIN(SpellFormulas, Spells.ID.EQ(SpellFormulas.SpellID)),
+		).
+		WHERE(
+			Spells.ID.EQ(Int(int64(id))),
+		)
+
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
+	if err != nil {
+		return spell, fmt.Errorf("failed to query spells: %w", err)
+	}
+	var ability sql.NullString
+	var onSuccess sql.NullString
+	var levelType sql.NullString
+	err = pgx.Row.Scan(row,
+		&spell.ID,
+		&spell.Name,
+		&spell.Description,
+		&spell.IsConcentration,
+		&spell.CastingTime,
+		&spell.IsRitual,
+		&spell.Level,
+		&spell.SpellType,
+		&spell.IsAOE,
+		&spell.HasDC,
+		&spell.ApiURL,
+		&ability,
+		&onSuccess,
+		&levelType,
+	)
+	if err != nil {
+		return spell, fmt.Errorf("failed to collect spells: %w", err)
+	}
+
+	if ability.Valid {
+		spell.Ability = ability.String
+	} else {
+		spell.Ability = ""
+	}
+	if onSuccess.Valid {
+		spell.OnSuccess = onSuccess.String
+	} else {
+		spell.OnSuccess = ""
+	}
+	if levelType.Valid {
+		spell.LevelType = levelType.String
+	} else {
+		spell.LevelType = ""
+	}
+
+	if levelType.Valid {
+		formulas, err := getSpellFormulas(ctx, id)
+		if err != nil {
+			return spell, err
+		}
+		spell.Formulas = formulas
+	} else {
+		spell.Formulas = []CastFormula{}
+	}
+	return spell, nil
+}
+
+func getSpellFormulas(ctx context.Context, spellID int) ([]CastFormula, error) {
+	var formulas []CastFormula
+	stmt := SELECT(
 		SpellFormulas.FormulaLevel,
-		SpellFormulas.LevelType,
 		CASE().
 			WHEN(Spells.SpellType.EQ(enum.Stype.Damage)).
 			THEN(SpellDamage.NumberOfDice).
@@ -144,64 +212,39 @@ func getSpellByID(ctx context.Context, id int, level int) (Spell, error) {
 			WHEN(Spells.SpellType.EQ(enum.Stype.Damage)).
 			THEN(SpellDamage.UseSpellmod).
 			ELSE(SpellHeal.UseSpellmod),
-	).
-		FROM(
-			Spells.
-				LEFT_JOIN(SpellDc, Spells.ID.EQ(SpellDc.SpellID)).
-				LEFT_JOIN(SpellFormulas, Spells.ID.EQ(SpellFormulas.SpellID)).
-				LEFT_JOIN(SpellDamage, SpellFormulas.FormulaID.EQ(SpellDamage.SpellFormulaID)).
-				LEFT_JOIN(SpellHeal, SpellFormulas.FormulaID.EQ(SpellHeal.SpellFormulaID)),
-		).
-		WHERE(
-			Spells.ID.EQ(Int(int64(id))).
-				AND(SpellFormulas.FormulaLevel.EQ(Int(int64(level)))),
-		)
+	).FROM(
+		Spells.
+			LEFT_JOIN(SpellFormulas, Spells.ID.EQ(SpellFormulas.SpellID)).
+			LEFT_JOIN(SpellDamage, SpellFormulas.FormulaID.EQ(SpellDamage.SpellFormulaID)).
+			LEFT_JOIN(SpellHeal, SpellFormulas.FormulaID.EQ(SpellHeal.SpellFormulaID)),
+	).WHERE(
+		Spells.ID.EQ(Int(int64(spellID))),
+	).ORDER_BY(
+		SpellFormulas.FormulaLevel.ASC(),
+	)
 
 	query, args := stmt.Sql()
-	row, err := database.QueryRow(ctx, query, args...)
+	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return spell, fmt.Errorf("failed to query spells: %w", err)
+		return formulas, fmt.Errorf("failed to query spell formulas: %w", err)
 	}
-	var ability sql.NullString
-	var onSuccess sql.NullString
-	err = pgx.Row.Scan(row,
-		&spell.ID,
-		&spell.Name,
-		&spell.Description,
-		&spell.IsConcentration,
-		&spell.CastingTime,
-		&spell.IsRitual,
-		&spell.Level,
-		&spell.SpellType,
-		&spell.IsAOE,
-		&spell.HasDC,
-		&spell.ApiURL,
-		&ability,
-		&onSuccess,
-		&spell.CastLevel,
-		&spell.LevelType,
-		&spell.NumberOfDice,
-		&spell.Die,
-		&spell.AmountToAdd,
-		&spell.DamageType,
-		&spell.UseSpellmod,
-	)
-	if err != nil {
-		return spell, fmt.Errorf("failed to collect spells: %w", err)
+	defer rows.Close()
+	for rows.Next() {
+		var formula CastFormula
+		err2 := rows.Scan(
+			&formula.CastLevel,
+			&formula.NumberOfDice,
+			&formula.Die,
+			&formula.AmountToAdd,
+			&formula.DamageType,
+			&formula.UseSpellmod,
+		)
+		if err2 != nil {
+			return formulas, fmt.Errorf("failed to collect spell formulas: %w", err)
+		}
+		formulas = append(formulas, formula)
 	}
-
-	if ability.Valid {
-		spell.Ability = ability.String
-	} else {
-		spell.Ability = ""
-	}
-	if onSuccess.Valid {
-		spell.OnSuccess = onSuccess.String
-	} else {
-		spell.OnSuccess = ""
-	}
-
-	return spell, nil
+	return formulas, nil
 }
 
 func getSpellIDByName(ctx context.Context, name string) (int, error) {
@@ -269,7 +312,7 @@ func QuerySpellData(ctx context.Context, params SpellQueryParams) (Spell, error)
 	}
 
 	var queryID int
-	var queryLevel int
+	//var queryLevel int
 
 	if params.ID != 0 {
 		queryID = params.ID
@@ -279,11 +322,11 @@ func QuerySpellData(ctx context.Context, params SpellQueryParams) (Spell, error)
 			return spell, err
 		}
 	}
-	queryLevel, err = getSpellQueryLevel(ctx, queryID, params.Level)
-	if err != nil {
-		return spell, err
-	}
-	spell, err = getSpellByID(ctx, queryID, queryLevel)
+	//queryLevel, err = getSpellQueryLevel(ctx, queryID, params.Level)
+	//if err != nil {
+	//	return spell, err
+	//}
+	spell, err = getSpellByID(ctx, queryID)
 	if err != nil {
 		return spell, err
 	}
@@ -328,7 +371,7 @@ func GetSpellFormulaByLevel(ctx context.Context, spellID int, formulaLevel int) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to query spell formula by level: %w", err)
 	}
-	err = row.Scan(&formula.CastLevel, &formula.LevelType, &formula.NumberOfDice, &formula.Die, &formula.AmountToAdd, &formula.UseSpellmod, &formula.DamageType)
+	err = row.Scan(&formula.CastLevel, &formula.NumberOfDice, &formula.Die, &formula.AmountToAdd, &formula.UseSpellmod, &formula.DamageType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect spell formula by level: %w", err)
 	}

@@ -23,6 +23,7 @@ const (
 	ETSpellSlotsEvent   EventType = "spellslots"
 	ETHPModifiedEvent   EventType = "hpmodified"
 	ETSavingThrowEvent  EventType = "savingthrow"
+	ETTargetChoiceEvent EventType = "targetchoice"
 )
 
 // TODO: Create Event structs for specific purposes. One catch all is not a smart way to handle this
@@ -81,39 +82,40 @@ func (b *BaseEvent) SetActor(actor string) {
 	b.Actor = actor
 }
 
-type AttackEvent struct {
+type MeleeAttackEvent struct {
 	BaseEvent
 	Target         string
-	WeaponName     string
+	AttackName     string
 	AttackRoll     int
 	AttackModifier int
 	AttackTotal    int
 	Success        bool
 }
 
-func (e AttackEvent) GetEventType() EventType { return ETAttackEvent }
+func (e *MeleeAttackEvent) GetEventType() EventType { return ETAttackEvent }
 
 type ActionChoiceEvent struct {
 	BaseEvent
 	ActionChoice shared.ActionType
 }
 
-func (e ActionChoiceEvent) GetEventType() EventType { return ETActionChoiceEvent }
+func (e *ActionChoiceEvent) GetEventType() EventType { return ETActionChoiceEvent }
 
 type SpellSlotsEvent struct {
 	BaseEvent
 	SpellSlots shared.SpellSlots
 }
 
-func (e SpellSlotsEvent) GetEventType() EventType { return ETSpellSlotsEvent }
+func (e *SpellSlotsEvent) GetEventType() EventType { return ETSpellSlotsEvent }
 
 type SpellChoiceEvent struct {
 	BaseEvent
 	SpellChoice *spells.Spell
+	CastLevel   int
 	HasSlots    bool
 }
 
-func (e SpellChoiceEvent) GetEventType() EventType { return ETSpellChoiceEvent }
+func (e *SpellChoiceEvent) GetEventType() EventType { return ETSpellChoiceEvent }
 
 type SpellAttackEvent struct {
 	BaseEvent
@@ -125,7 +127,7 @@ type SpellAttackEvent struct {
 	Success        bool
 }
 
-func (e SpellAttackEvent) GetEventType() EventType { return ETSpellAttackEvent }
+func (e *SpellAttackEvent) GetEventType() EventType { return ETSpellAttackEvent }
 
 type SpellDCEvent struct {
 	BaseEvent
@@ -136,7 +138,7 @@ type SpellDCEvent struct {
 	Success     bool
 }
 
-func (e SpellDCEvent) GetEventType() EventType { return ETSpellDCEvent }
+func (e *SpellDCEvent) GetEventType() EventType { return ETSpellDCEvent }
 
 type DamageEvent struct {
 	BaseEvent
@@ -146,7 +148,7 @@ type DamageEvent struct {
 	Rolls      []int
 }
 
-func (e DamageEvent) GetEventType() EventType { return ETDamageEvent }
+func (e *DamageEvent) GetEventType() EventType { return ETDamageEvent }
 
 type HealEvent struct {
 	BaseEvent
@@ -155,19 +157,19 @@ type HealEvent struct {
 	Rolls  []int
 }
 
-func (e HealEvent) GetEventType() EventType { return ETHealEvent }
+func (e *HealEvent) GetEventType() EventType { return ETHealEvent }
 
 type DeathEvent struct {
 	BaseEvent
 }
 
-func (e DeathEvent) GetEventType() EventType { return ETDeathEvent }
+func (e *DeathEvent) GetEventType() EventType { return ETDeathEvent }
 
 type UnconsciousEvent struct {
 	BaseEvent
 }
 
-func (e UnconsciousEvent) GetEventType() EventType { return ETUnconsciousEvent }
+func (e *UnconsciousEvent) GetEventType() EventType { return ETUnconsciousEvent }
 
 type HPModifiedEvent struct {
 	BaseEvent
@@ -176,15 +178,17 @@ type HPModifiedEvent struct {
 	CurrentHP  int
 }
 
-func (e HPModifiedEvent) GetEventType() EventType { return ETHPModifiedEvent }
+func (e *HPModifiedEvent) GetEventType() EventType { return ETHPModifiedEvent }
 
 type DiceRollEvent struct {
 	BaseEvent
-	Value int
-	Rolls []int
+	RollType shared.DiceRollType
+	Value    int
+	Rolls    []int
+	Modifier int
 }
 
-func (e DiceRollEvent) GetEventType() EventType { return ETRollEvent }
+func (e *DiceRollEvent) GetEventType() EventType { return ETRollEvent }
 
 type HPRollEvent struct {
 	BaseEvent
@@ -193,17 +197,25 @@ type HPRollEvent struct {
 	Modifier int
 }
 
-func (e HPRollEvent) GetEventType() EventType { return ETHPRollEvent }
+func (e *HPRollEvent) GetEventType() EventType { return ETHPRollEvent }
 
 type SavingThrowEvent struct {
 	BaseEvent
-	EventType EventType
-	Actor     string
-	Result    int
-	Roll      int
-	Modifier  int
-	Success   bool
+	Actor    string
+	Result   int
+	Roll     int
+	Modifier int
+	Success  bool
 }
+
+func (e *SavingThrowEvent) GetEventType() EventType { return ETSavingThrowEvent }
+
+type TargetChoiceEvent struct {
+	BaseEvent
+	Target string
+}
+
+func (e *TargetChoiceEvent) GetEventType() EventType { return ETTargetChoiceEvent }
 
 type CombatLogger interface {
 	LogEvent(event CombatEvent)

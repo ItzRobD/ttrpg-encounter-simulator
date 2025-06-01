@@ -46,14 +46,6 @@ func (c *Character) AddKnownSpell(ctx context.Context, spellID int) error {
 		return fmt.Errorf("error querying spell data: %w", err)
 	}
 
-	if s.LevelType == "character" {
-		formula, err2 := spells.GetSpellFormulaByLevel(ctx, spellID, c.Level)
-		if err2 != nil {
-			return fmt.Errorf("error getting spell formula by level: %w", err2)
-		}
-		s.CastFormula = *formula
-	}
-
 	c.KnownSpells = append(c.KnownSpells, s)
 	return nil
 }
@@ -167,7 +159,7 @@ func (c *Character) getHighestAverageAOESpell(spellPool []*spells.Spell) (*spell
 			continue
 		}
 		if s.IsAOE {
-			if highestSpell == nil || s.GetAverageAmount() > highestSpell.GetAverageAmount() {
+			if highestSpell == nil || s.GetHighestAverageAmount() > highestSpell.GetHighestAverageAmount() {
 				highestSpell = s
 			}
 		}
@@ -190,7 +182,7 @@ func (c *Character) getHighestAverageSpell(spellPool []*spells.Spell) (*spells.S
 			// TODO: Add logging for spell selection
 			continue
 		}
-		if highestSpell == nil || s.GetAverageAmount() > highestSpell.GetAverageAmount() {
+		if highestSpell == nil || s.GetHighestAverageAmount() > highestSpell.GetHighestAverageAmount() {
 			highestSpell = s
 		}
 	}
@@ -212,7 +204,7 @@ func (c *Character) getLowestAverageSpell(spellPool []*spells.Spell) (*spells.Sp
 			// TODO: Add logging for spell selection
 			continue
 		}
-		if lowestSpell == nil || s.GetAverageAmount() < lowestSpell.GetAverageAmount() {
+		if lowestSpell == nil || s.GetHighestAverageAmount() < lowestSpell.GetHighestAverageAmount() {
 			lowestSpell = s
 		}
 	}
@@ -222,24 +214,25 @@ func (c *Character) getLowestAverageSpell(spellPool []*spells.Spell) (*spells.Sp
 	return lowestSpell, nil
 }
 
-func (c *Character) getHighestCastableVersion(spell spells.Spell) (*spells.Spell, error) {
-	if spell.LevelType == "character" {
-		formula, err := spells.GetSpellFormulaByLevel(context.Background(), spell.ID, c.Level)
-		if err != nil {
-			return nil, fmt.Errorf("error getting spell formula by level: %w", err)
-		}
-		spell.CastFormula = *formula
-		return &spell, nil
-	} else if spell.LevelType == "slot" {
-		formula, err := spells.GetSpellFormulaByLevel(context.Background(), spell.ID, c.getHighestAvailableSpellSlot())
-		if err != nil {
-			return nil, fmt.Errorf("error getting spell formula by level: %w", err)
-		}
-		spell.CastFormula = *formula
-		return &spell, nil
-	}
-	return nil, fmt.Errorf("spell level type not supported: %s", spell.LevelType)
-}
+// TODO: Evaluate if this function is needed. If not, remove it.
+//func (c *Character) getHighestCastableVersion(spell spells.Spell) (*spells.Spell, error) {
+//	if spell.LevelType == "character" {
+//		formula, err := spells.GetSpellFormulaByLevel(context.Background(), spell.ID, c.Level)
+//		if err != nil {
+//			return nil, fmt.Errorf("error getting spell formula by level: %w", err)
+//		}
+//		spell.CastFormula = *formula
+//		return &spell, nil
+//	} else if spell.LevelType == "slot" {
+//		formula, err := spells.GetSpellFormulaByLevel(context.Background(), spell.ID, c.getHighestAvailableSpellSlot())
+//		if err != nil {
+//			return nil, fmt.Errorf("error getting spell formula by level: %w", err)
+//		}
+//		spell.CastFormula = *formula
+//		return &spell, nil
+//	}
+//	return nil, fmt.Errorf("spell level type not supported: %s", spell.LevelType)
+//}
 
 func (c *Character) getHighestAvailableSpellSlot() int {
 	highestSlot := -1
@@ -281,7 +274,7 @@ func (c *Character) GetMostEfficientHealingSpell(healTarget int) (*spells.Spell,
 	}
 
 	for _, s := range spellPool {
-		avgAmount := s.GetAverageAmount()
+		avgAmount := s.GetHighestAverageAmount()
 		diff := math.Abs(float64(avgAmount) - float64(healTarget))
 
 		if mostEfficientSpell == nil || diff < smallestDiff {

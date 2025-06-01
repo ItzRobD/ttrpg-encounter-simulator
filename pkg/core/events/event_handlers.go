@@ -11,12 +11,12 @@ type EventHandler interface {
 type AttackHandler struct{}
 
 func (h *AttackHandler) HandleEvent(event CombatEvent) {
-	if attackEvent, ok := event.(*AttackEvent); ok {
+	if attackEvent, ok := event.(*MeleeAttackEvent); ok {
 		fmt.Printf("[Round %d] <Attack> %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
 			attackEvent.GetRound(),
 			attackEvent.GetActor(),
 			attackEvent.Target,
-			attackEvent.WeaponName,
+			attackEvent.AttackName,
 			attackEvent.AttackTotal,
 			attackEvent.AttackRoll,
 			attackEvent.AttackModifier,
@@ -28,7 +28,7 @@ type ActionChoiceHandler struct{}
 
 func (h *ActionChoiceHandler) HandleEvent(event CombatEvent) {
 	if actionChoiceEvent, ok := event.(*ActionChoiceEvent); ok {
-		fmt.Printf("[Round %d] %s chooses %s as its action.\n",
+		fmt.Printf("[Round %d] <Action Choice> %s chooses %s as its action.\n",
 			actionChoiceEvent.GetRound(),
 			actionChoiceEvent.GetActor(),
 			actionChoiceEvent.ActionChoice)
@@ -39,15 +39,21 @@ type SpellChoiceHandler struct{}
 
 func (h *SpellChoiceHandler) HandleEvent(event CombatEvent) {
 	if spellChoiceEvent, ok := event.(*SpellChoiceEvent); ok {
+		castFormula, err := spellChoiceEvent.SpellChoice.GetForumlaAtLevel(spellChoiceEvent.CastLevel)
+		if err != nil {
+			fmt.Printf("Error getting formula for spell %s at level %d: %v\n", spellChoiceEvent.SpellChoice.Name, spellChoiceEvent.CastLevel, err)
+			return
+		}
+
 		fmt.Printf("[Round %d] %s chooses to cast %s at level %d. Formula: %dd%d + %d. Damage type: %s\n",
 			spellChoiceEvent.GetRound(),
 			spellChoiceEvent.GetActor(),
 			spellChoiceEvent.SpellChoice.Name,
-			spellChoiceEvent.SpellChoice.CastFormula.CastLevel,
-			spellChoiceEvent.SpellChoice.CastFormula.NumberOfDice,
-			spellChoiceEvent.SpellChoice.CastFormula.Die,
-			spellChoiceEvent.SpellChoice.CastFormula.AmountToAdd,
-			spellChoiceEvent.SpellChoice.CastFormula.DamageType)
+			spellChoiceEvent.CastLevel,
+			castFormula.NumberOfDice,
+			castFormula.Die,
+			castFormula.AmountToAdd,
+			castFormula.DamageType)
 	}
 }
 
@@ -145,11 +151,13 @@ type RollHandler struct{}
 
 func (h *RollHandler) HandleEvent(event CombatEvent) {
 	if rollEvent, ok := event.(*DiceRollEvent); ok {
-		fmt.Printf("[Round %d] <Roll> %s rolls %d, rolls: %v.\n",
+		fmt.Printf("[Round %d] <Roll> %s rolls for %s. Result: %d, rolls: %v, modifier: %d.\n",
 			rollEvent.GetRound(),
 			rollEvent.GetActor(),
+			rollEvent.RollType,
 			rollEvent.Value,
-			rollEvent.Rolls)
+			rollEvent.Rolls,
+			rollEvent.Modifier)
 	}
 }
 
@@ -163,5 +171,16 @@ func (h *HPRollHandler) HandleEvent(event CombatEvent) {
 			hpRollEvent.Value,
 			hpRollEvent.Rolls,
 			hpRollEvent.Modifier)
+	}
+}
+
+type TargetChoiceHandler struct{}
+
+func (e *TargetChoiceEvent) HandleEvent(event CombatEvent) {
+	if targetChoiceEvent, ok := event.(*TargetChoiceEvent); ok {
+		fmt.Printf("[Round %d] <Target Choice> %s chooses %s as their target.\n",
+			targetChoiceEvent.GetRound(),
+			targetChoiceEvent.GetActor(),
+			targetChoiceEvent.Target)
 	}
 }

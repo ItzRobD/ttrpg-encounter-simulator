@@ -321,4 +321,4 @@ func (m *Monster) GetEventListener() func(event interface{}) {
 
 var _ core.Entity = &Monster{}
 
-// TODO: Add New function?
+// TODO: Add function to create melee attacks from actions

@@ -2,23 +2,8 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
 )
-
-type Options struct {
-	UseMonsterHPAverage     bool
-	CanMonstersCrit         bool
-	CanPlayersCrit          bool
-	HasIncreasedCrits       bool
-	AllowPlayerHeals        bool
-	AllowMonsterHeals       bool
-	TargetPriority          shared.Prioritization
-	ActionPreference        shared.ActionPreference
-	AOEHitsAllEnemies       bool
-	PlayerHealThresholdPct  int
-	MonsterHealThresholdPct int
-}
 
 type Simulation struct {
 	Encounter  Encounter
@@ -40,6 +25,7 @@ func New(options Options) Simulation {
 	dispatcher.RegisterHandler(&events.ActionChoiceHandler{})
 	dispatcher.RegisterHandler(&events.SpellChoiceHandler{})
 	dispatcher.RegisterHandler(&events.HPModifiedHandler{})
+	dispatcher.RegisterHandler(&events.TargetChoiceEvent{})
 
 	var s Simulation
 	s.Encounter.Options = options

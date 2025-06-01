@@ -220,6 +220,7 @@ func main() {
 		AllowPlayerHeals:        true,
 		AllowMonsterHeals:       true,
 		TargetPriority:          shared.NoPriority,
+		HealPriority:            shared.PrioritizeMostDamaged,
 		ActionPreference:        shared.APNoPreference,
 		AOEHitsAllEnemies:       false,
 		PlayerHealThresholdPct:  50,

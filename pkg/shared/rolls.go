@@ -13,21 +13,31 @@ const (
 	RollDisadvantage
 )
 
-func InitiativeRoll(dexterity int, bonus int, advantage AdvantageType) (int, error) {
+type DiceRollType string
+
+const (
+	DiceRollAttack     DiceRollType = "attack"
+	DiceRollDamage     DiceRollType = "damage"
+	DiceRollInitiative DiceRollType = "initiative"
+)
+
+// InitiativeRoll calculates an initiative score based on dexterity, bonus, and advantage, returning the score, base roll, and error.
+// dexterity must be between 1 and 30. Returns an error if inputs are invalid or rolling fails.
+func InitiativeRoll(dexterity int, bonus int, advantage AdvantageType) (int, int, error) {
 	if dexterity < 1 || dexterity > 30 {
-		return 0, fmt.Errorf("initiative roll - dexterity must be between 1 and 30")
+		return 0, 0, fmt.Errorf("initiative roll - dexterity must be between 1 and 30")
 	}
 	modifier, err := GetAbilityScoreModifier(dexterity)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	roll, err := RollD20WithAdvantage(advantage)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	return roll + modifier + bonus, nil
+	return roll + modifier + bonus, roll, nil
 }
 
 func RollD20WithAdvantage(advantage AdvantageType) (int, error) {

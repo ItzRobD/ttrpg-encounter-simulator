@@ -55,3 +55,11 @@ func GetActionFromPreference(pref ActionPreference) ActionType {
 		return ATNoAction
 	}
 }
+
+type WeaponSlot string
+
+const (
+	WSPrimary   WeaponSlot = "primary"
+	WSSecondary WeaponSlot = "secondary"
+	WSRanged    WeaponSlot = "ranged"
+)

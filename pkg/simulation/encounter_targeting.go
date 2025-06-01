@@ -9,9 +9,11 @@ import (
 	"math/rand/v2"
 )
 
-func (e *Encounter) chooseDamageTarget(actor core.Entity) (core.Entity, error) {
+func (e *Encounter) chooseDamageTargetByPriority(actor core.Entity) (core.Entity, error) {
 	switch actor.(type) {
 	case *character.Character:
+		// if attacker has been confused or chargmed
+		// get lists of both
 		monsters := e.filterMonsters()
 		if len(monsters) == 0 {
 			return nil, fmt.Errorf("no targets available")
@@ -19,6 +21,8 @@ func (e *Encounter) chooseDamageTarget(actor core.Entity) (core.Entity, error) {
 		return e.selectMonsterByPriority(monsters)
 
 	case *monster.Monster:
+		// if attacker has been confused or chargmed
+		// get lists of both
 		characters := e.filterCharacters()
 		if len(characters) == 0 {
 			return nil, fmt.Errorf("no targets available")
@@ -26,12 +30,14 @@ func (e *Encounter) chooseDamageTarget(actor core.Entity) (core.Entity, error) {
 		return e.selectCharacterByPriority(characters)
 
 	default:
-		fmt.Printf("Unknown creature type %T\n", actor)
+		return nil, fmt.Errorf("Unknown creature type %T\n", actor)
 	}
-	panic("unhandled actor type")
+	return nil, fmt.Errorf("Unknown creature type %T\n", actor)
 }
 
-func (e *Encounter) chooseHealTarget(actor core.Entity) (core.Entity, error) {
+// chooseHealTargetByPriority determines the most suitable healing target based on the actor and prioritization strategy.
+// It returns the selected target entity or an error if no valid target is found.
+func (e *Encounter) chooseHealTargetByPriority(actor core.Entity) (core.Entity, error) {
 	switch actor.(type) {
 	case *character.Character:
 		characters := e.filterCharacters()
@@ -39,21 +45,30 @@ func (e *Encounter) chooseHealTarget(actor core.Entity) (core.Entity, error) {
 			return nil, fmt.Errorf("no targets available")
 		}
 
-		var lowestHP core.Entity
-		for _, c := range characters {
-			if lowestHP == nil || c.GetCurrentHP() < lowestHP.GetCurrentHP() {
-				lowestHP = c
-			}
-			if c.GetCurrentHP() == lowestHP.GetCurrentHP() {
-				if len(c.Class.Spellcasting.ClassHealingSpells) > 0 {
-					lowestHP = c
-				}
-			}
+		needsHealing := e.filterCharactersNeedingHealing(characters)
+		if len(needsHealing) == 0 {
+			return nil, fmt.Errorf("no characters need healing")
 		}
-		return lowestHP, nil
-	}
+
+		switch e.Options.HealPriority {
+		case shared.PrioritizeLowestHealth:
+			return e.findLowestHPCharacter(characters), nil
+		case shared.PrioritizeMostDamaged:
+			return e.findMostDamagedCharacter(characters), nil
+		case shared.PrioritizeHealer:
+			return e.findBestHealer(characters), nil
+		case shared.PrioritizeSpellcasting:
+			return e.findBestSpellcaster(characters), nil
+		case shared.NoPriority:
+			fallthrough
+		default:
+			return characters[rand.IntN(len(characters))], nil
+		}
 	// TODO: Add monsters
-	return nil, nil
+	case *monster.Monster:
+		return nil, fmt.Errorf("no targets available")
+	}
+	return nil, fmt.Errorf("no valid targets found")
 }
 
 func (e *Encounter) selectMonsterByPriority(monsters []*monster.Monster) (*monster.Monster, error) {
@@ -178,7 +193,7 @@ func (e *Encounter) selectCharacterByPriority(characters []*character.Character)
 func (e *Encounter) filterMonsters() []*monster.Monster {
 	var monsters []*monster.Monster
 	for _, entity := range e.CombatTracker {
-		if m, ok := entity.Creature.(*monster.Monster); ok {
+		if m, ok := entity.Entity.(*monster.Monster); ok {
 			monsters = append(monsters, m)
 		}
 	}
@@ -188,9 +203,62 @@ func (e *Encounter) filterMonsters() []*monster.Monster {
 func (e *Encounter) filterCharacters() []*character.Character {
 	var characters []*character.Character
 	for _, entity := range e.CombatTracker {
-		if c, ok := entity.Creature.(*character.Character); ok {
+		if c, ok := entity.Entity.(*character.Character); ok {
 			characters = append(characters, c)
 		}
 	}
 	return characters
+}
+
+func (e *Encounter) filterCharactersNeedingHealing(characters []*character.Character) []*character.Character {
+	var needsHealing []*character.Character
+	for _, c := range characters {
+		if c.GetCurrentHPPct() < e.Options.PlayerHealThresholdPct {
+			needsHealing = append(needsHealing, c)
+		}
+	}
+	return needsHealing
+}
+
+func (e *Encounter) findLowestHPCharacter(characters []*character.Character) *character.Character {
+	lowest := characters[0]
+	for _, c := range characters {
+		if lowest == nil || c.GetCurrentHP() < lowest.GetCurrentHP() {
+			lowest = c
+		}
+	}
+	return lowest
+}
+
+func (e *Encounter) findMostDamagedCharacter(characters []*character.Character) *character.Character {
+	mostDamaged := characters[0]
+	maxDamage := mostDamaged.GetMaxHP() - mostDamaged.GetCurrentHP()
+	for _, c := range characters[1:] {
+		damage := c.GetMaxHP() - c.GetCurrentHP()
+		if damage > maxDamage {
+			mostDamaged = c
+			maxDamage = damage
+		}
+	}
+	return mostDamaged
+}
+
+func (e *Encounter) findBestHealer(characters []*character.Character) *character.Character {
+	bestHealer := characters[0]
+	for _, c := range characters[1:] {
+		if len(c.Class.Spellcasting.ClassHealingSpells) > len(bestHealer.Class.Spellcasting.ClassHealingSpells) {
+			bestHealer = c
+		}
+	}
+	return bestHealer
+}
+
+func (e *Encounter) findBestSpellcaster(characters []*character.Character) *character.Character {
+	bestCaster := characters[0]
+	for _, c := range characters[1:] {
+		if len(c.Class.Spellcasting.ClassDamageSpells) > len(bestCaster.Class.Spellcasting.ClassDamageSpells) {
+			bestCaster = c
+		}
+	}
+	return bestCaster
 }

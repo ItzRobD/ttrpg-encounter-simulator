@@ -1,6 +1,7 @@
 package spells
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -27,13 +28,14 @@ type Spell struct {
 	IsConcentration bool
 	CastingTime     string
 	IsRitual        bool
-	Level           int
+	Level           int // Minimum spell level
 	SpellType       string
 	IsAOE           bool
 	HasDC           bool
 	ApiURL          string
+	LevelType       string // character || slot
 	SpellDC
-	CastFormula
+	Formulas []CastFormula
 }
 
 type SpellDC struct {
@@ -43,7 +45,6 @@ type SpellDC struct {
 
 type CastFormula struct {
 	CastLevel    int
-	LevelType    string
 	NumberOfDice int
 	Die          int
 	AmountToAdd  int
@@ -57,11 +58,41 @@ type SpellQueryParams struct {
 	Level int
 }
 
-func (s Spell) GetAverageAmount() int {
-	if s.Die <= 0 {
+type SpellResult struct {
+	Success bool
+	Amount  int
+	Rolls   []int
+}
+
+func (s Spell) GetHighestAverageAmount() int {
+	highestDie := s.Formulas[len(s.Formulas)-1].Die
+	highestNumDice := s.Formulas[len(s.Formulas)-1].NumberOfDice
+	if highestDie <= 0 {
 		return 0
 	}
-	dieAvg := float64(s.Die+1) / 2.0
-	spellAvg := dieAvg * float64(s.NumberOfDice)
+	dieAvg := float64(highestDie+1) / 2.0
+	spellAvg := dieAvg * float64(highestNumDice)
 	return int(math.Floor(spellAvg))
+}
+
+func (s *Spell) GetForumlaAtLevel(castLevel int) (*CastFormula, error) {
+	if castLevel < s.Level {
+		castLevel = s.Level
+	}
+
+	var bestFormula *CastFormula
+	for i := range s.Formulas {
+		formula := &s.Formulas[i]
+		if formula.CastLevel <= castLevel {
+			bestFormula = formula
+		} else {
+			break
+		}
+	}
+
+	if bestFormula == nil {
+		return nil, fmt.Errorf("no formula available for spell %s at level %d", s.Name, castLevel)
+	}
+
+	return bestFormula, nil
 }
