@@ -5,7 +5,15 @@ import (
 	"math/rand/v2"
 )
 
-func InitiativeRoll(dexterity int) (int, error) {
+type RollAdvantage int
+
+const (
+	Normal RollAdvantage = iota
+	Advantage
+	Disadvantage
+)
+
+func InitiativeRoll(dexterity int, bonus int, advantage RollAdvantage) (int, error) {
 	if dexterity < 1 || dexterity > 30 {
 		return 0, fmt.Errorf("initiative roll - dexterity must be between 1 and 30")
 	}
@@ -13,23 +21,46 @@ func InitiativeRoll(dexterity int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	_, rolls, err := RollDice(1, 20)
+
+	roll, err := RollD20WithAdvantage(advantage)
 	if err != nil {
 		return 0, err
 	}
-	i := rolls[0] + modifier
-	if i < 1 {
-		i = 1
-	}
-	return i, nil
+
+	return roll + modifier + bonus, nil
 }
 
-func AttackRoll(modifier int) (int, error) {
-	_, rolls, err := RollDice(1, 20)
+func RollD20WithAdvantage(advantage RollAdvantage) (int, error) {
+	switch advantage {
+	case Normal:
+		_, rolls, err := RollDice(1, 20)
+		if err != nil {
+			return 0, err
+		}
+		return rolls[0], nil
+	case Advantage:
+		_, rolls, err := RollDice(2, 20)
+		if err != nil {
+			return 0, err
+		}
+		return max(rolls[0], rolls[1]), nil
+	case Disadvantage:
+		_, rolls, err := RollDice(2, 20)
+		if err != nil {
+			return 0, err
+		}
+		return min(rolls[0], rolls[1]), nil
+	default:
+		return 0, fmt.Errorf("invalid advantage type")
+	}
+}
+
+func AttackRoll(modifier int, advantage RollAdvantage) (int, error) {
+	roll, err := RollD20WithAdvantage(advantage)
 	if err != nil {
 		return 0, err
 	}
-	return rolls[0] + modifier, nil
+	return roll + modifier, nil
 }
 
 func AttackHits(ar int, ac int) bool {
@@ -55,6 +86,9 @@ func DiceRollWithModifier(numberOfDice, numberOfSides int, amountToAdd int) (int
 	return dmg, rolls, nil
 }
 
+// RollDice rolls a specified number of dice with a given number of sides and returns the total sum, individual rolls, and any error.
+// numDice is the number of dice to roll and must be greater than 0.
+// numSides is the number of sides per die and must be a valid die type (4, 6, 8, 10, 12, 20, or 100).
 func RollDice(numDice int, numSides int) (int, []int, error) {
 	if numDice < 1 {
 		return 0, nil, fmt.Errorf("numDice must be greater than 0")
