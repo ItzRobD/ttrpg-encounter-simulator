@@ -142,6 +142,7 @@ func main() {
 	entityModifiers := core.EntityModifiers{
 		InitiativeAdvantage: shared.RollNormal,
 		InitiativeBonus:     0,
+		UseVersatileAttacks: true,
 	}
 
 	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferMelee, shared.SPNoPreference, entityModifiers)

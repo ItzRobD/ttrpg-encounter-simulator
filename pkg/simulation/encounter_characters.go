@@ -28,7 +28,8 @@ func (e *Encounter) handleCharacterTurn(character *character.Character, advantag
 	case shared.ATRanged:
 		e.performCharacterRangedAttack(character, advantage)
 	case shared.ATMelee:
-		e.performCharacterMeleeAttack(character, advantage)
+		// TODO: Placeholder versatile bool
+		e.performCharacterMeleeAttack(character, character.EntityModifiers.UseVersatileAttacks, advantage)
 	case shared.ATSpell:
 		// TODO: Placeholder cast level
 		e.performCharacterSpellAttack(character, 5, advantage)
@@ -49,7 +50,7 @@ func (e *Encounter) performCharacterRangedAttack(character *character.Character,
 	}
 	events.LogTargetChoiceEvent(character, target, character.GetEventListener())
 
-	aI, err := character.CreateWeaponAttackInfo(shared.WSRanged)
+	aI, err := character.CreateWeaponAttackInfo(shared.WSRanged, false)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -65,7 +66,7 @@ func (e *Encounter) performCharacterRangedAttack(character *character.Character,
 	}
 }
 
-func (e *Encounter) performCharacterMeleeAttack(character *character.Character, advantage shared.AdvantageType) {
+func (e *Encounter) performCharacterMeleeAttack(character *character.Character, useVersatileAttack bool, advantage shared.AdvantageType) {
 	target, err := e.chooseDamageTargetByPriority(character)
 	if err != nil {
 		fmt.Println(err)
@@ -74,7 +75,8 @@ func (e *Encounter) performCharacterMeleeAttack(character *character.Character, 
 	events.LogTargetChoiceEvent(character, target, character.GetEventListener())
 	// TODO: Add secondary slot
 	// Perform attack using main slot
-	aI, err := character.CreateWeaponAttackInfo(shared.WSPrimary)
+
+	aI, err := character.CreateWeaponAttackInfo(shared.WSPrimary, useVersatileAttack)
 	if err != nil {
 		fmt.Println(err)
 		return

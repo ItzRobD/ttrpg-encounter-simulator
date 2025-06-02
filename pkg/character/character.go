@@ -255,7 +255,7 @@ func (c *Character) GetWeaponProficiencyFromSlot(slot shared.WeaponSlot) (bool, 
 	}
 }
 
-func (c *Character) CreateWeaponAttackInfo(slot shared.WeaponSlot) (combat.AttackInfo, error) {
+func (c *Character) CreateWeaponAttackInfo(slot shared.WeaponSlot, useVersatile bool) (combat.AttackInfo, error) {
 	w, err := c.getWeaponFromSlot(slot)
 	if err != nil {
 		return combat.AttackInfo{}, err
@@ -276,13 +276,21 @@ func (c *Character) CreateWeaponAttackInfo(slot shared.WeaponSlot) (combat.Attac
 		return combat.AttackInfo{}, err
 	}
 
+	die := w.Die
+	var v bool
+	if useVersatile && w.IsVersatile {
+		die = w.Die + 2
+		v = true
+	}
+
 	return combat.AttackInfo{
-		Name:           w.Name,
-		NumberOfDice:   w.NumberOfDice,
-		Die:            w.Die,
-		AttackModifier: attackMod,
-		DamageModifier: damageMod,
-		DamageType:     w.DamageType,
+		Name:              w.Name,
+		NumberOfDice:      w.NumberOfDice,
+		Die:               die,
+		AttackModifier:    attackMod,
+		DamageModifier:    damageMod,
+		DamageType:        w.DamageType,
+		IsVersatileAttack: v,
 	}, nil
 }
 

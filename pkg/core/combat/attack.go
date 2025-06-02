@@ -7,12 +7,13 @@ import (
 )
 
 type AttackInfo struct {
-	Name           string
-	NumberOfDice   int
-	Die            int
-	AttackModifier int
-	DamageModifier int
-	DamageType     string
+	Name              string
+	NumberOfDice      int
+	Die               int
+	AttackModifier    int
+	DamageModifier    int
+	DamageType        string
+	IsVersatileAttack bool
 }
 
 func DoesAttackHit(attackTotal int, ac int) bool {

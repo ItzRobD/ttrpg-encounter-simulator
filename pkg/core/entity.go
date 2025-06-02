@@ -25,6 +25,7 @@ type Combatant struct {
 type EntityModifiers struct {
 	InitiativeAdvantage shared.AdvantageType
 	InitiativeBonus     int
+	UseVersatileAttacks bool
 }
 
 type CombatState struct {
