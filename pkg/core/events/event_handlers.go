@@ -12,15 +12,27 @@ type AttackHandler struct{}
 
 func (h *AttackHandler) HandleEvent(event CombatEvent) {
 	if attackEvent, ok := event.(*MeleeAttackEvent); ok {
-		fmt.Printf("[Round %d] <Attack> %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
-			attackEvent.GetRound(),
-			attackEvent.GetActor(),
-			attackEvent.Target,
-			attackEvent.AttackName,
-			attackEvent.AttackTotal,
-			attackEvent.AttackRoll,
-			attackEvent.AttackModifier,
-			attackEvent.Success)
+		var s string
+		if attackEvent.CriticalHit {
+			s = fmt.Sprintf("[Round %d] <Critical Hit> %s attacks %s with %s. %d to hit. Success: %t\n",
+				attackEvent.GetRound(),
+				attackEvent.GetActor(),
+				attackEvent.Target,
+				attackEvent.AttackName,
+				attackEvent.AttackRoll,
+				attackEvent.Success)
+		} else {
+			s = fmt.Sprintf("[Round %d] <Attack> %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
+				attackEvent.GetRound(),
+				attackEvent.GetActor(),
+				attackEvent.Target,
+				attackEvent.AttackName,
+				attackEvent.AttackTotal,
+				attackEvent.AttackRoll,
+				attackEvent.AttackModifier,
+				attackEvent.Success)
+		}
+		fmt.Printf(s)
 	}
 }
 

@@ -56,7 +56,7 @@ func (e *Encounter) performCharacterRangedAttack(character *character.Character,
 		return
 	}
 
-	didHit, dmg, err := combat.MakeMartialAttack(character, target, aI, advantage)
+	didHit, dmg, err := combat.MakeMartialAttack(character, target, aI, advantage, e.Options)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -82,7 +82,7 @@ func (e *Encounter) performCharacterMeleeAttack(character *character.Character, 
 		return
 	}
 
-	didHit, dmg, err := combat.MakeMartialAttack(character, target, aI, advantage)
+	didHit, dmg, err := combat.MakeMartialAttack(character, target, aI, advantage, e.Options)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -16,7 +16,7 @@ type Encounter struct {
 	Party         []*character.Character
 	Monsters      []*monster.Monster
 	CombatTracker []core.Combatant
-	Options       Options
+	Options       core.Options
 	CurrentRound  int
 }
 
@@ -40,6 +40,7 @@ func (e *Encounter) PrintEncounterMembers() {
 }
 
 func (e *Encounter) AddCombatant(c core.Combatant) error {
+	// TODO: Handle multiple combatants of the same type -> Bandit 1, Bandit 2, Bandit 3, etc.
 	if c.Entity == nil {
 		return fmt.Errorf("creature cannot be nil")
 	}

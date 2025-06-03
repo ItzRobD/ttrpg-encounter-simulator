@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
 )
@@ -11,7 +12,7 @@ type Simulation struct {
 	dispatcher *events.EventDispatcher
 }
 
-func New(options Options) Simulation {
+func New(options core.Options) Simulation {
 	dispatcher := events.NewEventDispatcher()
 	dispatcher.RegisterHandler(&events.AttackHandler{})
 	dispatcher.RegisterHandler(&events.SpellAttackHandler{})

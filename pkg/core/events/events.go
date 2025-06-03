@@ -90,6 +90,7 @@ type MeleeAttackEvent struct {
 	AttackModifier int
 	AttackTotal    int
 	Success        bool
+	CriticalHit    bool
 }
 
 func (e *MeleeAttackEvent) GetEventType() EventType { return ETAttackEvent }

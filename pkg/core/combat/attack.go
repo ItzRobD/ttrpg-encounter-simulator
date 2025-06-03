@@ -23,9 +23,23 @@ func DoesAttackHit(attackTotal int, ac int) bool {
 	return false
 }
 
+func isCriticalHit(attackRoll int) bool {
+	if attackRoll == 20 {
+		return true
+	}
+	return false
+}
+
+func CalculateDamage(ai AttackInfo, isCritical bool, options core.Options) (int, []int, error) {
+	if isCritical {
+		return shared.CalculateDamageCriticalHit(ai.NumberOfDice, ai.Die, ai.DamageModifier, options.UseImprovedCriticals)
+	}
+	return shared.DiceRollWithModifier(ai.NumberOfDice, ai.Die, ai.DamageModifier)
+}
+
 // MakeMartialAttack rolls an attack, determines if it hits the target, and calculates damage if applicable.
 // Returns a boolean indicating a hit, an integer for damage dealt, and an error if any issues occurred.
-func MakeMartialAttack(attacker core.Entity, target core.Entity, attackInfo AttackInfo, advantage shared.AdvantageType) (bool, int, error) {
+func MakeMartialAttack(attacker core.Entity, target core.Entity, attackInfo AttackInfo, advantage shared.AdvantageType, options core.Options) (bool, int, error) {
 	// Make the attack roll
 	attackTotal, attackRoll, err := shared.AttackRoll(attackInfo.AttackModifier, advantage)
 	if err != nil {
@@ -34,19 +48,18 @@ func MakeMartialAttack(attacker core.Entity, target core.Entity, attackInfo Atta
 	events.LogDiceRollEvent(attacker, attackTotal, []int{attackRoll}, shared.DiceRollAttack, attackInfo.AttackModifier, attacker.GetEventListener())
 
 	// Check if the attack hits
-	didHit := DoesAttackHit(attackTotal, target.GetAC())
+	isCrit := isCriticalHit(attackRoll)
+	if isCrit || DoesAttackHit(attackTotal, target.GetAC()) {
+		events.LogMeleeAttackEvent(attacker, target, attackInfo.Name, attackRoll, attackInfo.AttackModifier, true, isCrit, attacker.GetEventListener())
 
-	events.LogMeleeAttackEvent(attacker, target, attackInfo.Name, attackRoll, attackInfo.AttackModifier, didHit, attacker.GetEventListener())
-
-	if didHit {
-		damage, rolls, err2 := shared.DiceRollWithModifier(attackInfo.NumberOfDice, attackInfo.Die, attackInfo.DamageModifier)
+		damage, rolls, err2 := CalculateDamage(attackInfo, isCrit, options)
 		if err2 != nil {
 			return false, 0, err2
 		}
-		events.LogDiceRollEvent(attacker, damage, rolls, shared.DiceRollAttack, attackInfo.DamageModifier, attacker.GetEventListener())
-
+		events.LogDiceRollEvent(attacker, damage, rolls, shared.DiceRollDamage, attackInfo.DamageModifier, attacker.GetEventListener())
 		return true, damage, nil
 	}
 
+	events.LogMeleeAttackEvent(attacker, target, attackInfo.Name, attackRoll, attackInfo.AttackModifier, false, isCrit, attacker.GetEventListener())
 	return false, 0, nil
 }

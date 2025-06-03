@@ -87,8 +87,8 @@ func DoesAttackHit(ar int, ac int) bool {
 }
 
 func DiceRollWithModifier(numberOfDice, numberOfSides int, amountToAdd int) (int, []int, error) {
-	if numberOfDice < 1 || numberOfDice > 100 {
-		return 0, nil, fmt.Errorf("number of rolling must be between 1 and 100")
+	if numberOfDice < 1 {
+		return 0, nil, fmt.Errorf("number of dice to roll must be greater than 0")
 	}
 	if !ValidateDie(numberOfSides) {
 		return 0, nil, fmt.Errorf("invalid die type")
@@ -97,9 +97,36 @@ func DiceRollWithModifier(numberOfDice, numberOfSides int, amountToAdd int) (int
 	if err != nil {
 		return 0, nil, err
 	}
-	dmg := s + amountToAdd
+	total := s + amountToAdd
 
-	return dmg, rolls, nil
+	return total, rolls, nil
+}
+
+func CalculateDamageCriticalHit(numberOfDice, numberOfSides int, amountToAdd int, improvedCritical bool) (int, []int, error) {
+	if numberOfDice < 1 {
+		return 0, nil, fmt.Errorf("number of dice to roll must be greater than 0")
+	}
+	if !ValidateDie(numberOfSides) {
+		return 0, nil, fmt.Errorf("invalid die type")
+	}
+	if improvedCritical {
+		s, rolls, err := RollDice(numberOfDice, numberOfSides)
+		if err != nil {
+			return 0, nil, err
+		}
+		total := s + amountToAdd + (numberOfDice * numberOfSides)
+		for range numberOfDice {
+			rolls = append(rolls, numberOfSides)
+		}
+		return total, rolls, nil
+	}
+
+	s, rolls, err := RollDice(numberOfDice*2, numberOfSides)
+	if err != nil {
+		return 0, nil, err
+	}
+	total := s + amountToAdd
+	return total, rolls, nil
 }
 
 // RollDice rolls a specified number of dice with a given number of sides and returns the total sum, individual rolls, and any error.

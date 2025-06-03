@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	database "dnd5e-encounter-simulator-backend/internal/database"
+	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
@@ -214,7 +214,7 @@ func main() {
 	//fmt.Println("Max spell slots:")
 	//fmt.Println(c.Class.Spellcasting.MaxSpellSlots)
 
-	options := simulation.Options{
+	options := core.Options{
 		CanMonstersCrit:         true,
 		CanPlayersCrit:          true,
 		HasIncreasedCrits:       false,
