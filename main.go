@@ -145,7 +145,7 @@ func main() {
 		UseVersatileAttacks: true,
 	}
 
-	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferMelee, shared.SPNoPreference, entityModifiers)
+	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferSpells, shared.SPNoPreference, entityModifiers)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -156,7 +156,7 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = c.AddSRDWeapon(ctx, 7, "primary")
+	err = c.AddSRDWeapon(ctx, 2, "primary")
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -226,6 +226,7 @@ func main() {
 		AOEHitsAllEnemies:       false,
 		PlayerHealThresholdPct:  50,
 		MonsterHealThresholdPct: 50,
+		UseImprovedCriticals:    true,
 	}
 	s := simulation.New(options)
 	s.Encounter.AddPartyMember(&c)

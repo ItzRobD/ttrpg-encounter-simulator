@@ -1,6 +1,7 @@
 package spells
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
 	"math"
 )
@@ -64,7 +65,7 @@ type SpellResult struct {
 	Rolls   []int
 }
 
-func (s Spell) GetHighestAverageAmount() int {
+func (s *Spell) GetHighestAverageAmount() int {
 	highestDie := s.Formulas[len(s.Formulas)-1].Die
 	highestNumDice := s.Formulas[len(s.Formulas)-1].NumberOfDice
 	if highestDie <= 0 {
@@ -75,7 +76,8 @@ func (s Spell) GetHighestAverageAmount() int {
 	return int(math.Floor(spellAvg))
 }
 
-func (s *Spell) GetForumlaAtLevel(castLevel int) (*CastFormula, error) {
+// GetFormulaAtLevel retrieves the most suitable cast formula for the given spell at the specified cast level.
+func (s *Spell) GetFormulaAtLevel(castLevel int) (*CastFormula, error) {
 	if castLevel < s.Level {
 		castLevel = s.Level
 	}
@@ -95,4 +97,24 @@ func (s *Spell) GetForumlaAtLevel(castLevel int) (*CastFormula, error) {
 	}
 
 	return bestFormula, nil
+}
+
+// GetAverageDamageAtLevel calculates and returns the average damage for a spell cast at the given level with modifiers.
+// It uses the most suitable formula based on the cast level and considers options like spell modifiers and additional amounts.
+func (s *Spell) GetAverageDamageAtLevel(castLevel int, spellModDmg int) (int, *CastFormula, error) {
+	formula, err := s.GetFormulaAtLevel(castLevel)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	dAvg, err := shared.GetDieAverage(formula.Die)
+	if err != nil {
+		return 0, nil, err
+	}
+	dmg := int(math.Floor(float64(formula.NumberOfDice)*dAvg)) + formula.AmountToAdd
+	if formula.UseSpellmod {
+		dmg += spellModDmg
+	}
+
+	return dmg, formula, nil
 }

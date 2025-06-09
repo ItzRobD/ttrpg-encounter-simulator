@@ -66,23 +66,23 @@ func (e *Encounter) performCharacterRangedAttack(character *character.Character,
 	}
 }
 
-func (e *Encounter) performCharacterMeleeAttack(character *character.Character, useVersatileAttack bool, advantage shared.AdvantageType) {
-	target, err := e.chooseDamageTargetByPriority(character)
+func (e *Encounter) performCharacterMeleeAttack(c *character.Character, useVersatileAttack bool, advantage shared.AdvantageType) {
+	target, err := e.chooseDamageTargetByPriority(c)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	events.LogTargetChoiceEvent(character, target, character.GetEventListener())
+	events.LogTargetChoiceEvent(c, target, c.GetEventListener())
 	// TODO: Add secondary slot
 	// Perform attack using main slot
 
-	aI, err := character.CreateWeaponAttackInfo(shared.WSPrimary, useVersatileAttack)
+	aI, err := c.CreateWeaponAttackInfo(shared.WSPrimary, useVersatileAttack)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	didHit, dmg, err := combat.MakeMartialAttack(character, target, aI, advantage, e.Options)
+	didHit, dmg, err := combat.MakeMartialAttack(c, target, aI, advantage, e.Options)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -120,6 +120,7 @@ func (e *Encounter) performCharacterHealAction(c *character.Character) {
 func (e *Encounter) performCharacterSpellAttack(c *character.Character, castLevel int, advantage shared.AdvantageType) {
 	if !e.Options.AOEHitsAllEnemies {
 		target, _ := e.chooseDamageTargetByPriority(c)
+		// TODO: how are we choosing spell preference
 		damageSpell, err := e.chooseDamageSpell(c, shared.SPHighestLevel)
 		if err != nil {
 			fmt.Println(err)

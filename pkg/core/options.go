@@ -8,6 +8,8 @@ type Options struct {
 	CanPlayersCrit          bool
 	HasIncreasedCrits       bool
 	UseImprovedCriticals    bool
+	PlayersAlwaysUpcast     bool
+	MonstersAlwaysUpcast    bool
 	AllowPlayerHeals        bool
 	AllowMonsterHeals       bool
 	TargetPriority          shared.Prioritization

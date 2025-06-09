@@ -51,7 +51,7 @@ type SpellChoiceHandler struct{}
 
 func (h *SpellChoiceHandler) HandleEvent(event CombatEvent) {
 	if spellChoiceEvent, ok := event.(*SpellChoiceEvent); ok {
-		castFormula, err := spellChoiceEvent.SpellChoice.GetForumlaAtLevel(spellChoiceEvent.CastLevel)
+		castFormula, err := spellChoiceEvent.SpellChoice.GetFormulaAtLevel(spellChoiceEvent.CastLevel)
 		if err != nil {
 			fmt.Printf("Error getting formula for spell %s at level %d: %v\n", spellChoiceEvent.SpellChoice.Name, spellChoiceEvent.CastLevel, err)
 			return

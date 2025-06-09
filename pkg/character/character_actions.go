@@ -32,7 +32,7 @@ func (c *Character) CastSpell(target core.Entity, spell *spells.Spell, castLevel
 }
 
 func (c *Character) castHealingSpell(target core.Entity, spell *spells.Spell, castLevel int) (*spells.SpellResult, error) {
-	formula, err := spell.GetForumlaAtLevel(castLevel)
+	formula, err := spell.GetFormulaAtLevel(castLevel)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (c *Character) MakeSpellAttack(t *monster.Monster, s *spells.Spell, castLev
 		}
 	}
 
-	formula, err := s.GetForumlaAtLevel(castLevel)
+	formula, err := s.GetFormulaAtLevel(castLevel)
 	if err != nil {
 		return false, err
 	}

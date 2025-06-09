@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -98,6 +99,22 @@ func ValidateDie(die int) bool {
 		}
 	}
 	return false
+}
+
+var dieAverageValues = map[int]float64{
+	4:  2.5,
+	6:  3.5,
+	8:  4.5,
+	10: 5.5,
+	12: 6.5,
+	20: 10.5,
+}
+
+func GetDieAverage(die int) (float64, error) {
+	if !ValidateDie(die) {
+		return 0, errors.New("invalid die")
+	}
+	return dieAverageValues[die], nil
 }
 
 var validDamageTypes = []string{"acid", "bludgeoning", "cold", "fire", "force", "lightning",
