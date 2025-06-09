@@ -28,7 +28,7 @@ type SpellcastingManager struct {
 	spellcastModifierValue int
 }
 
-func NewSpellcastingManager(parent *core.Entity, casterType CasterType, casterLevel int, currentSlots SpellSlots, maxSlots SpellSlots, healingSpells []*spells.Spell, damageSpells []*spells.Spell, canUpcast bool, spellcastMod int) *SpellcastingManager {
+func NewSpellcastingManager(parent core.Entity, casterType CasterType, casterLevel int, currentSlots SpellSlots, maxSlots SpellSlots, healingSpells []*spells.Spell, damageSpells []*spells.Spell, canUpcast bool, spellcastMod int) *SpellcastingManager {
 	return &SpellcastingManager{
 		parent:                 parent,
 		casterType:             casterType,

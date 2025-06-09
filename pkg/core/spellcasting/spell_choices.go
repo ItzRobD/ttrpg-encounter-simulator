@@ -2,6 +2,7 @@ package spellcasting
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/spells"
+	"fmt"
 	"math/rand/v2"
 )
 
@@ -117,25 +118,26 @@ func (s *SpellcastingManager) GetHighestAverageSpell(t spells.SpellType) (*spell
 	var highestFormula *spells.CastFormula
 	var highestValue int
 	var highestAvailableSlot int
-	var hasSpellSlots bool
 
 	if s.canUpcast {
 		slot, err := s.GetHighestAvailableSpellSlot()
 		if err != nil {
-			hasSpellSlots = false
+			return nil, nil, err
 		}
 		highestAvailableSlot = slot
-		hasSpellSlots = true
 	}
 
 	for _, spell := range pool {
-		if s.canUpcast && hasSpellSlots {
-			v, f, err := spell.GetAverageDamageAtLevel(highestAvailableSlot, s.spellcastModifierValue)
-			if err != nil {
-				return nil, nil, err
-			}
+		var castLevel int
+		var v int
+		var f *spells.CastFormula
+		var err error
 
-			if !s.HasSpellSlotsAtLevel(f.CastLevel) {
+		if spell.Level == 0 {
+			castLevel = s.casterLevel
+			v, f, err = spell.GetAverageDamageCantrip(castLevel, s.spellcastModifierValue)
+			if err != nil {
+				fmt.Println(err)
 				continue
 			}
 
@@ -145,12 +147,35 @@ func (s *SpellcastingManager) GetHighestAverageSpell(t spells.SpellType) (*spell
 				highestFormula = f
 			}
 		} else {
-			v, f, err := spell.GetAverageDamageAtLevel(spell.Level, s.spellcastModifierValue)
-			if err != nil {
-				return nil, nil, err
+			if !s.HasAnySpellSlots() {
+				continue
+			}
+			if s.canUpcast {
+				castLevel = highestAvailableSlot
+				var canCast bool
+				for !canCast {
+					if s.HasSpellSlotsAtLevel(castLevel) {
+						canCast = true
+					} else {
+						castLevel--
+						if castLevel < 1 {
+							break
+						}
+					}
+				}
+				if castLevel < 1 {
+					continue
+				}
+			} else {
+				castLevel = spell.Level
+				if !s.HasSpellSlotsAtLevel(castLevel) {
+					continue
+				}
 			}
 
-			if !s.HasSpellSlotsAtLevel(f.CastLevel) {
+			v, f, err = spell.GetAverageDamageAtLevel(castLevel, s.spellcastModifierValue)
+			if err != nil {
+				fmt.Println(err)
 				continue
 			}
 

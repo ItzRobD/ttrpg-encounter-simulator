@@ -12,6 +12,15 @@ func (s *SpellcastingManager) HasSpellSlotsAtLevel(slot int) bool {
 	return s.currentSlots[slot] > 0
 }
 
+func (s *SpellcastingManager) HasAnySpellSlots() bool {
+	for _, slot := range s.currentSlots {
+		if slot > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *SpellcastingManager) GetSpellSlotsAtLevel(slot int) int {
 	return s.currentSlots[slot]
 }
