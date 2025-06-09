@@ -78,6 +78,9 @@ func (s *Spell) GetHighestAverageAmount() int {
 
 // GetFormulaAtLevel retrieves the most suitable cast formula for the given spell at the specified cast level.
 func (s *Spell) GetFormulaAtLevel(castLevel int) (*CastFormula, error) {
+	if s.Level == 0 {
+		return nil, fmt.Errorf("spell is not a leveled spell")
+	}
 	if castLevel < s.Level {
 		castLevel = s.Level
 	}
@@ -102,6 +105,9 @@ func (s *Spell) GetFormulaAtLevel(castLevel int) (*CastFormula, error) {
 // GetAverageDamageAtLevel calculates and returns the average damage for a spell cast at the given level with modifiers.
 // It uses the most suitable formula based on the cast level and considers options like spell modifiers and additional amounts.
 func (s *Spell) GetAverageDamageAtLevel(castLevel int, spellModDmg int) (int, *CastFormula, error) {
+	if s.Level == 0 {
+		return 0, nil, fmt.Errorf("spell is not a leveled spell")
+	}
 	formula, err := s.GetFormulaAtLevel(castLevel)
 	if err != nil {
 		return 0, nil, err
@@ -117,4 +123,43 @@ func (s *Spell) GetAverageDamageAtLevel(castLevel int, spellModDmg int) (int, *C
 	}
 
 	return dmg, formula, nil
+}
+
+func (s *Spell) GetAverageDamageCantrip(casterLevel int, spellModDmg int) (int, *CastFormula, error) {
+	if s.Level != 0 {
+		return 0, nil, fmt.Errorf("spell is not a cantrip")
+	}
+
+	formula, err := s.GetFormulaForCantrip(casterLevel)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	dAvg, err := shared.GetDieAverage(formula.Die)
+	if err != nil {
+		return 0, nil, err
+	}
+	dmg := int(math.Floor(float64(formula.NumberOfDice)*dAvg)) + formula.AmountToAdd
+	if formula.UseSpellmod {
+		dmg += spellModDmg
+	}
+
+	return dmg, formula, nil
+}
+
+func (s *Spell) GetFormulaForCantrip(casterLevel int) (*CastFormula, error) {
+	if s.Level != 0 {
+		return nil, fmt.Errorf("spell is not a cantrip")
+	}
+
+	var bestFormula *CastFormula
+	for i := range s.Formulas {
+		formula := &s.Formulas[i]
+		if formula.CastLevel <= casterLevel {
+			bestFormula = formula
+		} else {
+			break
+		}
+	}
+	return bestFormula, nil
 }

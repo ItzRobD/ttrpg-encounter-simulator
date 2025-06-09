@@ -1,6 +1,7 @@
 package spellcasting
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 )
@@ -16,6 +17,7 @@ const (
 type SpellSlots map[int]int
 
 type SpellcastingManager struct {
+	parent                 core.Entity
 	casterType             CasterType
 	casterLevel            int
 	currentSlots           SpellSlots
@@ -26,8 +28,9 @@ type SpellcastingManager struct {
 	spellcastModifierValue int
 }
 
-func NewSpellcastingManager(casterType CasterType, casterLevel int, currentSlots SpellSlots, maxSlots SpellSlots, healingSpells []*spells.Spell, damageSpells []*spells.Spell, canUpcast bool, spellcastMod int) *SpellcastingManager {
+func NewSpellcastingManager(parent *core.Entity, casterType CasterType, casterLevel int, currentSlots SpellSlots, maxSlots SpellSlots, healingSpells []*spells.Spell, damageSpells []*spells.Spell, canUpcast bool, spellcastMod int) *SpellcastingManager {
 	return &SpellcastingManager{
+		parent:                 parent,
 		casterType:             casterType,
 		casterLevel:            casterLevel,
 		currentSlots:           currentSlots,

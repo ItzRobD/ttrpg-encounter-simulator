@@ -303,6 +303,10 @@ func (m *Monster) GetCR() float64 { return m.CR }
 
 func (m *Monster) GetAC() int { return m.AC }
 
+func (m *Monster) GetLevel() interface{} { return m.CR }
+
+func (m *Monster) GetCasterLevel() int { return m.Spellcasting.CastingLevel }
+
 func (m *Monster) IsUnconscious() bool {
 	if m.HP.HP <= 0 {
 		if m.EventListener != nil {

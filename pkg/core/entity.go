@@ -15,6 +15,8 @@ type Entity interface {
 	GetAC() int
 	GetEventListener() func(event interface{})
 	GetSavingThrowRollResult(ability string) (int, error)
+	GetLevel() interface{}
+	GetCasterLevel() int
 }
 
 type Combatant struct {

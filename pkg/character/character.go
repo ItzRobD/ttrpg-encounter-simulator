@@ -242,6 +242,10 @@ func (c *Character) GetAC() int {
 	return c.Eq.Armor.ArmorClass
 }
 
+func (c *Character) GetLevel() interface{} { return c.Level }
+
+func (c *Character) GetCasterLevel() int { return c.Level }
+
 func (c *Character) GetWeaponProficiencyFromSlot(slot shared.WeaponSlot) (bool, error) {
 	switch slot {
 	case shared.WSPrimary:

@@ -168,3 +168,43 @@ func (s *SpellcastingManager) GetHighestAverageSpell(t spells.SpellType) (*spell
 
 	return highestSpell, highestFormula, nil
 }
+
+func (s *SpellcastingManager) GetHighestAverageCantrip(t spells.SpellType) (*spells.Spell, *spells.CastFormula, error) {
+	var pool []*spells.Spell
+	switch t {
+	case spells.STHealing:
+		pool = s.GetHealingCantrips()
+	case spells.STDamage:
+		pool = s.GetDamageCantrips()
+	default:
+		return nil, nil, NewSpellcastingError("", "invalid spell type", ERROR_GENERIC_SPELL)
+	}
+
+	if len(pool) == 0 {
+		return nil, nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_KNOWN)
+	}
+
+	var highestSpell *spells.Spell
+	var highestFormula *spells.CastFormula
+	var highestValue int
+	casterLevel := s.GetCasterLevel()
+
+	for _, spell := range pool {
+		v, f, err := spell.GetAverageDamageCantrip(casterLevel, s.spellcastModifierValue)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if v > highestValue {
+			highestValue = v
+			highestSpell = spell
+			highestFormula = f
+		}
+	}
+
+	if highestSpell == nil {
+		return nil, nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_KNOWN)
+	}
+
+	return highestSpell, highestFormula, nil
+}
