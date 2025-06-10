@@ -1,6 +1,8 @@
 package core
 
-import "dnd5e-encounter-simulator-backend/pkg/shared"
+import (
+	"dnd5e-encounter-simulator-backend/pkg/shared"
+)
 
 type Options struct {
 	UseMonsterHPAverage     bool

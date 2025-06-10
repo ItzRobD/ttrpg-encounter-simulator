@@ -6,8 +6,11 @@ const (
 	SPNoPreference SpellPriority = iota
 	SPHighestLevel
 	SPLowestLevel
-	SPCantrip
-	SPAreaOfEffect
+	SPCantrip // Prioritizes highest value
+	SPRandomCantrip
+	SPRandomLeveledSpell
+	SPAreaOfEffect // Prioritizes highest value
+	SPHighestDamage
 )
 
 type Prioritization int

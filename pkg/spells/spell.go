@@ -29,14 +29,14 @@ type Spell struct {
 	IsConcentration bool
 	CastingTime     string
 	IsRitual        bool
-	Level           int // Minimum spell level
-	SpellType       string
+	Level           int    // Minimum spell level
+	SpellType       string // TODO: Consider changing this to the spelltype enum
 	IsAOE           bool
 	HasDC           bool
 	ApiURL          string
 	LevelType       string // character || slot
 	SpellDC
-	Formulas []CastFormula
+	Formulas map[int]CastFormula
 }
 
 type SpellDC struct {
@@ -51,6 +51,7 @@ type CastFormula struct {
 	AmountToAdd  int
 	UseSpellmod  bool
 	DamageType   string
+	AverageValue int
 }
 
 type SpellQueryParams struct {
@@ -76,26 +77,28 @@ func (s *Spell) GetHighestAverageAmount() int {
 	return int(math.Floor(spellAvg))
 }
 
-// GetFormulaAtLevel retrieves the most suitable cast formula for the given spell at the specified cast level.
-func (s *Spell) GetFormulaAtLevel(castLevel int) (*CastFormula, error) {
+// GetClosestFormulaToLevel retrieves the most suitable cast formula for the given spell at the specified cast level.
+func (s *Spell) GetClosestFormulaToLevel(castLevel int) (*CastFormula, error) {
 	if s.Level == 0 {
 		return nil, fmt.Errorf("spell is not a leveled spell")
 	}
 	if castLevel < s.Level {
-		castLevel = s.Level
+		return nil, fmt.Errorf("cast level %d is below minimum spell level %d", castLevel, s.Level)
 	}
 
 	var bestFormula *CastFormula
-	for i := range s.Formulas {
-		formula := &s.Formulas[i]
-		if formula.CastLevel <= castLevel {
-			bestFormula = formula
-		} else {
-			break
+	var bestLevel int
+	found := false
+
+	for level, formula := range s.Formulas {
+		if level <= castLevel && (!found || level > bestLevel) {
+			bestFormula = &formula
+			bestLevel = level
+			found = true
 		}
 	}
 
-	if bestFormula == nil {
+	if !found {
 		return nil, fmt.Errorf("no formula available for spell %s at level %d", s.Name, castLevel)
 	}
 
@@ -108,7 +111,7 @@ func (s *Spell) GetAverageDamageAtLevel(castLevel int, spellModDmg int) (int, *C
 	if s.Level == 0 {
 		return 0, nil, fmt.Errorf("spell is not a leveled spell")
 	}
-	formula, err := s.GetFormulaAtLevel(castLevel)
+	formula, err := s.GetClosestFormulaToLevel(castLevel)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -153,13 +156,18 @@ func (s *Spell) GetFormulaForCantrip(casterLevel int) (*CastFormula, error) {
 	}
 
 	var bestFormula *CastFormula
-	for i := range s.Formulas {
-		formula := &s.Formulas[i]
-		if formula.CastLevel <= casterLevel {
-			bestFormula = formula
-		} else {
-			break
+	var bestLevel int
+	found := false
+
+	for level, formula := range s.Formulas {
+		if level <= casterLevel && (!found || level > bestLevel) {
+			bestLevel = level
+			formulaCopy := formula
+			bestFormula = &formulaCopy
+			found = true
 		}
 	}
+
 	return bestFormula, nil
+
 }

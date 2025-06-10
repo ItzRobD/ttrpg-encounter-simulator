@@ -102,12 +102,12 @@ type ActionChoiceEvent struct {
 
 func (e *ActionChoiceEvent) GetEventType() EventType { return ETActionChoiceEvent }
 
-type SpellSlotsEvent struct {
-	BaseEvent
-	SpellSlots shared.SpellSlots
-}
+//type SpellSlotsEvent struct {
+//	BaseEvent
+//	SpellSlots shared.SpellSlots
+//}
 
-func (e *SpellSlotsEvent) GetEventType() EventType { return ETSpellSlotsEvent }
+//func (e *SpellSlotsEvent) GetEventType() EventType { return ETSpellSlotsEvent }
 
 type SpellChoiceEvent struct {
 	BaseEvent

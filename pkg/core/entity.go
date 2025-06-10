@@ -44,7 +44,7 @@ type CombatState struct {
 	LegendaryActionPoints int
 
 	// Spell Resources
-	SpellSlots    shared.SpellSlots
+	// TODO: Spellcasting manager
 	Concentration *spells.Spell
 
 	// TODO: Evaluate if conditions will be a feature

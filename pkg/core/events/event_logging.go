@@ -46,16 +46,16 @@ func LogSpellChoiceEvent(actor core.Entity, spell *spells.Spell, hasSlots bool, 
 	}
 }
 
-func LogSpellSlotsEvent(actor core.Entity, spellSlots shared.SpellSlots, listener func(event interface{})) {
-	event := &SpellSlotsEvent{
-		SpellSlots: spellSlots,
-	}
-	event.SetActor(actor.GetName())
-
-	if listener != nil {
-		listener(event)
-	}
-}
+//func LogSpellSlotsEvent(actor core.Entity, spellSlots shared.SpellSlots, listener func(event interface{})) {
+//	event := &SpellSlotsEvent{
+//		SpellSlots: spellSlots,
+//	}
+//	event.SetActor(actor.GetName())
+//
+//	if listener != nil {
+//		listener(event)
+//	}
+//}
 
 func LogSpellAttackEvent(actor core.Entity, target core.Entity, spell *spells.Spell, attackRoll, attackModifier int, isHit bool, listener func(event interface{})) {
 	event := &SpellAttackEvent{

@@ -1,11 +1,19 @@
 package spellcasting
 
-func (s *SpellcastingManager) GetSpellSlots() SpellSlots {
+func (s *SpellcastingManager) getSpellSlots() SpellSlots {
 	return s.currentSlots
 }
 
-func (s *SpellcastingManager) GetMaxSpellSlots() SpellSlots {
+func (s *SpellcastingManager) getMaxSpellSlots() SpellSlots {
 	return s.maxSlots
+}
+
+func (s *SpellcastingManager) getSpellSlotsAtLevel(slot int) int {
+	return s.currentSlots[slot]
+}
+
+func (s *SpellcastingManager) getMaxSpellSlotsAtLevel(slot int) int {
+	return s.maxSlots[slot]
 }
 
 func (s *SpellcastingManager) HasSpellSlotsAtLevel(slot int) bool {
@@ -21,20 +29,12 @@ func (s *SpellcastingManager) HasAnySpellSlots() bool {
 	return false
 }
 
-func (s *SpellcastingManager) GetSpellSlotsAtLevel(slot int) int {
-	return s.currentSlots[slot]
-}
-
-func (s *SpellcastingManager) GetMaxSpellSlotsAtLevel(slot int) int {
-	return s.maxSlots[slot]
-}
-
 func (s *SpellcastingManager) ExpendSpellSlot(slot int) error {
-	if s.currentSlots[slot] > 0 {
-		s.currentSlots[slot]--
-		return nil
+	if !s.HasSpellSlotsAtLevel(slot) {
+		return NewSpellSlotError(slot, "no spell slots available", ERROR_NO_SLOTS_AVAILABLE)
 	}
-	return NewSpellSlotErrorOutOfSlots(slot)
+	s.currentSlots[slot]--
+	return nil
 }
 
 func (s *SpellcastingManager) RecoverSpellSlotByAmount(slot int, amount int) error {
@@ -49,8 +49,8 @@ func (s *SpellcastingManager) RecoverSpellSlotToMax(slot int) error {
 	return s.RecoverSpellSlotByAmount(slot, s.maxSlots[slot]-s.currentSlots[slot])
 }
 
-func (s *SpellcastingManager) GetHighestAvailableSpellSlot() (int, error) {
-	for i := len(s.currentSlots) - 1; i >= 0; i-- {
+func (s *SpellcastingManager) getHighestAvailableSpellSlot() (int, error) {
+	for i := len(s.currentSlots) - 1; i > 0; i-- {
 		if s.currentSlots[i] > 0 {
 			return i, nil
 		}

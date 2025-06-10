@@ -22,11 +22,11 @@ type Character struct {
 	Eq                Equipment
 	WeaponProficiency WeaponProficiencies
 	KnownSpells       []spells.Spell
-	SpellSlots        shared.SpellSlots
-	ActionPreference  shared.ActionPreference
-	SpellPriority     shared.SpellPriority
-	EntityModifiers   core.EntityModifiers
-	EventListener     func(event interface{})
+	//SpellSlots        shared.SpellSlots
+	ActionPreference shared.ActionPreference
+	SpellPriority    shared.SpellPriority
+	EntityModifiers  core.EntityModifiers
+	EventListener    func(event interface{})
 }
 
 type Equipment struct {
@@ -61,14 +61,14 @@ func New(ctx context.Context, name string, classID int, level int, abilityScores
 	}
 
 	return Character{
-		Name:             name,
-		Class:            c,
-		Level:            level,
-		AbilityScores:    abilityScores,
-		HP:               hp,
-		Eq:               Equipment{},
-		KnownSpells:      []spells.Spell{},
-		SpellSlots:       c.Spellcasting.MaxSpellSlots[level],
+		Name:          name,
+		Class:         c,
+		Level:         level,
+		AbilityScores: abilityScores,
+		HP:            hp,
+		Eq:            Equipment{},
+		KnownSpells:   []spells.Spell{},
+		//SpellSlots:       c.Spellcasting.MaxSpellSlots[level],
 		ActionPreference: ap,
 		SpellPriority:    sp,
 		EntityModifiers:  em,
@@ -217,9 +217,9 @@ func (c *Character) PrefersRanged() bool {
 	return false
 }
 
-func (c *Character) GetSpellSlots() shared.SpellSlots {
-	return c.SpellSlots
-}
+//func (c *Character) GetSpellSlots() shared.SpellSlots {
+//	return c.SpellSlots
+//}
 
 func (c *Character) GetName() string {
 	return c.Name

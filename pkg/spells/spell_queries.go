@@ -181,9 +181,14 @@ func getSpellByID(ctx context.Context, id int) (Spell, error) {
 		if err != nil {
 			return spell, err
 		}
-		spell.Formulas = formulas
+
+		spell.Formulas = make(map[int]CastFormula)
+
+		for _, formula := range formulas {
+			spell.Formulas[formula.CastLevel] = formula
+		}
 	} else {
-		spell.Formulas = []CastFormula{}
+		spell.Formulas = nil
 	}
 	return spell, nil
 }
