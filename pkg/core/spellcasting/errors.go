@@ -5,16 +5,12 @@ import "fmt"
 type SpellSlotErrorType string
 
 const (
-	ERROR_NO_SLOTS_AVAILABLE            SpellSlotErrorType = "no slots available"
-	ERROR_NO_SLOTS_LEFT                 SpellSlotErrorType = "no slots left"
-	ERROR_SLOT_ALREADY_USED             SpellSlotErrorType = "slot already used"
-	ERROR_SLOT_NOT_AVAILABLE            SpellSlotErrorType = "slot not available"
-	ERROR_SLOT_NOT_FOUND                SpellSlotErrorType = "slot not found"
-	ERROR_SLOT_LEVEL_TOO_LOW            SpellSlotErrorType = "slot level too low"
-	ERROR_SLOT_LEVEL_TOO_HIGH           SpellSlotErrorType = "slot level too high"
-	ERROR_SLOT_LEVEL_TOO_LOW_FOR_SPELL  SpellSlotErrorType = "slot level too low for spell"
-	ERROR_SLOT_LEVEL_TOO_HIGH_FOR_SPELL SpellSlotErrorType = "slot level too high for spell"
-	ERROR_GENERIC_SLOT                  SpellSlotErrorType = "generic slot error"
+	ERROR_NO_SLOTS_AVAILABLE SpellSlotErrorType = "no slots available"
+	ERROR_NO_SLOTS_LEFT      SpellSlotErrorType = "no slots left"
+	ERROR_SLOT_ALREADY_USED  SpellSlotErrorType = "slot already used"
+	ERROR_SLOT_NOT_AVAILABLE SpellSlotErrorType = "slot not available"
+	ERROR_SLOT_NOT_FOUND     SpellSlotErrorType = "slot not found"
+	ERROR_GENERIC_SLOT       SpellSlotErrorType = "generic slot error"
 )
 
 type SpellSlotError struct {
@@ -53,22 +49,6 @@ func NewSpellSlotErrorNotAvailable(level int) *SpellSlotError {
 
 func NewSpellSlotErrorNotFound(level int) *SpellSlotError {
 	return NewSpellSlotError(level, "not found", ERROR_SLOT_NOT_FOUND)
-}
-
-func NewSpellSlotErrorLevelTooLow(level int) *SpellSlotError {
-	return NewSpellSlotError(level, "level too low", ERROR_SLOT_LEVEL_TOO_LOW)
-}
-
-func NewSpellSlotErrorLevelTooHigh(level int) *SpellSlotError {
-	return NewSpellSlotError(level, "level too high", ERROR_SLOT_LEVEL_TOO_HIGH)
-}
-
-func NewSpellSlotErrorLevelTooLowForSpell(level int) *SpellSlotError {
-	return NewSpellSlotError(level, "level too low for spell", ERROR_SLOT_LEVEL_TOO_LOW_FOR_SPELL)
-}
-
-func NewSpellSlotErrorLevelTooHighForSpell(level int) *SpellSlotError {
-	return NewSpellSlotError(level, "level too high for spell", ERROR_SLOT_LEVEL_TOO_HIGH_FOR_SPELL)
 }
 
 type SpellcastingErrorType string
