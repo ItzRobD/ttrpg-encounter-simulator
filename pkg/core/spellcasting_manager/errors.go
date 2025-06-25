@@ -1,4 +1,4 @@
-package spellcasting
+package spellcasting_manager
 
 import "fmt"
 

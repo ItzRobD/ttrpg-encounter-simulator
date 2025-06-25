@@ -5,8 +5,8 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/armor"
 	"dnd5e-encounter-simulator-backend/pkg/class"
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/core/combat"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/martial_attacks"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
@@ -259,25 +259,25 @@ func (c *Character) GetWeaponProficiencyFromSlot(slot shared.WeaponSlot) (bool, 
 	}
 }
 
-func (c *Character) CreateWeaponAttackInfo(slot shared.WeaponSlot, useVersatile bool) (combat.AttackInfo, error) {
+func (c *Character) CreateWeaponAttackInfo(slot shared.WeaponSlot, useVersatile bool) (martial_attacks.AttackData, error) {
 	w, err := c.getWeaponFromSlot(slot)
 	if err != nil {
-		return combat.AttackInfo{}, err
+		return martial_attacks.AttackData{}, err
 	}
 
 	prof, err := c.GetWeaponProficiencyFromSlot(slot)
 	if err != nil {
-		return combat.AttackInfo{}, err
+		return martial_attacks.AttackData{}, err
 	}
 
 	attackMod, err := w.GetAttackModifier(&c.AbilityScores, c.Level, prof)
 	if err != nil {
-		return combat.AttackInfo{}, err
+		return martial_attacks.AttackData{}, err
 	}
 
 	damageMod, err := w.GetWeaponModifier(&c.AbilityScores)
 	if err != nil {
-		return combat.AttackInfo{}, err
+		return martial_attacks.AttackData{}, err
 	}
 
 	die := w.Die
@@ -287,7 +287,7 @@ func (c *Character) CreateWeaponAttackInfo(slot shared.WeaponSlot, useVersatile 
 		v = true
 	}
 
-	return combat.AttackInfo{
+	return martial_attacks.AttackData{
 		Name:              w.Name,
 		NumberOfDice:      w.NumberOfDice,
 		Die:               die,

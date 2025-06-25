@@ -2,6 +2,7 @@ package events
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/martial_attacks"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 )
@@ -17,15 +18,16 @@ func LogCharacterActionChoiceEvent(actor core.Entity, choice shared.ActionType, 
 	}
 }
 
-func LogMeleeAttackEvent(actor core.Entity, target core.Entity, attack string, attackRoll, attackModifier int, isHit bool, isCritical bool, listener func(event interface{})) {
+func LogMeleeAttackEvent(actor core.Entity, target core.Entity, attackResult martial_attacks.AttackResult, listener func(event interface{})) {
 	event := &MeleeAttackEvent{
 		Target:         target.GetName(),
-		AttackName:     attack,
-		AttackRoll:     attackRoll,
-		AttackModifier: attackModifier,
-		AttackTotal:    attackRoll + attackModifier,
-		Success:        isHit,
-		CriticalHit:    isCritical,
+		AttackName:     attackResult.AttackName,
+		AttackCount:    attackResult.AttackCount,
+		AttackRoll:     attackResult.AttackRoll,
+		AttackModifier: attackResult.AttackTotal - attackResult.AttackRoll,
+		AttackTotal:    attackResult.AttackTotal,
+		Success:        attackResult.IsHit,
+		CriticalHit:    attackResult.IsCriticalHit,
 	}
 	event.SetActor(actor.GetName())
 

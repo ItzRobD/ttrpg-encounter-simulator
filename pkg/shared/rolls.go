@@ -86,6 +86,11 @@ func DoesAttackHit(ar int, ac int) bool {
 	return false
 }
 
+// DiceRollWithModifier rolls a number of dice, adds specified modifier, and returns total, individual rolls, and errors if any.
+// numberOfDice specifies how many dice should be rolled and must be greater than 0.
+// numberOfSides defines the type of dice to roll, which must be a valid die type.
+// amountToAdd is a flat modifier added to the total result.
+// Returns the total roll result, a slice of individual rolls, and an error if input validation fails.
 func DiceRollWithModifier(numberOfDice, numberOfSides int, amountToAdd int) (int, []int, error) {
 	if numberOfDice < 1 {
 		return 0, nil, fmt.Errorf("number of dice to roll must be greater than 0")

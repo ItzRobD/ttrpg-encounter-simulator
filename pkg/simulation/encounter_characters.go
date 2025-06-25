@@ -2,8 +2,8 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
-	"dnd5e-encounter-simulator-backend/pkg/core/combat"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/martial_attacks"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
@@ -56,7 +56,7 @@ func (e *Encounter) performCharacterRangedAttack(character *character.Character,
 		return
 	}
 
-	didHit, dmg, err := combat.MakeMartialAttack(character, target, aI, advantage, e.Options)
+	didHit, dmg, err := martial_attacks.MakeMartialAttack(character, target, aI, advantage, e.Options)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -82,7 +82,7 @@ func (e *Encounter) performCharacterMeleeAttack(c *character.Character, useVersa
 		return
 	}
 
-	didHit, dmg, err := combat.MakeMartialAttack(c, target, aI, advantage, e.Options)
+	didHit, dmg, err := martial_attacks.MakeMartialAttack(c, target, aI, advantage, e.Options)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -1,4 +1,4 @@
-package spellcasting
+package spellcasting_manager
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/shared"

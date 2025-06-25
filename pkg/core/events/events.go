@@ -86,6 +86,7 @@ type MeleeAttackEvent struct {
 	BaseEvent
 	Target         string
 	AttackName     string
+	AttackCount    int
 	AttackRoll     int
 	AttackModifier int
 	AttackTotal    int

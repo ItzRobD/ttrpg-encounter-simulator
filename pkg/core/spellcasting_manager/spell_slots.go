@@ -1,4 +1,4 @@
-package spellcasting
+package spellcasting_manager
 
 func (s *SpellcastingManager) getSpellSlots() SpellSlots {
 	return s.currentSlots
