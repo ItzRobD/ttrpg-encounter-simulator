@@ -50,7 +50,7 @@ func (e *Encounter) performCharacterRangedAttack(character *character.Character,
 	}
 	events.LogTargetChoiceEvent(character, target, character.GetEventListener())
 
-	aI, err := character.CreateWeaponAttackInfo(shared.WSRanged, false)
+	aI, err := character.CreateWeaponAttackData(shared.WSRanged, false)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -76,13 +76,15 @@ func (e *Encounter) performCharacterMeleeAttack(c *character.Character, useVersa
 	// TODO: Add secondary slot
 	// Perform attack using main slot
 
-	aI, err := c.CreateWeaponAttackInfo(shared.WSPrimary, useVersatileAttack)
+	ad, err := c.CreateWeaponAttackData(shared.WSPrimary, useVersatileAttack)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	didHit, dmg, err := martial_attacks.MakeMartialAttack(c, target, aI, advantage, e.Options)
+	// TODO: Handle creating attack request for the action - new functions created in character for this
+
+	res, err := martial_attacks.MakeMartialAttack(c, target, , e.Options)
 	if err != nil {
 		fmt.Println(err)
 		return

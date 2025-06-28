@@ -22,11 +22,13 @@ type Character struct {
 	Eq                Equipment
 	WeaponProficiency WeaponProficiencies
 	KnownSpells       []spells.Spell
-	//SpellSlots        shared.SpellSlots
-	ActionPreference shared.ActionPreference
-	SpellPriority    shared.SpellPriority
-	EntityModifiers  core.EntityModifiers
-	EventListener    func(event interface{})
+	ActionPreference  shared.ActionPreference
+	SpellPriority     shared.SpellPriority
+	EntityModifiers   core.EntityModifiers
+	Feats             CharacterFeats
+	RogueFeatures     RogueFeatures
+	NumberOfAttacks   int
+	EventListener     func(event interface{})
 }
 
 type Equipment struct {
@@ -40,6 +42,25 @@ type WeaponProficiencies struct {
 	Primary   bool
 	Secondary bool
 	Ranged    bool
+}
+
+type RogueFeatures struct {
+	HasSneakAttack       bool
+	HasAssassinate       bool
+	NumOfSneakAttackDice int
+}
+
+type CharacterFeats struct {
+	TwoWeaponFighting bool // Add damage to offhand
+	GreatWeaponMaster bool // Power Attack
+	Sharpshooter      bool // Power Attack
+	XBowExpert        bool // Bonus action hand crossbow attack
+	ShieldMaster      bool // Better dex saves with a shield
+	WarCaster         bool // Adv on conc saves
+	DualWielder       bool // +1 AC While dual wielding, can use non light weapons
+	// Crusher/Slasher/Piercer
+	//Defensive duelist - reaction to add ac
+	HeavyArmorMaster bool // If heavy armor, non magic phys damage reduced by 3
 }
 
 func New(ctx context.Context, name string, classID int, level int, abilityScores shared.AbilityScores, hp shared.PlayerHP, ap shared.ActionPreference, sp shared.SpellPriority, em core.EntityModifiers) (Character, error) {
@@ -60,6 +81,24 @@ func New(ctx context.Context, name string, classID int, level int, abilityScores
 		return Character{}, err
 	}
 
+	numAttacks := 1
+	numAttacks, err = GetNumberOfAttacksFromLevelAndClass(ctx, level, classID)
+	if err != nil {
+		fmt.Println(fmt.Errorf("error getting extra attacks from level and class: %w", err))
+	}
+
+	var rFeatures RogueFeatures
+	if c.ID == 10 {
+		sneakAttackDice, errSA := GetNumberOfSneakAttackDiceFromLevel(ctx, level)
+		if errSA != nil {
+			sneakAttackDice = 0
+			fmt.Println(fmt.Errorf("error getting sneak attack dice from level: %w", errSA))
+		}
+
+		rFeatures.HasSneakAttack = true
+		rFeatures.NumOfSneakAttackDice = sneakAttackDice
+	}
+
 	return Character{
 		Name:          name,
 		Class:         c,
@@ -72,6 +111,9 @@ func New(ctx context.Context, name string, classID int, level int, abilityScores
 		ActionPreference: ap,
 		SpellPriority:    sp,
 		EntityModifiers:  em,
+		NumberOfAttacks:  numAttacks,
+		Feats:            CharacterFeats{},
+		RogueFeatures:    rFeatures,
 	}, nil
 }
 
@@ -259,7 +301,7 @@ func (c *Character) GetWeaponProficiencyFromSlot(slot shared.WeaponSlot) (bool, 
 	}
 }
 
-func (c *Character) CreateWeaponAttackInfo(slot shared.WeaponSlot, useVersatile bool) (martial_attacks.AttackData, error) {
+func (c *Character) CreateWeaponAttackData(slot shared.WeaponSlot, useVersatile bool) (martial_attacks.AttackData, error) {
 	w, err := c.getWeaponFromSlot(slot)
 	if err != nil {
 		return martial_attacks.AttackData{}, err
@@ -295,6 +337,33 @@ func (c *Character) CreateWeaponAttackInfo(slot shared.WeaponSlot, useVersatile 
 		DamageModifier:    damageMod,
 		DamageType:        w.DamageType,
 		IsVersatileAttack: v,
+	}, nil
+}
+
+func (c *Character) CreateAttackRequest(slot shared.WeaponSlot, useVersatile bool, advantage shared.AdvantageType) (*martial_attacks.AttackRequest, error) {
+	attackData, err := c.CreateWeaponAttackData(slot, useVersatile)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: This will have to be handled internally by other functions to get the values of each of these
+	//		Will have to account for character feats
+	modifiers := martial_attacks.AttackModifiers{
+		BonusAttackRoll:      0,
+		BonusDamageRoll:      0,
+		ShouldApplyDamageMod: false,
+		PowerAttack:          false,
+		ImprovedCritical:     false,
+		TreatOnesAsTwos:      false,
+		RerollOnesAndTwos:    false,
+		HalflingLucky:        false,
+	}
+
+	return &martial_attacks.AttackRequest{
+		AttackData:  attackData,
+		Modifiers:   modifiers,
+		Advantage:   advantage,
+		AttackCount: c.NumberOfAttacks,
 	}, nil
 }
 

@@ -97,10 +97,6 @@ func (e *Encounter) SimulateRound() {
 			if creature.IsUnconscious() {
 				continue // Skip if the character is unconscious
 			}
-			// TODO: I want to split turn logic, specifically spellcasting, into the shared package
-			//       Since both monsters and characters will need to choose spells. Choosing actions
-			//       Should be handled through the interface -> Add GetAction() or some similar method
-			//       Move any shared logic with rolls etc to the shared package
 			e.handleCharacterTurn(creature, shared.RollNormal)
 		case *monster.Monster:
 			if creature.IsUnconscious() {

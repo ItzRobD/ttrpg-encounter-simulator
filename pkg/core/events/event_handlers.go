@@ -22,6 +22,17 @@ func (h *AttackHandler) HandleEvent(event CombatEvent) {
 				attackEvent.AttackName,
 				attackEvent.AttackRoll,
 				attackEvent.Success)
+		} else if !attackEvent.Success {
+			s = fmt.Sprintf("[Round %d] <Miss> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
+				attackEvent.GetRound(),
+				attackEvent.AttackCount,
+				attackEvent.GetActor(),
+				attackEvent.Target,
+				attackEvent.AttackName,
+				attackEvent.AttackTotal,
+				attackEvent.AttackRoll,
+				attackEvent.AttackModifier,
+				attackEvent.Success)
 		} else {
 			s = fmt.Sprintf("[Round %d] <Attack> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
 				attackEvent.GetRound(),
