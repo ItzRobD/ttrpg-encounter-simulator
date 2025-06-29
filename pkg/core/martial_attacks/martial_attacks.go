@@ -122,7 +122,7 @@ func CalculateDamage(ad AttackData, isCritical bool, modifiers AttackModifiers, 
 // MakeMartialAttack rolls an attack, determines if it hits the target, and calculates damage if applicable.
 // Returns a boolean indicating a hit, an integer for damage dealt, and an error if any issues occurred.
 // Note: attacker and target can be mutated - must be a pointer
-func MakeMartialAttack(attacker core.Entity, target core.Entity, attack AttackRequest, options core.Options) ([]AttackResult, error) {
+func MakeMartialAttack(attacker core.Entity, target core.Entity, attack *AttackRequest, options core.Options) ([]AttackResult, error) {
 	var results []AttackResult
 
 	for i := 0; i < attack.AttackCount; i++ {

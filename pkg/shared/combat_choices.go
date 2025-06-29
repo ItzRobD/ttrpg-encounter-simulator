@@ -46,6 +46,14 @@ const (
 	ATHeal                = "healing"
 )
 
+type MeleePreference int
+
+const (
+	MPNoPreference MeleePreference = iota
+	MPPreferVersatile
+	MPPreferNonVersatile
+)
+
 func GetActionFromPreference(pref ActionPreference) ActionType {
 	switch pref {
 	case APPreferMelee:

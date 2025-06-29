@@ -76,23 +76,23 @@ func (e *Encounter) performCharacterMeleeAttack(c *character.Character, useVersa
 	// TODO: Add secondary slot
 	// Perform attack using main slot
 
-	ad, err := c.CreateWeaponAttackData(shared.WSPrimary, useVersatileAttack)
+	req, err := c.CreateAttackRequest(shared.WSPrimary, useVersatileAttack, advantage)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// TODO: Handle creating attack request for the action - new functions created in character for this
-
-	res, err := martial_attacks.MakeMartialAttack(c, target, , e.Options)
+	res, err := martial_attacks.MakeMartialAttack(c, target, req, e.Options)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	if didHit {
-		fmt.Printf("Hit! %d damage\n", dmg)
-	}
 
+	for _, atk := range res {
+		if atk.IsHit {
+			fmt.Printf("Hit! %d damage\n", atk.Damage)
+		}
+	}
 }
 
 func (e *Encounter) performCharacterHealAction(c *character.Character) {

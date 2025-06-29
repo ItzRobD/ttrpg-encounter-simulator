@@ -23,6 +23,7 @@ type Character struct {
 	WeaponProficiency WeaponProficiencies
 	KnownSpells       []spells.Spell
 	ActionPreference  shared.ActionPreference
+	MeleePreference   shared.MeleePreference
 	SpellPriority     shared.SpellPriority
 	EntityModifiers   core.EntityModifiers
 	Feats             CharacterFeats
