@@ -1,8 +1,9 @@
-package shared
+package core
 
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 type ChallengeRatingPB struct {
@@ -127,4 +128,23 @@ func ValidateDamageType(damageType string) bool {
 		}
 	}
 	return false
+}
+
+func GetNormalizedAbility(ability string) (Ability, error) {
+	switch strings.ToLower(ability) {
+	case "str", "strength":
+		return AbilityStrength, nil
+	case "dex", "dexterity":
+		return AbilityDexterity, nil
+	case "con", "constitution":
+		return AbilityConstitution, nil
+	case "int", "intelligence":
+		return AbilityIntelligence, nil
+	case "wis", "wisdom":
+		return AbilityWisdom, nil
+	case "cha", "charisma":
+		return AbilityCharisma, nil
+	default:
+		return AbilityNone, fmt.Errorf("invalid ability")
+	}
 }

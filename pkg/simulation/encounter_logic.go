@@ -4,6 +4,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
@@ -13,7 +14,7 @@ import (
 // ChooseCharacterActionType selects the action type for a character, preferring healing if available and needed.
 func (e *Encounter) ChooseCharacterActionType(actor *character.Character) (shared.ActionType, error) {
 	// Choose between a damage action or a healing action
-	if e.Options.AllowPlayerHeals && actor.HasHealingSpells() {
+	if e.Options.AllowPlayerHeals && actor.SpellcastingManager.HasHealingSpells() {
 		if e.doesAPlayerNeedHealing() {
 			events.LogCharacterActionChoiceEvent(actor, shared.ATHeal, actor.EventListener)
 			return shared.ATHeal, nil
@@ -25,7 +26,7 @@ func (e *Encounter) ChooseCharacterActionType(actor *character.Character) (share
 func (e *Encounter) chooseCharacterDamageAction(actor *character.Character) (shared.ActionType, error) {
 	switch e.Options.ActionPreference {
 	case shared.APNoPreference:
-		if len(actor.KnownSpells) == 0 {
+		if !actor.SpellcastingManager.HasDamageSpells() {
 			return chooseFromNoSpellsPreference(actor)
 		} else {
 			return chooseFromHasSpellsPreference(actor)
@@ -37,7 +38,7 @@ func (e *Encounter) chooseCharacterDamageAction(actor *character.Character) (sha
 		events.LogCharacterActionChoiceEvent(actor, shared.ATRanged, actor.EventListener)
 		return shared.ATRanged, nil
 	case shared.APPreferSpells:
-		if len(actor.KnownSpells) == 0 {
+		if !actor.SpellcastingManager.HasDamageSpells() {
 			return chooseFromNoSpellsPreference(actor)
 		}
 		// TODO: There is a logic issue here where if spells are preferred but there are no spell slots available it tries anyway
@@ -51,11 +52,12 @@ func (e *Encounter) chooseCharacterDamageAction(actor *character.Character) (sha
 func chooseFromNoSpellsPreference(actor *character.Character) (shared.ActionType, error) {
 	if actor.ActionPreference == shared.APNoPreference {
 		// TODO: This is simply checking if the character class is a ranger which may not prefer ranged attacks
+		// TODO: Add a prefer ranged preference?
 		//if actor.PrefersRanged() {
 		//	events.LogCharacterActionChoiceEvent(actor, shared.ATRanged, actor.EventListener)
 		//	return shared.ATRanged, nil
 		//}
-		r, _, err := shared.RollDice(1, 100)
+		r, _, err := core.RollDice(1, 100)
 		if err != nil {
 			return shared.ATNoAction, nil
 		}
@@ -81,7 +83,7 @@ func chooseFromHasSpellsPreference(actor *character.Character) (shared.ActionTyp
 			events.LogCharacterActionChoiceEvent(actor, shared.ATSpell, actor.EventListener)
 			return shared.ATSpell, nil
 		}
-		r, _, err := shared.RollDice(1, 100)
+		r, _, err := core.RollDice(1, 100)
 		if err != nil {
 			return shared.ATNoAction, nil
 		}
@@ -100,12 +102,12 @@ func chooseFromHasSpellsPreference(actor *character.Character) (shared.ActionTyp
 	return actionType, nil
 }
 
-func (e *Encounter) chooseBestHealingSpell(actor core.Entity, target core.Entity) (*spells.Spell, error) {
+func (e *Encounter) chooseBestHealingSpell(actor core.Entity, target core.Entity) (*spellcasting_manager.SpellChoice, error) {
 	switch a := actor.(type) {
 	case *character.Character:
 		hpDiff := target.GetMaxHP() - target.GetCurrentHP()
-		s, err := a.GetMostEfficientHealingSpell(hpDiff)
-		events.LogSpellChoiceEvent(a, s, true, a.EventListener)
+		s, err := a.SpellcastingManager.GetMostEfficientHealingSpell(hpDiff)
+		events.LogSpellChoiceEvent(a, s, a.SpellcastingManager.GetStatus(), a.EventListener)
 		if err != nil {
 			return nil, err
 		}
@@ -116,14 +118,14 @@ func (e *Encounter) chooseBestHealingSpell(actor core.Entity, target core.Entity
 	return nil, fmt.Errorf("unknown actor type %T", actor)
 }
 
-func (e *Encounter) chooseDamageSpell(actor core.Entity, priority shared.SpellPriority) (*spells.Spell, error) {
+func (e *Encounter) chooseDamageSpell(actor core.Entity, priority shared.SpellPriority) (*spellcasting_manager.SpellChoice, error) {
 	switch a := actor.(type) {
 	case *character.Character:
-		damageSpell, err := a.ChooseDamageSpell(priority)
+		damageSpell, err := a.SpellcastingManager.ChooseSpellByPriority(spells.STDamage, priority)
 		if err != nil {
 			return nil, err
 		}
-		events.LogSpellChoiceEvent(a, damageSpell, true, a.EventListener)
+		events.LogSpellChoiceEvent(a, damageSpell, a.SpellcastingManager.GetStatus(), a.EventListener)
 		return damageSpell, nil
 	case *monster.Monster:
 		// TODO: Add monster spell choice, if spellcaster/if innate

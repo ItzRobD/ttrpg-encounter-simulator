@@ -1,7 +1,6 @@
 package spells
 
 import (
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
 	"math"
 )
@@ -60,12 +59,6 @@ type SpellQueryParams struct {
 	Level int
 }
 
-type SpellResult struct {
-	Success bool
-	Amount  int
-	Rolls   []int
-}
-
 func (s *Spell) GetHighestAverageAmount() int {
 	highestDie := s.Formulas[len(s.Formulas)-1].Die
 	highestNumDice := s.Formulas[len(s.Formulas)-1].NumberOfDice
@@ -116,10 +109,7 @@ func (s *Spell) GetAverageDamageAtLevel(castLevel int, spellModDmg int) (int, *C
 		return 0, nil, err
 	}
 
-	dAvg, err := shared.GetDieAverage(formula.Die)
-	if err != nil {
-		return 0, nil, err
-	}
+	dAvg := float64(formula.Die+1) / 2.0
 	dmg := int(math.Floor(float64(formula.NumberOfDice)*dAvg)) + formula.AmountToAdd
 	if formula.UseSpellmod {
 		dmg += spellModDmg
@@ -138,7 +128,7 @@ func (s *Spell) GetAverageDamageCantrip(casterLevel int, spellModDmg int) (int, 
 		return 0, nil, err
 	}
 
-	dAvg, err := shared.GetDieAverage(formula.Die)
+	dAvg := float64(formula.Die+1) / 2.0
 	if err != nil {
 		return 0, nil, err
 	}

@@ -36,7 +36,7 @@ type MonsterBase struct {
 	IsLegendary         bool
 	IsSpellcaster       bool
 	IsInnateSpellcaster bool
-	AbilityScores       shared.AbilityScores
+	AbilityScores       core.AbilityScores
 	HP                  shared.MonsterHP
 	SaveProficiencies   shared.SaveProficiencies
 }
@@ -187,7 +187,7 @@ func (m *Monster) SetEntityModifiers(em core.EntityModifiers) {
 func (m *Monster) DetermineMonsterHP(useAverage bool) (int, int, error) {
 	if !useAverage {
 		toAdd := m.HP.AmountToAdd
-		s, rolls, err := shared.RollDice(m.HP.NumberOfDice, m.HP.Die)
+		s, rolls, err := core.RollDice(m.HP.NumberOfDice, m.HP.Die)
 		if err != nil {
 			return 0, toAdd, fmt.Errorf("error rolling hp dice: %w", err)
 		}
@@ -200,7 +200,7 @@ func (m *Monster) DetermineMonsterHP(useAverage bool) (int, int, error) {
 	}
 }
 
-func (m *Monster) ModifyHP(amount int) {
+func (m *Monster) ModifyHP(value int) {
 	m.HP.HP += amount
 	if m.HP.HP > m.HP.MaxHP {
 		m.HP.HP = m.HP.MaxHP
@@ -218,7 +218,7 @@ func (m *Monster) GetSavingThrowRollResult(ability string) (int, error) {
 	switch ability {
 	case spells.SpellDCStrength:
 		if m.SaveProficiencies.Strength == 0 {
-			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Strength)
+			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Strength)
 			if err != nil {
 				return 0, err
 			}
@@ -227,7 +227,7 @@ func (m *Monster) GetSavingThrowRollResult(ability string) (int, error) {
 		}
 	case spells.SpellDCDexterity:
 		if m.SaveProficiencies.Dexterity == 0 {
-			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Dexterity)
+			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Dexterity)
 			if err != nil {
 				return 0, err
 			}
@@ -236,7 +236,7 @@ func (m *Monster) GetSavingThrowRollResult(ability string) (int, error) {
 		}
 	case spells.SpellDCConstitution:
 		if m.SaveProficiencies.Constitution == 0 {
-			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Constitution)
+			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Constitution)
 			if err != nil {
 				return 0, err
 			}
@@ -245,7 +245,7 @@ func (m *Monster) GetSavingThrowRollResult(ability string) (int, error) {
 		}
 	case spells.SpellDCIntelligence:
 		if m.SaveProficiencies.Intelligence == 0 {
-			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Intelligence)
+			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Intelligence)
 			if err != nil {
 				return 0, err
 			}
@@ -254,7 +254,7 @@ func (m *Monster) GetSavingThrowRollResult(ability string) (int, error) {
 		}
 	case spells.SpellDCWisdom:
 		if m.SaveProficiencies.Wisdom == 0 {
-			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Wisdom)
+			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Wisdom)
 			if err != nil {
 				return 0, err
 			}
@@ -263,7 +263,7 @@ func (m *Monster) GetSavingThrowRollResult(ability string) (int, error) {
 		}
 	case spells.SpellDCCharisma:
 		if m.SaveProficiencies.Charisma == 0 {
-			mod, err = shared.GetAbilityScoreModifier(m.AbilityScores.Charisma)
+			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Charisma)
 			if err != nil {
 				return 0, err
 			}
@@ -275,7 +275,7 @@ func (m *Monster) GetSavingThrowRollResult(ability string) (int, error) {
 	}
 
 	//roll, rolls, err := shared.RollDice(1, 20)
-	roll, _, err := shared.RollDice(1, 20)
+	roll, _, err := core.RollDice(1, 20)
 	save := roll + mod
 	//m.logRollEvent(roll, rolls, mod)
 

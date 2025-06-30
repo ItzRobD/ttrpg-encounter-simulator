@@ -241,7 +241,7 @@ func (c *Character) getWeaponFromSlot(slot shared.WeaponSlot) (*weapon.Weapon, e
 	}
 }
 
-func (c *Character) ModifyHP(amount int) {
+func (c *Character) ModifyHP(value int) {
 	prevHP := c.HP.HP
 	c.HP.HP += amount
 	if c.HP.HP > c.HP.MaxHP {
@@ -269,7 +269,7 @@ func (c *Character) GetSavingThrowRollResult(ability string) (int, error) {
 //	if c.EventListener != nil {
 //		event := events.CombatEvent{
 //			EventType: events.ETAttackEvent,
-//			Actor:     c.Name,
+//			ActorName:     c.Name,
 //			Target:    target.Name,
 //			Attack:    weapon.Name,
 //			Value:     attackRoll + attackModifier,
@@ -284,7 +284,7 @@ func (c *Character) GetSavingThrowRollResult(ability string) (int, error) {
 //	if c.EventListener != nil {
 //		event := events.CombatEvent{
 //			EventType:    events.ETActionChoiceEvent,
-//			Actor:        c.Name,
+//			ActorName:        c.Name,
 //			ActionChoice: choice,
 //		}
 //		c.EventListener(event)
@@ -295,7 +295,7 @@ func (c *Character) GetSavingThrowRollResult(ability string) (int, error) {
 //	if c.EventListener != nil {
 //		event := events.CombatEvent{
 //			EventType:   events.ETSpellChoiceEvent,
-//			Actor:       c.Name,
+//			ActorName:       c.Name,
 //			SpellChoice: spell,
 //		}
 //		c.EventListener(event)
@@ -306,7 +306,7 @@ func (c *Character) GetSavingThrowRollResult(ability string) (int, error) {
 //	if c.EventListener != nil {
 //		event := events.CombatEvent{
 //			EventType: events.ETAttackEvent,
-//			Actor:     c.Name,
+//			ActorName:     c.Name,
 //			Target:    target.Name,
 //			Attack:    spell.Name,
 //			Value:     attackRoll + attackModifier,
@@ -321,7 +321,7 @@ func (c *Character) GetSavingThrowRollResult(ability string) (int, error) {
 //	if c.EventListener != nil {
 //		event := events.CombatEvent{
 //			EventType:   events.ETSpellDC,
-//			Actor:       c.Name,
+//			ActorName:       c.Name,
 //			Target:      target.Name,
 //			Attack:      spell.Name,
 //			Value:       dc,
@@ -336,7 +336,7 @@ func (c *Character) GetSavingThrowRollResult(ability string) (int, error) {
 //	if c.EventListener != nil {
 //		event := events.CombatEvent{
 //			EventType:  events.ETDamageEvent,
-//			Actor:      c.Name,
+//			ActorName:      c.Name,
 //			Target:     target.Name,
 //			Value:      damage,
 //			DamageType: damageType,

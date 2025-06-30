@@ -76,7 +76,7 @@ func main() {
 	//	fmt.Println(err)
 	//}
 
-	m, err := monster.NewSRDMonster(ctx, params, core.EntityModifiers{InitiativeAdvantage: shared.RollNormal, InitiativeBonus: 0})
+	m, err := monster.NewSRDMonster(ctx, params, core.EntityModifiers{InitiativeAdvantage: core.RollNormal, InitiativeBonus: 0})
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -121,7 +121,7 @@ func main() {
 
 	//ctx := context.Background()
 
-	var as shared.AbilityScores
+	var as core.AbilityScores
 	as.Strength = 12
 	as.Dexterity = 18
 	as.Constitution = 16
@@ -140,7 +140,7 @@ func main() {
 	}
 
 	entityModifiers := core.EntityModifiers{
-		InitiativeAdvantage: shared.RollNormal,
+		InitiativeAdvantage: core.RollNormal,
 		InitiativeBonus:     0,
 		UseVersatileAttacks: true,
 	}

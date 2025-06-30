@@ -1,4 +1,4 @@
-package shared
+package core
 
 import (
 	"fmt"
@@ -77,13 +77,6 @@ func AttackRoll(modifier int, advantage AdvantageType) (int, int, error) {
 
 func AttackRollD20(advantage AdvantageType) (int, error) {
 	return RollD20WithAdvantage(advantage)
-}
-
-func DoesAttackHit(ar int, ac int) bool {
-	if ar >= ac {
-		return true
-	}
-	return false
 }
 
 // DiceRollWithModifier rolls a number of dice, adds specified modifier, and returns total, individual rolls, and errors if any.

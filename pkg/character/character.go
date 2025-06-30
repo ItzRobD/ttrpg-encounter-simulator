@@ -3,10 +3,10 @@ package character
 import (
 	"context"
 	"dnd5e-encounter-simulator-backend/pkg/armor"
-	"dnd5e-encounter-simulator-backend/pkg/class"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/martial_attacks"
+	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
@@ -14,22 +14,22 @@ import (
 )
 
 type Character struct {
-	Name              string
-	Class             class.Class
-	Level             int
-	AbilityScores     shared.AbilityScores
-	HP                shared.PlayerHP
-	Eq                Equipment
-	WeaponProficiency WeaponProficiencies
-	KnownSpells       []spells.Spell
-	ActionPreference  shared.ActionPreference
-	MeleePreference   shared.MeleePreference
-	SpellPriority     shared.SpellPriority
-	EntityModifiers   core.EntityModifiers
-	Feats             CharacterFeats
-	RogueFeatures     RogueFeatures
-	NumberOfAttacks   int
-	EventListener     func(event interface{})
+	Name                string
+	Class               Class
+	Level               int
+	AbilityScores       core.AbilityScores
+	HP                  shared.PlayerHP
+	Eq                  Equipment
+	WeaponProficiency   WeaponProficiencies
+	SpellcastingManager *spellcasting_manager.SpellcastingManager
+	ActionPreference    shared.ActionPreference
+	MeleePreference     shared.MeleePreference
+	SpellPriority       shared.SpellPriority
+	EntityModifiers     core.EntityModifiers
+	Feats               CharacterFeats
+	RogueFeatures       RogueFeatures
+	NumberOfAttacks     int
+	EventListener       func(event interface{})
 }
 
 type Equipment struct {
@@ -64,7 +64,7 @@ type CharacterFeats struct {
 	HeavyArmorMaster bool // If heavy armor, non magic phys damage reduced by 3
 }
 
-func New(ctx context.Context, name string, classID int, level int, abilityScores shared.AbilityScores, hp shared.PlayerHP, ap shared.ActionPreference, sp shared.SpellPriority, em core.EntityModifiers) (Character, error) {
+func New(ctx context.Context, name string, classID int, level int, abilityScores core.AbilityScores, hp shared.PlayerHP, ap shared.ActionPreference, sp shared.SpellPriority, em core.EntityModifiers) (Character, error) {
 	if classID < 0 || classID > 13 {
 		return Character{}, fmt.Errorf("invalid class id during character initialization: %d", classID)
 	}
@@ -75,9 +75,9 @@ func New(ctx context.Context, name string, classID int, level int, abilityScores
 		name = "Unnamed Character"
 	}
 
-	var params class.ClassQueryParams
+	var params ClassQueryParams
 	params.ID = classID
-	c, err := class.QueryClassData(ctx, params)
+	c, err := QueryClassData(ctx, params)
 	if err != nil {
 		return Character{}, err
 	}
@@ -100,22 +100,55 @@ func New(ctx context.Context, name string, classID int, level int, abilityScores
 		rFeatures.NumOfSneakAttackDice = sneakAttackDice
 	}
 
-	return Character{
+	char := Character{
 		Name:          name,
 		Class:         c,
 		Level:         level,
 		AbilityScores: abilityScores,
 		HP:            hp,
 		Eq:            Equipment{},
-		KnownSpells:   []spells.Spell{},
+		//KnownSpells:   []spells.Spell{},
 		//SpellSlots:       c.Spellcasting.MaxSpellSlots[level],
-		ActionPreference: ap,
-		SpellPriority:    sp,
-		EntityModifiers:  em,
-		NumberOfAttacks:  numAttacks,
-		Feats:            CharacterFeats{},
-		RogueFeatures:    rFeatures,
-	}, nil
+		ActionPreference:    ap,
+		SpellPriority:       sp,
+		EntityModifiers:     em,
+		NumberOfAttacks:     numAttacks,
+		Feats:               CharacterFeats{},
+		RogueFeatures:       rFeatures,
+		SpellcastingManager: &spellcasting_manager.SpellcastingManager{},
+	}
+
+	sm, err := initializeSpellcastingManager(ctx, &char)
+	if err != nil {
+		return Character{}, err
+	}
+
+	char.SpellcastingManager = sm
+
+	return char, nil
+}
+
+func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcasting_manager.SpellcastingManager, error) {
+	slots, err := GetSpellSlotsByLevelAndClassID(ctx, c.Level, c.Class.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	spellModValue, err := c.GetSpellBonus()
+
+	sm := spellcasting_manager.NewSpellcastingManager(c, spellcasting_manager.CasterCharacter, c.Level, slots, slots, false, spellModValue)
+	if err != nil {
+		return nil, err
+	}
+
+	availableSpellIDs, err := spells.GetUsableSpellIDsByClassID(ctx, c.Class.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	sm.SetUsableSpellIDs(availableSpellIDs)
+
+	return sm, nil
 }
 
 func (c *Character) AddSRDArmor(ctx context.Context, armorID int) error {
@@ -221,29 +254,38 @@ func (c *Character) IsUnconscious() bool {
 	return false
 }
 
-func (c *Character) GetSpellBonus() (int, error) {
+func (c *Character) GetSpellBonus(addProficiency bool) (int, error) {
 	var mod int
 	var err error
 	switch c.Class.SpellcastingMod {
-	case "int":
-		mod, err = shared.GetAbilityScoreModifier(c.AbilityScores.Intelligence)
-	case "wis":
-		mod, err = shared.GetAbilityScoreModifier(c.AbilityScores.Wisdom)
-	case "cha":
-		mod, err = shared.GetAbilityScoreModifier(c.AbilityScores.Charisma)
-	case "":
-		mod = 0
+	case core.AbilityStrength:
+		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Strength)
+	case core.AbilityDexterity:
+		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Dexterity)
+	case core.AbilityConstitution:
+		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Constitution)
+	case core.AbilityIntelligence:
+		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Intelligence)
+	case core.AbilityWisdom:
+		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Wisdom)
+	case core.AbilityCharisma:
+		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Charisma)
 	default:
+		mod = 0
 		err = fmt.Errorf("invalid spellcasting modifier: %s", c.Class.SpellcastingMod)
 	}
 
-	var pb int
-	pb, err = shared.GetCharacterProficiencyBonus(c.Level)
-	if err != nil {
-		return 0, err
+	if addProficiency {
+		var pb int
+		pb, err = core.GetCharacterProficiencyBonus(c.Level)
+		if err != nil {
+			return 0, err
+		}
+
+		return mod + pb, nil
 	}
 
-	return mod + pb, nil
+	return mod, nil
 }
 
 func (c *Character) PrefersSpells() bool {
@@ -341,7 +383,7 @@ func (c *Character) CreateWeaponAttackData(slot shared.WeaponSlot, useVersatile 
 	}, nil
 }
 
-func (c *Character) CreateAttackRequest(slot shared.WeaponSlot, useVersatile bool, advantage shared.AdvantageType) (*martial_attacks.AttackRequest, error) {
+func (c *Character) CreateAttackRequest(slot shared.WeaponSlot, useVersatile bool, advantage core.AdvantageType) (*martial_attacks.AttackRequest, error) {
 	attackData, err := c.CreateWeaponAttackData(slot, useVersatile)
 	if err != nil {
 		return nil, err
@@ -355,7 +397,6 @@ func (c *Character) CreateAttackRequest(slot shared.WeaponSlot, useVersatile boo
 		ShouldApplyDamageMod: false,
 		PowerAttack:          false,
 		ImprovedCritical:     false,
-		TreatOnesAsTwos:      false,
 		RerollOnesAndTwos:    false,
 		HalflingLucky:        false,
 	}
@@ -365,6 +406,42 @@ func (c *Character) CreateAttackRequest(slot shared.WeaponSlot, useVersatile boo
 		Modifiers:   modifiers,
 		Advantage:   advantage,
 		AttackCount: c.NumberOfAttacks,
+	}, nil
+}
+
+func (c *Character) CreateSpellAttackData(spellChoice spellcasting_manager.SpellChoice) (spellcasting_manager.SpellAttackData, error) {
+	spellBonus, err := c.GetSpellBonus(true)
+	if err != nil {
+		return nil, err
+	}
+
+	spellMod, err := c.GetSpellBonus(false)
+	if err != nil {
+		return nil, err
+	}
+
+	return spellcasting_manager.SpellAttackData{
+		SpellChoice:    spellChoice,
+		AttackModifier: spellBonus,
+		SpellModifier:  spellMod,
+	}, nil
+}
+
+func (c *Character) CreateSpellCastRequest(spellChoice spellcasting_manager.SpellChoice, advantage core.AdvantageType) (*spellcasting_manager.SpellcastRequest, error) {
+	attackData, err := c.CreateSpellAttackData(spellChoice)
+	if err != nil {
+		return nil, err
+	}
+
+	modifiers := spellcasting_manager.SpellModifiers{
+		TreatOnesAsTwos: false,
+		HalflingLucky:   false,
+	}
+
+	return &spellcasting_manager.SpellCastRequest{
+		AttackData: attackData,
+		Modifiers:  modifiers,
+		Advantage:  advantage,
 	}, nil
 }
 

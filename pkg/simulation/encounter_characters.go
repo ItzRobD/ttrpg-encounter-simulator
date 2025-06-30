@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/martial_attacks"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
@@ -14,7 +15,7 @@ func (e *Encounter) AddPartyMember(c *character.Character) {
 }
 
 // handleCharacterTurn manages the actions of a character during their turn in an encounter.
-func (e *Encounter) handleCharacterTurn(character *character.Character, advantage shared.AdvantageType) {
+func (e *Encounter) handleCharacterTurn(character *character.Character, advantage core.AdvantageType) {
 	actionType, err := e.ChooseCharacterActionType(character)
 	if err != nil {
 		fmt.Println(err)
@@ -42,31 +43,34 @@ func (e *Encounter) handleCharacterTurn(character *character.Character, advantag
 	}
 }
 
-func (e *Encounter) performCharacterRangedAttack(character *character.Character, advantage shared.AdvantageType) {
-	target, err := e.chooseDamageTargetByPriority(character)
+func (e *Encounter) performCharacterRangedAttack(c *character.Character, advantage core.AdvantageType) {
+	target, err := e.chooseDamageTargetByPriority(c)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	events.LogTargetChoiceEvent(character, target, character.GetEventListener())
+	events.LogTargetChoiceEvent(c, target, c.GetEventListener())
 
-	aI, err := character.CreateWeaponAttackData(shared.WSRanged, false)
+	req, err := c.CreateAttackRequest(shared.WSPrimary, false, advantage)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	didHit, dmg, err := martial_attacks.MakeMartialAttack(character, target, aI, advantage, e.Options)
+	res, err := martial_attacks.MakeMartialAttack(c, target, req, e.Options)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
-	if didHit {
-		fmt.Printf("Hit! %d damage\n", dmg)
+	for _, atk := range res {
+		if atk.IsHit {
+			fmt.Printf("Hit! %d damage\n", atk.Damage)
+		}
 	}
 }
 
-func (e *Encounter) performCharacterMeleeAttack(c *character.Character, useVersatileAttack bool, advantage shared.AdvantageType) {
+func (e *Encounter) performCharacterMeleeAttack(c *character.Character, useVersatileAttack bool, advantage core.AdvantageType) {
 	target, err := e.chooseDamageTargetByPriority(c)
 	if err != nil {
 		fmt.Println(err)
@@ -119,7 +123,7 @@ func (e *Encounter) performCharacterHealAction(c *character.Character) {
 	}
 }
 
-func (e *Encounter) performCharacterSpellAttack(c *character.Character, castLevel int, advantage shared.AdvantageType) {
+func (e *Encounter) performCharacterSpellAttack(c *character.Character, castLevel int, advantage core.AdvantageType) {
 	if !e.Options.AOEHitsAllEnemies {
 		target, _ := e.chooseDamageTargetByPriority(c)
 		// TODO: how are we choosing spell preference

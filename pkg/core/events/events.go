@@ -1,6 +1,8 @@
 package events
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"time"
@@ -25,28 +27,6 @@ const (
 	ETSavingThrowEvent  EventType = "savingthrow"
 	ETTargetChoiceEvent EventType = "targetchoice"
 )
-
-// TODO: Create Event structs for specific purposes. One catch all is not a smart way to handle this
-//type CombatEvent struct {
-//	Round        int
-//	EventType    EventType
-//	Actor        string
-//	Target       string
-//	Attack       string
-//	Success      bool
-//	Value        int
-//	DamageType   string
-//	Rolls        []int
-//	IsFatal      bool
-//	Modifier     int
-//	SavingThrow  int
-//	CurrentHP    int
-//	PreviousHP   int
-//	ActionChoice shared.ActionType
-//	SpellChoice  *spells.Spell
-//	HasSlots     bool
-//	SpellSlots   shared.SpellSlots
-//}
 
 type CombatEvent interface {
 	GetRound() int
@@ -112,9 +92,8 @@ func (e *ActionChoiceEvent) GetEventType() EventType { return ETActionChoiceEven
 
 type SpellChoiceEvent struct {
 	BaseEvent
-	SpellChoice *spells.Spell
-	CastLevel   int
-	HasSlots    bool
+	SpellChoice   *spellcasting_manager.SpellChoice
+	ManagerStatus *spellcasting_manager.SpellcastingManagerStatus
 }
 
 func (e *SpellChoiceEvent) GetEventType() EventType { return ETSpellChoiceEvent }
@@ -122,11 +101,12 @@ func (e *SpellChoiceEvent) GetEventType() EventType { return ETSpellChoiceEvent 
 type SpellAttackEvent struct {
 	BaseEvent
 	Target         string
-	SpellChoice    *spells.Spell
+	SpellName      string
 	AttackRoll     int
 	AttackModifier int
 	AttackTotal    int
 	Success        bool
+	CriticalHit    bool
 }
 
 func (e *SpellAttackEvent) GetEventType() EventType { return ETSpellAttackEvent }
@@ -154,9 +134,10 @@ func (e *DamageEvent) GetEventType() EventType { return ETDamageEvent }
 
 type HealEvent struct {
 	BaseEvent
-	Target string
-	Amount int
-	Rolls  []int
+	Target      string
+	Amount      int
+	Rolls       []int
+	IsMaxHealth bool
 }
 
 func (e *HealEvent) GetEventType() EventType { return ETHealEvent }
@@ -184,7 +165,7 @@ func (e *HPModifiedEvent) GetEventType() EventType { return ETHPModifiedEvent }
 
 type DiceRollEvent struct {
 	BaseEvent
-	RollType shared.DiceRollType
+	RollType core.DiceRollType
 	Value    int
 	Rolls    []int
 	Modifier int

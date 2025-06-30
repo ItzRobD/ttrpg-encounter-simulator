@@ -6,7 +6,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
 	"sort"
 )
@@ -54,11 +53,11 @@ func (e *Encounter) SetupCombatTracker() error {
 	}
 
 	for _, m := range e.Monsters {
-		initiative, roll, err := shared.InitiativeRoll(m.AbilityScores.Dexterity, m.EntityModifiers.InitiativeBonus, m.EntityModifiers.InitiativeAdvantage)
+		initiative, roll, err := core.InitiativeRoll(m.AbilityScores.Dexterity, m.EntityModifiers.InitiativeBonus, m.EntityModifiers.InitiativeAdvantage)
 		if err != nil {
 			return err
 		}
-		events.LogDiceRollEvent(m, initiative, []int{roll}, shared.DiceRollInitiative, m.EntityModifiers.InitiativeBonus, m.EventListener)
+		events.LogDiceRollEvent(m, initiative, []int{roll}, core.DiceRollInitiative, m.EntityModifiers.InitiativeBonus, m.EventListener)
 		err = e.AddCombatant(core.Combatant{
 			InitiativeScore: initiative,
 			Entity:          m,
@@ -68,11 +67,11 @@ func (e *Encounter) SetupCombatTracker() error {
 		}
 	}
 	for _, p := range e.Party {
-		initiative, roll, err := shared.InitiativeRoll(p.AbilityScores.Dexterity, p.EntityModifiers.InitiativeBonus, p.EntityModifiers.InitiativeAdvantage)
+		initiative, roll, err := core.InitiativeRoll(p.AbilityScores.Dexterity, p.EntityModifiers.InitiativeBonus, p.EntityModifiers.InitiativeAdvantage)
 		if err != nil {
 			return err
 		}
-		events.LogDiceRollEvent(p, initiative, []int{roll}, shared.DiceRollInitiative, p.EntityModifiers.InitiativeBonus, p.EventListener)
+		events.LogDiceRollEvent(p, initiative, []int{roll}, core.DiceRollInitiative, p.EntityModifiers.InitiativeBonus, p.EventListener)
 		err = e.AddCombatant(core.Combatant{
 			InitiativeScore: initiative,
 			Entity:          p,
@@ -97,7 +96,7 @@ func (e *Encounter) SimulateRound() {
 			if creature.IsUnconscious() {
 				continue // Skip if the character is unconscious
 			}
-			e.handleCharacterTurn(creature, shared.RollNormal)
+			e.handleCharacterTurn(creature, core.RollNormal)
 		case *monster.Monster:
 			if creature.IsUnconscious() {
 				continue // Skip if the monster is unconscious

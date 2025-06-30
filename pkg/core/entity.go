@@ -1,12 +1,11 @@
 package core
 
 import (
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 )
 
 type Entity interface {
-	ModifyHP(amount int)
+	ModifyHP(value int)
 	IsUnconscious() bool
 	GetCurrentHP() int
 	GetCurrentHPPct() int
@@ -25,7 +24,7 @@ type Combatant struct {
 }
 
 type EntityModifiers struct {
-	InitiativeAdvantage shared.AdvantageType
+	InitiativeAdvantage AdvantageType
 	InitiativeBonus     int
 	UseVersatileAttacks bool
 }

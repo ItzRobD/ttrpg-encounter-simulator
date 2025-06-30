@@ -7,6 +7,133 @@ import (
 	"math/rand/v2"
 )
 
+func (s *SpellcastingManager) GetMostEfficientHealingSpell(targetValue int) (*SpellChoice, error) {
+	if !s.HasHealingSpells() {
+		return nil, NewSpellcastingError("", "no healing spells found", ERROR_SPELL_NOT_FOUND)
+	}
+
+	pool, err := s.getSpellPoolOfType(spells.STHealing)
+	if err != nil {
+		return nil, err
+	}
+
+	var options []HealingOption
+
+	for _, spellsAtLevel := range pool {
+		for _, spell := range spellsAtLevel {
+			castLevel, formula, avg := s.getBestCastOptionForSpell(spell)
+
+			if castLevel == -1 {
+				continue
+			}
+
+			var efficiency float64
+			if castLevel == 0 { // Cantrip
+				efficiency = 1.0
+			} else {
+				efficiency = float64(formula.AverageValue) / float64(avg)
+			}
+
+			options = append(options, HealingOption{
+				Spell:        spell,
+				Formula:      formula,
+				CastLevel:    castLevel,
+				Efficiency:   efficiency,
+				TargetDelta:  targetValue - avg,
+				AverageValue: avg,
+			})
+		}
+	}
+
+	if len(options) == 0 {
+		return nil, NewSpellcastingError("", "no available healing options", ERROR_SPELL_NOT_FOUND)
+	}
+
+	bestOption := s.selectBestHealingOption(options, targetValue)
+	return &SpellChoice{
+		Spell:   bestOption.Spell,
+		Formula: bestOption.Formula,
+	}, nil
+}
+
+func (s *SpellcastingManager) selectBestHealingOption(options []HealingOption, targetValue int) HealingOption {
+	// Sort by multiple criteria:
+	// 1. Prefer spells that can exactly meet or slightly exceed the target
+	// 2. Among those, prefer higher efficiency
+	// 3. Prefer lower spell slot usage (less waste)
+
+	// First, separate options that can meet the target from those that can't
+	var exactMatches []HealingOption
+	var overheals []HealingOption
+	var underheals []HealingOption
+
+	for _, option := range options {
+		if option.TargetDelta == 0 {
+			exactMatches = append(exactMatches, option)
+		} else if option.TargetDelta < 0 { // Negative delta means overheal
+			overheals = append(overheals, option)
+		} else { // Positive delta means underheal
+			underheals = append(underheals, option)
+		}
+	}
+
+	// Prefer exact matches first
+	if len(exactMatches) > 0 {
+		return s.findMostEfficient(exactMatches)
+	}
+
+	// Then prefer minimal overheals
+	if len(overheals) > 0 {
+		return s.findMinimalOverheal(overheals)
+	}
+
+	// Finally, take the best underheal option
+	return s.findBestUnderheal(underheals)
+
+}
+
+func (s *SpellcastingManager) findMostEfficient(options []HealingOption) HealingOption {
+	best := options[0]
+	for _, option := range options[1:] {
+		if option.Efficiency > best.Efficiency {
+			best = option
+		}
+	}
+	return best
+}
+
+func (s *SpellcastingManager) findMinimalOverheal(options []HealingOption) HealingOption {
+	best := options[0]
+	for _, option := range options[1:] {
+		// Prefer less overheal (less negative delta)
+		if option.TargetDelta > best.TargetDelta {
+			best = option
+		} else if option.TargetDelta == best.TargetDelta {
+			// If same overheal, prefer higher efficiency
+			if option.Efficiency > best.Efficiency {
+				best = option
+			}
+		}
+	}
+	return best
+}
+
+func (s *SpellcastingManager) findBestUnderheal(options []HealingOption) HealingOption {
+	best := options[0]
+	for _, option := range options[1:] {
+		// Prefer less underheal (smaller positive delta)
+		if option.TargetDelta < best.TargetDelta {
+			best = option
+		} else if option.TargetDelta == best.TargetDelta {
+			// If same underheal, prefer higher efficiency
+			if option.Efficiency > best.Efficiency {
+				best = option
+			}
+		}
+	}
+	return best
+}
+
 func (s *SpellcastingManager) ChooseSpellByPriority(t spells.SpellType, priority shared.SpellPriority) (*SpellChoice, error) {
 	switch priority {
 	case shared.SPNoPreference: // Random known spell

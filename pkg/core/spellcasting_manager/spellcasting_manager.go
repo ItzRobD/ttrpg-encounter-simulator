@@ -2,7 +2,6 @@ package spellcasting_manager
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"math"
@@ -23,6 +22,15 @@ type SpellChoice struct {
 	Formula *spells.CastFormula
 }
 
+type HealingOption struct {
+	Spell        *spells.Spell
+	Formula      *spells.CastFormula
+	CastLevel    int
+	Efficiency   float64
+	TargetDelta  int
+	AverageValue int
+}
+
 type SpellcastingManager struct {
 	parent                 core.Entity
 	casterType             CasterType
@@ -31,11 +39,22 @@ type SpellcastingManager struct {
 	maxSlots               SpellSlots
 	healingSpells          map[int][]*spells.Spell
 	damageSpells           map[int][]*spells.Spell
+	damageSpellCount       int
+	healingSpellCount      int
+	usableSpellIDs         []int // TODO: Not currently being used for anything
 	canUpcast              bool
 	spellcastModifierValue int
 }
 
-func NewSpellcastingManager(parent core.Entity, casterType CasterType, casterLevel int, currentSlots SpellSlots, maxSlots SpellSlots, canUpcast bool, spellcastMod int) *SpellcastingManager {
+type SpellcastingManagerStatus struct {
+	parent       core.Entity
+	casterType   CasterType
+	casterLevel  int
+	currentSlots SpellSlots
+	maxSlots     SpellSlots
+}
+
+func NewSpellcastingManager(parent core.Entity, casterType CasterType, casterLevel int, currentSlots SpellSlots, maxSlots SpellSlots, canUpcast bool, spellcastModValue int) *SpellcastingManager {
 	return &SpellcastingManager{
 		parent:                 parent,
 		casterType:             casterType,
@@ -43,19 +62,25 @@ func NewSpellcastingManager(parent core.Entity, casterType CasterType, casterLev
 		currentSlots:           currentSlots,
 		maxSlots:               maxSlots,
 		canUpcast:              canUpcast,
-		spellcastModifierValue: spellcastMod,
+		spellcastModifierValue: spellcastModValue,
 		healingSpells:          map[int][]*spells.Spell{},
 		damageSpells:           map[int][]*spells.Spell{},
 	}
+}
+
+func (s *SpellcastingManager) SetUsableSpellIDs(ids []int) {
+	s.usableSpellIDs = ids
 }
 
 func (s *SpellcastingManager) AddKnownSpell(spell *spells.Spell) error {
 	s.calculateFormulaAverages(spell)
 	if spell.SpellType == string(spells.STHealing) {
 		s.healingSpells[spell.Level] = append(s.healingSpells[spell.Level], spell)
+		s.healingSpellCount++
 		return nil
 	} else if spell.SpellType == string(spells.STDamage) {
 		s.damageSpells[spell.Level] = append(s.damageSpells[spell.Level], spell)
+		s.healingSpellCount++
 		return nil
 	}
 
@@ -64,7 +89,7 @@ func (s *SpellcastingManager) AddKnownSpell(spell *spells.Spell) error {
 
 func (s *SpellcastingManager) calculateFormulaAverages(spell *spells.Spell) {
 	for level, formula := range spell.Formulas {
-		dAvg, err := shared.GetDieAverage(formula.Die)
+		dAvg, err := core.GetDieAverage(formula.Die)
 		if err != nil {
 			fmt.Println("Error invalid die")
 			continue
@@ -79,11 +104,15 @@ func (s *SpellcastingManager) calculateFormulaAverages(spell *spells.Spell) {
 }
 
 func (s *SpellcastingManager) HasHealingSpells() bool {
-	return len(s.healingSpells) > 0
+	return s.healingSpellCount > 0
 }
 
 func (s *SpellcastingManager) GetHealingSpells() map[int][]*spells.Spell {
 	return s.healingSpells
+}
+
+func (s *SpellcastingManager) GetHealingSpellCount() int {
+	return s.healingSpellCount
 }
 
 func (s *SpellcastingManager) GetHealingCantrips() []*spells.Spell {
@@ -117,11 +146,19 @@ func (s *SpellcastingManager) GetHealingSpellsLeveled() []*spells.Spell {
 }
 
 func (s *SpellcastingManager) HasDamageSpells() bool {
-	return len(s.damageSpells) > 0
+	return s.damageSpellCount > 0
+}
+
+func (s *SpellcastingManager) HasAnyKnownSpells() bool {
+	return s.HasHealingSpells() || s.HasDamageSpells()
 }
 
 func (s *SpellcastingManager) GetDamageSpells() map[int][]*spells.Spell {
 	return s.damageSpells
+}
+
+func (s *SpellcastingManager) GetDamageSpellCount() int {
+	return s.damageSpellCount
 }
 
 func (s *SpellcastingManager) GetDamageCantrips() []*spells.Spell {
@@ -161,4 +198,14 @@ func (s *SpellcastingManager) GetCasterType() CasterType {
 
 func (s *SpellcastingManager) GetCasterLevel() int {
 	return s.casterLevel
+}
+
+func (s *SpellcastingManager) GetStatus() *SpellcastingManagerStatus {
+	return &SpellcastingManagerStatus{
+		parent:       s.parent,
+		casterType:   s.casterType,
+		casterLevel:  s.casterLevel,
+		currentSlots: s.currentSlots,
+		maxSlots:     s.maxSlots,
+	}
 }

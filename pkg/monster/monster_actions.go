@@ -4,7 +4,7 @@ package monster
 //	if m.EventListener != nil {
 //		event := events.CombatEvent{
 //			EventType: events.ETHPRollEvent,
-//			Actor:     m.Name,
+//			ActorName:     m.Name,
 //			Value:     rollSum + toAdd,
 //			Rolls:     rolls,
 //			Modifier:     toAdd,
@@ -18,7 +18,7 @@ package monster
 //	if m.EventListener != nil {
 //		event := events.CombatEvent{
 //			EventType: events.ETRollEvent,
-//			Actor:     m.Name,
+//			ActorName:     m.Name,
 //			Value:     rollSum + toAdd,
 //			Rolls:     rolls,
 //			Modifier:     toAdd,

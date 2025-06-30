@@ -1,7 +1,7 @@
 package weapon
 
 import (
-	"dnd5e-encounter-simulator-backend/pkg/shared"
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
 )
 
@@ -27,10 +27,10 @@ func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die in
 	if numberOfDice < 1 {
 		return Weapon{}, fmt.Errorf("number of rolling must be greater than 0")
 	}
-	if !shared.ValidateDie(die) {
+	if !core.ValidateDie(die) {
 		return Weapon{}, fmt.Errorf("invalid damage die: %d", die)
 	}
-	if !shared.ValidateDamageType(damageType) {
+	if !core.ValidateDamageType(damageType) {
 		return Weapon{}, fmt.Errorf("invalid damage type: %s", damageType)
 	}
 	return Weapon{
@@ -54,7 +54,7 @@ func isRangedWeapon(id int) bool {
 	return false
 }
 
-func (w *Weapon) GetAttackModifier(as *shared.AbilityScores, clvl int, isProficient bool) (int, error) {
+func (w *Weapon) GetAttackModifier(as *core.AbilityScores, clvl int, isProficient bool) (int, error) {
 	mod, err := w.GetWeaponModifier(as)
 	if err != nil {
 		return 0, err
@@ -64,7 +64,7 @@ func (w *Weapon) GetAttackModifier(as *shared.AbilityScores, clvl int, isProfici
 		return mod, nil
 	}
 
-	pb, err := shared.GetCharacterProficiencyBonus(clvl)
+	pb, err := core.GetCharacterProficiencyBonus(clvl)
 	if err != nil {
 		return 0, err
 	}
@@ -72,17 +72,17 @@ func (w *Weapon) GetAttackModifier(as *shared.AbilityScores, clvl int, isProfici
 	return mod + pb, nil
 }
 
-func (w *Weapon) GetWeaponModifier(as *shared.AbilityScores) (int, error) {
+func (w *Weapon) GetWeaponModifier(as *core.AbilityScores) (int, error) {
 	var mod int
 	var err error
 	if w.IsRanged || w.IsFinesse {
-		mod, err = shared.GetAbilityScoreModifier(as.Dexterity)
+		mod, err = core.GetAbilityScoreModifier(as.Dexterity)
 		if err != nil {
 			return 0, err
 		}
 		return mod, nil
 	} else {
-		mod, err = shared.GetAbilityScoreModifier(as.Strength)
+		mod, err = core.GetAbilityScoreModifier(as.Strength)
 		if err != nil {
 			return 0, err
 		}

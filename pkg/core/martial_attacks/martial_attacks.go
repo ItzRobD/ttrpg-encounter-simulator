@@ -3,13 +3,12 @@ package martial_attacks
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 )
 
 type AttackRequest struct {
 	AttackData
 	Modifiers   AttackModifiers
-	Advantage   shared.AdvantageType
+	Advantage   core.AdvantageType
 	AttackCount int
 }
 type AttackData struct {
@@ -31,7 +30,6 @@ type AttackModifiers struct {
 	PowerAttack bool // GWM / Sharpshooter (-5 attack, +10 damage) // TODO: Implement logic for this choice
 
 	ImprovedCritical bool // Crits on 19 and 20, Hexblade, Champion
-	TreatOnesAsTwos  bool // Elemental Adept
 
 	RerollOnesAndTwos bool // GWF
 	// TODO: GWF Creates an extra attack
@@ -40,7 +38,7 @@ type AttackModifiers struct {
 }
 
 type AttackResult struct {
-	AttackerName  string
+	ActorName     string
 	TargetName    string
 	AttackName    string
 	AttackCount   int
@@ -53,21 +51,19 @@ type AttackResult struct {
 	DamageType    string
 }
 
-func DoesAttackHit(attackTotal int, ac int) bool {
-	if attackTotal >= ac {
-		return true
-	}
-	return false
-}
+func (r *AttackResult) GetActorName() string   { return r.ActorName }
+func (r *AttackResult) GetTargetName() string  { return r.TargetName }
+func (r *AttackResult) GetAttackName() string  { return r.AttackName }
+func (r *AttackResult) GetAttackCount() int    { return r.AttackCount }
+func (r *AttackResult) GetIsHit() bool         { return r.IsHit }
+func (r *AttackResult) GetIsCriticalHit() bool { return r.IsCriticalHit }
+func (r *AttackResult) GetAttackTotal() int    { return r.AttackTotal }
+func (r *AttackResult) GetAttackRoll() int     { return r.AttackRoll }
+func (r *AttackResult) GetDamage() int         { return r.Damage }
+func (r *AttackResult) GetDamageRolls() []int  { return r.DamageRolls }
+func (r *AttackResult) GetDamageType() string  { return r.DamageType }
 
-func isCriticalHit(attackRoll int, critThreshold int) bool {
-	if attackRoll >= critThreshold {
-		return true
-	}
-	return false
-}
-
-func CalculateDamage(ad AttackData, isCritical bool, modifiers AttackModifiers, options core.Options) (int, []int, error) {
+func calculateDamage(ad AttackData, isCritical bool, modifiers AttackModifiers, options core.Options) (int, []int, error) {
 	dmgMod := ad.DamageModifier
 	if !modifiers.ShouldApplyDamageMod {
 		dmgMod = 0
@@ -82,12 +78,12 @@ func CalculateDamage(ad AttackData, isCritical bool, modifiers AttackModifiers, 
 	var err error
 
 	if isCritical {
-		total, rolls, err = shared.CalculateDamageCriticalHit(ad.NumberOfDice, ad.Die, dmgMod, options.UseImprovedCriticals)
+		total, rolls, err = core.CalculateDamageCriticalHit(ad.NumberOfDice, ad.Die, dmgMod, options.UseImprovedCriticals)
 		if err != nil {
 			return 0, nil, err
 		}
 	} else {
-		total, rolls, err = shared.DiceRollWithModifier(ad.NumberOfDice, ad.Die, dmgMod)
+		total, rolls, err = core.DiceRollWithModifier(ad.NumberOfDice, ad.Die, dmgMod)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -96,22 +92,13 @@ func CalculateDamage(ad AttackData, isCritical bool, modifiers AttackModifiers, 
 	if modifiers.RerollOnesAndTwos {
 		for i, roll := range rolls {
 			if roll <= 2 {
-				_, newRolls, err := shared.RollDice(1, ad.Die)
+				_, newRolls, err := core.RollDice(1, ad.Die)
 				if err != nil {
 					return 0, nil, err
 				}
 				total = total + newRolls[0] - roll
 				rolls[i] = newRolls[0]
 				// TODO: Log new roll replacement, maybe keep an array of rerolls to log easier
-			}
-		}
-	}
-	if modifiers.TreatOnesAsTwos {
-		for i, roll := range rolls {
-			if roll == 1 {
-				rolls[i] = 2
-				total += 1
-				// TODO: Log adding an additional point of damage for the modifier
 			}
 		}
 	}
@@ -122,67 +109,68 @@ func CalculateDamage(ad AttackData, isCritical bool, modifiers AttackModifiers, 
 // MakeMartialAttack rolls an attack, determines if it hits the target, and calculates damage if applicable.
 // Returns a boolean indicating a hit, an integer for damage dealt, and an error if any issues occurred.
 // Note: attacker and target can be mutated - must be a pointer
-func MakeMartialAttack(attacker core.Entity, target core.Entity, attack *AttackRequest, options core.Options) ([]AttackResult, error) {
+func MakeMartialAttack(attacker core.Entity, target core.Entity, req *AttackRequest, options core.Options) ([]AttackResult, error) {
 	var results []AttackResult
 
-	for i := 0; i < attack.AttackCount; i++ {
+	for i := 0; i < req.AttackCount; i++ {
 		var res AttackResult
-		// Make the attack roll
-		attackMod := attack.AttackData.AttackModifier + attack.Modifiers.BonusAttackRoll
+		// Make the req roll
+		attackMod := req.AttackData.AttackModifier + req.Modifiers.BonusAttackRoll
 
-		if attack.Modifiers.PowerAttack {
+		if req.Modifiers.PowerAttack {
 			attackMod -= 5
 		}
 
 		var attackTotal int
 		var attackRoll int
-		attackTotal, attackRoll, err := shared.AttackRoll(attackMod, attack.Advantage)
+		attackTotal, attackRoll, err := core.AttackRoll(attackMod, req.Advantage)
 		if err != nil {
 			return nil, err
 		}
 
-		if attackRoll == 1 && attack.Modifiers.HalflingLucky {
-			attackTotal, attackRoll, err = shared.AttackRoll(attackMod, attack.Advantage)
+		// TODO: Note that halfling lucky does not use advantage again, re-roll lower
+		if attackRoll == 1 && req.Modifiers.HalflingLucky {
+			attackTotal, attackRoll, err = core.AttackRoll(attackMod, req.Advantage)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		res.AttackerName = attacker.GetName()
+		res.ActorName = attacker.GetName()
 		res.TargetName = target.GetName()
-		res.AttackName = attack.Name
+		res.AttackName = req.Name
 		res.AttackTotal = attackTotal
 		res.AttackRoll = attackRoll
 		res.AttackCount = i
 
-		events.LogDiceRollEvent(attacker, attackTotal, []int{attackRoll}, shared.DiceRollAttack, attackMod, attacker.GetEventListener())
+		events.LogDiceRollEvent(attacker, attackTotal, []int{attackRoll}, core.DiceRollAttack, attackMod, attacker.GetEventListener())
 
-		// Check if the attack hits
+		// Check if the req hits
 		critThreshold := 20
-		if attack.Modifiers.ImprovedCritical {
+		if req.Modifiers.ImprovedCritical {
 			critThreshold = 19
 		}
-		isCrit := isCriticalHit(attackRoll, critThreshold)
-		if (isCrit || DoesAttackHit(attackTotal, target.GetAC())) && attackRoll != 1 {
+		isCrit := core.IsCriticalHit(attackRoll, critThreshold)
+		if (isCrit || core.DoesAttackHit(attackTotal, target.GetAC())) && attackRoll != 1 {
 			res.IsHit = true
 			res.IsCriticalHit = isCrit
 
-			events.LogMeleeAttackEvent(attacker, target, res, attacker.GetEventListener())
+			events.LogMeleeAttackEvent(attacker, target, &res, attacker.GetEventListener())
 
-			damage, rolls, err2 := CalculateDamage(attack.AttackData, isCrit, attack.Modifiers, options)
+			damage, rolls, err2 := calculateDamage(req.AttackData, isCrit, req.Modifiers, options)
 			if err2 != nil {
 				return nil, err2
 			}
 			res.Damage = damage
 			res.DamageRolls = rolls
-			res.DamageType = attack.AttackData.DamageType
-			//events.LogDiceRollEvent(attacker, res.Damage, res.DamageRolls, shared.DiceRollDamage, attack.AttackData.DamageModifier, attacker.GetEventListener())
+			res.DamageType = req.AttackData.DamageType
+			//events.LogDiceRollEvent(attacker, res.Damage, res.DamageRolls, shared.DiceRollDamage, req.AttackData.DamageModifier, attacker.GetEventListener())
 		} else {
 			// Log a miss
-			events.LogMeleeAttackEvent(attacker, target, res, attacker.GetEventListener())
+			events.LogMeleeAttackEvent(attacker, target, &res, attacker.GetEventListener())
 		}
 
-		// Add each attack to the results slice
+		// Add each req to the results slice
 		results = append(results, res)
 	}
 

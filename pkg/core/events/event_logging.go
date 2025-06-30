@@ -2,7 +2,7 @@ package events
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/core/martial_attacks"
+	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 )
@@ -18,16 +18,16 @@ func LogCharacterActionChoiceEvent(actor core.Entity, choice shared.ActionType, 
 	}
 }
 
-func LogMeleeAttackEvent(actor core.Entity, target core.Entity, attackResult martial_attacks.AttackResult, listener func(event interface{})) {
+func LogMeleeAttackEvent(actor core.Entity, target core.Entity, attackResult core.AttackResultData, listener func(event interface{})) {
 	event := &MeleeAttackEvent{
 		Target:         target.GetName(),
-		AttackName:     attackResult.AttackName,
-		AttackCount:    attackResult.AttackCount,
-		AttackRoll:     attackResult.AttackRoll,
-		AttackModifier: attackResult.AttackTotal - attackResult.AttackRoll,
-		AttackTotal:    attackResult.AttackTotal,
-		Success:        attackResult.IsHit,
-		CriticalHit:    attackResult.IsCriticalHit,
+		AttackName:     attackResult.GetActorName(),
+		AttackCount:    attackResult.GetAttackCount(),
+		AttackRoll:     attackResult.GetAttackRoll(),
+		AttackModifier: attackResult.GetAttackTotal() - attackResult.GetAttackRoll(),
+		AttackTotal:    attackResult.GetAttackTotal(),
+		Success:        attackResult.GetIsHit(),
+		CriticalHit:    attackResult.GetIsCriticalHit(),
 	}
 	event.SetActor(actor.GetName())
 
@@ -36,10 +36,10 @@ func LogMeleeAttackEvent(actor core.Entity, target core.Entity, attackResult mar
 	}
 }
 
-func LogSpellChoiceEvent(actor core.Entity, spell *spells.Spell, hasSlots bool, listener func(event interface{})) {
+func LogSpellChoiceEvent(actor core.Entity, choice *spellcasting_manager.SpellChoice, status *spellcasting_manager.SpellcastingManagerStatus, listener func(event interface{})) {
 	event := &SpellChoiceEvent{
-		SpellChoice: spell,
-		HasSlots:    hasSlots,
+		SpellChoice:   choice,
+		ManagerStatus: status,
 	}
 	event.SetActor(actor.GetName())
 
@@ -48,25 +48,15 @@ func LogSpellChoiceEvent(actor core.Entity, spell *spells.Spell, hasSlots bool, 
 	}
 }
 
-//func LogSpellSlotsEvent(actor core.Entity, spellSlots shared.SpellSlots, listener func(event interface{})) {
-//	event := &SpellSlotsEvent{
-//		SpellSlots: spellSlots,
-//	}
-//	event.SetActor(actor.GetName())
-//
-//	if listener != nil {
-//		listener(event)
-//	}
-//}
-
-func LogSpellAttackEvent(actor core.Entity, target core.Entity, spell *spells.Spell, attackRoll, attackModifier int, isHit bool, listener func(event interface{})) {
+func LogSpellAttackEvent(actor core.Entity, target core.Entity, res core.SpellResultData, listener func(event interface{})) {
 	event := &SpellAttackEvent{
 		Target:         target.GetName(),
-		SpellChoice:    spell,
-		AttackTotal:    attackRoll + attackModifier,
-		AttackModifier: attackModifier,
-		AttackRoll:     attackRoll,
-		Success:        isHit,
+		SpellName:      res.GetSpellName(),
+		AttackTotal:    res.GetAttackTotal(),
+		AttackModifier: res.GetAttackTotal() - res.GetAttackRoll(),
+		AttackRoll:     res.GetAttackRoll(),
+		Success:        res.GetHasDC(),
+		CriticalHit:    res.GetIsCriticalHit(),
 	}
 	event.SetActor(actor.GetName())
 
@@ -106,9 +96,10 @@ func LogDamageEvent(actor core.Entity, target core.Entity, damageType string, da
 
 func LogHealEvent(actor core.Entity, target core.Entity, amt int, rolls []int, listener func(event interface{})) {
 	event := &HealEvent{
-		Target: target.GetName(),
-		Amount: amt,
-		Rolls:  rolls,
+		Target:      target.GetName(),
+		Amount:      amt,
+		Rolls:       rolls,
+		IsMaxHealth: target.GetMaxHP() == target.GetCurrentHP(),
 	}
 	event.SetActor(actor.GetName())
 
@@ -143,7 +134,7 @@ func LogHPRollEvent(actor core.Entity, rollSum int, rolls []int, toAdd int, list
 	}
 }
 
-func LogDiceRollEvent(actor core.Entity, rollSum int, rolls []int, rollType shared.DiceRollType, modifier int, listener func(event interface{})) {
+func LogDiceRollEvent(actor core.Entity, rollSum int, rolls []int, rollType core.DiceRollType, modifier int, listener func(event interface{})) {
 	event := &DiceRollEvent{
 		RollType: rollType,
 		Value:    rollSum,

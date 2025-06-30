@@ -11,7 +11,7 @@ type SaveProficiencies struct {
 
 // MakeSavingThrow attempts a saving throw for an actor based on a specific ability score and target difficulty.
 // Returns true if the saving throw is successful, otherwise false, and an error if there is any.
-//func MakeSavingThrow(actor core.Entity, ability AbilityScore, target int) (bool, error) {
+//func MakeSavingThrow(actor core.Entity, ability Ability, target int) (bool, error) {
 //	var mod int
 //	var err error
 //	switch c := actor.(type) {

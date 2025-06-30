@@ -58,7 +58,7 @@ func (e *Encounter) chooseHealTargetByPriority(actor core.Entity) (core.Entity, 
 		case shared.PrioritizeHealer:
 			return e.findBestHealer(characters), nil
 		case shared.PrioritizeSpellcasting:
-			return e.findBestSpellcaster(characters), nil
+			return e.findBestDamageSpellcaster(characters), nil
 		case shared.NoPriority:
 			fallthrough
 		default:
@@ -170,18 +170,18 @@ func (e *Encounter) selectCharacterByPriority(characters []*character.Character)
 		}
 	case shared.PrioritizeHealer:
 		for _, c := range characters {
-			if c.Class.SpellcastingMod != "None" {
-				for _, s := range c.KnownSpells {
-					if s.SpellType == "Heal" {
-						return c, nil
-					}
+			if c.Class.SpellcastingMod != core.AbilityNone {
+				if c.SpellcastingManager.HasHealingSpells() {
+					return c, nil
 				}
 			}
 		}
 	case shared.PrioritizeSpellcasting:
 		for _, c := range characters {
-			if len(c.KnownSpells) > 0 {
-				return c, nil
+			if c.Class.SpellcastingMod != core.AbilityNone {
+				if c.SpellcastingManager.HasAnyKnownSpells() {
+					return c, nil
+				}
 			}
 		}
 	default:
@@ -246,17 +246,17 @@ func (e *Encounter) findMostDamagedCharacter(characters []*character.Character) 
 func (e *Encounter) findBestHealer(characters []*character.Character) *character.Character {
 	bestHealer := characters[0]
 	for _, c := range characters[1:] {
-		if len(c.Class.Spellcasting.ClassHealingSpells) > len(bestHealer.Class.Spellcasting.ClassHealingSpells) {
+		if c.SpellcastingManager.GetHealingSpellCount() > bestHealer.SpellcastingManager.GetHealingSpellCount() {
 			bestHealer = c
 		}
 	}
 	return bestHealer
 }
 
-func (e *Encounter) findBestSpellcaster(characters []*character.Character) *character.Character {
+func (e *Encounter) findBestDamageSpellcaster(characters []*character.Character) *character.Character {
 	bestCaster := characters[0]
 	for _, c := range characters[1:] {
-		if len(c.Class.Spellcasting.ClassDamageSpells) > len(bestCaster.Class.Spellcasting.ClassDamageSpells) {
+		if c.SpellcastingManager.GetDamageSpellCount() > bestCaster.SpellcastingManager.GetDamageSpellCount() {
 			bestCaster = c
 		}
 	}
