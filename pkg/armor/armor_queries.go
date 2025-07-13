@@ -9,6 +9,10 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 )
 
+// getArmorIDByName retrieves the ID of an armor item from the database using its name.
+// ctx is the context for managing request-scoped values, deadlines, and cancellation.
+// name represents the name of the armor for which the ID needs to be fetched.
+// Returns the armor ID as an integer and an error if the operation fails.
 func getArmorIDByName(ctx context.Context, name string) (int, error) {
 	var id int
 	stmt := SELECT(
@@ -31,6 +35,10 @@ func getArmorIDByName(ctx context.Context, name string) (int, error) {
 	return id, nil
 }
 
+// getArmorByID retrieves an armor item from the database using the provided ID.
+// ctx is the context for managing request-scoped values, deadlines, and cancellation.
+// id specifies the unique identifier of the armor to fetch.
+// Returns an Armor object and an error if the operation fails.
 func getArmorByID(ctx context.Context, id int) (Armor, error) {
 	var armorResult Armor
 	stmt := SELECT(
@@ -57,6 +65,10 @@ func getArmorByID(ctx context.Context, id int) (Armor, error) {
 	return armorResult, nil
 }
 
+// QueryArmorData retrieves armor data based on the provided query parameters.
+// ctx is the context for managing request-scoped values, deadlines, and cancellation.
+// params specifies the query parameters, including armor ID or name.
+// Returns an Armor object if successful, or an error if the operation fails.
 func QueryArmorData(ctx context.Context, params ArmorQueryParams) (Armor, error) {
 	var armorResult Armor
 	var err error

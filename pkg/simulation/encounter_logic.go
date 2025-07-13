@@ -107,7 +107,11 @@ func (e *Encounter) chooseBestHealingSpell(actor core.Entity, target core.Entity
 	case *character.Character:
 		hpDiff := target.GetMaxHP() - target.GetCurrentHP()
 		s, err := a.SpellcastingManager.GetMostEfficientHealingSpell(hpDiff)
-		events.LogSpellChoiceEvent(a, s, a.SpellcastingManager.GetStatus(), a.EventListener)
+		event := events.SpellChoiceEvent{
+			SpellChoice:   s,
+			ManagerStatus: a.SpellcastingManager.GetStatus(),
+		}
+		events.LogSpellChoiceEvent(a, event, a.EventListener)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +129,11 @@ func (e *Encounter) chooseDamageSpell(actor core.Entity, priority shared.SpellPr
 		if err != nil {
 			return nil, err
 		}
-		events.LogSpellChoiceEvent(a, damageSpell, a.SpellcastingManager.GetStatus(), a.EventListener)
+		event := events.SpellChoiceEvent{
+			SpellChoice:   damageSpell,
+			ManagerStatus: a.SpellcastingManager.GetStatus(),
+		}
+		events.LogSpellChoiceEvent(a, event, a.EventListener)
 		return damageSpell, nil
 	case *monster.Monster:
 		// TODO: Add monster spell choice, if spellcaster/if innate

@@ -5,21 +5,33 @@ import (
 	"math/rand/v2"
 )
 
-type AdvantageType int
+//type AdvantageType int
+//
+//const (
+//	RollNormal AdvantageType = iota
+//	RollAdvantage
+//	RollDisadvantage
+//)
+//
+//type DiceRollType string
+//
+//const (
+//	DiceRollAttack     DiceRollType = "attack"
+//	DiceRollDamage     DiceRollType = "damage"
+//	DiceRollInitiative DiceRollType = "initiative"
+//)
 
-const (
-	RollNormal AdvantageType = iota
-	RollAdvantage
-	RollDisadvantage
-)
-
-type DiceRollType string
-
-const (
-	DiceRollAttack     DiceRollType = "attack"
-	DiceRollDamage     DiceRollType = "damage"
-	DiceRollInitiative DiceRollType = "initiative"
-)
+//type DiceType int
+//
+//const (
+//	D4   DiceType = 4
+//	D6   DiceType = 6
+//	D8   DiceType = 8
+//	D10  DiceType = 10
+//	D12  DiceType = 12
+//	D20  DiceType = 20
+//	D100 DiceType = 100
+//)
 
 // InitiativeRoll calculates an initiative score based on dexterity, bonus, and advantage, returning the score, base roll, and error.
 // dexterity must be between 1 and 30. Returns an error if inputs are invalid or rolling fails.
@@ -40,39 +52,45 @@ func InitiativeRoll(dexterity int, bonus int, advantage AdvantageType) (int, int
 	return roll + modifier + bonus, roll, nil
 }
 
-func RollD20WithAdvantage(advantage AdvantageType) (int, error) {
+// RollD20WithAdvantage rolls a 20-sided die with normal, advantage, or disadvantage based on the given AdvantageType.
+// Returns the final roll result, all individual roll values, and an error if rolling fails or the advantage type is invalid.
+func RollD20WithAdvantage(advantage AdvantageType) (int, []int, error) {
 	switch advantage {
 	case RollNormal:
 		_, rolls, err := RollDice(1, 20)
 		if err != nil {
 			return 0, err
 		}
-		return rolls[0], nil
+		return rolls[0], rolls, nil
 	case RollAdvantage:
 		_, rolls, err := RollDice(2, 20)
 		if err != nil {
 			return 0, err
 		}
-		return max(rolls[0], rolls[1]), nil
+		return max(rolls[0], rolls[1]), rolls, nil
 	case RollDisadvantage:
 		_, rolls, err := RollDice(2, 20)
 		if err != nil {
 			return 0, err
 		}
-		return min(rolls[0], rolls[1]), nil
+		return min(rolls[0], rolls[1]), rolls, nil
 	default:
-		return 0, fmt.Errorf("invalid advantage type")
+		return 0, nil, fmt.Errorf("invalid advantage type")
 	}
+}
+
+func RerollLowerD20(rolls []int) ([]int, []int, error) {
+
 }
 
 // AttackRoll calculates the attack roll value by adding a roll of a D20 (considering advantage/disadvantage) to a modifier.
 // Returns the final attack roll value, the raw roll value, and an error if rolling fails.
-func AttackRoll(modifier int, advantage AdvantageType) (int, int, error) {
-	roll, err := RollD20WithAdvantage(advantage)
+func AttackRoll(modifier int, advantage AdvantageType) (int, []int, error) {
+	roll, rolls, err := RollD20WithAdvantage(advantage)
 	if err != nil {
-		return 0, 0, err
+		return 0, nil, err
 	}
-	return roll + modifier, roll, nil
+	return roll + modifier, rolls, nil
 }
 
 func AttackRollD20(advantage AdvantageType) (int, error) {

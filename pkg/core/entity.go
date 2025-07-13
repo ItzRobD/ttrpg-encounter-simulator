@@ -1,8 +1,6 @@
 package core
 
-import (
-	"dnd5e-encounter-simulator-backend/pkg/spells"
-)
+import ()
 
 type Entity interface {
 	ModifyHP(value int)
@@ -13,9 +11,14 @@ type Entity interface {
 	GetName() string
 	GetAC() int
 	GetEventListener() func(event interface{})
-	GetSavingThrowRollResult(ability string) (int, error)
 	GetLevel() interface{}
 	GetCasterLevel() int
+	MakeSavingThrow(ability Ability) (int, []int, error)
+	GetSpellSaveDC(ability Ability) int
+	GetAbilityScores() AbilityScores
+	GetAbilityScore(ability Ability) int
+	GetAbilityScoreModifier(ability Ability) (int, error)
+	GetSavingThrowBonus(ability Ability) int
 }
 
 type Combatant struct {
@@ -27,6 +30,7 @@ type EntityModifiers struct {
 	InitiativeAdvantage AdvantageType
 	InitiativeBonus     int
 	UseVersatileAttacks bool
+	CanUpcast           bool
 }
 
 type CombatState struct {
@@ -44,7 +48,6 @@ type CombatState struct {
 
 	// Spell Resources
 	// TODO: Spellcasting manager
-	Concentration *spells.Spell
 
 	// TODO: Evaluate if conditions will be a feature
 	// Conditions

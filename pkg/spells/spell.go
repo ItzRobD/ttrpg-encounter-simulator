@@ -48,7 +48,7 @@ type CastFormula struct {
 	NumberOfDice int
 	Die          int
 	AmountToAdd  int
-	UseSpellmod  bool
+	UseSpellmod  bool // UseSpellmod specifies whether the spell modifier should be added to the calculated damage.
 	DamageType   string
 	AverageValue int
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// getClassIDByName queries the database to find the class ID corresponding to the given class name.
 func getClassIDByName(ctx context.Context, name string) (int, error) {
 	var id int
 	stmt := SELECT(
@@ -33,6 +34,8 @@ func getClassIDByName(ctx context.Context, name string) (int, error) {
 	return id, nil
 }
 
+// getClassByID retrieves a Class by its ID from the database using a context and an integer ID as inputs.
+// It returns the Class struct and an error if the query or scan operation fails.
 func getClassByID(ctx context.Context, id int) (Class, error) {
 	var classResult Class
 	stmt := SELECT(
@@ -56,6 +59,7 @@ func getClassByID(ctx context.Context, id int) (Class, error) {
 	return classResult, nil
 }
 
+// getClassSpellSlotsByID retrieves spell slots of a class by its ID, returning a nested map of level and slots per level.
 func getClassSpellSlotsByID(ctx context.Context, id int) (map[int]map[int]int, error) {
 	var spellSlots map[int]map[int]int
 	stmt := SELECT(
@@ -107,6 +111,7 @@ func getClassSpellSlotsByID(ctx context.Context, id int) (map[int]map[int]int, e
 	return spellSlots, nil
 }
 
+// QueryClassData retrieves a Class based on the provided query parameters (ID or Name) and fetches its spellcasting mod.
 func QueryClassData(ctx context.Context, params ClassQueryParams) (Class, error) {
 	var classResult Class
 	var err error
@@ -138,6 +143,11 @@ func QueryClassData(ctx context.Context, params ClassQueryParams) (Class, error)
 	return classResult, err
 }
 
+// GetNumberOfAttacksFromLevelAndClass determines the number of attacks a character has based on class and level inputs.
+// ctx is the context for database queries.
+// level is the character's level between 1 and 20.
+// classID is the class identifier between 0 and 13.
+// Returns the number of attacks or an error if inputs are invalid or the query fails.
 func GetNumberOfAttacksFromLevelAndClass(ctx context.Context, level int, classID int) (int, error) {
 	if level <= 0 || level > 20 {
 		return 0, fmt.Errorf("invalid level provided: %d", level)
@@ -170,6 +180,10 @@ func GetNumberOfAttacksFromLevelAndClass(ctx context.Context, level int, classID
 	return numberOfAttacks, nil
 }
 
+// GetNumberOfSneakAttackDiceFromLevel retrieves the number of sneak attack dice for a given character level (1-20).
+// ctx is the context for managing database queries.
+// level specifies the character's level and must be between 1 and 20.
+// Returns the number of dice or an error if the level is invalid or the query fails.
 func GetNumberOfSneakAttackDiceFromLevel(ctx context.Context, level int) (int, error) {
 	if level <= 0 || level > 20 {
 		return 0, fmt.Errorf("invalid level provided: %d", level)
@@ -195,6 +209,8 @@ func GetNumberOfSneakAttackDiceFromLevel(ctx context.Context, level int) (int, e
 	return numberOfDice, nil
 }
 
+// getSpellModByClassID retrieves the spellcasting modifier for a character class based on its class ID.
+// Returns a core.Ability and an error if the operation fails.
 func getSpellModByClassID(ctx context.Context, classID int) (core.Ability, error) {
 	if classID < 0 || classID > 13 {
 		return "", fmt.Errorf("invalid class id provided: %d", classID)
@@ -223,6 +239,8 @@ func getSpellModByClassID(ctx context.Context, classID int) (core.Ability, error
 	return core.AbilityNone, nil
 }
 
+// GetHitDieByClassID retrieves the hit die value for a given class ID from the database.
+// Returns the hit die as an integer or an error if the query fails or the class ID is invalid.
 func GetHitDieByClassID(ctx context.Context, classID int) (int, error) {
 	if classID < 0 || classID > 13 {
 		return 0, fmt.Errorf("invalid class id provided: %d", classID)
@@ -245,6 +263,8 @@ func GetHitDieByClassID(ctx context.Context, classID int) (int, error) {
 	return die, nil
 }
 
+// GetSpellSlotsByLevelAndClassID retrieves the spell slots for a given character level and class ID.
+// Returns a SpellSlots structure and an error if inputs are invalid or a database query fails.
 func GetSpellSlotsByLevelAndClassID(ctx context.Context, level int, classID int) (spellcasting_manager.SpellSlots, error) {
 	if level <= 0 || level > 20 {
 		return nil, fmt.Errorf("invalid value provided: %d", level)

@@ -143,6 +143,7 @@ func main() {
 		InitiativeAdvantage: core.RollNormal,
 		InitiativeBonus:     0,
 		UseVersatileAttacks: true,
+		CanUpcast:           true,
 	}
 
 	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferSpells, shared.SPNoPreference, entityModifiers)

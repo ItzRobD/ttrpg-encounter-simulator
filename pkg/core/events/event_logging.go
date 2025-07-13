@@ -2,7 +2,6 @@ package events
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 )
@@ -36,11 +35,8 @@ func LogMeleeAttackEvent(actor core.Entity, target core.Entity, attackResult cor
 	}
 }
 
-func LogSpellChoiceEvent(actor core.Entity, choice *spellcasting_manager.SpellChoice, status *spellcasting_manager.SpellcastingManagerStatus, listener func(event interface{})) {
-	event := &SpellChoiceEvent{
-		SpellChoice:   choice,
-		ManagerStatus: status,
-	}
+func LogSpellChoiceEvent(actor core.Entity, spellChoiceEvent SpellChoiceEvent, listener func(event interface{})) {
+	event := spellChoiceEvent
 	event.SetActor(actor.GetName())
 
 	if listener != nil {
@@ -134,12 +130,18 @@ func LogHPRollEvent(actor core.Entity, rollSum int, rolls []int, toAdd int, list
 	}
 }
 
-func LogDiceRollEvent(actor core.Entity, rollSum int, rolls []int, rollType core.DiceRollType, modifier int, listener func(event interface{})) {
+func LogDiceRollEvent(actor core.Entity, res core.DiceRollResultData, listener func(event interface{})) {
 	event := &DiceRollEvent{
-		RollType: rollType,
-		Value:    rollSum,
-		Rolls:    rolls,
-		Modifier: modifier,
+		FinalRollValue: res.GetFinalRollValue(),
+		FinalRolls:     res.GetFinalRolls(),
+		Modifier:       res.GetModifier(),
+		Total:          res.GetTotal(),
+		Advantage:      res.GetAdvantage(),
+		OriginalRolls:  res.GetOriginalRolls(),
+		RerollEvents:   res.GetRerollEvents(),
+		WasRerolled:    res.GetWasRerolled(),
+		IsCritical:     res.GetIsCritical(),
+		IsNaturalOne:   res.GetIsNaturalOne(),
 	}
 	event.SetActor(actor.GetName())
 

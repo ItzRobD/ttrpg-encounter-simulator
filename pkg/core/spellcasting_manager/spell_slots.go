@@ -1,10 +1,12 @@
 package spellcasting_manager
 
-func (s *SpellcastingManager) getSpellSlots() SpellSlots {
+import "dnd5e-encounter-simulator-backend/pkg/spells"
+
+func (s *SpellcastingManager) getSpellSlots() spells.SpellSlots {
 	return s.currentSlots
 }
 
-func (s *SpellcastingManager) getMaxSpellSlots() SpellSlots {
+func (s *SpellcastingManager) getMaxSpellSlots() spells.SpellSlots {
 	return s.maxSlots
 }
 

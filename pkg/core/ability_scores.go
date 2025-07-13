@@ -20,3 +20,21 @@ type AbilityScores struct {
 	Wisdom       int `json:"wisdom"`
 	Charisma     int `json:"charisma"`
 }
+
+type AbilityScoresProficiencies struct {
+	Strength     bool `json:"strength"`
+	Dexterity    bool `json:"dexterity"`
+	Constitution bool `json:"constitution"`
+	Intelligence bool `json:"intelligence"`
+	Wisdom       bool `json:"wisdom"`
+	Charisma     bool `json:"charisma"`
+}
+
+type SaveProficiencies struct {
+	Strength     int `json:"strength"`
+	Dexterity    int `json:"dexterity"`
+	Constitution int `json:"constitution"`
+	Intelligence int `json:"intelligence"`
+	Wisdom       int `json:"wisdom"`
+	Charisma     int `json:"charisma"`
+}

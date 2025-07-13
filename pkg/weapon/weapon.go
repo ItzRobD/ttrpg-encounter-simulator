@@ -5,6 +5,14 @@ import (
 	"fmt"
 )
 
+// Weapon represents a weapon with properties such as name, damage type, and special attributes.
+// Name refers to the name of the weapon.
+// IsVersatile indicates if the weapon can be used with one or two hands.
+// IsFinesse determines if the weapon can use Dexterity for attack and damage rolls.
+// NumberOfDice specifies the count of dice rolled for damage calculation.
+// Die represents the type of die rolled for weapon damage (e.g., d6, d8).
+// DamageType specifies the type of damage the weapon inflicts (e.g., slashing, piercing).
+// IsRanged indicates if the weapon is a ranged weapon.
 type Weapon struct {
 	Name         string
 	IsVersatile  bool
@@ -15,11 +23,13 @@ type Weapon struct {
 	IsRanged     bool
 }
 
+// WeaponQueryParams defines the parameters for querying weapon data, including weapon name and ID.
 type WeaponQueryParams struct {
 	Name string
 	ID   int
 }
 
+// New creates a new weapon with specified attributes, validating inputs and returning an error for invalid configurations.
 func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die int, damageType string, isRanged bool) (Weapon, error) {
 	if name == "" {
 		name = "Unnamed weapon"
@@ -44,6 +54,7 @@ func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die in
 	}, nil
 }
 
+// isRangedWeapon determines if the given weapon ID corresponds to a ranged weapon and returns true if it does.
 func isRangedWeapon(id int) bool {
 	rangedIDs := []int{2, 4, 5, 6, 10, 12, 14, 29, 33, 34, 35}
 	for _, v := range rangedIDs {
@@ -54,6 +65,8 @@ func isRangedWeapon(id int) bool {
 	return false
 }
 
+// GetAttackModifier calculates the attack modifier for a weapon based on ability scores, character level, and proficiency status.
+// Returns the attack modifier or an error if any calculation fails.
 func (w *Weapon) GetAttackModifier(as *core.AbilityScores, clvl int, isProficient bool) (int, error) {
 	mod, err := w.GetWeaponModifier(as)
 	if err != nil {
@@ -72,6 +85,8 @@ func (w *Weapon) GetAttackModifier(as *core.AbilityScores, clvl int, isProficien
 	return mod + pb, nil
 }
 
+// GetWeaponModifier determines the modifier to use for a weapon based on its type and the ability scores provided.
+// Returns the calculated modifier or an error if the ability score calculation fails.
 func (w *Weapon) GetWeaponModifier(as *core.AbilityScores) (int, error) {
 	var mod int
 	var err error

@@ -5,6 +5,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"errors"
+	"fmt"
 )
 
 type SpellCastRequest struct {
@@ -19,7 +20,7 @@ type SpellModifiers struct {
 }
 
 type SpellAttackData struct {
-	SpellChoice    SpellChoice
+	SpellChoice    spells.SpellChoice
 	AttackModifier int
 	SpellModifier  int
 }
@@ -36,8 +37,8 @@ type SpellResult struct {
 	IsCriticalHit    bool
 	HasDC            bool
 	SpellSaveAbility core.Ability
-	SpellSaveRoll    int
-	SpellSaveTotal   bool
+	SpellSaveRolls   []int
+	SpellSaveTotal   int
 	SpellSaveSuccess bool
 	Damage           int
 	DamageRolls      []int
@@ -55,14 +56,14 @@ func (r *SpellResult) GetIsHit() bool                    { return r.IsHit }
 func (r *SpellResult) GetIsCriticalHit() bool            { return r.IsCriticalHit }
 func (r *SpellResult) GetHasDC() bool                    { return r.HasDC }
 func (r *SpellResult) GetSpellSaveAbility() core.Ability { return r.SpellSaveAbility }
-func (r *SpellResult) GetSpellSaveRoll() int             { return r.SpellSaveRoll }
-func (r *SpellResult) GetSpellSaveTotal() bool           { return r.SpellSaveTotal }
+func (r *SpellResult) GetSpellSaveRolls() []int          { return r.SpellSaveRolls }
+func (r *SpellResult) GetSpellSaveTotal() int            { return r.SpellSaveTotal }
 func (r *SpellResult) GetSpellSaveSuccess() bool         { return r.SpellSaveSuccess }
 func (r *SpellResult) GetDamage() int                    { return r.Damage }
 func (r *SpellResult) GetDamageRolls() []int             { return r.DamageRolls }
 func (r *SpellResult) GetDamageType() string             { return r.DamageType }
 
-func (s *SpellcastingManager) CastSpell(target core.Entity, spell *SpellChoice) {
+func (s *SpellcastingManager) CastSpell(target core.Entity, spell *spells.SpellChoice) {
 	switch spell.Spell.SpellType {
 	case spells.STDamage:
 		// Damage
@@ -72,7 +73,7 @@ func (s *SpellcastingManager) CastSpell(target core.Entity, spell *SpellChoice) 
 	}
 }
 
-func calculatedamage(req *SpellCastRequest, isCritical bool, options core.Options) (int, []int, error) {
+func calculateDamage(req *SpellCastRequest, isCritical bool, options core.Options) (int, []int, error) {
 	var dmgMod int
 	if req.AttackData.SpellChoice.Formula.UseSpellmod {
 		dmgMod = req.AttackData.SpellModifier
@@ -109,45 +110,92 @@ func calculatedamage(req *SpellCastRequest, isCritical bool, options core.Option
 	return total, rolls, nil
 }
 
-func (s *SpellcastingManager) castDamageSpell(target core.Entity, req *SpellCastRequest, options core.Options) error {
+func (s *SpellcastingManager) castDamageSpell(target core.Entity, req *SpellCastRequest, options core.Options) (*SpellResult, error) {
 	var res SpellResult
 	switch req.AttackData.SpellChoice.Spell.HasDC {
 	case true:
 		res.HasDC = true
-		// TODO: Handle DC saves for spells
+
+		a, err := core.GetNormalizedAbility(req.AttackData.SpellChoice.Spell.SpellDC.Ability)
+		if err != nil {
+			return nil, err
+		}
+		saveTotal, saveRolls, err := target.MakeSavingThrow(a)
+		if err != nil {
+			return nil, err
+		}
+
+		res.SpellSaveTotal = saveTotal
+		res.SpellSaveRolls = saveRolls
+
+		if s.IsSaveSuccessful(saveTotal, s.parent.GetSpellSaveDC(a)) {
+			res.SpellSaveSuccess = true
+		} else {
+			res.SpellSaveSuccess = false
+		}
+
+		// Calculate damage
+		var damage int
+		var damageRolls []int
+		damage, damageRolls, err = calculateDamage(req, false, options)
+		if err != nil {
+			return nil, err
+		}
+
+		if res.SpellSaveSuccess {
+			if req.AttackData.SpellChoice.Spell.SpellDC.OnSuccess == "none" {
+				res.SpellTotalValue = 0
+				res.Damage = 0
+				res.DamageRolls = damageRolls
+			} else if req.AttackData.SpellChoice.Spell.SpellDC.OnSuccess == "half" {
+				res.SpellTotalValue = damage / 2
+				res.Damage = damage / 2
+				res.DamageRolls = damageRolls
+			} else {
+				fmt.Println("Other DC On success not implemented")
+			}
+		} else {
+			res.SpellTotalValue = damage
+			res.Damage = damage
+			res.DamageRolls = damageRolls
+		}
 	case false:
 		res.HasDC = false
 
 		var attackTotal int
-		var attackRoll int
-		attackTotal, attackRoll, err := core.AttackRoll(req.AttackData.AttackModifier, req.Advantage)
+		var attackRolls []int
+		attackTotal, attackRolls, err := core.AttackRoll(req.AttackData.AttackModifier, req.Advantage)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// TODO: Note that halfling lucky does not use advantage again, re-roll lower
-		if attackRoll == 1 && req.Modifiers.HalflingLucky {
-			attackTotal, attackRoll, err = core.AttackRoll(req.AttackData.AttackModifier, req.Advantage)
-			if err != nil {
-				return err
+		if attackRolls == 1 && req.Modifiers.HalflingLucky {
+			if req.Advantage == core.RollNormal {
+				attackTotal, attackRolls, err = core.AttackRoll(req.AttackData.AttackModifier, req.Advantage)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+
 			}
 		}
 
-		events.LogDiceRollEvent(s.parent, attackTotal, []int{attackRoll}, core.DiceRollAttack, req.AttackData.AttackModifier, s.parent.GetEventListener())
-		res.AttackRoll = attackRoll
+		events.LogDiceRollEvent(s.parent, attackTotal, []int{attackRolls}, core.DiceRollAttack, req.AttackData.AttackModifier, s.parent.GetEventListener())
+		res.AttackRoll = attackRolls
 		res.AttackTotal = attackTotal
 
 		critThreshold := 20
-		isCrit := core.IsCriticalHit(attackRoll, critThreshold)
-		if (isCrit || core.DoesAttackHit(attackRoll, target.GetAC())) && attackRoll != 1 {
+		isCrit := core.IsCriticalHit(attackRolls, critThreshold)
+		if (isCrit || core.DoesAttackHit(attackRolls, target.GetAC())) && attackRolls != 1 {
 			res.IsHit = true
 			res.IsCriticalHit = isCrit
 
 			events.LogSpellAttackEvent(s.parent, target, &res, s.parent.GetEventListener())
 
-			damage, rolls, err2 := calculatedamage(req, isCrit, options)
+			damage, rolls, err2 := calculateDamage(req, isCrit, options)
 			if err2 != nil {
-				return err2
+				return nil, err2
 			}
 			res.Damage = damage
 			res.SpellTotalValue = damage
@@ -156,16 +204,22 @@ func (s *SpellcastingManager) castDamageSpell(target core.Entity, req *SpellCast
 
 		}
 	default:
-		return errors.New("invalid spell")
+		return nil, errors.New("invalid spell")
 	}
 
 	res.ActorName = s.parent.GetName()
 	res.TargetName = target.GetName()
 	res.SpellName = req.AttackData.SpellChoice.Spell.Name
 	res.SpellLevel = req.AttackData.SpellChoice.Spell.Level
+
+	return &res, nil
 }
 
-func (s *SpellcastingManager) castHealingSpell(target core.Entity, spell *SpellChoice) error {
+func (s *SpellcastingManager) castHealingSpell(target core.Entity, spell *spells.SpellChoice) error {
 	var result SpellResult
 
+}
+
+func (s *SpellcastingManager) IsSaveSuccessful(roll int, dc int) bool {
+	return roll >= dc
 }

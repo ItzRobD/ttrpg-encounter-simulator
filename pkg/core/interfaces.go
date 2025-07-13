@@ -1,37 +1,5 @@
 package core
 
-//type AttackData interface {
-//	GetActorName() string
-//	GetTargetName() string
-//	GetAttackName() string
-//	GetAttackCount() int
-//	IsHit() bool
-//	CriticalHit() bool
-//	GetAttackTotal() int
-//	GetAttackRoll() int
-//	GetDamage() int
-//	GetDamageRolls() []int
-//	GetDamageType() string
-//}
-//
-//type AttackModifiers interface {
-//	GetBonusAttackRoll() int
-//	GetBonusDamageRoll() int
-//	GetShouldApplyDamageMod() bool
-//	GetPowerAttack() bool
-//	GetImprovedCritical() bool
-//	GetTreatOnesAsTwos() bool
-//	GetRerollOnesAndTwos() bool
-//	GetHalflingLucky() bool
-//}
-//
-//type AttackRequestData interface {
-//	GetAttackData() AttackData
-//	GetModifiers() AttackModifiers
-//	GetAdvantage() AdvantageType
-//	GetAttackCount() int
-//}
-
 type AttackResultData interface {
 	GetActorName() string
 	GetTargetName() string
@@ -58,10 +26,25 @@ type SpellResultData interface {
 	GetIsCriticalHit() bool
 	GetHasDC() bool
 	GetSpellSaveAbility() Ability
-	GetSpellSaveRoll() int
-	GetSpellSaveTotal() bool
+	GetSpellSaveRolls() []int
+	GetSpellSaveTotal() int
 	GetSpellSaveSuccess() bool
 	GetDamage() int
 	GetDamageRolls() []int
 	GetDamageType() string
+}
+
+type DiceRollResultData interface {
+	GetFinalRollValue() int
+	GetFinalRolls() []int
+	GetModifier() int
+	GetTotal() int
+	GetAdvantage() string // Note: returns type string
+
+	GetOriginalRolls() []int
+	GetRerollEvents() []map[string]interface{}
+	GetWasRerolled() bool
+
+	GetIsCritical() bool
+	GetIsNaturalOne() bool
 }

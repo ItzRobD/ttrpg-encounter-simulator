@@ -7,21 +7,6 @@ import (
 	"math"
 )
 
-type CasterType string
-
-const (
-	CasterCharacter         CasterType = "character"
-	CasterMonsterInnate                = "innate_monster"
-	CasterMonsterTrueCaster            = "spellcaster_monster"
-)
-
-type SpellSlots map[int]int
-
-type SpellChoice struct {
-	Spell   *spells.Spell
-	Formula *spells.CastFormula
-}
-
 type HealingOption struct {
 	Spell        *spells.Spell
 	Formula      *spells.CastFormula
@@ -33,10 +18,10 @@ type HealingOption struct {
 
 type SpellcastingManager struct {
 	parent                 core.Entity
-	casterType             CasterType
+	casterType             spells.CasterType
 	casterLevel            int
-	currentSlots           SpellSlots
-	maxSlots               SpellSlots
+	currentSlots           spells.SpellSlots
+	maxSlots               spells.SpellSlots
 	healingSpells          map[int][]*spells.Spell
 	damageSpells           map[int][]*spells.Spell
 	damageSpellCount       int
@@ -46,15 +31,7 @@ type SpellcastingManager struct {
 	spellcastModifierValue int
 }
 
-type SpellcastingManagerStatus struct {
-	parent       core.Entity
-	casterType   CasterType
-	casterLevel  int
-	currentSlots SpellSlots
-	maxSlots     SpellSlots
-}
-
-func NewSpellcastingManager(parent core.Entity, casterType CasterType, casterLevel int, currentSlots SpellSlots, maxSlots SpellSlots, canUpcast bool, spellcastModValue int) *SpellcastingManager {
+func NewSpellcastingManager(parent core.Entity, casterType spells.CasterType, casterLevel int, currentSlots spells.SpellSlots, maxSlots spells.SpellSlots, canUpcast bool, spellcastModValue int) *SpellcastingManager {
 	return &SpellcastingManager{
 		parent:                 parent,
 		casterType:             casterType,
@@ -192,7 +169,7 @@ func (s *SpellcastingManager) GetDamageSpellsLeveled() []*spells.Spell {
 	return results
 }
 
-func (s *SpellcastingManager) GetCasterType() CasterType {
+func (s *SpellcastingManager) GetCasterType() spells.CasterType {
 	return s.casterType
 }
 
@@ -200,12 +177,12 @@ func (s *SpellcastingManager) GetCasterLevel() int {
 	return s.casterLevel
 }
 
-func (s *SpellcastingManager) GetStatus() *SpellcastingManagerStatus {
-	return &SpellcastingManagerStatus{
-		parent:       s.parent,
-		casterType:   s.casterType,
-		casterLevel:  s.casterLevel,
-		currentSlots: s.currentSlots,
-		maxSlots:     s.maxSlots,
+func (s *SpellcastingManager) GetStatus() *spells.SpellcastingManagerStatus {
+	return &spells.SpellcastingManagerStatus{
+		Parent:       s.parent,
+		CasterType:   s.casterType,
+		CasterLevel:  s.casterLevel,
+		CurrentSlots: s.currentSlots,
+		MaxSlots:     s.maxSlots,
 	}
 }

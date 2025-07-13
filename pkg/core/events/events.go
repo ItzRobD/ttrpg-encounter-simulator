@@ -1,8 +1,6 @@
 package events
 
 import (
-	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"time"
@@ -92,8 +90,8 @@ func (e *ActionChoiceEvent) GetEventType() EventType { return ETActionChoiceEven
 
 type SpellChoiceEvent struct {
 	BaseEvent
-	SpellChoice   *spellcasting_manager.SpellChoice
-	ManagerStatus *spellcasting_manager.SpellcastingManagerStatus
+	SpellChoice   *spells.SpellChoice
+	ManagerStatus *spells.SpellcastingManagerStatus
 }
 
 func (e *SpellChoiceEvent) GetEventType() EventType { return ETSpellChoiceEvent }
@@ -165,10 +163,21 @@ func (e *HPModifiedEvent) GetEventType() EventType { return ETHPModifiedEvent }
 
 type DiceRollEvent struct {
 	BaseEvent
-	RollType core.DiceRollType
-	Value    int
-	Rolls    []int
-	Modifier int
+	RollType       string
+	FinalRollValue int
+	FinalRolls     []int
+	Modifier       int
+	Total          int
+	Advantage      string
+
+	// Reroll tracking
+	OriginalRolls []int
+	RerollEvents  []map[string]interface{}
+	WasRerolled   bool
+
+	// Special results
+	IsCritical   bool
+	IsNaturalOne bool
 }
 
 func (e *DiceRollEvent) GetEventType() EventType { return ETRollEvent }

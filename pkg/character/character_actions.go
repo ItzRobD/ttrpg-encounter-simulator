@@ -243,14 +243,14 @@ func (c *Character) getWeaponFromSlot(slot shared.WeaponSlot) (*weapon.Weapon, e
 
 func (c *Character) ModifyHP(value int) {
 	prevHP := c.HP.HP
-	c.HP.HP += amount
+	c.HP.HP += value
 	if c.HP.HP > c.HP.MaxHP {
 		c.HP.HP = c.HP.MaxHP
 	}
 	if c.HP.HP < 0 {
 		c.HP.HP = 0
 	}
-	events.LogHPModifiedEvent(c, amount, prevHP, c.HP.HP, c.EventListener)
+	events.LogHPModifiedEvent(c, value, prevHP, c.HP.HP, c.EventListener)
 }
 
 //func (c *Character) ExpendSpellSlot(level int) error {
@@ -260,10 +260,6 @@ func (c *Character) ModifyHP(value int) {
 //	c.SpellSlots[level] -= 1
 //	return nil
 //}
-
-func (c *Character) GetSavingThrowRollResult(ability string) (int, error) {
-	return 0, fmt.Errorf("not implemented")
-}
 
 //func (c *Character) logWeaponAttackEvent(target *monster.Monster, weapon *weapon.Weapon, attackRoll, attackModifier int, isHit bool) {
 //	if c.EventListener != nil {

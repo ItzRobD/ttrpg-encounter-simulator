@@ -7,7 +7,7 @@ import (
 	"math/rand/v2"
 )
 
-func (s *SpellcastingManager) GetMostEfficientHealingSpell(targetValue int) (*SpellChoice, error) {
+func (s *SpellcastingManager) GetMostEfficientHealingSpell(targetValue int) (*spells.SpellChoice, error) {
 	if !s.HasHealingSpells() {
 		return nil, NewSpellcastingError("", "no healing spells found", ERROR_SPELL_NOT_FOUND)
 	}
@@ -50,7 +50,7 @@ func (s *SpellcastingManager) GetMostEfficientHealingSpell(targetValue int) (*Sp
 	}
 
 	bestOption := s.selectBestHealingOption(options, targetValue)
-	return &SpellChoice{
+	return &spells.SpellChoice{
 		Spell:   bestOption.Spell,
 		Formula: bestOption.Formula,
 	}, nil
@@ -134,7 +134,7 @@ func (s *SpellcastingManager) findBestUnderheal(options []HealingOption) Healing
 	return best
 }
 
-func (s *SpellcastingManager) ChooseSpellByPriority(t spells.SpellType, priority shared.SpellPriority) (*SpellChoice, error) {
+func (s *SpellcastingManager) ChooseSpellByPriority(t spells.SpellType, priority shared.SpellPriority) (*spells.SpellChoice, error) {
 	switch priority {
 	case shared.SPNoPreference: // Random known spell
 		choice, err := s.getRandomSpellChoice(t, false)
@@ -237,7 +237,7 @@ func (s *SpellcastingManager) ChooseSpellByPriority(t spells.SpellType, priority
 	return nil, nil
 }
 
-func (s *SpellcastingManager) getHighestAverageAvailableAOESpellChoice(t spells.SpellType) (*SpellChoice, error) {
+func (s *SpellcastingManager) getHighestAverageAvailableAOESpellChoice(t spells.SpellType) (*spells.SpellChoice, error) {
 	pool, err := s.getSpellPoolOfType(t)
 	if err != nil {
 		return nil, err
@@ -274,13 +274,13 @@ func (s *SpellcastingManager) getHighestAverageAvailableAOESpellChoice(t spells.
 		return nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_FOUND)
 	}
 
-	return &SpellChoice{Spell: highestSpell, Formula: highestFormula}, nil
+	return &spells.SpellChoice{Spell: highestSpell, Formula: highestFormula}, nil
 }
 
 // getHighestAverageAvailableOfPool determines the spell from the given pool with the highest average output and returns it.
 // This method evaluates both leveled spells and cantrips, considering the spell's formulas and caster level.
 // Returns a SpellChoice containing the selected spell and its formula or an error if no valid spell is found.
-func (s *SpellcastingManager) getHighestAverageAvailableOfPool(pool []*spells.Spell) (*SpellChoice, error) {
+func (s *SpellcastingManager) getHighestAverageAvailableOfPool(pool []*spells.Spell) (*spells.SpellChoice, error) {
 	if len(pool) == 0 {
 		return nil, NewSpellcastingError("", "no spells found", ERROR_SPELL_NOT_KNOWN)
 	}
@@ -319,7 +319,7 @@ func (s *SpellcastingManager) getHighestAverageAvailableOfPool(pool []*spells.Sp
 		return nil, NewSpellcastingError("", "no spells found", ERROR_SPELL_NOT_KNOWN)
 	}
 
-	return &SpellChoice{Spell: highestSpell, Formula: highestFormula}, nil
+	return &spells.SpellChoice{Spell: highestSpell, Formula: highestFormula}, nil
 }
 
 func (s *SpellcastingManager) GetBestFormulaForSpell(spell spells.Spell, p shared.SpellPriority) (*spells.CastFormula, error) {
@@ -400,18 +400,18 @@ func (s *SpellcastingManager) GetBestFormulaForSpell(spell spells.Spell, p share
 
 // getRandomCantripChoice retrieves a random cantrip of the specified spell type (healing or damage).
 // Returns an error if no cantrips are found for the provided type or if the type is invalid.
-func (s *SpellcastingManager) getRandomCantripChoice(t spells.SpellType) (*SpellChoice, error) {
+func (s *SpellcastingManager) getRandomCantripChoice(t spells.SpellType) (*spells.SpellChoice, error) {
 	pool, err := s.getSpellPoolOfType(t)
 	if err != nil {
 		return nil, err
 	}
 
-	var castableChoices []*SpellChoice
+	var castableChoices []*spells.SpellChoice
 	if cantrips, exists := pool[0]; exists {
 		for _, spell := range cantrips {
 			castLevel, formula, _ := s.getBestCastOptionForSpell(spell)
 			if castLevel != -1 {
-				castableChoices = append(castableChoices, &SpellChoice{Spell: spell, Formula: formula})
+				castableChoices = append(castableChoices, &spells.SpellChoice{Spell: spell, Formula: formula})
 			}
 		}
 	}
@@ -426,7 +426,7 @@ func (s *SpellcastingManager) getRandomCantripChoice(t spells.SpellType) (*Spell
 
 // getRandomSpellChoice selects a random leveled spell of the given type (healing or damage).
 // Returns an error if no spells are found for the specified type or if the type is invalid.
-func (s *SpellcastingManager) getRandomSpellChoice(t spells.SpellType, excludeCantrips bool) (*SpellChoice, error) {
+func (s *SpellcastingManager) getRandomSpellChoice(t spells.SpellType, excludeCantrips bool) (*spells.SpellChoice, error) {
 	pool, err := s.getSpellPoolOfType(t)
 	if err != nil {
 		return nil, err
@@ -436,7 +436,7 @@ func (s *SpellcastingManager) getRandomSpellChoice(t spells.SpellType, excludeCa
 		return nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_FOUND)
 	}
 
-	var castableChoices []*SpellChoice
+	var castableChoices []*spells.SpellChoice
 	for level, spellsAtLevel := range pool {
 		if level == 0 && excludeCantrips {
 			continue
@@ -444,7 +444,7 @@ func (s *SpellcastingManager) getRandomSpellChoice(t spells.SpellType, excludeCa
 		for _, spell := range spellsAtLevel {
 			castLevel, formula, _ := s.getBestCastOptionForSpell(spell)
 			if castLevel != -1 {
-				castableChoices = append(castableChoices, &SpellChoice{Spell: spell, Formula: formula})
+				castableChoices = append(castableChoices, &spells.SpellChoice{Spell: spell, Formula: formula})
 			}
 		}
 	}
@@ -458,7 +458,7 @@ func (s *SpellcastingManager) getRandomSpellChoice(t spells.SpellType, excludeCa
 	return castableChoices[i], nil
 }
 
-func (s *SpellcastingManager) getHighestAverageAvailableSpellChoice(t spells.SpellType) (*SpellChoice, error) {
+func (s *SpellcastingManager) getHighestAverageAvailableSpellChoice(t spells.SpellType) (*spells.SpellChoice, error) {
 	pool, err := s.getSpellPoolOfType(t)
 	if err != nil {
 		return nil, err
@@ -491,7 +491,7 @@ func (s *SpellcastingManager) getHighestAverageAvailableSpellChoice(t spells.Spe
 		return nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_KNOWN)
 	}
 
-	return &SpellChoice{Spell: highestSpell, Formula: highestFormula}, nil
+	return &spells.SpellChoice{Spell: highestSpell, Formula: highestFormula}, nil
 }
 
 // getBestCastOptionForSpell determines the optimal way to cast a spell based on level, available slots, and upcast options.
@@ -539,7 +539,7 @@ func (s *SpellcastingManager) getBestCastOptionForSpell(spell *spells.Spell) (in
 	return -1, nil, 0
 }
 
-func (s *SpellcastingManager) getHighestAverageCantrip(t spells.SpellType) (*SpellChoice, error) {
+func (s *SpellcastingManager) getHighestAverageCantrip(t spells.SpellType) (*spells.SpellChoice, error) {
 	var pool []*spells.Spell
 	switch t {
 	case spells.STHealing:
@@ -577,7 +577,7 @@ func (s *SpellcastingManager) getHighestAverageCantrip(t spells.SpellType) (*Spe
 		return nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_KNOWN)
 	}
 
-	return &SpellChoice{Spell: highestSpell, Formula: highestFormula}, nil
+	return &spells.SpellChoice{Spell: highestSpell, Formula: highestFormula}, nil
 }
 
 func (s *SpellcastingManager) getHighestLevelSpells(t spells.SpellType) ([]*spells.Spell, error) {
@@ -618,7 +618,7 @@ func (s *SpellcastingManager) getLowestLeveledSpells(t spells.SpellType) ([]*spe
 	return nil, NewSpellSlotErrorOutOfSlots(0)
 }
 
-func (s *SpellcastingManager) isAbleToCast(choice SpellChoice) bool {
+func (s *SpellcastingManager) isAbleToCast(choice spells.SpellChoice) bool {
 	if choice.Spell.Level == 0 {
 		return true
 	}
@@ -626,7 +626,7 @@ func (s *SpellcastingManager) isAbleToCast(choice SpellChoice) bool {
 	return s.HasSpellSlotsAtLevel(choice.Formula.CastLevel)
 }
 
-func (s *SpellcastingManager) getHighestLevelSpellChoice(t spells.SpellType) (*SpellChoice, error) {
+func (s *SpellcastingManager) getHighestLevelSpellChoice(t spells.SpellType) (*spells.SpellChoice, error) {
 	pool, err := s.getHighestLevelSpells(t)
 	if err != nil {
 		return nil, err
@@ -638,7 +638,7 @@ func (s *SpellcastingManager) getHighestLevelSpellChoice(t spells.SpellType) (*S
 	return choice, nil
 }
 
-func (s *SpellcastingManager) getLowestLevelSpellChoice(t spells.SpellType) (*SpellChoice, error) {
+func (s *SpellcastingManager) getLowestLevelSpellChoice(t spells.SpellType) (*spells.SpellChoice, error) {
 	pool, err := s.getLowestLeveledSpells(t)
 	if err != nil {
 		return nil, err
