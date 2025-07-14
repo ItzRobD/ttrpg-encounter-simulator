@@ -2,6 +2,7 @@ package spellcasting_manager
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"math"
@@ -9,7 +10,7 @@ import (
 
 type HealingOption struct {
 	Spell        *spells.Spell
-	Formula      *spells.CastFormula
+	Formula      *core.CastFormula
 	CastLevel    int
 	Efficiency   float64
 	TargetDelta  int
@@ -18,7 +19,8 @@ type HealingOption struct {
 
 type SpellcastingManager struct {
 	parent                 core.Entity
-	casterType             spells.CasterType
+	rollManager            *roll_manager.RollManager
+	casterType             core.CasterType
 	casterLevel            int
 	currentSlots           spells.SpellSlots
 	maxSlots               spells.SpellSlots
@@ -31,9 +33,10 @@ type SpellcastingManager struct {
 	spellcastModifierValue int
 }
 
-func NewSpellcastingManager(parent core.Entity, casterType spells.CasterType, casterLevel int, currentSlots spells.SpellSlots, maxSlots spells.SpellSlots, canUpcast bool, spellcastModValue int) *SpellcastingManager {
+func NewSpellcastingManager(parent core.Entity, rm *roll_manager.RollManager, casterType core.CasterType, casterLevel int, currentSlots spells.SpellSlots, maxSlots spells.SpellSlots, canUpcast bool, spellcastModValue int) *SpellcastingManager {
 	return &SpellcastingManager{
 		parent:                 parent,
+		rollManager:            rm,
 		casterType:             casterType,
 		casterLevel:            casterLevel,
 		currentSlots:           currentSlots,
@@ -45,26 +48,26 @@ func NewSpellcastingManager(parent core.Entity, casterType spells.CasterType, ca
 	}
 }
 
-func (s *SpellcastingManager) SetUsableSpellIDs(ids []int) {
-	s.usableSpellIDs = ids
+func (scm *SpellcastingManager) SetUsableSpellIDs(ids []int) {
+	scm.usableSpellIDs = ids
 }
 
-func (s *SpellcastingManager) AddKnownSpell(spell *spells.Spell) error {
-	s.calculateFormulaAverages(spell)
-	if spell.SpellType == string(spells.STHealing) {
-		s.healingSpells[spell.Level] = append(s.healingSpells[spell.Level], spell)
-		s.healingSpellCount++
+func (scm *SpellcastingManager) AddKnownSpell(spell *spells.Spell) error {
+	scm.calculateFormulaAverages(spell)
+	if spell.SpellType == core.STHealing {
+		scm.healingSpells[spell.Level] = append(scm.healingSpells[spell.Level], spell)
+		scm.healingSpellCount++
 		return nil
-	} else if spell.SpellType == string(spells.STDamage) {
-		s.damageSpells[spell.Level] = append(s.damageSpells[spell.Level], spell)
-		s.healingSpellCount++
+	} else if spell.SpellType == core.STDamage {
+		scm.damageSpells[spell.Level] = append(scm.damageSpells[spell.Level], spell)
+		scm.healingSpellCount++
 		return nil
 	}
 
 	return fmt.Errorf("Spells is of non healing or damage type")
 }
 
-func (s *SpellcastingManager) calculateFormulaAverages(spell *spells.Spell) {
+func (scm *SpellcastingManager) calculateFormulaAverages(spell *spells.Spell) {
 	for level, formula := range spell.Formulas {
 		dAvg, err := core.GetDieAverage(formula.Die)
 		if err != nil {
@@ -80,40 +83,40 @@ func (s *SpellcastingManager) calculateFormulaAverages(spell *spells.Spell) {
 	}
 }
 
-func (s *SpellcastingManager) HasHealingSpells() bool {
-	return s.healingSpellCount > 0
+func (scm *SpellcastingManager) HasHealingSpells() bool {
+	return scm.healingSpellCount > 0
 }
 
-func (s *SpellcastingManager) GetHealingSpells() map[int][]*spells.Spell {
-	return s.healingSpells
+func (scm *SpellcastingManager) GetHealingSpells() map[int][]*spells.Spell {
+	return scm.healingSpells
 }
 
-func (s *SpellcastingManager) GetHealingSpellCount() int {
-	return s.healingSpellCount
+func (scm *SpellcastingManager) GetHealingSpellCount() int {
+	return scm.healingSpellCount
 }
 
-func (s *SpellcastingManager) GetHealingCantrips() []*spells.Spell {
-	if !s.HasHealingSpells() {
+func (scm *SpellcastingManager) GetHealingCantrips() []*spells.Spell {
+	if !scm.HasHealingSpells() {
 		return nil
 	}
-	return s.healingSpells[0]
+	return scm.healingSpells[0]
 }
 
-func (s *SpellcastingManager) getHealingSpellsByLevel(level int) []*spells.Spell {
-	if !s.HasHealingSpells() {
+func (scm *SpellcastingManager) getHealingSpellsByLevel(level int) []*spells.Spell {
+	if !scm.HasHealingSpells() {
 		return nil
 	}
-	return s.healingSpells[level]
+	return scm.healingSpells[level]
 }
 
-func (s *SpellcastingManager) GetHealingSpellsLeveled() []*spells.Spell {
-	if !s.HasHealingSpells() {
+func (scm *SpellcastingManager) GetHealingSpellsLeveled() []*spells.Spell {
+	if !scm.HasHealingSpells() {
 		return nil
 	}
 	var results []*spells.Spell
 
 	for level := 1; level <= 9; level++ {
-		spellsAtLevel := s.getHealingSpellsByLevel(level)
+		spellsAtLevel := scm.getHealingSpellsByLevel(level)
 		if spellsAtLevel != nil {
 			results = append(results, spellsAtLevel...)
 		}
@@ -122,45 +125,45 @@ func (s *SpellcastingManager) GetHealingSpellsLeveled() []*spells.Spell {
 	return results
 }
 
-func (s *SpellcastingManager) HasDamageSpells() bool {
-	return s.damageSpellCount > 0
+func (scm *SpellcastingManager) HasDamageSpells() bool {
+	return scm.damageSpellCount > 0
 }
 
-func (s *SpellcastingManager) HasAnyKnownSpells() bool {
-	return s.HasHealingSpells() || s.HasDamageSpells()
+func (scm *SpellcastingManager) HasAnyKnownSpells() bool {
+	return scm.HasHealingSpells() || scm.HasDamageSpells()
 }
 
-func (s *SpellcastingManager) GetDamageSpells() map[int][]*spells.Spell {
-	return s.damageSpells
+func (scm *SpellcastingManager) GetDamageSpells() map[int][]*spells.Spell {
+	return scm.damageSpells
 }
 
-func (s *SpellcastingManager) GetDamageSpellCount() int {
-	return s.damageSpellCount
+func (scm *SpellcastingManager) GetDamageSpellCount() int {
+	return scm.damageSpellCount
 }
 
-func (s *SpellcastingManager) GetDamageCantrips() []*spells.Spell {
-	if !s.HasDamageSpells() {
+func (scm *SpellcastingManager) GetDamageCantrips() []*spells.Spell {
+	if !scm.HasDamageSpells() {
 		return nil
 	}
-	return s.damageSpells[0]
+	return scm.damageSpells[0]
 }
 
-func (s *SpellcastingManager) getDamageSpellsByLevel(level int) []*spells.Spell {
-	if !s.HasDamageSpells() {
+func (scm *SpellcastingManager) getDamageSpellsByLevel(level int) []*spells.Spell {
+	if !scm.HasDamageSpells() {
 		return nil
 	}
 
-	return s.damageSpells[level]
+	return scm.damageSpells[level]
 }
 
-func (s *SpellcastingManager) GetDamageSpellsLeveled() []*spells.Spell {
-	if !s.HasDamageSpells() {
+func (scm *SpellcastingManager) GetDamageSpellsLeveled() []*spells.Spell {
+	if !scm.HasDamageSpells() {
 		return nil
 	}
 	var results []*spells.Spell
 
 	for level := 1; level <= 9; level++ {
-		spellsAtLevel := s.getDamageSpellsByLevel(level)
+		spellsAtLevel := scm.getDamageSpellsByLevel(level)
 		if spellsAtLevel != nil {
 			results = append(results, spellsAtLevel...)
 		}
@@ -169,20 +172,20 @@ func (s *SpellcastingManager) GetDamageSpellsLeveled() []*spells.Spell {
 	return results
 }
 
-func (s *SpellcastingManager) GetCasterType() spells.CasterType {
-	return s.casterType
+func (scm *SpellcastingManager) GetCasterType() core.CasterType {
+	return scm.casterType
 }
 
-func (s *SpellcastingManager) GetCasterLevel() int {
-	return s.casterLevel
+func (scm *SpellcastingManager) GetCasterLevel() int {
+	return scm.casterLevel
 }
 
-func (s *SpellcastingManager) GetStatus() *spells.SpellcastingManagerStatus {
+func (scm *SpellcastingManager) GetStatus() *spells.SpellcastingManagerStatus {
 	return &spells.SpellcastingManagerStatus{
-		Parent:       s.parent,
-		CasterType:   s.casterType,
-		CasterLevel:  s.casterLevel,
-		CurrentSlots: s.currentSlots,
-		MaxSlots:     s.maxSlots,
+		Parent:       scm.parent,
+		CasterType:   scm.casterType,
+		CasterLevel:  scm.casterLevel,
+		CurrentSlots: scm.currentSlots,
+		MaxSlots:     scm.maxSlots,
 	}
 }

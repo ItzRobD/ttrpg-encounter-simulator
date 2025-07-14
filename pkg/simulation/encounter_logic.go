@@ -14,7 +14,7 @@ import (
 // ChooseCharacterActionType selects the action type for a character, preferring healing if available and needed.
 func (e *Encounter) ChooseCharacterActionType(actor *character.Character) (shared.ActionType, error) {
 	// Choose between a damage action or a healing action
-	if e.Options.AllowPlayerHeals && actor.SpellcastingManager.HasHealingSpells() {
+	if e.Options.AllowCharacterHeals && actor.SpellcastingManager.HasHealingSpells() {
 		if e.doesAPlayerNeedHealing() {
 			events.LogCharacterActionChoiceEvent(actor, shared.ATHeal, actor.EventListener)
 			return shared.ATHeal, nil
@@ -143,11 +143,11 @@ func (e *Encounter) chooseDamageSpell(actor core.Entity, priority shared.SpellPr
 }
 
 func (e *Encounter) doesAPlayerNeedHealing() bool {
-	if !e.Options.AllowPlayerHeals {
+	if !e.Options.AllowCharacterHeals {
 		return false
 	}
 	for _, c := range e.filterCharacters() {
-		if c.GetCurrentHPPct() < e.Options.PlayerHealThresholdPct {
+		if c.GetCurrentHPPct() < e.Options.CharacterHealThresholdPct {
 			return true
 		}
 	}

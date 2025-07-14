@@ -1,24 +1,9 @@
 package spells
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
 	"math"
-)
-
-const (
-	SpellDCStrength     = "str"
-	SpellDCDexterity    = "dex"
-	SpellDCConstitution = "con"
-	SpellDCIntelligence = "int"
-	SpellDCWisdom       = "wis"
-	SpellDCCharisma     = "cha"
-)
-
-type SpellType string
-
-const (
-	STDamage  SpellType = "damage"
-	STHealing SpellType = "healing"
 )
 
 type Spell struct {
@@ -26,32 +11,40 @@ type Spell struct {
 	Name            string
 	Description     string
 	IsConcentration bool
-	CastingTime     string
+	CastingTime     core.CastingTime
 	IsRitual        bool
-	Level           int    // Minimum spell level
-	SpellType       string // TODO: Consider changing this to the spelltype enum
+	Level           int // Minimum spell level
+	SpellType       core.SpellType
 	IsAOE           bool
 	HasDC           bool
 	ApiURL          string
 	LevelType       string // character || slot
-	SpellDC
-	Formulas map[int]CastFormula
+	SpellDC         SpellDC
+	Formulas        map[int]core.CastFormula
 }
+
+func (s *Spell) GetID() int                            { return s.ID }
+func (s *Spell) GetName() string                       { return s.Name }
+func (s *Spell) GetDescription() string                { return s.Description }
+func (s *Spell) GetIsConcentration() bool              { return s.IsConcentration }
+func (s *Spell) GetCastingTime() core.CastingTime      { return s.CastingTime }
+func (s *Spell) GetIsRitual() bool                     { return s.IsRitual }
+func (s *Spell) GetLevel() int                         { return s.Level }
+func (s *Spell) GetSpellType() core.SpellType          { return s.SpellType }
+func (s *Spell) GetIsAOE() bool                        { return s.IsAOE }
+func (s *Spell) GetHasDC() bool                        { return s.HasDC }
+func (s *Spell) GetApiURL() string                     { return s.ApiURL }
+func (s *Spell) GetLevelType() string                  { return s.LevelType }
+func (s *Spell) GetSpellDC() core.SpellDC              { return s.SpellDC }
+func (s *Spell) GetFormulas() map[int]core.CastFormula { return s.Formulas }
 
 type SpellDC struct {
-	Ability   string
-	OnSuccess string
+	Ability   core.Ability
+	OnSuccess core.DCOnSuccess
 }
 
-type CastFormula struct {
-	CastLevel    int
-	NumberOfDice int
-	Die          int
-	AmountToAdd  int
-	UseSpellmod  bool // UseSpellmod specifies whether the spell modifier should be added to the calculated damage.
-	DamageType   string
-	AverageValue int
-}
+func (s SpellDC) GetAbility() core.Ability       { return s.Ability }
+func (s SpellDC) GetOnSuccess() core.DCOnSuccess { return s.OnSuccess }
 
 type SpellQueryParams struct {
 	Name  string
@@ -71,7 +64,7 @@ func (s *Spell) GetHighestAverageAmount() int {
 }
 
 // GetClosestFormulaToLevel retrieves the most suitable cast formula for the given spell at the specified cast level.
-func (s *Spell) GetClosestFormulaToLevel(castLevel int) (*CastFormula, error) {
+func (s *Spell) GetClosestFormulaToLevel(castLevel int) (*core.CastFormula, error) {
 	if s.Level == 0 {
 		return nil, fmt.Errorf("spell is not a leveled spell")
 	}
@@ -79,7 +72,7 @@ func (s *Spell) GetClosestFormulaToLevel(castLevel int) (*CastFormula, error) {
 		return nil, fmt.Errorf("cast level %d is below minimum spell level %d", castLevel, s.Level)
 	}
 
-	var bestFormula *CastFormula
+	var bestFormula *core.CastFormula
 	var bestLevel int
 	found := false
 
@@ -100,7 +93,7 @@ func (s *Spell) GetClosestFormulaToLevel(castLevel int) (*CastFormula, error) {
 
 // GetAverageDamageAtLevel calculates and returns the average damage for a spell cast at the given level with modifiers.
 // It uses the most suitable formula based on the cast level and considers options like spell modifiers and additional amounts.
-func (s *Spell) GetAverageDamageAtLevel(castLevel int, spellModDmg int) (int, *CastFormula, error) {
+func (s *Spell) GetAverageDamageAtLevel(castLevel int, spellModDmg int) (int, *core.CastFormula, error) {
 	if s.Level == 0 {
 		return 0, nil, fmt.Errorf("spell is not a leveled spell")
 	}
@@ -118,7 +111,7 @@ func (s *Spell) GetAverageDamageAtLevel(castLevel int, spellModDmg int) (int, *C
 	return dmg, formula, nil
 }
 
-func (s *Spell) GetAverageDamageCantrip(casterLevel int, spellModDmg int) (int, *CastFormula, error) {
+func (s *Spell) GetAverageDamageCantrip(casterLevel int, spellModDmg int) (int, *core.CastFormula, error) {
 	if s.Level != 0 {
 		return 0, nil, fmt.Errorf("spell is not a cantrip")
 	}
@@ -140,12 +133,12 @@ func (s *Spell) GetAverageDamageCantrip(casterLevel int, spellModDmg int) (int, 
 	return dmg, formula, nil
 }
 
-func (s *Spell) GetFormulaForCantrip(casterLevel int) (*CastFormula, error) {
+func (s *Spell) GetFormulaForCantrip(casterLevel int) (*core.CastFormula, error) {
 	if s.Level != 0 {
 		return nil, fmt.Errorf("spell is not a cantrip")
 	}
 
-	var bestFormula *CastFormula
+	var bestFormula *core.CastFormula
 	var bestLevel int
 	found := false
 

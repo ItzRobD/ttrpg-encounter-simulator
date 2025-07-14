@@ -215,19 +215,19 @@ func main() {
 	//fmt.Println("Max spell slots:")
 	//fmt.Println(c.Class.Spellcasting.MaxSpellSlots)
 
-	options := core.Options{
-		CanMonstersCrit:         true,
-		CanPlayersCrit:          true,
-		HasIncreasedCrits:       false,
-		AllowPlayerHeals:        true,
-		AllowMonsterHeals:       true,
-		TargetPriority:          shared.NoPriority,
-		HealPriority:            shared.PrioritizeMostDamaged,
-		ActionPreference:        shared.APNoPreference,
-		AOEHitsAllEnemies:       false,
-		PlayerHealThresholdPct:  50,
-		MonsterHealThresholdPct: 50,
-		UseImprovedCriticals:    true,
+	options := core.SimulationOptions{
+		CanMonstersCrit:           true,
+		CanCharactersCrit:         true,
+		HasIncreasedCrits:         false,
+		AllowCharacterHeals:       true,
+		AllowMonsterHeals:         true,
+		TargetPriority:            shared.NoPriority,
+		HealPriority:              shared.PrioritizeMostDamaged,
+		ActionPreference:          shared.APNoPreference,
+		AOEHitsAllEnemies:         false,
+		CharacterHealThresholdPct: 50,
+		MonsterHealThresholdPct:   50,
+		UseImprovedCriticals:      true,
 	}
 	s := simulation.New(options)
 	s.Encounter.AddPartyMember(&c)

@@ -12,6 +12,10 @@ const (
 	AbilityNone         Ability = ""
 )
 
+func (a Ability) String() string {
+	return string(a)
+}
+
 type AbilityScores struct {
 	Strength     int `json:"strength"`
 	Dexterity    int `json:"dexterity"`

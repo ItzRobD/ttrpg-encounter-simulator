@@ -15,7 +15,7 @@ type Encounter struct {
 	Party         []*character.Character
 	Monsters      []*monster.Monster
 	CombatTracker []core.Combatant
-	Options       core.Options
+	Options       core.SimulationOptions
 	CurrentRound  int
 }
 

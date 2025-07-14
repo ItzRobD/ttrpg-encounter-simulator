@@ -213,7 +213,7 @@ func (e *Encounter) filterCharacters() []*character.Character {
 func (e *Encounter) filterCharactersNeedingHealing(characters []*character.Character) []*character.Character {
 	var needsHealing []*character.Character
 	for _, c := range characters {
-		if c.GetCurrentHPPct() < e.Options.PlayerHealThresholdPct {
+		if c.GetCurrentHPPct() < e.Options.CharacterHealThresholdPct {
 			needsHealing = append(needsHealing, c)
 		}
 	}

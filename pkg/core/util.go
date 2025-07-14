@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -111,11 +110,8 @@ var dieAverageValues = map[int]float64{
 	20: 10.5,
 }
 
-func GetDieAverage(die int) (float64, error) {
-	if !ValidateDie(die) {
-		return 0, errors.New("invalid die")
-	}
-	return dieAverageValues[die], nil
+func GetDieAverage(die DiceType) (float64, error) {
+	return dieAverageValues[die.Int()], nil
 }
 
 var validDamageTypes = []string{"acid", "bludgeoning", "cold", "fire", "force", "lightning",

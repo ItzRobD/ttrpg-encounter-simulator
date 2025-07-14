@@ -1,6 +1,7 @@
 package events
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"time"
@@ -70,6 +71,8 @@ type MeleeAttackEvent struct {
 	AttackTotal    int
 	Success        bool
 	CriticalHit    bool
+	DamageTotal    int
+	DamageType     string
 }
 
 func (e *MeleeAttackEvent) GetEventType() EventType { return ETAttackEvent }
@@ -98,13 +101,20 @@ func (e *SpellChoiceEvent) GetEventType() EventType { return ETSpellChoiceEvent 
 
 type SpellAttackEvent struct {
 	BaseEvent
-	Target         string
-	SpellName      string
-	AttackRoll     int
-	AttackModifier int
-	AttackTotal    int
-	Success        bool
-	CriticalHit    bool
+	Target            string
+	SpellName         string
+	AttackRoll        int
+	AttackModifier    int
+	AttackTotal       int
+	Success           bool
+	CriticalHit       bool
+	DamageTotal       int
+	DamageType        string
+	HasDC             bool
+	DCAbility         string
+	SaveEffect        string
+	DCValue           int
+	SavingThrowResult int
 }
 
 func (e *SpellAttackEvent) GetEventType() EventType { return ETSpellAttackEvent }
@@ -163,7 +173,9 @@ func (e *HPModifiedEvent) GetEventType() EventType { return ETHPModifiedEvent }
 
 type DiceRollEvent struct {
 	BaseEvent
-	RollType       string
+	RollType       core.DiceRollType
+	NumberOfDice   int
+	Die            string
 	FinalRollValue int
 	FinalRolls     []int
 	Modifier       int
@@ -178,6 +190,8 @@ type DiceRollEvent struct {
 	// Special results
 	IsCritical   bool
 	IsNaturalOne bool
+	IsSuccess    bool
+	TargetValue  int
 }
 
 func (e *DiceRollEvent) GetEventType() EventType { return ETRollEvent }

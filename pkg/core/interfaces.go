@@ -1,5 +1,46 @@
 package core
 
+type AttackData interface {
+	GetAttackName() string
+	GetNumberOfDice() int
+	GetDie() DiceType
+	GetAttackModifier() int
+	GetDamageModifier() int
+	GetDamageType() string
+	GetIsVersatileAttack() bool
+}
+
+type AttackOptions interface {
+	GetAdvantage() AdvantageType
+	GetNumberOfAttacks() int
+	GetBonusToAttackRoll() int
+	GetBonusToDamageRoll() int
+	GetShouldApplyDamageMod() bool
+	GetIsPowerAttack() bool
+	GetIsImprovedCritical() bool
+	GetShouldRerollOnesAndTwos() bool
+}
+
+type AttackRequest interface {
+	GetAttackData() AttackData
+	GetAttackOptions() AttackOptions
+	GetSimulationOptions() SimulationOptions
+	GetTarget() Entity
+}
+
+type AttackResult interface {
+	GetActorName() string
+	GetTargetName() string
+	GetAttackName() string
+	GetAttackCount() int
+	GetIsHit() bool
+	GetIsCriticalHit() bool
+	GetAttackTotal() int
+	GetAttackRoll() int
+	GetDamageResult() RollResult
+	GetDamageType() DamageType
+}
+
 type AttackResultData interface {
 	GetActorName() string
 	GetTargetName() string
@@ -14,7 +55,7 @@ type AttackResultData interface {
 	GetDamageType() string
 }
 
-type SpellResultData interface {
+type SpellResult interface {
 	GetActorName() string
 	GetTargetName() string
 	GetSpellName() string
@@ -25,16 +66,64 @@ type SpellResultData interface {
 	GetIsHit() bool
 	GetIsCriticalHit() bool
 	GetHasDC() bool
+	GetTargetDCValue() int
 	GetSpellSaveAbility() Ability
+	GetSpellSaveEffect() DCOnSuccess
 	GetSpellSaveRolls() []int
 	GetSpellSaveTotal() int
 	GetSpellSaveSuccess() bool
-	GetDamage() int
-	GetDamageRolls() []int
-	GetDamageType() string
+	GetDamageResult() RollResult
+	GetDamageType() DamageType
 }
 
-type DiceRollResultData interface {
+type SpellCastData interface {
+	GetSpellChoice() SpellChoice
+	GetAttackModifier() int
+	GetSpellcastingModifier() int
+}
+
+type Spell interface {
+	GetID() int
+	GetName() string
+	GetDescription() string
+	GetIsConcentration() bool
+	GetCastingTime() CastingTime
+	GetIsRitual() bool
+	GetLevel() int
+	GetSpellType() SpellType
+	GetIsAOE() bool
+	GetHasDC() bool
+	GetApiURL() string
+	GetLevelType() string
+	GetSpellDC() SpellDC
+	GetFormulas() map[int]CastFormula
+}
+
+type SpellDC interface {
+	GetAbility() Ability
+	GetOnSuccess() DCOnSuccess
+}
+
+type SpellOptions interface {
+	GetAdvantage() AdvantageType
+	GetBonusToAttackRoll() int
+	GetBonusToDamageRoll() int
+	GetShouldApplyDamageMod() bool
+	GetIsImprovedCritical() bool
+	GetShouldRerollOnesAndTwos() bool
+}
+
+type SpellCastRequest interface {
+	GetSpellCastData() SpellCastData
+	GetSpellOptions() SpellOptions
+	GetSimulationOptions() SimulationOptions
+	GetTarget() Entity
+}
+
+type RollResult interface {
+	GetDiceRollType() DiceRollType
+	GetNumberOfDice() int
+	GetDiceType() string
 	GetFinalRollValue() int
 	GetFinalRolls() []int
 	GetModifier() int
@@ -47,4 +136,6 @@ type DiceRollResultData interface {
 
 	GetIsCritical() bool
 	GetIsNaturalOne() bool
+	GetIsSuccess() bool
+	GetTargetValue() int
 }

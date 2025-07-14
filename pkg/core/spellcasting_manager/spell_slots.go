@@ -2,28 +2,28 @@ package spellcasting_manager
 
 import "dnd5e-encounter-simulator-backend/pkg/spells"
 
-func (s *SpellcastingManager) getSpellSlots() spells.SpellSlots {
-	return s.currentSlots
+func (scm *SpellcastingManager) getSpellSlots() spells.SpellSlots {
+	return scm.currentSlots
 }
 
-func (s *SpellcastingManager) getMaxSpellSlots() spells.SpellSlots {
-	return s.maxSlots
+func (scm *SpellcastingManager) getMaxSpellSlots() spells.SpellSlots {
+	return scm.maxSlots
 }
 
-func (s *SpellcastingManager) getSpellSlotsAtLevel(slot int) int {
-	return s.currentSlots[slot]
+func (scm *SpellcastingManager) getSpellSlotsAtLevel(slot int) int {
+	return scm.currentSlots[slot]
 }
 
-func (s *SpellcastingManager) getMaxSpellSlotsAtLevel(slot int) int {
-	return s.maxSlots[slot]
+func (scm *SpellcastingManager) getMaxSpellSlotsAtLevel(slot int) int {
+	return scm.maxSlots[slot]
 }
 
-func (s *SpellcastingManager) HasSpellSlotsAtLevel(slot int) bool {
-	return s.currentSlots[slot] > 0
+func (scm *SpellcastingManager) HasSpellSlotsAtLevel(slot int) bool {
+	return scm.currentSlots[slot] > 0
 }
 
-func (s *SpellcastingManager) HasAnySpellSlots() bool {
-	for _, slot := range s.currentSlots {
+func (scm *SpellcastingManager) HasAnySpellSlots() bool {
+	for _, slot := range scm.currentSlots {
 		if slot > 0 {
 			return true
 		}
@@ -31,29 +31,29 @@ func (s *SpellcastingManager) HasAnySpellSlots() bool {
 	return false
 }
 
-func (s *SpellcastingManager) ExpendSpellSlot(slot int) error {
-	if !s.HasSpellSlotsAtLevel(slot) {
+func (scm *SpellcastingManager) ExpendSpellSlot(slot int) error {
+	if !scm.HasSpellSlotsAtLevel(slot) {
 		return NewSpellSlotError(slot, "no spell slots available", ERROR_NO_SLOTS_AVAILABLE)
 	}
-	s.currentSlots[slot]--
+	scm.currentSlots[slot]--
 	return nil
 }
 
-func (s *SpellcastingManager) RecoverSpellSlotByAmount(slot int, amount int) error {
-	if s.currentSlots[slot] < s.maxSlots[slot] {
-		s.currentSlots[slot] += amount
+func (scm *SpellcastingManager) RecoverSpellSlotByAmount(slot int, amount int) error {
+	if scm.currentSlots[slot] < scm.maxSlots[slot] {
+		scm.currentSlots[slot] += amount
 		return nil
 	}
 	return NewSpellSlotError(slot, "unable to recover spell slot", ERROR_GENERIC_SLOT)
 }
 
-func (s *SpellcastingManager) RecoverSpellSlotToMax(slot int) error {
-	return s.RecoverSpellSlotByAmount(slot, s.maxSlots[slot]-s.currentSlots[slot])
+func (scm *SpellcastingManager) RecoverSpellSlotToMax(slot int) error {
+	return scm.RecoverSpellSlotByAmount(slot, scm.maxSlots[slot]-scm.currentSlots[slot])
 }
 
-func (s *SpellcastingManager) getHighestAvailableSpellSlot() (int, error) {
-	for i := len(s.currentSlots) - 1; i > 0; i-- {
-		if s.currentSlots[i] > 0 {
+func (scm *SpellcastingManager) getHighestAvailableSpellSlot() (int, error) {
+	for i := len(scm.currentSlots) - 1; i > 0; i-- {
+		if scm.currentSlots[i] > 0 {
 			return i, nil
 		}
 	}

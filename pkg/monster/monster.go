@@ -4,6 +4,7 @@ import (
 	"context"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
@@ -21,6 +22,7 @@ type Monster struct {
 	LegendaryActions []LegendaryAction
 	SpecialAbilities []SpecialAbility
 	Spellcasting     MSpellcasting
+	RollManager      *roll_manager.RollManager
 	EventListener    func(event interface{})
 }
 
@@ -211,73 +213,29 @@ func (m *Monster) ModifyHP(value int) {
 }
 
 // MakeSavingThrow calculates a saving throw for the given ability and returns the total roll result or an error.
-func (m *Monster) MakeSavingThrow(ability core.Ability) (int, []int, error) {
+func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int) (core.RollResult, error) {
 	// roll dice, add save
-	var mod int
-	var err error
-	switch ability {
-	case core.AbilityStrength:
-		if m.SaveProficiencies.Strength == 0 {
-			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Strength)
-			if err != nil {
-				return 0, nil, err
-			}
-		} else {
-			mod = m.SaveProficiencies.Strength
-		}
-	case core.AbilityDexterity:
-		if m.SaveProficiencies.Dexterity == 0 {
-			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Dexterity)
-			if err != nil {
-				return 0, nil, err
-			}
-		} else {
-			mod = m.SaveProficiencies.Dexterity
-		}
-	case core.AbilityConstitution:
-		if m.SaveProficiencies.Constitution == 0 {
-			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Constitution)
-			if err != nil {
-				return 0, nil, err
-			}
-		} else {
-			mod = m.SaveProficiencies.Constitution
-		}
-	case core.AbilityIntelligence:
-		if m.SaveProficiencies.Intelligence == 0 {
-			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Intelligence)
-			if err != nil {
-				return 0, nil, err
-			}
-		} else {
-			mod = m.SaveProficiencies.Intelligence
-		}
-	case core.AbilityWisdom:
-		if m.SaveProficiencies.Wisdom == 0 {
-			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Wisdom)
-			if err != nil {
-				return 0, nil, err
-			}
-		} else {
-			mod = m.SaveProficiencies.Wisdom
-		}
-	case core.AbilityCharisma:
-		if m.SaveProficiencies.Charisma == 0 {
-			mod, err = core.GetAbilityScoreModifier(m.AbilityScores.Charisma)
-			if err != nil {
-				return 0, nil, err
-			}
-		} else {
-			mod = m.SaveProficiencies.Charisma
-		}
-	default:
-		return 0, nil, fmt.Errorf("invalid ability: %s", ability)
+	mod, err := m.GetSavingThrowBonus(ability)
+	if err != nil {
+		return nil, err
 	}
 
-	roll, rolls, err := core.RollDice(1, 20)
-	save := roll + mod
+	opts := roll_manager.RollOptions{
+		Advantage:         core.RollNormal, // TODO: Will monsters ever have advantage? Features apply this
+		Modifier:          mod,
+		CriticalThreshold: 0,     // Not relevant
+		TreatOnesAsTwos:   false, // Not relevant
+		RollType:          core.DiceRollSavingThrow,
+		RollContext:       "Saving Throw",
+		TargetValue:       targetValue,
+	}
 
-	return save, rolls, nil
+	res, err := m.RollManager.RollSavingThrow(ability, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (m *Monster) GetName() string {
@@ -393,28 +351,41 @@ func (m *Monster) GetAbilityScoreModifier(ability core.Ability) (int, error) {
 	return abilityMod, nil
 }
 
-func (m *Monster) GetSavingThrowBonus(ability core.Ability) int {
+func (m *Monster) GetSavingThrowBonus(ability core.Ability) (int, error) {
+	var v int
+	var err error
 	switch ability {
 	case core.AbilityStrength:
-		return m.SaveProficiencies.Strength
+		v = m.SaveProficiencies.Strength
 	case core.AbilityDexterity:
-		return m.SaveProficiencies.Dexterity
+		v = m.SaveProficiencies.Dexterity
 	case core.AbilityConstitution:
-		return m.SaveProficiencies.Constitution
+		v = m.SaveProficiencies.Constitution
 	case core.AbilityIntelligence:
-		return m.SaveProficiencies.Intelligence
+		v = m.SaveProficiencies.Intelligence
 	case core.AbilityWisdom:
-		return m.SaveProficiencies.Wisdom
+		v = m.SaveProficiencies.Wisdom
 	case core.AbilityCharisma:
-		return m.SaveProficiencies.Charisma
+		v = m.SaveProficiencies.Charisma
 	default:
-		return false
+		return 0, fmt.Errorf("unsupoorted ability")
 	}
+
+	if v == 0 {
+		v, err = m.GetAbilityScoreModifier(ability)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return v, nil
 }
 
 func (m *Monster) GetEventListener() func(event interface{}) {
 	return m.EventListener
 }
+
+func (m *Monster) IsCharacter() bool { return false }
+func (m *Monster) IsMonster() bool   { return true }
 
 var _ core.Entity = &Monster{}
 

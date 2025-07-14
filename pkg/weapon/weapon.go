@@ -18,8 +18,8 @@ type Weapon struct {
 	IsVersatile  bool
 	IsFinesse    bool
 	NumberOfDice int
-	Die          int
-	DamageType   string
+	Die          core.DiceType
+	DamageType   core.DamageType
 	IsRanged     bool
 }
 
@@ -30,18 +30,12 @@ type WeaponQueryParams struct {
 }
 
 // New creates a new weapon with specified attributes, validating inputs and returning an error for invalid configurations.
-func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die int, damageType string, isRanged bool) (Weapon, error) {
+func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die core.DiceType, damageType core.DamageType, isRanged bool) (Weapon, error) {
 	if name == "" {
 		name = "Unnamed weapon"
 	}
 	if numberOfDice < 1 {
 		return Weapon{}, fmt.Errorf("number of rolling must be greater than 0")
-	}
-	if !core.ValidateDie(die) {
-		return Weapon{}, fmt.Errorf("invalid damage die: %d", die)
-	}
-	if !core.ValidateDamageType(damageType) {
-		return Weapon{}, fmt.Errorf("invalid damage type: %s", damageType)
 	}
 	return Weapon{
 		Name:         name,

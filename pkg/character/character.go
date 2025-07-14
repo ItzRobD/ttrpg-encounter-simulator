@@ -5,7 +5,8 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/armor"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
-	"dnd5e-encounter-simulator-backend/pkg/core/martial_attacks"
+	"dnd5e-encounter-simulator-backend/pkg/core/martial_attack_manager"
+	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
@@ -22,6 +23,7 @@ import (
 // Eq: Struct containing equippeed weapons and armor
 // WeaponProficiency: Struct containing whether character is proficient in each weapon slot
 // SpellcastingManager:
+// MartialAttackManager:
 // ActionPreference: represents character preference to perform melee/ranged/spell actions
 // MeleePreference: represents character preference to use versatile weapon, not, no proference
 // SpellPriority: represents character preference on spell type set by simulator
@@ -31,23 +33,26 @@ import (
 // NumberOfAttacks: represents the number of attacks a character can make (extra attack)
 // EventListener: Registered for action logs
 type Character struct {
-	Name                string
-	Class               Class
-	Level               int
-	AbilityScores       core.AbilityScores
-	AbilityScoreProf    core.AbilityScoresProficiencies
-	HP                  shared.PlayerHP
-	Eq                  Equipment
-	WeaponProficiency   WeaponProficiencies
-	SpellcastingManager *spellcasting_manager.SpellcastingManager
-	ActionPreference    shared.ActionPreference
-	MeleePreference     shared.MeleePreference
-	SpellPriority       shared.SpellPriority
-	EntityModifiers     core.EntityModifiers
-	Feats               CharacterFeats
-	RogueFeatures       RogueFeatures
-	NumberOfAttacks     int
-	EventListener       func(event interface{})
+	Name                 string
+	Class                Class
+	Level                int
+	AbilityScores        core.AbilityScores
+	AbilityScoreProf     core.AbilityScoresProficiencies
+	HP                   shared.PlayerHP
+	Eq                   Equipment
+	WeaponProficiency    WeaponProficiencies
+	SpellcastingManager  *spellcasting_manager.SpellcastingManager
+	MartialAttackManager *martial_attack_manager.MartialAttackManager
+	RollManager          *roll_manager.RollManager
+	ActionPreference     shared.ActionPreference
+	MeleePreference      shared.MeleePreference
+	SpellPriority        shared.SpellPriority
+	EntityModifiers      core.EntityModifiers
+	Feats                CharacterFeats
+	RerollAbilities      roll_manager.RerollAbilities
+	RogueFeatures        RogueFeatures
+	NumberOfAttacks      int
+	EventListener        func(event interface{})
 }
 
 // Equipment represents a character's equipped armor and weapons, including primary, secondary, and ranged weapon slots.
@@ -161,7 +166,7 @@ func initializeSpellcastingManager(ctx context.Context, c *Character, canUpcast 
 
 	spellModValue, err := c.GetSpellBonus(true)
 
-	sm := spellcasting_manager.NewSpellcastingManager(c, spellcasting_manager.CasterCharacter, c.Level, slots, slots, canUpcast, spellModValue)
+	sm := spellcasting_manager.NewSpellcastingManager(c, core.CasterCharacter, c.Level, slots, slots, canUpcast, spellModValue)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +238,7 @@ func (c *Character) AddSRDWeapon(ctx context.Context, weaponID int, slot string)
 
 // AddCustomWeapon adds a custom weapon to the character with specified properties and associates it with a specified slot.
 // Returns an error if weapon creation or adding it to the character fails.
-func (c *Character) AddCustomWeapon(name string, isVersatile bool, isFinesse bool, numberOfDice int, die int, damageType string, isRanged bool, slot string) error {
+func (c *Character) AddCustomWeapon(name string, isVersatile bool, isFinesse bool, numberOfDice int, die core.DiceType, damageType core.DamageType, isRanged bool, slot string) error {
 	w, err := weapon.New(name, isVersatile, isFinesse, numberOfDice, die, damageType, isRanged)
 	if err != nil {
 		return err
@@ -424,25 +429,25 @@ func (c *Character) GetWeaponProficiencyFromSlot(slot shared.WeaponSlot) (bool, 
 // slot specifies the weapon slot to retrieve the weapon from.
 // useVersatile indicates whether to use the weapon in versatile mode, if applicable.
 // Returns the constructed AttackData and an error if any issue occurs in retrieving or calculating weapon properties.
-func (c *Character) CreateWeaponAttackData(slot shared.WeaponSlot, useVersatile bool) (martial_attacks.AttackData, error) {
+func (c *Character) CreateWeaponAttackData(slot shared.WeaponSlot, useVersatile bool) (martial_attack_manager.AttackData, error) {
 	w, err := c.getWeaponFromSlot(slot)
 	if err != nil {
-		return martial_attacks.AttackData{}, err
+		return martial_attack_manager.AttackData{}, err
 	}
 
 	prof, err := c.GetWeaponProficiencyFromSlot(slot)
 	if err != nil {
-		return martial_attacks.AttackData{}, err
+		return martial_attack_manager.AttackData{}, err
 	}
 
 	attackMod, err := w.GetAttackModifier(&c.AbilityScores, c.Level, prof)
 	if err != nil {
-		return martial_attacks.AttackData{}, err
+		return martial_attack_manager.AttackData{}, err
 	}
 
 	damageMod, err := w.GetWeaponModifier(&c.AbilityScores)
 	if err != nil {
-		return martial_attacks.AttackData{}, err
+		return martial_attack_manager.AttackData{}, err
 	}
 
 	die := w.Die
@@ -452,7 +457,7 @@ func (c *Character) CreateWeaponAttackData(slot shared.WeaponSlot, useVersatile 
 		v = true
 	}
 
-	return martial_attacks.AttackData{
+	return martial_attack_manager.AttackData{
 		Name:              w.Name,
 		NumberOfDice:      w.NumberOfDice,
 		Die:               die,
@@ -464,7 +469,7 @@ func (c *Character) CreateWeaponAttackData(slot shared.WeaponSlot, useVersatile 
 }
 
 // CreateAttackRequest generates an attack request with specific weapon data, modifiers, advantage type, and attack count.
-func (c *Character) CreateAttackRequest(slot shared.WeaponSlot, useVersatile bool, advantage core.AdvantageType) (*martial_attacks.AttackRequest, error) {
+func (c *Character) CreateAttackRequest(slot shared.WeaponSlot, useVersatile bool, advantage core.AdvantageType, simulationOptions core.SimulationOptions) (*martial_attack_manager.AttackRequest, error) {
 	attackData, err := c.CreateWeaponAttackData(slot, useVersatile)
 	if err != nil {
 		return nil, err
@@ -472,53 +477,52 @@ func (c *Character) CreateAttackRequest(slot shared.WeaponSlot, useVersatile boo
 
 	// TODO: This will have to be handled internally by other functions to get the values of each of these
 	//		Will have to account for character feats
-	modifiers := martial_attacks.AttackModifiers{
-		BonusAttackRoll:      0,
-		BonusDamageRoll:      0,
+	attackOptions := martial_attack_manager.AttackOptions{
+		BonusToAttackRoll:    0,
+		BonusToDamageRoll:    0,
 		ShouldApplyDamageMod: false,
 		PowerAttack:          false,
 		ImprovedCritical:     false,
 		RerollOnesAndTwos:    false,
-		HalflingLucky:        false,
 	}
 
-	return &martial_attacks.AttackRequest{
-		AttackData:  attackData,
-		Modifiers:   modifiers,
-		Advantage:   advantage,
-		AttackCount: c.NumberOfAttacks,
+	return &martial_attack_manager.AttackRequest{
+		AttackData:        attackData,
+		AttackOptions:     attackOptions,
+		SimulationOptions: simulationOptions,
+		// TODO: I removed target here. make sure this is being set by simulation
 	}, nil
 }
 
 // CreateSpellAttackData creates and returns the data for a spell attack, including attack and spell modifiers.
 // It takes a SpellChoice as input and computes the necessary modifiers for the attack.
-// Returns a SpellAttackData struct and an error if any calculation fails.
-func (c *Character) CreateSpellAttackData(spellChoice spellcasting_manager.SpellChoice) (spellcasting_manager.SpellAttackData, error) {
+// Returns a SpellCastData struct and an error if any calculation fails.
+func (c *Character) CreateSpellAttackData(spellChoice spells.SpellChoice) (spellcasting_manager.SpellCastData, error) {
 	spellBonus, err := c.GetSpellBonus(true)
 	if err != nil {
-		return spellcasting_manager.SpellAttackData{}, err
+		return spellcasting_manager.SpellCastData{}, err
 	}
 
 	spellMod, err := c.GetSpellBonus(false)
 	if err != nil {
-		return spellcasting_manager.SpellAttackData{}, err
+		return spellcasting_manager.SpellCastData{}, err
 	}
 
-	return spellcasting_manager.SpellAttackData{
-		SpellChoice:    spellChoice,
-		AttackModifier: spellBonus,
-		SpellModifier:  spellMod,
+	return spellcasting_manager.SpellCastData{
+		SpellChoice:          spellChoice,
+		AttackModifier:       spellBonus,
+		SpellcastingModifier: spellMod,
 	}, nil
 }
 
 // CreateSpellCastRequest generates a new SpellCastRequest based on the given spell choice and advantage type.
-func (c *Character) CreateSpellCastRequest(spellChoice spellcasting_manager.SpellChoice, advantage core.AdvantageType) (*spellcasting_manager.SpellCastRequest, error) {
+func (c *Character) CreateSpellCastRequest(spellChoice spells.SpellChoice, advantage core.AdvantageType) (*spellcasting_manager.SpellCastRequest, error) {
 	attackData, err := c.CreateSpellAttackData(spellChoice)
 	if err != nil {
 		return nil, err
 	}
 
-	modifiers := spellcasting_manager.SpellModifiers{
+	modifiers := spellcasting_manager.SpellOptions{
 		TreatOnesAsTwos: false,
 		HalflingLucky:   false,
 	}
@@ -531,18 +535,28 @@ func (c *Character) CreateSpellCastRequest(spellChoice spellcasting_manager.Spel
 }
 
 // MakeSavingThrow calculates a saving throw roll using the specified ability and returns the result, rolls, and an error if any.
-func (c *Character) MakeSavingThrow(ability core.Ability) (int, []int, error) {
-	mod, err := core.GetAbilityScoreModifier(c.GetAbilityScore(ability))
+func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int) (core.RollResult, error) {
+	mod, err := c.GetSavingThrowBonus(ability)
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
 
-	roll, rolls, err := core.DiceRollWithModifier(1, 20, mod)
-	if err != nil {
-		return 0, nil, err
+	opts := roll_manager.RollOptions{
+		Advantage:         core.RollNormal, // TODO: Determining advantage needs to be handled ie racial traits
+		Modifier:          mod,
+		CriticalThreshold: 0,     // Not relevant
+		TreatOnesAsTwos:   false, // Not relevant
+		RollType:          core.DiceRollSavingThrow,
+		RollContext:       "Saving Throw",
+		TargetValue:       targetValue,
 	}
 
-	return roll, rolls, nil
+	res, err := c.RollManager.RollSavingThrow(ability, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // GetAbilityScore returns the score for the specified ability of the character. Defaults to 0 if the ability is not found.
@@ -565,6 +579,8 @@ func (c *Character) GetAbilityScore(ability core.Ability) int {
 	}
 }
 
+// GetAbilityScoreModifier calculates the ability score modifier for a given ability based on the character's ability scores.
+// Returns the modifier as an integer or an error if the ability is invalid.
 func (c *Character) GetAbilityScoreModifier(ability core.Ability) (int, error) {
 	var abilityMod int
 	var err error
@@ -591,7 +607,8 @@ func (c *Character) GetAbilityScoreModifier(ability core.Ability) (int, error) {
 	return abilityMod, nil
 }
 
-func (c *Character) GetAbilityProficiency(ability core.Ability) bool {
+// GetIsProficientInAbility checks if the character is proficient in the specified ability and returns true if proficient.
+func (c *Character) GetIsProficientInAbility(ability core.Ability) bool {
 	switch ability {
 	case core.AbilityStrength:
 		return c.AbilityScoreProf.Strength
@@ -610,40 +627,26 @@ func (c *Character) GetAbilityProficiency(ability core.Ability) bool {
 	}
 }
 
-func (c *Character) GetSavingThrowBonus(ability core.Ability) int {
+// GetSavingThrowBonus calculates the saving throw bonus from ability modifiers and proficiency based on character level.
+func (c *Character) GetSavingThrowBonus(ability core.Ability) (int, error) {
 	var pb int
 	var mod int
 	var err error
 
-	switch ability {
-	case core.AbilityStrength:
-		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Strength)
-		pb, err = core.GetCharacterProficiencyBonus(c.Level)
-	case core.AbilityDexterity:
-		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Dexterity)
-		pb, err = core.GetCharacterProficiencyBonus(c.Level)
-	case core.AbilityConstitution:
-		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Constitution)
-		pb, err = core.GetCharacterProficiencyBonus(c.Level)
-	case core.AbilityIntelligence:
-		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Intelligence)
-		pb, err = core.GetCharacterProficiencyBonus(c.Level)
-	case core.AbilityWisdom:
-		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Wisdom)
-		pb, err = core.GetCharacterProficiencyBonus(c.Level)
-	case core.AbilityCharisma:
-		mod, err = core.GetAbilityScoreModifier(c.AbilityScores.Charisma)
-		pb, err = core.GetCharacterProficiencyBonus(c.Level)
-	default:
-		return 0
-	}
-
+	mod, err = c.GetAbilityScoreModifier(ability)
+	pb, err = core.GetCharacterProficiencyBonus(c.Level)
 	if err != nil {
-		return 0
+		return 0, err
 	}
 
-	return pb + mod
+	if c.GetIsProficientInAbility(ability) {
+		return pb + mod, nil
+	}
+	return mod, nil
 }
+
+func (c *Character) IsCharacter() bool { return true }
+func (c *Character) IsMonster() bool   { return false }
 
 func (c *Character) GetEventListener() func(event interface{}) {
 	return c.EventListener

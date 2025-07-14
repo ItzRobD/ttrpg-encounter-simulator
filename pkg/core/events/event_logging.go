@@ -17,9 +17,9 @@ func LogCharacterActionChoiceEvent(actor core.Entity, choice shared.ActionType, 
 	}
 }
 
-func LogMeleeAttackEvent(actor core.Entity, target core.Entity, attackResult core.AttackResultData, listener func(event interface{})) {
+func LogMeleeAttackEvent(actor core.Entity, attackResult core.AttackResult, listener func(event interface{})) {
 	event := &MeleeAttackEvent{
-		Target:         target.GetName(),
+		Target:         attackResult.GetTargetName(),
 		AttackName:     attackResult.GetActorName(),
 		AttackCount:    attackResult.GetAttackCount(),
 		AttackRoll:     attackResult.GetAttackRoll(),
@@ -27,6 +27,22 @@ func LogMeleeAttackEvent(actor core.Entity, target core.Entity, attackResult cor
 		AttackTotal:    attackResult.GetAttackTotal(),
 		Success:        attackResult.GetIsHit(),
 		CriticalHit:    attackResult.GetIsCriticalHit(),
+		DamageTotal:    attackResult.GetDamageResult().GetTotal(),
+		DamageType:     attackResult.GetDamageType().String(),
+	}
+	event.SetActor(actor.GetName())
+
+	if listener != nil {
+		listener(event)
+	}
+}
+
+func LogDamageEvent(actor core.Entity, target core.Entity, damageType string, damage int, rolls []int, listener func(event interface{})) {
+	event := &DamageEvent{
+		Target:     target.GetName(),
+		Amount:     damage,
+		DamageType: damageType,
+		Rolls:      rolls,
 	}
 	event.SetActor(actor.GetName())
 
@@ -44,15 +60,22 @@ func LogSpellChoiceEvent(actor core.Entity, spellChoiceEvent SpellChoiceEvent, l
 	}
 }
 
-func LogSpellAttackEvent(actor core.Entity, target core.Entity, res core.SpellResultData, listener func(event interface{})) {
+func LogSpellAttackEvent(actor core.Entity, target core.Entity, res core.SpellResult, listener func(event interface{})) {
 	event := &SpellAttackEvent{
-		Target:         target.GetName(),
-		SpellName:      res.GetSpellName(),
-		AttackTotal:    res.GetAttackTotal(),
-		AttackModifier: res.GetAttackTotal() - res.GetAttackRoll(),
-		AttackRoll:     res.GetAttackRoll(),
-		Success:        res.GetHasDC(),
-		CriticalHit:    res.GetIsCriticalHit(),
+		Target:            target.GetName(),
+		SpellName:         res.GetSpellName(),
+		AttackTotal:       res.GetAttackTotal(),
+		AttackModifier:    res.GetAttackTotal() - res.GetAttackRoll(),
+		AttackRoll:        res.GetAttackRoll(),
+		Success:           res.GetIsHit(),
+		CriticalHit:       res.GetIsCriticalHit(),
+		DamageTotal:       res.GetDamageResult().GetTotal(),
+		DamageType:        res.GetDamageType().String(),
+		HasDC:             res.GetHasDC(),
+		DCAbility:         res.GetSpellSaveAbility().String(),
+		SaveEffect:        res.GetSpellSaveEffect().String(),
+		DCValue:           res.GetTargetDCValue(),
+		SavingThrowResult: res.GetSpellSaveTotal(),
 	}
 	event.SetActor(actor.GetName())
 
@@ -68,20 +91,6 @@ func LogSpellDCEvent(actor core.Entity, target core.Entity, spell *spells.Spell,
 		DC:          dc,
 		SavingThrow: save,
 		Success:     isHit,
-	}
-	event.SetActor(actor.GetName())
-
-	if listener != nil {
-		listener(event)
-	}
-}
-
-func LogDamageEvent(actor core.Entity, target core.Entity, damageType string, damage int, rolls []int, listener func(event interface{})) {
-	event := &DamageEvent{
-		Target:     target.GetName(),
-		Amount:     damage,
-		DamageType: damageType,
-		Rolls:      rolls,
 	}
 	event.SetActor(actor.GetName())
 
@@ -130,8 +139,11 @@ func LogHPRollEvent(actor core.Entity, rollSum int, rolls []int, toAdd int, list
 	}
 }
 
-func LogDiceRollEvent(actor core.Entity, res core.DiceRollResultData, listener func(event interface{})) {
+func LogDiceRollEvent(actor core.Entity, res core.RollResult, listener func(event interface{})) {
 	event := &DiceRollEvent{
+		RollType:       res.GetDiceRollType(),
+		NumberOfDice:   res.GetNumberOfDice(),
+		Die:            res.GetDiceType(),
 		FinalRollValue: res.GetFinalRollValue(),
 		FinalRolls:     res.GetFinalRolls(),
 		Modifier:       res.GetModifier(),
@@ -142,6 +154,8 @@ func LogDiceRollEvent(actor core.Entity, res core.DiceRollResultData, listener f
 		WasRerolled:    res.GetWasRerolled(),
 		IsCritical:     res.GetIsCritical(),
 		IsNaturalOne:   res.GetIsNaturalOne(),
+		IsSuccess:      res.GetIsSuccess(),
+		TargetValue:    res.GetTargetValue(),
 	}
 	event.SetActor(actor.GetName())
 

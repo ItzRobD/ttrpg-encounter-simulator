@@ -12,7 +12,7 @@ type Simulation struct {
 	dispatcher *events.EventDispatcher
 }
 
-func New(options core.Options) Simulation {
+func New(options core.SimulationOptions) Simulation {
 	dispatcher := events.NewEventDispatcher()
 	//dispatcher.RegisterHandler(&events.AttackHandler{})
 	//dispatcher.RegisterHandler(&events.SpellAttackHandler{})

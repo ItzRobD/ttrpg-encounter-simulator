@@ -1,6 +1,7 @@
 package events
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
 )
 
@@ -49,14 +50,14 @@ func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 func (h *UniversalEventHandler) handleMeleeAttack(e *MeleeAttackEvent) {
 	var s string
 	if e.CriticalHit {
-		s = fmt.Sprintf("[Round %d] <Critical Hit> Attack %d - %s attacks %s with %s. %d to hit. Success: %t\n",
-			e.GetRound(), e.AttackCount, e.GetActor(), e.Target, e.AttackName, e.AttackRoll, e.Success)
+		s = fmt.Sprintf("[Round %d] <Martial Critical Hit> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
+			e.GetRound(), e.AttackCount, e.GetActor(), e.Target, e.AttackName, e.AttackRoll, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
 	} else if !e.Success {
-		s = fmt.Sprintf("[Round %d] <Miss> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
+		s = fmt.Sprintf("[Round %d] <Martial Miss> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
 			e.GetRound(), e.AttackCount, e.GetActor(), e.Target, e.AttackName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success)
 	} else {
-		s = fmt.Sprintf("[Round %d] <Attack> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
-			e.GetRound(), e.AttackCount, e.GetActor(), e.Target, e.AttackName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success)
+		s = fmt.Sprintf("[Round %d] <Martial Attack> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
+			e.GetRound(), e.AttackCount, e.GetActor(), e.Target, e.AttackName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
 	}
 	fmt.Print(s)
 }
@@ -81,15 +82,38 @@ func (h *UniversalEventHandler) handleSpellChoice(e *SpellChoiceEvent) {
 }
 
 func (h *UniversalEventHandler) handleSpellAttack(e *SpellAttackEvent) {
-	fmt.Printf("[Round %d] <Spell Attack> %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
-		e.GetRound(),
-		e.GetActor(),
-		e.Target,
-		e.SpellName,
-		e.AttackTotal,
-		e.AttackRoll,
-		e.AttackModifier,
-		e.Success)
+	var s string
+	switch e.HasDC {
+	case true: // TODO: I need to account for whether the save was successful or not -> need to add that to the event maybe?
+		s = fmt.Sprintf("[Round %d] <Spell DC Attack> %s attacks %s with %s. DC is: %d. %s Saving throw: %d. Success: %t.\n",
+			e.GetRound(),
+			e.GetActor(),
+			e.Target,
+			e.SpellName,
+			e.DCAbility,
+			e.SavingThrowResult,
+			e.Success)
+		if e.Success {
+			if e.SaveEffect == "half" {
+				s += fmt.Sprintf(" Half damage is dealt: %d %s.\n",
+					e.DamageTotal,
+					e.DamageType)
+			} else if e.Success {
+				s += fmt.Sprintf(" No damage is dealt.\n")
+			}
+		}
+	case false:
+		if e.CriticalHit {
+			s = fmt.Sprintf("[Round %d] <Spell Critical Hit> %s attacks %s with %s. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
+				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.AttackRoll, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
+		} else if !e.Success {
+			s = fmt.Sprintf("[Round %d] <Spell Miss> %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
+				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success)
+		} else {
+			s = fmt.Sprintf("[Round %d] <Spell Attack> %s attacks %s with %s. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
+				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
+		}
+	}
 }
 
 func (h *UniversalEventHandler) handleSpellDC(e *SpellDCEvent) {
@@ -143,28 +167,63 @@ func (h *UniversalEventHandler) handleUnconscious(e *UnconsciousEvent) {
 
 func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	var s string
-	if e.WasRerolled {
-		s = fmt.Sprintf("[Round %d] <Roll> %s rolls for %s. Total: %d, final rolls: %v. Advantage: %s, Modifier: %d."+
-			"Dice were rerolled, original rolls: %v \n",
+	switch e.RollType {
+	case core.DiceRollGeneral:
+		s = fmt.Sprintf("[Round %d] <Roll> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d.",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,
-			e.Total,
-			e.FinalRolls,
-			e.Advantage,
-			e.Modifier,
-			e.OriginalRolls)
-	} else {
-		s = fmt.Sprintf("[Round %d] <Roll> %s rolls for %s. Total: %d, final rolls: %v. Advantage: %s, Modifier: %d \n",
-			e.GetRound(),
-			e.GetActor(),
-			e.RollType,
+			e.NumberOfDice,
+			e.Die,
 			e.Total,
 			e.FinalRolls,
 			e.Advantage,
 			e.Modifier)
+	case core.DiceRollInitiative:
+		s = fmt.Sprintf("[Round %d] <Initiative> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d.",
+			e.GetRound(),
+			e.GetActor(),
+			e.RollType,
+			e.NumberOfDice,
+			e.Die,
+			e.Total,
+			e.FinalRolls,
+			e.Advantage,
+			e.Modifier)
+	case core.DiceRollSavingThrow:
+		s = fmt.Sprintf("[Round %d] <Saving Throw> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, DC: %d, Success: %t\n",
+			e.GetRound(),
+			e.GetActor(),
+			e.RollType,
+			e.NumberOfDice,
+			e.Die,
+			e.Total,
+			e.FinalRolls,
+			e.Advantage,
+			e.Modifier,
+			e.TargetValue,
+			e.IsSuccess)
+	case core.DiceRollAbilityCheck:
+		s = fmt.Sprintf("[Round %d] <Ability Check> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t\n",
+			e.GetRound(),
+			e.GetActor(),
+			e.RollType,
+			e.NumberOfDice,
+			e.Die,
+			e.Total,
+			e.FinalRolls,
+			e.Advantage,
+			e.Modifier,
+			e.TargetValue,
+			e.IsSuccess)
 	}
-	fmt.Printf(s)
+
+	if e.WasRerolled {
+		s += fmt.Sprintf("Dice were rerolled, original rolls: %v \n",
+			e.OriginalRolls)
+	} else {
+		s += fmt.Sprintf("\n")
+	}
 }
 
 func (h *UniversalEventHandler) handleHPRoll(e *HPRollEvent) {
