@@ -5,7 +5,7 @@ import (
 	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
+	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -265,7 +265,7 @@ func GetHitDieByClassID(ctx context.Context, classID int) (int, error) {
 
 // GetSpellSlotsByLevelAndClassID retrieves the spell slots for a given character level and class ID.
 // Returns a SpellSlots structure and an error if inputs are invalid or a database query fails.
-func GetSpellSlotsByLevelAndClassID(ctx context.Context, level int, classID int) (spellcasting_manager.SpellSlots, error) {
+func GetSpellSlotsByLevelAndClassID(ctx context.Context, level int, classID int) (spells.SpellSlots, error) {
 	if level <= 0 || level > 20 {
 		return nil, fmt.Errorf("invalid value provided: %d", level)
 	}
@@ -294,7 +294,7 @@ func GetSpellSlotsByLevelAndClassID(ctx context.Context, level int, classID int)
 		return nil, fmt.Errorf("failed to scan spell slots by value and class id: %w", err)
 	}
 
-	slots := make(spellcasting_manager.SpellSlots)
+	slots := make(spells.SpellSlots)
 	for i, value := range levels {
 		slots[i+1] = value
 	}

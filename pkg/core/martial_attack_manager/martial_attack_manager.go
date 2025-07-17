@@ -75,7 +75,6 @@ func (mam *MartialAttackManager) CalculateAttackResults(req *AttackRequest, opti
 			CriticalThreshold: cT,
 			TreatOnesAsTwos:   false,
 			RollType:          core.DiceRollAttack,
-			RollContext:       "Attack Roll",
 			TargetValue:       req.Target.GetAC(),
 		}
 
@@ -92,7 +91,6 @@ func (mam *MartialAttackManager) CalculateAttackResults(req *AttackRequest, opti
 			CriticalThreshold: 0,     // Not relevant to damage function
 			TreatOnesAsTwos:   false, // Not relevant
 			RollType:          core.DiceRollDamage,
-			RollContext:       "Damage Roll",
 			TargetValue:       0, // Not relevant
 		}
 		dmgRollResult, err := mam.rollManager.RollDamage(req, attackRollResult.IsCritical, rollOpts)

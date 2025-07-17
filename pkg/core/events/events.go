@@ -93,7 +93,7 @@ func (e *ActionChoiceEvent) GetEventType() EventType { return ETActionChoiceEven
 
 type SpellChoiceEvent struct {
 	BaseEvent
-	SpellChoice   *spells.SpellChoice
+	SpellChoice   *core.SpellChoice
 	ManagerStatus *spells.SpellcastingManagerStatus
 }
 
@@ -101,20 +101,22 @@ func (e *SpellChoiceEvent) GetEventType() EventType { return ETSpellChoiceEvent 
 
 type SpellAttackEvent struct {
 	BaseEvent
-	Target            string
-	SpellName         string
-	AttackRoll        int
-	AttackModifier    int
-	AttackTotal       int
-	Success           bool
-	CriticalHit       bool
-	DamageTotal       int
-	DamageType        string
-	HasDC             bool
-	DCAbility         string
-	SaveEffect        string
-	DCValue           int
-	SavingThrowResult int
+	Target             string
+	SpellName          string
+	SpellLevel         int
+	AttackRoll         int
+	AttackModifier     int
+	AttackTotal        int
+	Success            bool
+	CriticalHit        bool
+	DamageTotal        int
+	DamageType         string
+	HasDC              bool
+	DCAbility          string
+	SaveEffect         string
+	DCValue            int
+	SavingThrowSuccess bool
+	SavingThrowResult  int
 }
 
 func (e *SpellAttackEvent) GetEventType() EventType { return ETSpellAttackEvent }
@@ -142,10 +144,12 @@ func (e *DamageEvent) GetEventType() EventType { return ETDamageEvent }
 
 type HealEvent struct {
 	BaseEvent
-	Target      string
-	Amount      int
-	Rolls       []int
-	IsMaxHealth bool
+	Target     string
+	Name       string
+	IsSpell    bool
+	SpellLevel int
+	HealTotal  int
+	HealRolls  []int
 }
 
 func (e *HealEvent) GetEventType() EventType { return ETHealEvent }

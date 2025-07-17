@@ -60,22 +60,24 @@ func LogSpellChoiceEvent(actor core.Entity, spellChoiceEvent SpellChoiceEvent, l
 	}
 }
 
-func LogSpellAttackEvent(actor core.Entity, target core.Entity, res core.SpellResult, listener func(event interface{})) {
+func LogSpellAttackEvent(actor core.Entity, res core.SpellResult, listener func(event interface{})) {
 	event := &SpellAttackEvent{
-		Target:            target.GetName(),
-		SpellName:         res.GetSpellName(),
-		AttackTotal:       res.GetAttackTotal(),
-		AttackModifier:    res.GetAttackTotal() - res.GetAttackRoll(),
-		AttackRoll:        res.GetAttackRoll(),
-		Success:           res.GetIsHit(),
-		CriticalHit:       res.GetIsCriticalHit(),
-		DamageTotal:       res.GetDamageResult().GetTotal(),
-		DamageType:        res.GetDamageType().String(),
-		HasDC:             res.GetHasDC(),
-		DCAbility:         res.GetSpellSaveAbility().String(),
-		SaveEffect:        res.GetSpellSaveEffect().String(),
-		DCValue:           res.GetTargetDCValue(),
-		SavingThrowResult: res.GetSpellSaveTotal(),
+		Target:             res.GetTargetName(),
+		SpellName:          res.GetSpellName(),
+		SpellLevel:         res.GetSpellLevel(),
+		AttackTotal:        res.GetAttackTotal(),
+		AttackModifier:     res.GetAttackTotal() - res.GetAttackRoll(),
+		AttackRoll:         res.GetAttackRoll(),
+		Success:            res.GetIsHit(),
+		CriticalHit:        res.GetIsCriticalHit(),
+		DamageTotal:        res.GetValueResult().GetTotal(),
+		DamageType:         res.GetDamageType().String(),
+		HasDC:              res.GetHasDC(),
+		DCAbility:          res.GetSpellSaveAbility().String(),
+		SaveEffect:         res.GetSpellSaveEffect().String(),
+		DCValue:            res.GetTargetDCValue(),
+		SavingThrowSuccess: res.GetSpellSaveSuccess(),
+		SavingThrowResult:  res.GetSpellSaveTotal(),
 	}
 	event.SetActor(actor.GetName())
 
@@ -99,12 +101,14 @@ func LogSpellDCEvent(actor core.Entity, target core.Entity, spell *spells.Spell,
 	}
 }
 
-func LogHealEvent(actor core.Entity, target core.Entity, amt int, rolls []int, listener func(event interface{})) {
+func LogSpellHealEvent(actor core.Entity, res core.SpellResult, listener func(event interface{})) {
 	event := &HealEvent{
-		Target:      target.GetName(),
-		Amount:      amt,
-		Rolls:       rolls,
-		IsMaxHealth: target.GetMaxHP() == target.GetCurrentHP(),
+		Target:     res.GetTargetName(),
+		Name:       res.GetSpellName(),
+		SpellLevel: res.GetSpellLevel(),
+		IsSpell:    true,
+		HealTotal:  res.GetValueResult().GetTotal(),
+		HealRolls:  res.GetValueResult().GetFinalRolls(),
 	}
 	event.SetActor(actor.GetName())
 

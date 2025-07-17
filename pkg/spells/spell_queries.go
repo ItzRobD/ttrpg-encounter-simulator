@@ -6,6 +6,7 @@ import (
 	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
 	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5"
@@ -161,14 +162,17 @@ func getSpellByID(ctx context.Context, id int) (Spell, error) {
 	}
 
 	if ability.Valid {
-		spell.Ability = ability.String
+		spell.SpellDC.Ability = core.Ability(ability.String)
 	} else {
-		spell.Ability = ""
+		spell.SpellDC.Ability = ""
 	}
 	if onSuccess.Valid {
-		spell.OnSuccess = onSuccess.String
+		spell.SpellDC.OnSuccess, err = core.MakeDCOnSuccess(onSuccess.String)
+		if err != nil {
+			return spell, err
+		}
 	} else {
-		spell.OnSuccess = ""
+		spell.SpellDC.OnSuccess = core.DCOnSuccessNone
 	}
 	if levelType.Valid {
 		spell.LevelType = levelType.String
@@ -182,7 +186,7 @@ func getSpellByID(ctx context.Context, id int) (Spell, error) {
 			return spell, err
 		}
 
-		spell.Formulas = make(map[int]CastFormula)
+		spell.Formulas = make(map[int]core.CastFormula)
 
 		for _, formula := range formulas {
 			spell.Formulas[formula.CastLevel] = formula
@@ -193,8 +197,8 @@ func getSpellByID(ctx context.Context, id int) (Spell, error) {
 	return spell, nil
 }
 
-func getSpellFormulas(ctx context.Context, spellID int) ([]CastFormula, error) {
-	var formulas []CastFormula
+func getSpellFormulas(ctx context.Context, spellID int) ([]core.CastFormula, error) {
+	var formulas []core.CastFormula
 	stmt := SELECT(
 		SpellFormulas.FormulaLevel,
 		CASE().
@@ -235,7 +239,7 @@ func getSpellFormulas(ctx context.Context, spellID int) ([]CastFormula, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var formula CastFormula
+		var formula core.CastFormula
 		err2 := rows.Scan(
 			&formula.CastLevel,
 			&formula.NumberOfDice,
@@ -339,7 +343,7 @@ func QuerySpellData(ctx context.Context, params SpellQueryParams) (Spell, error)
 	return spell, nil
 }
 
-func GetSpellFormulaByLevel(ctx context.Context, spellID int, formulaLevel int) (*CastFormula, error) {
+func GetSpellFormulaByLevel(ctx context.Context, spellID int, formulaLevel int) (*core.CastFormula, error) {
 	minLevel, err := getMinimumSpellLevelByID(ctx, spellID)
 	if err != nil {
 		return nil, err
@@ -353,7 +357,7 @@ func GetSpellFormulaByLevel(ctx context.Context, spellID int, formulaLevel int) 
 		return nil, err
 	}
 
-	var formula CastFormula
+	var formula core.CastFormula
 
 	stmt := SELECT(
 		SpellFormulas.FormulaLevel,

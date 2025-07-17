@@ -18,7 +18,7 @@ type AttackOptions interface {
 	GetShouldApplyDamageMod() bool
 	GetIsPowerAttack() bool
 	GetIsImprovedCritical() bool
-	GetShouldRerollOnesAndTwos() bool
+	GetTreatOnesAsTwos() bool
 }
 
 type AttackRequest interface {
@@ -72,7 +72,7 @@ type SpellResult interface {
 	GetSpellSaveRolls() []int
 	GetSpellSaveTotal() int
 	GetSpellSaveSuccess() bool
-	GetDamageResult() RollResult
+	GetValueResult() RollResult
 	GetDamageType() DamageType
 }
 
@@ -110,7 +110,7 @@ type SpellOptions interface {
 	GetBonusToDamageRoll() int
 	GetShouldApplyDamageMod() bool
 	GetIsImprovedCritical() bool
-	GetShouldRerollOnesAndTwos() bool
+	GetTreatOnesAsTwos() bool
 }
 
 type SpellCastRequest interface {

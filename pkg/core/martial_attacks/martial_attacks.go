@@ -45,7 +45,7 @@ package martial_attacks
 //	TargetName    string
 //	AttackName    string
 //	AttackCount   int
-//	IsHit         bool
+//	IsSuccess         bool
 //	IsCriticalHit bool
 //	AttackTotal   int
 //	AttackRoll    int
@@ -58,7 +58,7 @@ package martial_attacks
 //func (r *AttackResult) GetTargetName() string  { return r.TargetName }
 //func (r *AttackResult) GetAttackName() string  { return r.AttackName }
 //func (r *AttackResult) GetAttackCount() int    { return r.AttackCount }
-//func (r *AttackResult) GetIsHit() bool         { return r.IsHit }
+//func (r *AttackResult) GetIsHit() bool         { return r.IsSuccess }
 //func (r *AttackResult) GetIsCriticalHit() bool { return r.IsCriticalHit }
 //func (r *AttackResult) GetAttackTotal() int    { return r.AttackTotal }
 //func (r *AttackResult) GetAttackRoll() int     { return r.AttackRoll }
@@ -166,7 +166,7 @@ package martial_attacks
 //		}
 //		isCrit := core.IsCriticalHit(attackRoll, critThreshold)
 //		if (isCrit || core.DoesAttackHit(attackTotal, target.GetAC())) && attackRoll != 1 {
-//			res.IsHit = true
+//			res.IsSuccess = true
 //			res.IsCriticalHit = isCrit
 //
 //			events.LogMeleeAttackEvent(attacker, target, &res, attacker.GetEventListener())

@@ -1,6 +1,9 @@
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type DiceRollType string
 
@@ -8,6 +11,7 @@ const (
 	DiceRollGeneral      DiceRollType = "general"
 	DiceRollAttack       DiceRollType = "attack"
 	DiceRollDamage       DiceRollType = "damage"
+	DiceRollHealing      DiceRollType = "healing"
 	DiceRollInitiative   DiceRollType = "initiative"
 	DiceRollAbilityCheck DiceRollType = "ability check"
 	DiceRollSavingThrow  DiceRollType = "saving throw"
@@ -96,15 +100,62 @@ func (dt DamageType) String() string {
 	return string(dt)
 }
 
+func MakeDamageType(s string) (DamageType, error) {
+	switch strings.ToLower(s) {
+	case "acid":
+		return DamageAcid, nil
+	case "cold":
+		return DamageCold, nil
+	case "fire":
+		return DamageFire, nil
+	case "force":
+		return DamageForce, nil
+	case "lightning":
+		return DamageLightning, nil
+	case "necrotic":
+		return DamageNecrotic, nil
+	case "poison":
+		return DamagePoison, nil
+	case "psychic":
+		return DamagePsychic, nil
+	case "radiant":
+		return DamageRadiant, nil
+	case "thunder":
+		return DamageThunder, nil
+	case "slashing":
+		return DamageSlashing, nil
+	case "bludgeoning":
+		return DamageBludgeoning, nil
+	case "piercing":
+		return DamagePiercing, nil
+	default:
+		return DamageAcid, fmt.Errorf("invalid damage type")
+	}
+}
+
 type DCOnSuccess string
 
 const (
-	DCOnSuccessNone DCOnSuccess = "none"
-	DCOnSuccessHalf DCOnSuccess = "half"
+	DCOnSuccessNone  DCOnSuccess = "none"
+	DCOnSuccessHalf  DCOnSuccess = "half"
+	DCOnSuccessOther DCOnSuccess = "other"
 )
 
 func (dcs DCOnSuccess) String() string {
 	return string(dcs)
+}
+
+func MakeDCOnSuccess(s string) (DCOnSuccess, error) {
+	switch strings.ToLower(s) {
+	case "none":
+		return DCOnSuccessNone, nil
+	case "half":
+		return DCOnSuccessHalf, nil
+	case "other":
+		return DCOnSuccessOther, nil
+	default:
+		return DCOnSuccessNone, fmt.Errorf("invalid DCOnSuccess")
+	}
 }
 
 type SpellType string
@@ -118,6 +169,17 @@ func (st SpellType) String() string {
 	return string(st)
 }
 
+func MakeSpellType(s string) (SpellType, error) {
+	switch strings.ToLower(s) {
+	case "damage":
+		return STDamage, nil
+	case "healing":
+		return STHealing, nil
+	default:
+		return STDamage, fmt.Errorf("invalid spell type")
+	}
+}
+
 type CasterType string
 
 const (
@@ -125,6 +187,23 @@ const (
 	CasterMonsterInnate     CasterType = "innate_monster"
 	CasterMonsterTrueCaster CasterType = "spellcaster_monster"
 )
+
+func (ct CasterType) String() string {
+	return string(ct)
+}
+
+func MakeCasterType(s string) (CasterType, error) {
+	switch strings.ToLower(s) {
+	case "character":
+		return CasterCharacter, nil
+	case "innate_monster":
+		return CasterMonsterInnate, nil
+	case "spellcaster_monster":
+		return CasterMonsterTrueCaster, nil
+	default:
+		return CasterCharacter, fmt.Errorf("invalid caster type")
+	}
+}
 
 type CastingTime string
 
@@ -137,6 +216,19 @@ const (
 
 func (ct CastingTime) String() string {
 	return string(ct)
+}
+
+func MakeCastingTime(s string) (CastingTime, error) {
+	switch strings.ToLower(s) {
+	case "action":
+		return CastingTimeAction, nil
+	case "bonus":
+		return CastingTimeBonus, nil
+	case "reaction":
+		return CastingTimeReaction, nil
+	default:
+		return CastingTimeAction, fmt.Errorf("invalid casting time")
+	}
 }
 
 type CastFormula struct {

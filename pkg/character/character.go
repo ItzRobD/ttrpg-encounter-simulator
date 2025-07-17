@@ -526,6 +526,14 @@ func (c *Character) CreateSpellCastRequest(spellChoice spells.SpellChoice, advan
 		TreatOnesAsTwos: false,
 		HalflingLucky:   false,
 	}
+	// TODO: Since the rework of spellcasting, roll, and attack managers
+	//		Need to now rework the creation of attack and spellcast requests for
+	//		both mnster and character
+	//		Afterwards look at the logic of turns, keep in mind logging has also changed
+	//		for some things -> universal handler and also use of requests and results
+	//
+	// TODO: There may also be additional errors to clean up from these changes -> types etc
+	//			Also ensure we are validating type creations
 
 	return &spellcasting_manager.SpellCastRequest{
 		AttackData: attackData,

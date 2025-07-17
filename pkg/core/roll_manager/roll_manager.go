@@ -26,8 +26,7 @@ type RollOptions struct {
 	TreatOnesAsTwos   bool // Elemental Adept
 
 	// Context for logging
-	RollType    core.DiceRollType
-	RollContext string // "Attack Roll", "Damage Roll", etc. // TODO: Determine if this is necessary
+	RollType core.DiceRollType
 
 	// Target for success
 	TargetValue int
@@ -180,7 +179,6 @@ func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) 
 
 	options.Modifier += mod
 	options.RollType = core.DiceRollInitiative
-	options.RollContext = "Initiative Roll"
 
 	res, err := rm.RollD20(options)
 	if err != nil {
@@ -193,7 +191,7 @@ func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) 
 	return res, nil
 }
 
-func (rm *RollManager) RollDamage(req core.AttackRequest, isCritical bool, options RollOptions) (*RollResult, error) {
+func (rm *RollManager) RollDamage(req core.AttackRequest, isCritical bool, opts RollOptions) (*RollResult, error) {
 	// Handle damage rolls
 	// Apply Great Weapon Fighting, Elemental Adept
 	// Log all events
@@ -233,14 +231,14 @@ func (rm *RollManager) RollDamage(req core.AttackRequest, isCritical bool, optio
 	}
 
 	// Configure result
-	res.DiceRollType = core.DiceRollDamage
+	res.DiceRollType = opts.RollType
 	res.NumberOfDice = numDice
 	res.Die = die
 	res.FinalRollValue = dmgRollTotal
 	res.FinalRolls = dmgRolls
 	res.Modifier = dmgMod
 	res.Total = dmgRollTotal
-	res.Advantage = options.Advantage
+	res.Advantage = opts.Advantage
 	res.OriginalRolls = dmgRolls
 
 	// apply modifiers
@@ -261,20 +259,20 @@ func (rm *RollManager) RollDamage(req core.AttackRequest, isCritical bool, optio
 	return &res, nil
 }
 
-func (rm *RollManager) RollSpellDamage(req core.SpellCastRequest, isCritical bool, options RollOptions) (*RollResult, error) {
+func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool, opts RollOptions) (*RollResult, error) {
 	var res RollResult
 
-	var dmgMod int
+	var valueMod int
 	if !req.GetSpellCastData().GetSpellChoice().GetFormula().GetUseSpellModifier() {
 		// Get the caster's spell ability modifier
-		dmgMod = req.GetSpellCastData().GetSpellcastingModifier()
+		valueMod = req.GetSpellCastData().GetSpellcastingModifier()
 	} else {
-		dmgMod = req.GetSpellCastData().GetSpellChoice().GetFormula().GetAmountToAdd()
+		valueMod = req.GetSpellCastData().GetSpellChoice().GetFormula().GetAmountToAdd()
 	}
 
 	// Calculate the appropriate amount of damage
-	var dmgRollTotal int
-	var dmgRolls []int
+	var valRollTotal int
+	var valRolls []int
 
 	formula := req.GetSpellCastData().GetSpellChoice().GetFormula()
 	numDice := formula.GetNumberOfDice()
@@ -288,29 +286,29 @@ func (rm *RollManager) RollSpellDamage(req core.SpellCastRequest, isCritical boo
 
 	if crit {
 		if req.GetSimulationOptions().UseImprovedCriticals {
-			dmgRollTotal, dmgRolls = rm.rollExtraMaxDice(numDice, die)
+			valRollTotal, valRolls = rm.rollExtraMaxDice(numDice, die)
 		} else {
-			dmgRollTotal, dmgRolls = rm.rollDoubleDice(numDice, die)
+			valRollTotal, valRolls = rm.rollDoubleDice(numDice, die)
 		}
 	} else {
-		dmgRollTotal, dmgRolls = rm.rollDice(numDice, die)
+		valRollTotal, valRolls = rm.rollDice(numDice, die)
 	}
 
 	// Configure result
-	res.DiceRollType = core.DiceRollDamage
+	res.DiceRollType = opts.RollType
 	res.NumberOfDice = numDice
 	res.Die = die
-	res.FinalRollValue = dmgRollTotal
-	res.FinalRolls = dmgRolls
-	res.Modifier = dmgMod
-	res.Total = dmgRollTotal
-	res.Advantage = options.Advantage
-	res.OriginalRolls = dmgRolls
+	res.FinalRollValue = valRollTotal
+	res.FinalRolls = valRolls
+	res.Modifier = valueMod
+	res.Total = valRollTotal
+	res.Advantage = opts.Advantage
+	res.OriginalRolls = valRolls
 
 	// Apply modifiers
 	// Elemental Adept
 	if containsOnes(res.OriginalRolls) {
-		newRolls, rEvents := rm.applyElementalAdept(dmgRolls, die)
+		newRolls, rEvents := rm.applyElementalAdept(valRolls, die)
 		if len(rEvents) > 0 {
 			res.FinalRolls = newRolls
 			res.RerollEvents = append(res.RerollEvents, rEvents...)
@@ -328,7 +326,6 @@ func (rm *RollManager) RollSpellDamage(req core.SpellCastRequest, isCritical boo
 // RollSavingThrow rolls a d20 for a saving throw, applies bonuses and modifiers, and logs the result. Returns the roll result.
 func (rm *RollManager) RollSavingThrow(ability core.Ability, options RollOptions) (*RollResult, error) {
 	options.RollType = core.DiceRollSavingThrow
-	options.RollContext = "Saving Throw"
 
 	res, err := rm.RollD20(options)
 	if err != nil {
@@ -363,7 +360,6 @@ func (rm *RollManager) RollAbilityCheck(ability core.Ability, options RollOption
 	}
 	options.Modifier += mod
 	options.RollType = core.DiceRollAbilityCheck
-	options.RollContext = "Ability Check"
 
 	res, err := rm.RollD20(options)
 	if err != nil {

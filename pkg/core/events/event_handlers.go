@@ -73,7 +73,7 @@ func (h *UniversalEventHandler) handleSpellChoice(e *SpellChoiceEvent) {
 	fmt.Printf("[Round %d] %s chooses to cast %s at level %d. Formula: %dd%d + %d. Damage type: %s\n",
 		e.GetRound(),
 		e.GetActor(),
-		e.SpellChoice.Spell.Name,
+		e.SpellChoice.Spell.GetName(),
 		e.SpellChoice.Formula.CastLevel,
 		e.SpellChoice.Formula.NumberOfDice,
 		e.SpellChoice.Formula.Die,
@@ -84,36 +84,43 @@ func (h *UniversalEventHandler) handleSpellChoice(e *SpellChoiceEvent) {
 func (h *UniversalEventHandler) handleSpellAttack(e *SpellAttackEvent) {
 	var s string
 	switch e.HasDC {
-	case true: // TODO: I need to account for whether the save was successful or not -> need to add that to the event maybe?
-		s = fmt.Sprintf("[Round %d] <Spell DC Attack> %s attacks %s with %s. DC is: %d. %s Saving throw: %d. Success: %t.\n",
+	case true:
+		s = fmt.Sprintf("[Round %d] <Spell DC Attack> %s attacks %s with %s at level %d. DC is: %d. %s Saving throw: %d. Save success: %t.",
 			e.GetRound(),
 			e.GetActor(),
 			e.Target,
 			e.SpellName,
+			e.SpellLevel,
 			e.DCAbility,
 			e.SavingThrowResult,
-			e.Success)
-		if e.Success {
+			e.SavingThrowSuccess)
+		if e.SavingThrowSuccess {
 			if e.SaveEffect == "half" {
 				s += fmt.Sprintf(" Half damage is dealt: %d %s.\n",
 					e.DamageTotal,
 					e.DamageType)
-			} else if e.Success {
+			} else if e.SaveEffect == "none" {
 				s += fmt.Sprintf(" No damage is dealt.\n")
 			}
+		} else {
+			s += fmt.Sprintf(" Damage: %d %s\n",
+				e.DamageTotal,
+				e.DamageType)
 		}
 	case false:
 		if e.CriticalHit {
-			s = fmt.Sprintf("[Round %d] <Spell Critical Hit> %s attacks %s with %s. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
-				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.AttackRoll, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
+			s = fmt.Sprintf("[Round %d] <Spell Critical Hit> %s attacks %s with %s at level %d. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
+				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.SpellLevel, e.AttackRoll, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
 		} else if !e.Success {
-			s = fmt.Sprintf("[Round %d] <Spell Miss> %s attacks %s with %s. %d to hit, %d + %d. Success: %t\n",
-				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success)
+			s = fmt.Sprintf("[Round %d] <Spell Miss> %s attacks %s with %s at level %d. %d to hit, %d + %d. Success: %t\n",
+				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.SpellLevel, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success)
 		} else {
-			s = fmt.Sprintf("[Round %d] <Spell Attack> %s attacks %s with %s. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
-				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
+			s = fmt.Sprintf("[Round %d] <Spell Attack> %s attacks %s with %s at level %d. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
+				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.SpellLevel, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
 		}
 	}
+
+	fmt.Print(s)
 }
 
 func (h *UniversalEventHandler) handleSpellDC(e *SpellDCEvent) {
@@ -136,12 +143,28 @@ func (h *UniversalEventHandler) handleDamage(e *DamageEvent) {
 }
 
 func (h *UniversalEventHandler) handleHeal(e *HealEvent) {
-	fmt.Printf("[Round %d] <Heal> %s heals %s for %d hp, rolls: %v\n",
-		e.GetRound(),
-		e.GetActor(),
-		e.Target,
-		e.Amount,
-		e.Rolls)
+	var s string
+	switch e.IsSpell {
+	case true:
+		s = fmt.Sprintf("[Round %d] <Heal> %s heals %s using %s at level %d for %d hp, rolls: %v\n",
+			e.GetRound(),
+			e.GetActor(),
+			e.Target,
+			e.Name,
+			e.SpellLevel,
+			e.HealTotal,
+			e.HealRolls)
+	case false:
+		s = fmt.Sprintf("[Round %d] <Heal> %s heals %s using %sfor %d hp, rolls: %v\n",
+			e.GetRound(),
+			e.GetActor(),
+			e.Target,
+			e.Name,
+			e.HealTotal,
+			e.HealRolls)
+	}
+
+	fmt.Print(s)
 }
 
 func (h *UniversalEventHandler) handleDeath(e *DeathEvent) {
@@ -224,6 +247,8 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	} else {
 		s += fmt.Sprintf("\n")
 	}
+
+	fmt.Print(s)
 }
 
 func (h *UniversalEventHandler) handleHPRoll(e *HPRollEvent) {
@@ -334,7 +359,7 @@ func (h *UniversalEventHandler) handleSavingThrow(e *SavingThrowEvent) {
 //			spellAttackEvent.GetRound(),
 //			spellAttackEvent.GetActor(),
 //			spellAttackEvent.Target,
-//			spellAttackEvent.SpellName,
+//			spellAttackEvent.Name,
 //			spellAttackEvent.AttackTotal,
 //			spellAttackEvent.AttackRoll,
 //			spellAttackEvent.AttackModifier,

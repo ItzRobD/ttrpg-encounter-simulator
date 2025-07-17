@@ -23,7 +23,7 @@ func (ao AttackOptions) GetBonusToDamageRoll() int        { return ao.BonusToDam
 func (ao AttackOptions) GetShouldApplyDamageMod() bool    { return ao.ShouldApplyDamageMod }
 func (ao AttackOptions) GetIsPowerAttack() bool           { return ao.PowerAttack }
 func (ao AttackOptions) GetIsImprovedCritical() bool      { return ao.ImprovedCritical }
-func (ao AttackOptions) GetShouldRerollOnesAndTwos() bool { return ao.RerollOnesAndTwos }
+func (ao AttackOptions) GetTreatOnesAsTwos() bool         { return ao.RerollOnesAndTwos }
 
 type AttackData struct {
 	Name              string

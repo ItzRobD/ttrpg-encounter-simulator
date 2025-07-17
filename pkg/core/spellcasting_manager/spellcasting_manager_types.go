@@ -52,7 +52,7 @@ type SpellResult struct {
 	SpellTotalValue  int // Damage or heal amount
 	AttackRoll       int
 	AttackTotal      int
-	IsHit            bool
+	IsSuccess        bool
 	IsCriticalHit    bool
 	HasDC            bool
 	TargetDCValue    int
@@ -61,7 +61,7 @@ type SpellResult struct {
 	SpellSaveRolls   []int
 	SpellSaveTotal   int
 	SpellSaveSuccess bool
-	DamageRoll       core.RollResult
+	ValueRoll        core.RollResult
 	DamageType       core.DamageType
 }
 
@@ -72,7 +72,7 @@ func (r *SpellResult) GetSpellLevel() int                   { return r.SpellLeve
 func (r *SpellResult) GetSpellTotalValue() int              { return r.SpellTotalValue }
 func (r *SpellResult) GetAttackRoll() int                   { return r.AttackRoll }
 func (r *SpellResult) GetAttackTotal() int                  { return r.AttackTotal }
-func (r *SpellResult) GetIsHit() bool                       { return r.IsHit }
+func (r *SpellResult) GetIsHit() bool                       { return r.IsSuccess }
 func (r *SpellResult) GetIsCriticalHit() bool               { return r.IsCriticalHit }
 func (r *SpellResult) GetHasDC() bool                       { return r.HasDC }
 func (r *SpellResult) GetTargetDCValue() int                { return r.TargetDCValue }
@@ -81,5 +81,5 @@ func (r *SpellResult) GetSpellSaveEffect() core.DCOnSuccess { return r.SpellSave
 func (r *SpellResult) GetSpellSaveRolls() []int             { return r.SpellSaveRolls }
 func (r *SpellResult) GetSpellSaveTotal() int               { return r.SpellSaveTotal }
 func (r *SpellResult) GetSpellSaveSuccess() bool            { return r.SpellSaveSuccess }
-func (r *SpellResult) GetDamageResult() core.RollResult     { return r.DamageRoll }
+func (r *SpellResult) GetValueResult() core.RollResult      { return r.ValueRoll }
 func (r *SpellResult) GetDamageType() core.DamageType       { return r.DamageType }

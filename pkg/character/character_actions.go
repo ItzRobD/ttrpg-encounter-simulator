@@ -44,7 +44,7 @@ import (
 //	target.ModifyHP(amount)
 //	actualHealing := target.GetCurrentHP() - initialHP
 //
-//	events.LogHealEvent(c, target, actualHealing, rolls, c.EventListener)
+//	events.LogSpellHealEvent(c, target, actualHealing, rolls, c.EventListener)
 //
 //	return &spells.SpellResult{
 //		Success: true,
@@ -74,7 +74,7 @@ import (
 //
 //	t.ModifyHP(sum)
 //
-//	events.LogHealEvent(c, t, sum, rolls, c.EventListener)
+//	events.LogSpellHealEvent(c, t, sum, rolls, c.EventListener)
 //	return true, nil
 //}
 

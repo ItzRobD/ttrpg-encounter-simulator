@@ -1,5 +1,7 @@
 package core
 
+import "strings"
+
 type Ability string
 
 const (
@@ -14,6 +16,25 @@ const (
 
 func (a Ability) String() string {
 	return string(a)
+}
+
+func MakeAbility(s string) Ability {
+	switch strings.ToLower(s) {
+	case "str", "strength":
+		return AbilityStrength
+	case "dex", "dexterity":
+		return AbilityDexterity
+	case "con", "constitution":
+		return AbilityConstitution
+	case "int", "intelligence":
+		return AbilityIntelligence
+	case "wis", "wisdom":
+		return AbilityWisdom
+	case "cha", "charisma":
+		return AbilityCharisma
+	default:
+		return AbilityNone
+	}
 }
 
 type AbilityScores struct {

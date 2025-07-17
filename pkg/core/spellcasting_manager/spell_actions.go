@@ -10,11 +10,13 @@ import (
 func (scm *SpellcastingManager) CastSpell(req *SpellCastRequest, options SpellOptions) (*SpellResult, error) {
 	switch req.SpellCastData.SpellChoice.Spell.GetSpellType() {
 	case core.STDamage:
-		// Damage
+		scm.castDamageSpell(req, options)
 	case core.STHealing:
-		// Healing
-
+		scm.castHealingSpell(req, options)
+	default:
+		return nil, fmt.Errorf("Invalid spell cast data")
 	}
+	return nil, nil
 }
 
 func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options SpellOptions) (*SpellResult, error) {
@@ -40,7 +42,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 				SpellTotalValue:  0,
 				AttackRoll:       0,
 				AttackTotal:      0,
-				IsHit:            false,
+				IsSuccess:        false,
 				IsCriticalHit:    false,
 				HasDC:            req.GetSpellCastData().GetSpellChoice().GetSpell().GetHasDC(),
 				TargetDCValue:    targetDC,
@@ -49,7 +51,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 				SpellSaveRolls:   saveRes.GetFinalRolls(),
 				SpellSaveTotal:   saveRes.GetTotal(),
 				SpellSaveSuccess: saveRes.GetIsSuccess(),
-				DamageRoll:       nil,
+				ValueRoll:        nil,
 				DamageType:       req.GetSpellCastData().GetSpellChoice().GetFormula().GetDamageType(),
 			}
 
@@ -65,11 +67,10 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 			CriticalThreshold: 0,                       // Not relevant to damage function
 			TreatOnesAsTwos:   options.TreatOnesAsTwos, // TODO: Does this make sense to pull from options
 			RollType:          core.DiceRollDamage,
-			RollContext:       "Damage Roll",
 			TargetValue:       0, // Not relevant
 		}
 
-		dmgRollResult, err := scm.rollManager.RollSpellDamage(req, false, rollOpts)
+		dmgRollResult, err := scm.rollManager.RollSpellValue(req, false, rollOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +83,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 			SpellTotalValue:  dmgRollResult.Total,
 			AttackRoll:       0,
 			AttackTotal:      0,
-			IsHit:            true,
+			IsSuccess:        true,
 			IsCriticalHit:    false,
 			HasDC:            req.GetSpellCastData().GetSpellChoice().GetSpell().GetHasDC(),
 			TargetDCValue:    targetDC,
@@ -91,14 +92,14 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 			SpellSaveRolls:   saveRes.GetFinalRolls(),
 			SpellSaveTotal:   saveRes.GetTotal(),
 			SpellSaveSuccess: saveRes.GetIsSuccess(),
-			DamageRoll:       dmgRollResult,
+			ValueRoll:        dmgRollResult,
 			DamageType:       req.GetSpellCastData().GetSpellChoice().GetFormula().GetDamageType(),
 		}
 
 		if saveRes.GetIsSuccess() && req.GetSpellCastData().GetSpellChoice().GetSpell().GetSpellDC().GetOnSuccess() == core.DCOnSuccessHalf {
 			// Target Takes half-damage
 			dmgRollResult.Total = dmgRollResult.Total / 2
-			spellResult.DamageRoll = dmgRollResult
+			spellResult.ValueRoll = dmgRollResult
 			spellResult.SpellTotalValue = dmgRollResult.Total
 		}
 
@@ -106,7 +107,6 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 
 		return &spellResult, nil
 	case false:
-
 		// Attack Roll
 		attackMod := req.SpellCastData.AttackModifier + req.SpellOptions.BonusToAttackRoll
 		cT := 20
@@ -120,7 +120,6 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 			CriticalThreshold: cT,
 			TreatOnesAsTwos:   options.TreatOnesAsTwos, // Not relevant to the attack roll
 			RollType:          core.DiceRollAttack,
-			RollContext:       "Attack Roll",
 			TargetValue:       req.Target.GetAC(),
 		}
 
@@ -136,11 +135,10 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 			CriticalThreshold: 0,                       // Not relevant to damage function
 			TreatOnesAsTwos:   options.TreatOnesAsTwos, // TODO: Does this make sense to pull from options
 			RollType:          core.DiceRollDamage,
-			RollContext:       "Damage Roll",
 			TargetValue:       0, // Not relevant
 		}
 
-		dmgRollResult, err := scm.rollManager.RollSpellDamage(req, attackRollResult, rollOpts)
+		dmgRollResult, err := scm.rollManager.RollSpellValue(req, attackRollResult.IsCritical, rollOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -153,28 +151,62 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 			SpellTotalValue:  dmgRollResult.Total,
 			AttackRoll:       attackRollResult.FinalRollValue,
 			AttackTotal:      attackRollResult.Total,
-			IsHit:            attackRollResult.IsSuccess,
+			IsSuccess:        attackRollResult.IsSuccess,
 			IsCriticalHit:    attackRollResult.IsCritical,
 			HasDC:            req.GetSpellCastData().GetSpellChoice().GetSpell().GetHasDC(),
 			SpellSaveAbility: req.GetSpellCastData().GetSpellChoice().GetSpell().GetSpellDC().GetAbility(),
 			SpellSaveRolls:   nil,
 			SpellSaveTotal:   0,
 			SpellSaveSuccess: false,
-			DamageRoll:       dmgRollResult,
+			ValueRoll:        dmgRollResult,
 			DamageType:       req.GetSpellCastData().GetSpellChoice().GetFormula().GetDamageType(),
 		}
 
 		events.LogSpellAttackEvent(scm.parent, &attackResult, scm.parent.GetEventListener())
 
 		return &attackResult, nil
+	default:
+		return nil, fmt.Errorf("Invalid spell cast data")
 	}
-
-	return &res, nil
 }
 
-func (scm *SpellcastingManager) castHealingSpell(target core.Entity, spell *core.SpellChoice) error {
-	var result SpellResult
+func (scm *SpellcastingManager) castHealingSpell(req *SpellCastRequest, options SpellOptions) (*SpellResult, error) {
+	res := SpellResult{
+		ActorName:        scm.parent.GetName(),
+		TargetName:       req.Target.GetName(),
+		SpellName:        req.GetSpellCastData().GetSpellChoice().GetSpell().GetName(),
+		SpellLevel:       req.GetSpellCastData().GetSpellChoice().GetSpell().GetLevel(),
+		SpellTotalValue:  0,
+		AttackRoll:       0,
+		AttackTotal:      0,
+		IsSuccess:        true,
+		IsCriticalHit:    false,
+		HasDC:            false,
+		TargetDCValue:    0,
+		SpellSaveAbility: "",
+		SpellSaveEffect:  "",
+		SpellSaveRolls:   nil,
+		SpellSaveTotal:   0,
+		SpellSaveSuccess: false,
+		ValueRoll:        nil,
+		DamageType:       "",
+	}
 
+	opts := roll_manager.RollOptions{
+		RollType: core.DiceRollHealing,
+	}
+
+	healRollResult, err := scm.rollManager.RollSpellValue(req, false, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	res.SpellTotalValue = healRollResult.Total
+	res.ValueRoll = healRollResult
+
+	events.LogSpellHealEvent(scm.parent, &res, scm.parent.GetEventListener())
+
+	return &res, nil
 }
 
 func (scm *SpellcastingManager) IsSaveSuccessful(roll int, dc int) bool {
