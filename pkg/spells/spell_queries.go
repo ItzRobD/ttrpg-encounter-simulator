@@ -167,7 +167,7 @@ func getSpellByID(ctx context.Context, id int) (Spell, error) {
 		spell.SpellDC.Ability = ""
 	}
 	if onSuccess.Valid {
-		spell.SpellDC.OnSuccess, err = core.MakeDCOnSuccess(onSuccess.String)
+		spell.SpellDC.OnSuccess, err = core.NewDCOnSuccess(onSuccess.String)
 		if err != nil {
 			return spell, err
 		}

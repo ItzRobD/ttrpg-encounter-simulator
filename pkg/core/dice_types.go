@@ -1,0 +1,76 @@
+package core
+
+import "fmt"
+
+type DiceRollType string
+
+const (
+	DiceRollGeneral      DiceRollType = "general"
+	DiceRollAttack       DiceRollType = "attack"
+	DiceRollDamage       DiceRollType = "damage"
+	DiceRollHealing      DiceRollType = "healing"
+	DiceRollInitiative   DiceRollType = "initiative"
+	DiceRollAbilityCheck DiceRollType = "ability check"
+	DiceRollSavingThrow  DiceRollType = "saving throw"
+)
+
+type DiceType int
+
+const (
+	D4   DiceType = 4
+	D6   DiceType = 6
+	D8   DiceType = 8
+	D10  DiceType = 10
+	D12  DiceType = 12
+	D20  DiceType = 20
+	D100 DiceType = 100
+)
+
+func (dt DiceType) String() string {
+	return fmt.Sprintf("%d", int(dt))
+}
+
+func (dt DiceType) Int() int {
+	return int(dt)
+}
+
+func (dt DiceType) Max() int {
+	return int(dt)
+}
+
+func (dt DiceType) Min() int {
+	return 1
+}
+
+func (dt DiceType) Avg() float64 {
+	return (float64(dt) / 2) + 0.5
+}
+
+func (dt DiceType) IsValid() bool {
+	switch dt {
+	case D4, D6, D8, D10, D12, D20, D100:
+		return true
+	}
+	return false
+}
+
+type AdvantageType int
+
+const (
+	RollNormal AdvantageType = iota
+	RollAdvantage
+	RollDisadvantage
+)
+
+func (at AdvantageType) String() string {
+	switch at {
+	case RollNormal:
+		return "Normal"
+	case RollAdvantage:
+		return "Advantage"
+	case RollDisadvantage:
+		return "Disadvantage"
+	default:
+		return "invalid"
+	}
+}

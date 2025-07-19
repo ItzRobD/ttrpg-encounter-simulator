@@ -2,7 +2,6 @@ package spellcasting_manager
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"errors"
 	"math/rand/v2"
@@ -135,9 +134,9 @@ func (scm *SpellcastingManager) findBestUnderheal(options []HealingOption) Heali
 	return best
 }
 
-func (scm *SpellcastingManager) ChooseSpellByPriority(t core.SpellType, priority shared.SpellPriority) (*core.SpellChoice, error) {
+func (scm *SpellcastingManager) ChooseSpellByPriority(t core.SpellType, priority core.SpellPriority) (*core.SpellChoice, error) {
 	switch priority {
-	case shared.SPNoPreference: // Random known spell
+	case core.SPNoPreference: // Random known spell
 		choice, err := scm.getRandomSpellChoice(t, false)
 		if err != nil {
 			var spellErr *SpellcastingError
@@ -151,7 +150,7 @@ func (scm *SpellcastingManager) ChooseSpellByPriority(t core.SpellType, priority
 			return nil, err
 		}
 		return choice, nil
-	case shared.SPHighestLevel:
+	case core.SPHighestLevel:
 		choice, err := scm.getHighestLevelSpellChoice(t)
 		if err != nil {
 			var spellSlotErr *SpellSlotError
@@ -165,7 +164,7 @@ func (scm *SpellcastingManager) ChooseSpellByPriority(t core.SpellType, priority
 			return nil, err
 		}
 		return choice, nil
-	case shared.SPLowestLevel:
+	case core.SPLowestLevel:
 		choice, err := scm.getLowestLevelSpellChoice(t)
 		if err != nil {
 			var spellSlotErr *SpellSlotError
@@ -179,19 +178,19 @@ func (scm *SpellcastingManager) ChooseSpellByPriority(t core.SpellType, priority
 			return nil, err
 		}
 		return choice, nil
-	case shared.SPCantrip: // Prioritizes highest value cantrip
+	case core.SPCantrip: // Prioritizes highest value cantrip
 		choice, err := scm.getHighestAverageCantrip(t)
 		if err != nil {
 			return nil, err
 		}
 		return choice, nil
-	case shared.SPRandomCantrip:
+	case core.SPRandomCantrip:
 		choice, err := scm.getRandomCantripChoice(t)
 		if err != nil {
 			return nil, err
 		}
 		return choice, nil
-	case shared.SPRandomLeveledSpell:
+	case core.SPRandomLeveledSpell:
 		choice, err := scm.getRandomSpellChoice(t, true)
 		if err != nil {
 			var spellErr *SpellcastingError
@@ -205,7 +204,7 @@ func (scm *SpellcastingManager) ChooseSpellByPriority(t core.SpellType, priority
 			return nil, err
 		}
 		return choice, nil
-	case shared.SPAreaOfEffect:
+	case core.SPAreaOfEffect:
 		choice, err := scm.getHighestAverageAvailableAOESpellChoice(t)
 		if err != nil {
 			var spellErr *SpellcastingError
@@ -219,7 +218,7 @@ func (scm *SpellcastingManager) ChooseSpellByPriority(t core.SpellType, priority
 			return nil, err
 		}
 		return choice, nil
-	case shared.SPHighestDamage:
+	case core.SPHighestDamage:
 		choice, err := scm.getHighestAverageAvailableSpellChoice(t)
 		if err != nil {
 			var spellErr *SpellcastingError
@@ -323,7 +322,7 @@ func (scm *SpellcastingManager) getHighestAverageAvailableOfPool(pool []*spells.
 	return &core.SpellChoice{Spell: highestSpell, Formula: highestFormula}, nil
 }
 
-func (scm *SpellcastingManager) GetBestFormulaForSpell(spell spells.Spell, p shared.SpellPriority) (*core.CastFormula, error) {
+func (scm *SpellcastingManager) GetBestFormulaForSpell(spell spells.Spell, p core.SpellPriority) (*core.CastFormula, error) {
 	var formula *core.CastFormula
 	var err error
 	var value int
@@ -332,12 +331,12 @@ func (scm *SpellcastingManager) GetBestFormulaForSpell(spell spells.Spell, p sha
 		return nil, NewSpellSlotError(0, "actor has no available spell slots", ERROR_SLOT_NOT_AVAILABLE)
 	}
 
-	if p != shared.SPLowestLevel && p != shared.SPHighestLevel {
+	if p != core.SPLowestLevel && p != core.SPHighestLevel {
 		return nil, NewSpellcastingError(spell.Name, "cannot get best formula for spell - invalid priority", ERROR_GENERIC_SPELL)
 	}
 
 	switch p {
-	case shared.SPLowestLevel:
+	case core.SPLowestLevel:
 		if spell.Level == 0 {
 			value, formula, err = spell.GetAverageDamageCantrip(scm.parent.GetCasterLevel(), scm.spellcastModifierValue)
 			if err != nil {
@@ -364,7 +363,7 @@ func (scm *SpellcastingManager) GetBestFormulaForSpell(spell spells.Spell, p sha
 			return nil, NewSpellcastingError(spell.Name, "unable to cast spell", ERROR_GENERIC_SPELL)
 		}
 		return formula, nil
-	case shared.SPHighestLevel:
+	case core.SPHighestLevel:
 		if spell.Level == 0 {
 			value, formula, err = spell.GetAverageDamageCantrip(scm.parent.GetCasterLevel(), scm.spellcastModifierValue)
 			if err != nil {

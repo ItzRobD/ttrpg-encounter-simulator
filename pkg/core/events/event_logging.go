@@ -2,11 +2,10 @@ package events
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 )
 
-func LogCharacterActionChoiceEvent(actor core.Entity, choice shared.ActionType, listener func(event interface{})) {
+func LogCharacterActionChoiceEvent(actor core.Entity, choice core.ActionType, listener func(event interface{})) {
 	event := &ActionChoiceEvent{
 		ActionChoice: choice,
 	}

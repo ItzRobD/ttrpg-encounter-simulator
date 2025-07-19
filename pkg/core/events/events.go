@@ -2,7 +2,6 @@ package events
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"time"
 )
@@ -79,7 +78,7 @@ func (e *MeleeAttackEvent) GetEventType() EventType { return ETAttackEvent }
 
 type ActionChoiceEvent struct {
 	BaseEvent
-	ActionChoice shared.ActionType
+	ActionChoice core.ActionType
 }
 
 func (e *ActionChoiceEvent) GetEventType() EventType { return ETActionChoiceEvent }
