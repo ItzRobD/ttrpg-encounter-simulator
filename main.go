@@ -146,7 +146,7 @@ func main() {
 		CanUpcast:           true,
 	}
 
-	c, err := character.New(ctx, "Frank", 13, 10, as, hp, shared.APPreferSpells, shared.SPNoPreference, entityModifiers)
+	c, err := character.New(ctx, "Frank", 13, 10, as, hp, core.APPreferSpells, core.SPNoPreference, entityModifiers)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -221,9 +221,9 @@ func main() {
 		HasIncreasedCrits:         false,
 		AllowCharacterHeals:       true,
 		AllowMonsterHeals:         true,
-		TargetPriority:            shared.NoPriority,
-		HealPriority:              shared.PrioritizeMostDamaged,
-		ActionPreference:          shared.APNoPreference,
+		TargetPriority:            core.NoPriority,
+		HealPriority:              core.PrioritizeMostDamaged,
+		ActionPreference:          core.APNoPreference,
 		AOEHitsAllEnemies:         false,
 		CharacterHealThresholdPct: 50,
 		MonsterHealThresholdPct:   50,

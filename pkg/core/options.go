@@ -1,9 +1,5 @@
 package core
 
-import (
-	"dnd5e-encounter-simulator-backend/pkg/shared"
-)
-
 type SimulationOptions struct {
 	UseMonsterHPAverage       bool
 	CanMonstersCrit           bool
@@ -14,9 +10,9 @@ type SimulationOptions struct {
 	MonstersAlwaysUpcast      bool
 	AllowCharacterHeals       bool
 	AllowMonsterHeals         bool
-	TargetPriority            shared.Prioritization
-	HealPriority              shared.Prioritization
-	ActionPreference          shared.ActionPreference
+	TargetPriority            TargetPrioritization
+	HealPriority              TargetPrioritization
+	ActionPreference          ActionPreference
 	AOEHitsAllEnemies         bool
 	CharacterHealThresholdPct int
 	MonsterHealThresholdPct   int

@@ -6,7 +6,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/martial_attacks"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
 )
 
@@ -23,19 +22,19 @@ func (e *Encounter) handleCharacterTurn(character *character.Character, advantag
 	}
 
 	switch actionType {
-	case shared.ATHeal:
+	case core.ATHeal:
 		e.performCharacterHealAction(character)
 		return
-	case shared.ATRanged:
+	case core.ATRanged:
 		e.performCharacterRangedAttack(character, advantage)
-	case shared.ATMelee:
+	case core.ATMelee:
 		// TODO: Placeholder versatile bool
 		e.performCharacterMeleeAttack(character, character.EntityModifiers.UseVersatileAttacks, advantage)
-	case shared.ATSpell:
+	case core.ATSpell:
 		// TODO: Placeholder cast level
 		e.performCharacterSpellAttack(character, 5, advantage)
 		return
-	case shared.ATNoAction:
+	case core.ATNoAction:
 		fallthrough
 	default:
 		// No action to be taken
@@ -51,7 +50,7 @@ func (e *Encounter) performCharacterRangedAttack(c *character.Character, advanta
 	}
 	events.LogTargetChoiceEvent(c, target, c.GetEventListener())
 
-	req, err := c.CreateAttackRequest(shared.WSPrimary, false, advantage)
+	req, err := c.CreateAttackRequest(core.WSPrimary, false, advantage)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -80,7 +79,7 @@ func (e *Encounter) performCharacterMeleeAttack(c *character.Character, useVersa
 	// TODO: Add secondary slot
 	// Perform attack using main slot
 
-	req, err := c.CreateAttackRequest(shared.WSPrimary, useVersatileAttack, advantage)
+	req, err := c.CreateAttackRequest(core.WSPrimary, useVersatileAttack, advantage)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -127,7 +126,7 @@ func (e *Encounter) performCharacterSpellAttack(c *character.Character, castLeve
 	if !e.Options.AOEHitsAllEnemies {
 		target, _ := e.chooseDamageTargetByPriority(c)
 		// TODO: how are we choosing spell preference
-		damageSpell, err := e.chooseDamageSpell(c, shared.SPHighestLevel)
+		damageSpell, err := e.chooseDamageSpell(c, core.SPHighestLevel)
 		if err != nil {
 			fmt.Println(err)
 		}

@@ -1,8 +1,8 @@
 package character
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"fmt"
 )
@@ -228,13 +228,13 @@ import (
 //	return false, 0, nil
 //}
 
-func (c *Character) getWeaponFromSlot(slot shared.WeaponSlot) (*weapon.Weapon, error) {
+func (c *Character) getWeaponFromSlot(slot core.WeaponSlot) (*weapon.Weapon, error) {
 	switch slot {
-	case shared.WSPrimary:
+	case core.WSPrimary:
 		return &c.Eq.Primary, nil
-	case shared.WSSecondary:
+	case core.WSSecondary:
 		return &c.Eq.Secondary, nil
-	case shared.WSRanged:
+	case core.WSRanged:
 		return &c.Eq.Ranged, nil
 	default:
 		return nil, fmt.Errorf("invalid slot identifier provided: %s", slot)

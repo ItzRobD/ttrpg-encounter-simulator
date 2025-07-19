@@ -4,7 +4,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"fmt"
 	"math/rand/v2"
 )
@@ -51,15 +50,15 @@ func (e *Encounter) chooseHealTargetByPriority(actor core.Entity) (core.Entity, 
 		}
 
 		switch e.Options.HealPriority {
-		case shared.PrioritizeLowestHealth:
+		case core.PrioritizeLowestHealth:
 			return e.findLowestHPCharacter(characters), nil
-		case shared.PrioritizeMostDamaged:
+		case core.PrioritizeMostDamaged:
 			return e.findMostDamagedCharacter(characters), nil
-		case shared.PrioritizeHealer:
+		case core.PrioritizeHealer:
 			return e.findBestHealer(characters), nil
-		case shared.PrioritizeSpellcasting:
+		case core.PrioritizeSpellcaster:
 			return e.findBestDamageSpellcaster(characters), nil
-		case shared.NoPriority:
+		case core.NoPriority:
 			fallthrough
 		default:
 			return characters[rand.IntN(len(characters))], nil
@@ -74,46 +73,46 @@ func (e *Encounter) chooseHealTargetByPriority(actor core.Entity) (core.Entity, 
 func (e *Encounter) selectMonsterByPriority(monsters []*monster.Monster) (*monster.Monster, error) {
 	var target *monster.Monster
 	switch e.Options.TargetPriority {
-	case shared.NoPriority:
+	case core.NoPriority:
 		//fmt.Println("No TargetPriority")
 		target = monsters[rand.IntN(len(monsters))]
-	case shared.PrioritizeHighestCR:
+	case core.PrioritizeHighestCR:
 		for _, m := range monsters {
 			if target == nil || m.CR > target.CR {
 				target = m
 			}
 		}
-	case shared.PrioritizeLowestCR:
+	case core.PrioritizeLowestCR:
 		for _, m := range monsters {
 			if target == nil || m.CR < target.CR {
 				target = m
 			}
 		}
-	case shared.PrioritizeMostDamaged:
+	case core.PrioritizeMostDamaged:
 		for _, m := range monsters {
 			if target == nil || m.GetMaxHP()-m.GetCurrentHP() > target.GetMaxHP()-target.GetCurrentHP() {
 				target = m
 			}
 		}
-	case shared.PrioritizeLowestHealth:
+	case core.PrioritizeLowestHealth:
 		for _, m := range monsters {
 			if target == nil || m.GetCurrentHP() < target.GetCurrentHP() {
 				target = m
 			}
 		}
-	case shared.PrioritizeHighestMaxHP:
+	case core.PrioritizeHighestMaxHP:
 		for _, m := range monsters {
 			if target == nil || m.HP.MaxHP > target.HP.MaxHP {
 				target = m
 			}
 		}
-	case shared.PrioritizeLowestMaxHP:
+	case core.PrioritizeLowestMaxHP:
 		for _, m := range monsters {
 			if target == nil || m.HP.MaxHP < target.HP.MaxHP {
 				target = m
 			}
 		}
-	case shared.PrioritizeHealer:
+	case core.PrioritizeHealer:
 		for _, m := range monsters {
 			if m.IsSpellcaster {
 				for _, s := range m.Spellcasting.SC.Spells {
@@ -123,7 +122,7 @@ func (e *Encounter) selectMonsterByPriority(monsters []*monster.Monster) (*monst
 				}
 			}
 		}
-	case shared.PrioritizeSpellcasting:
+	case core.PrioritizeSpellcaster:
 		for _, m := range monsters {
 			if m.IsSpellcaster || m.IsInnateSpellcaster {
 				return m, nil
@@ -138,37 +137,37 @@ func (e *Encounter) selectMonsterByPriority(monsters []*monster.Monster) (*monst
 func (e *Encounter) selectCharacterByPriority(characters []*character.Character) (*character.Character, error) {
 	var target *character.Character
 	switch e.Options.TargetPriority {
-	case shared.NoPriority:
+	case core.NoPriority:
 		fmt.Println("No TargetPriority")
 		target = characters[rand.IntN(len(characters))]
-	case shared.PrioritizeHighestCR,
-		shared.PrioritizeLowestCR:
+	case core.PrioritizeHighestCR,
+		core.PrioritizeLowestCR:
 		fallthrough
-	case shared.PrioritizeMostDamaged:
+	case core.PrioritizeMostDamaged:
 		for _, c := range characters {
 			if target == nil || c.GetMaxHP()-c.GetCurrentHP() > target.GetMaxHP()-target.GetCurrentHP() {
 				target = c
 			}
 		}
-	case shared.PrioritizeLowestHealth:
+	case core.PrioritizeLowestHealth:
 		for _, c := range characters {
 			if target == nil || c.GetCurrentHP() < target.GetCurrentHP() {
 				target = c
 			}
 		}
-	case shared.PrioritizeHighestMaxHP:
+	case core.PrioritizeHighestMaxHP:
 		for _, c := range characters {
 			if target == nil || c.HP.MaxHP > target.HP.MaxHP {
 				target = c
 			}
 		}
-	case shared.PrioritizeLowestMaxHP:
+	case core.PrioritizeLowestMaxHP:
 		for _, c := range characters {
 			if target == nil || c.HP.MaxHP < target.HP.MaxHP {
 				target = c
 			}
 		}
-	case shared.PrioritizeHealer:
+	case core.PrioritizeHealer:
 		for _, c := range characters {
 			if c.Class.SpellcastingMod != core.AbilityNone {
 				if c.SpellcastingManager.HasHealingSpells() {
@@ -176,7 +175,7 @@ func (e *Encounter) selectCharacterByPriority(characters []*character.Character)
 				}
 			}
 		}
-	case shared.PrioritizeSpellcasting:
+	case core.PrioritizeSpellcaster:
 		for _, c := range characters {
 			if c.Class.SpellcastingMod != core.AbilityNone {
 				if c.SpellcastingManager.HasAnyKnownSpells() {

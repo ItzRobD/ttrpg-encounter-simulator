@@ -44,9 +44,9 @@ type Character struct {
 	SpellcastingManager  *spellcasting_manager.SpellcastingManager
 	MartialAttackManager *martial_attack_manager.MartialAttackManager
 	RollManager          *roll_manager.RollManager
-	ActionPreference     shared.ActionPreference
-	MeleePreference      shared.MeleePreference
-	SpellPriority        shared.SpellPriority
+	ActionPreference     core.ActionPreference
+	MeleePreference      core.VersatileWeaponPreference
+	SpellPriority        core.SpellPriority
 	EntityModifiers      core.EntityModifiers
 	Feats                CharacterFeats
 	RerollAbilities      roll_manager.RerollAbilities
@@ -54,6 +54,11 @@ type Character struct {
 	NumberOfAttacks      int
 	EventListener        func(event interface{})
 }
+
+// TODO: New Managers/ideas
+// 		C/M |Combat State Manager: HP Management, Action Management, Leg Actions, Conditions
+//		C | Equipment
+//		C | Proficiencies:
 
 // Equipment represents a character's equipped armor and weapons, including primary, secondary, and ranged weapon slots.
 type Equipment struct {
@@ -91,7 +96,7 @@ type CharacterFeats struct {
 	HeavyArmorMaster bool // If heavy armor, non magic phys damage reduced by 3
 }
 
-func New(ctx context.Context, name string, classID int, level int, abilityScores core.AbilityScores, hp shared.PlayerHP, ap shared.ActionPreference, sp shared.SpellPriority, em core.EntityModifiers) (Character, error) {
+func New(ctx context.Context, name string, classID int, level int, abilityScores core.AbilityScores, hp shared.PlayerHP, ap core.ActionPreference, sp core.SpellPriority, em core.EntityModifiers) (Character, error) {
 	if classID < 0 || classID > 13 {
 		return Character{}, fmt.Errorf("invalid class id during character initialization: %d", classID)
 	}
@@ -412,13 +417,13 @@ func (c *Character) GetSpellSaveDC(ability core.Ability) int {
 }
 
 // GetWeaponProficiencyFromSlot returns the weapon proficiency for the given weapon slot or an error if the slot is invalid.
-func (c *Character) GetWeaponProficiencyFromSlot(slot shared.WeaponSlot) (bool, error) {
+func (c *Character) GetWeaponProficiencyFromSlot(slot core.WeaponSlot) (bool, error) {
 	switch slot {
-	case shared.WSPrimary:
+	case core.WSPrimary:
 		return c.WeaponProficiency.Primary, nil
-	case shared.WSSecondary:
+	case core.WSSecondary:
 		return c.WeaponProficiency.Secondary, nil
-	case shared.WSRanged:
+	case core.WSRanged:
 		return c.WeaponProficiency.Ranged, nil
 	default:
 		return false, fmt.Errorf("invalid slot identifier provided: %s", slot)
@@ -429,7 +434,7 @@ func (c *Character) GetWeaponProficiencyFromSlot(slot shared.WeaponSlot) (bool, 
 // slot specifies the weapon slot to retrieve the weapon from.
 // useVersatile indicates whether to use the weapon in versatile mode, if applicable.
 // Returns the constructed AttackData and an error if any issue occurs in retrieving or calculating weapon properties.
-func (c *Character) CreateWeaponAttackData(slot shared.WeaponSlot, useVersatile bool) (martial_attack_manager.AttackData, error) {
+func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bool) (martial_attack_manager.AttackData, error) {
 	w, err := c.getWeaponFromSlot(slot)
 	if err != nil {
 		return martial_attack_manager.AttackData{}, err
@@ -469,7 +474,7 @@ func (c *Character) CreateWeaponAttackData(slot shared.WeaponSlot, useVersatile 
 }
 
 // CreateAttackRequest generates an attack request with specific weapon data, modifiers, advantage type, and attack count.
-func (c *Character) CreateAttackRequest(slot shared.WeaponSlot, useVersatile bool, advantage core.AdvantageType, simulationOptions core.SimulationOptions) (*martial_attack_manager.AttackRequest, error) {
+func (c *Character) CreateAttackRequest(slot core.WeaponSlot, useVersatile bool, advantage core.AdvantageType, simulationOptions core.SimulationOptions) (*martial_attack_manager.AttackRequest, error) {
 	attackData, err := c.CreateWeaponAttackData(slot, useVersatile)
 	if err != nil {
 		return nil, err
