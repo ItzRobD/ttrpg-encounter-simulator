@@ -7,6 +7,7 @@ type Entity interface {
 	GetAC() int                                                           // Added C
 	GetEventListener() func(event interface{})                            // Added C
 	GetLevel() interface{}                                                // Added C
+	GetHitDie() DiceType                                                  // Added C
 	GetCasterLevel() uint8                                                // Added C
 	MakeSavingThrow(ability Ability, targetValue int) (RollResult, error) // Added C
 	GetSpellSaveDC(ability Ability) int                                   // Added C

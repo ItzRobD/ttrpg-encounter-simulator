@@ -12,6 +12,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/entity_configuration"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
+	"math"
 )
 
 // Character represents a player or NPC with attributes like name, class, level, and various managers for gameplay systems.
@@ -137,6 +138,34 @@ func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcas
 	sm.SetUsableSpellIDs(availableSpellIDs)
 
 	return sm, nil
+}
+
+func (c *Character) setHP(m core.HPSetMethod, value int) error {
+	switch m {
+	case core.HPSetValue:
+		hp := entity_state_manager.HPValues{
+			CurrentHP: value,
+			MaxHP:     value,
+			TempHP:    0,
+			HitDie:    c.GetHitDie(),
+		}
+		c.EntityState.SetHPValues(hp)
+	case core.HPSetAverage:
+		modifier, err := c.getAbilityScoreModifier(core.AbilityConstitution)
+		if err != nil {
+			return err
+		}
+		hpAvg := math.Round(float64(c.Class.HitDie.Int()) + (float64(c.Level-1) * c.Class.HitDie.Avg()) + float64(int(c.Level)*modifier))
+		hpv := entity_state_manager.HPValues{
+			CurrentHP: int(hpAvg),
+			MaxHP:     int(hpAvg),
+			TempHP:    0,
+			HitDie:    c.GetHitDie(),
+		}
+	case core.HPSetRoll:
+		c.RollManager.RollHP()
+	}
+
 }
 
 // GetSpellBonus calculates the spellcasting bonus based on the character's ability score and optionally adds proficiency bonus.
@@ -437,5 +466,6 @@ func (c *Character) GetAbilityScoreModifier(a core.Ability) (int, error) {
 	return c.getAbilityScoreModifier(a)
 }
 func (c *Character) GetSavingThrowBonus(a core.Ability) (int, error) { return c.getSavingThrowBonus(a) }
+func (c *Character) GetHitDie() core.DiceType                        { return c.Class.HitDie }
 
 var _ core.Entity = &Character{}

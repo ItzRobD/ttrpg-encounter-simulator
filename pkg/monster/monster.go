@@ -39,7 +39,7 @@ type MonsterBase struct {
 	IsInnateSpellcaster bool
 	AbilityScores       core.AbilityScores
 	HP                  shared.MonsterHP
-	SaveProficiencies   shared.SaveProficiencies
+	// TODO: Don't need a save proficiencies struct -> can calculate PB based on CR
 }
 
 type MonsterDamageModifier struct {
@@ -152,17 +152,6 @@ func NewSRDMonster(ctx context.Context, params MonsterQueryParams, em core.Entit
 		if !strings.Contains(err.Error(), "no rows in result set") {
 			fmt.Println(err)
 		}
-	}
-
-	cs := core.CombatState{
-		CurrentHP: base.HP.MaxHP,
-		MaxHP:     base.HP.MaxHP,
-		TempHP:    0,
-
-		HasUsedAction:         false,
-		HasUsedBonusAction:    false,
-		HasUsedReaction:       false,
-		LegendaryActionPoints: 3,
 	}
 
 	monster := &Monster{

@@ -62,7 +62,7 @@ func (c ClassID) String() string {
 type Class struct {
 	ID                   ClassID
 	Name                 string
-	HitDie               int
+	HitDie               core.DiceType
 	SpellcastingMod      core.Ability
 	SneakAttackDiceCount int
 	AttackCount          int

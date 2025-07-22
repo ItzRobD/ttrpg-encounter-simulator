@@ -55,3 +55,11 @@ func (ds DeathSaves) NewDeathSaves() DeathSaves {
 		SaveFailure: 0,
 	}
 }
+
+type HPSetMethod uint8
+
+const (
+	HPSetValue HPSetMethod = iota
+	HPSetAverage
+	HPSetRoll
+)

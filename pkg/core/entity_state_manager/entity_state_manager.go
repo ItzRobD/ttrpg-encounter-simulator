@@ -65,6 +65,13 @@ type EntityStateManager struct {
 	Resistances         core.DamageResistances
 }
 
+func (esm *EntityStateManager) SetHPValues(hp HPValues) {
+	esm.CurrentHP = hp.GetHP()
+	esm.MaxHP = hp.GetMaxHP()
+	esm.TempHP = hp.GetTempHP()
+	esm.HitDie = hp.GetHitDie()
+}
+
 func (esm *EntityStateManager) GetHitDie() core.DiceType {
 	return esm.HitDie
 }

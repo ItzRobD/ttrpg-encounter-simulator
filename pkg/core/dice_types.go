@@ -12,6 +12,7 @@ const (
 	DiceRollInitiative   DiceRollType = "initiative"
 	DiceRollAbilityCheck DiceRollType = "ability check"
 	DiceRollSavingThrow  DiceRollType = "saving throw"
+	DiceRollHP           DiceRollType = "hp"
 )
 
 type DiceType int

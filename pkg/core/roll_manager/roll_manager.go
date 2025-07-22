@@ -3,6 +3,7 @@ package roll_manager
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"fmt"
 	"math/rand/v2"
 )
 
@@ -376,6 +377,60 @@ func (rm *RollManager) RollAbilityCheck(ability core.Ability, options RollOption
 	return res, nil
 }
 
+func (rm *RollManager) RollHP() (*RollResult, error) {
+	var err error
+	var hp int
+	var options RollOptions
+	options.RollType = core.DiceRollHP
+	options.Advantage = core.RollNormal
+	hitDie := rm.parent.GetHitDie()
+	options.Modifier, err = rm.parent.GetAbilityScoreModifier(core.AbilityConstitution)
+
+	if rm.parent.IsCharacter() {
+		if rm.parent.GetLevel() == 1 {
+			return &RollResult{
+				DiceRollType:   core.DiceRollHP,
+				NumberOfDice:   1,
+				Die:            hitDie,
+				FinalRollValue: int(hitDie),
+				FinalRolls:     []int{int(hitDie)},
+				Modifier:       options.Modifier,
+				Total:          hitDie.Int() + options.Modifier,
+				OriginalRolls:  []int{int(hitDie)},
+			}, nil
+		}
+
+		var numDice uint8
+		var cLevel uint8
+		if level, ok := rm.parent.GetLevel().(uint8); ok {
+			cLevel = level
+			numDice = level - 1
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		rollValue, rolls := rm.rollDice(int(numDice), hitDie)
+
+		hp = hitDie.Int() + rollValue + (options.Modifier * int(cLevel))
+
+		return &RollResult{
+			DiceRollType:   core.DiceRollHP,
+			NumberOfDice:   int(numDice),
+			Die:            hitDie,
+			FinalRollValue: rollValue,
+			FinalRolls:     rolls,
+			Modifier:       options.Modifier,
+			Total:          hp,
+			OriginalRolls:  rolls,
+		}, nil
+	} else {
+		// TODO: Update this function once we fix the monster struct
+		return nil, fmt.Errorf("monster hp rolling not implemented")
+	}
+}
+
 func (rm *RollManager) UseLuckyReroll() bool {
 	if rm.luckyUsesRemaining > 0 {
 		rm.luckyUsesRemaining--
@@ -388,6 +443,8 @@ func (rm *RollManager) RestoreLuckyUses() {
 	rm.luckyUsesRemaining = 3
 }
 
+// applyElementalAdept adjusts dice rolls to avoid results of 1 if the Elemental Adept feature is active.
+// Rolls of 1 are replaced with 2, and corresponding reroll events are generated.
 func (rm *RollManager) applyElementalAdept(rolls []int, die core.DiceType) ([]int, []RerollEvent) {
 	if !rm.RerollAbilities.HasElementalAdept {
 		return nil, nil
@@ -414,6 +471,8 @@ func (rm *RollManager) applyElementalAdept(rolls []int, die core.DiceType) ([]in
 	return newRolls, rerollEvents
 }
 
+// applyGreatWeaponFighting applies the Great Weapon Fighting rule to reroll dice with values of 1 or 2 in the given rolls.
+// It returns the modified rolls and a slice of RerollEvent objects detailing each reroll.
 func (rm *RollManager) applyGreatWeaponFighting(rolls []int, die core.DiceType) ([]int, []RerollEvent) {
 	if !rm.RerollAbilities.HasGreatWeaponFighting {
 		return nil, nil
@@ -472,6 +531,7 @@ func (rm *RollManager) applyHalflingLucky(rolls []int, die core.DiceType) ([]int
 	return newRolls, rerollEvents
 }
 
+// calculateSingleDieFinalValue determines the final roll value and total based on roll type (normal, advantage, disadvantage).
 func (rm *RollManager) calculateSingleDieFinalValue(res *RollResult) {
 	switch res.Advantage {
 	case core.RollNormal:
@@ -486,11 +546,13 @@ func (rm *RollManager) calculateSingleDieFinalValue(res *RollResult) {
 	}
 }
 
+// calculateSuccess determines if a roll result meets or exceeds the desired target value and updates the result accordingly.
 func (rm *RollManager) calculateSuccess(res *RollResult, options RollOptions) {
 	res.IsSuccess = res.FinalRollValue >= options.TargetValue
 	res.TargetValue = options.TargetValue
 }
 
+// rollDice rolls a specified number of dice of a given type and returns the sum of rolls and individual roll results.
 func (rm *RollManager) rollDice(numberOfDice int, die core.DiceType) (int, []int) {
 	rolls := make([]int, numberOfDice)
 	for i := 0; i < numberOfDice; i++ {
@@ -500,6 +562,7 @@ func (rm *RollManager) rollDice(numberOfDice int, die core.DiceType) (int, []int
 	return sum(rolls), rolls
 }
 
+// rollDoubleDice rolls double the number of dice specified and returns the total sum and individual roll results.
 func (rm *RollManager) rollDoubleDice(numberOfDice int, die core.DiceType) (int, []int) {
 	rolls := make([]int, numberOfDice*2)
 	for i := 0; i < numberOfDice*2; i++ {
@@ -509,6 +572,9 @@ func (rm *RollManager) rollDoubleDice(numberOfDice int, die core.DiceType) (int,
 	return sum(rolls), rolls
 }
 
+// rollExtraMaxDice rolls additional dice and returns the sum and the list of rolled values.
+// numberOfDice specifies the number of dice to roll initially and then adds the maximum value for each dice.
+// die defines the type of dice used for the rolls.
 func (rm *RollManager) rollExtraMaxDice(numberOfDice int, die core.DiceType) (int, []int) {
 	rolls := make([]int, numberOfDice*2)
 	for i := 0; i < numberOfDice*2; i++ {
@@ -522,10 +588,12 @@ func (rm *RollManager) rollExtraMaxDice(numberOfDice int, die core.DiceType) (in
 	return sum(rolls), rolls
 }
 
+// rollDie simulates rolling a die of the specified type and returns the result as an integer between 1 and the die's maximum value.
 func (rm *RollManager) rollDie(die core.DiceType) int {
 	return rm.rng.IntN(die.Int()) + 1
 }
 
+// sum calculates and returns the sum of all integers in the given slice.
 func sum(arr []int) int {
 	s := 0
 	for _, v := range arr {
@@ -534,6 +602,7 @@ func sum(arr []int) int {
 	return s
 }
 
+// highest returns the largest integer value from a given slice of integers.
 func highest(arr []int) int {
 	r := arr[0]
 	for _, v := range arr {
@@ -544,6 +613,7 @@ func highest(arr []int) int {
 	return r
 }
 
+// lowest finds and returns the smallest integer in the provided slice of integers.
 func lowest(arr []int) int {
 	r := arr[0]
 	for _, v := range arr {
@@ -554,6 +624,7 @@ func lowest(arr []int) int {
 	return r
 }
 
+// containsOnes checks if the given slice of integers contains at least one occurrence of the integer value 1.
 func containsOnes(arr []int) bool {
 	for _, v := range arr {
 		if v == 1 {
@@ -563,6 +634,7 @@ func containsOnes(arr []int) bool {
 	return false
 }
 
+// containsOnesOrTwos checks if the given slice of integers contains at least one occurrence of the values 1 or 2.
 func containsOnesOrTwos(arr []int) bool {
 	for _, v := range arr {
 		if v == 1 || v == 2 {
