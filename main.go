@@ -39,7 +39,7 @@ func main() {
 	//}
 	//fmt.Println(bonus)
 
-	//modifier, err := shared.GetAbilityScoreModifier(12)
+	//modifier, err := shared.getAbilityScoreModifier(12)
 	//if err != nil {
 	//	fmt.Println(err)
 	//}

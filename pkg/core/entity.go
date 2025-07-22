@@ -1,24 +1,21 @@
 package core
 
 type Entity interface {
-	ModifyHP(value int)
-	IsUnconscious() bool
-	GetCurrentHP() int
-	GetCurrentHPPct() int
-	GetMaxHP() int
-	GetName() string
-	GetAC() int
-	GetEventListener() func(event interface{})
-	GetLevel() interface{}
-	GetCasterLevel() int
-	MakeSavingThrow(ability Ability, targetValue int) (RollResult, error)
-	GetSpellSaveDC(ability Ability) int
-	GetAbilityScores() AbilityScores
-	GetAbilityScore(ability Ability) int
-	GetAbilityScoreModifier(ability Ability) (int, error)
-	GetSavingThrowBonus(ability Ability) (int, error)
-	IsCharacter() bool
-	IsMonster() bool
+	IsUnconscious() bool                                                  // Added C
+	GetHPStatus() HPStatus                                                // Added C TODO: Fix type
+	GetName() string                                                      // Added C
+	GetAC() int                                                           // Added C
+	GetEventListener() func(event interface{})                            // Added C
+	GetLevel() interface{}                                                // Added C
+	GetCasterLevel() uint8                                                // Added C
+	MakeSavingThrow(ability Ability, targetValue int) (RollResult, error) // Added C
+	GetSpellSaveDC(ability Ability) int                                   // Added C
+	GetAbilityScores() AbilityScores                                      // Added C
+	GetAbilityScore(ability Ability) int                                  // Added C
+	GetAbilityScoreModifier(ability Ability) (int, error)                 // Added C
+	GetSavingThrowBonus(ability Ability) (int, error)                     // Added C
+	IsCharacter() bool                                                    // Added C
+	IsMonster() bool                                                      // Added C
 }
 
 type Combatant struct {

@@ -24,11 +24,12 @@ type EntityStateConfig struct {
 	MaxHP                int
 	TempHP               int
 	MaxLegendaryActions  int
-	NumExtraAttacks      int
+	AttackCount          int
 	Conditions           core.EntityConditions
 	ActionPreference     core.ActionPreference
 	VersatilePreference  core.VersatileWeaponPreference
 	TargetPrioritization core.TargetPrioritization
+	SpellcastingPriority core.SpellPriority
 	InitiativeAdvantage  core.AdvantageType
 	InitiativeBonus      int
 }
@@ -56,6 +57,7 @@ type EntityStateManager struct {
 	ActionPreference          core.ActionPreference
 	VersatileWeaponPreference core.VersatileWeaponPreference
 	TargetPrioritization      core.TargetPrioritization
+	SpellcastingPriority      core.SpellPriority
 
 	// Bonuses
 	InitiativeAdvantage core.AdvantageType
@@ -243,6 +245,14 @@ func (esm *EntityStateManager) GetTargetPrioritization() core.TargetPrioritizati
 	return esm.TargetPrioritization
 }
 
+func (esm *EntityStateManager) SetSpellcastingPriority(p core.SpellPriority) {
+	esm.SpellcastingPriority = p
+}
+
+func (esm *EntityStateManager) GetSpellcastingPriority() core.SpellPriority {
+	return esm.SpellcastingPriority
+}
+
 func (esm *EntityStateManager) SetInitiativeAdvantage(a core.AdvantageType) {
 	esm.InitiativeAdvantage = a
 }
@@ -291,8 +301,8 @@ func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*Entit
 	if config.MaxLegendaryActions < 0 {
 		config.MaxLegendaryActions = 0
 	}
-	if config.NumExtraAttacks < 0 {
-		config.NumExtraAttacks = 0
+	if config.AttackCount < 0 {
+		config.AttackCount = 0
 	}
 	if config.Conditions == nil {
 		config.Conditions = core.NewEntityConditions()
@@ -307,11 +317,12 @@ func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*Entit
 		HasUsedBonusAction:        false,
 		LegendaryActionPoints:     config.MaxLegendaryActions,
 		LegendaryActionPointsMax:  config.MaxLegendaryActions,
-		NumberOfExtraAttacks:      config.NumExtraAttacks,
+		NumberOfExtraAttacks:      config.AttackCount,
 		Conditions:                config.Conditions,
 		ActionPreference:          config.ActionPreference,
 		VersatileWeaponPreference: config.VersatilePreference,
 		TargetPrioritization:      config.TargetPrioritization,
+		SpellcastingPriority:      config.SpellcastingPriority,
 		InitiativeAdvantage:       config.InitiativeAdvantage,
 		InitiativeBonus:           config.InitiativeBonus,
 	}, nil

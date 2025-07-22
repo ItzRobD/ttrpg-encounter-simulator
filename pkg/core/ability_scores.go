@@ -46,6 +46,36 @@ type AbilityScores struct {
 	Charisma     int `json:"charisma"`
 }
 
+func (as *AbilityScores) GetScore(ability Ability) int {
+	switch ability {
+	case AbilityStrength:
+		return as.Strength
+	case AbilityDexterity:
+		return as.Dexterity
+	case AbilityConstitution:
+		return as.Constitution
+	case AbilityIntelligence:
+		return as.Intelligence
+	case AbilityWisdom:
+		return as.Wisdom
+	case AbilityCharisma:
+		return as.Charisma
+	default:
+		return 0
+	}
+}
+
+func NewAbilityScores(strength, dexterity, constitution, intelligence, wisdom, charisma int) AbilityScores {
+	return AbilityScores{
+		Strength:     strength,
+		Dexterity:    dexterity,
+		Constitution: constitution,
+		Intelligence: intelligence,
+		Wisdom:       wisdom,
+		Charisma:     charisma,
+	}
+}
+
 type AbilityScoresProficiencies struct {
 	Strength     bool `json:"strength"`
 	Dexterity    bool `json:"dexterity"`
@@ -53,6 +83,41 @@ type AbilityScoresProficiencies struct {
 	Intelligence bool `json:"intelligence"`
 	Wisdom       bool `json:"wisdom"`
 	Charisma     bool `json:"charisma"`
+}
+
+func (as *AbilityScoresProficiencies) GetScore(ability Ability) bool {
+	switch ability {
+	case AbilityStrength:
+		return as.Strength
+	case AbilityDexterity:
+		return as.Dexterity
+	case AbilityConstitution:
+		return as.Constitution
+	case AbilityIntelligence:
+		return as.Intelligence
+	case AbilityWisdom:
+		return as.Wisdom
+	case AbilityCharisma:
+		return as.Charisma
+	default:
+		return false
+	}
+}
+
+func NewAbilityScoresProficiencies(strength, dexterity, constitution, intelligence, wisdom, charisma bool) AbilityScoresProficiencies {
+	return AbilityScoresProficiencies{
+		Strength:     strength,
+		Dexterity:    dexterity,
+		Constitution: constitution,
+		Intelligence: intelligence,
+		Wisdom:       wisdom,
+		Charisma:     charisma,
+	}
+}
+
+type AbilityScoresConfig struct {
+	AbilityScores AbilityScores              `json:"ability_scores"`
+	Proficiencies AbilityScoresProficiencies `json:"proficiencies"`
 }
 
 type SaveProficiencies struct {

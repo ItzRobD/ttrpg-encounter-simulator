@@ -3,8 +3,10 @@ package monster
 import (
 	"context"
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
+	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
@@ -13,17 +15,14 @@ import (
 
 type Monster struct {
 	MonsterBase
-	CombatState      core.CombatState
-	EntityModifiers  core.EntityModifiers
-	DamageModifiers  []MonsterDamageModifier
-	ResistBreakers   []shared.DamageBreaker
-	Actions          []MonsterAction
-	Multiattacks     []MonsterMultiattack
-	LegendaryActions []LegendaryAction
-	SpecialAbilities []SpecialAbility
-	Spellcasting     MSpellcasting
-	RollManager      *roll_manager.RollManager
-	EventListener    func(event interface{})
+	EntityState         *entity_state_manager.EntityStateManager
+	SpellCastingManager *spellcasting_manager.SpellcastingManager
+	RollManager         *roll_manager.RollManager
+	Actions             []MonsterAction
+	Multiattacks        []MonsterMultiattack
+	LegendaryActions    []LegendaryAction
+	SpecialAbilities    []SpecialAbility
+	EventListener       func(event interface{})
 }
 
 type MonsterBase struct {
@@ -182,10 +181,6 @@ func NewSRDMonster(ctx context.Context, params MonsterQueryParams, em core.Entit
 	return monster, nil
 }
 
-func (m *Monster) SetEntityModifiers(em core.EntityModifiers) {
-	m.EntityModifiers = em
-}
-
 func (m *Monster) DetermineMonsterHP(useAverage bool) (int, int, error) {
 	if !useAverage {
 		toAdd := m.HP.AmountToAdd
@@ -199,16 +194,6 @@ func (m *Monster) DetermineMonsterHP(useAverage bool) (int, int, error) {
 	} else {
 		events.LogHPRollEvent(m, m.HP.HPAverage, []int{m.HP.HPAverage}, 0, m.EventListener)
 		return m.HP.HPAverage, 0, nil
-	}
-}
-
-func (m *Monster) ModifyHP(value int) {
-	m.HP.HP += value
-	if m.HP.HP > m.HP.MaxHP {
-		m.HP.HP = m.HP.MaxHP
-	}
-	if m.HP.HP < 0 {
-		m.HP.HP = 0
 	}
 }
 

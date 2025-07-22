@@ -139,3 +139,11 @@ type RollResult interface {
 	GetIsSuccess() bool
 	GetTargetValue() int
 }
+
+type HPStatus interface {
+	GetHP() int
+	GetMaxHP() int
+	GetTempHP() int
+	GetHPPct() int
+	GetHitDie() DiceType
+}

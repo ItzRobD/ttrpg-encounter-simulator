@@ -387,7 +387,7 @@ func GetSpellFormulaByLevel(ctx context.Context, spellID int, formulaLevel int) 
 	return &formula, nil
 }
 
-func GetUsableSpellIDsByClassID(ctx context.Context, classID int) ([]int, error) {
+func GetUsableSpellIDsByClassID(ctx context.Context, classID uint8) ([]int, error) {
 	var ids []int
 	stmt := SELECT(
 		Spells.ID,
@@ -421,7 +421,7 @@ func GetUsableSpellIDsByClassID(ctx context.Context, classID int) ([]int, error)
 	return ids, nil
 }
 
-func GetHealingAndDamageSpellsByClassID(ctx context.Context, classID int) ([]Spell, []Spell, error) {
+func GetHealingAndDamageSpellsByClassID(ctx context.Context, classID uint8) ([]Spell, []Spell, error) {
 	var healingSpells []Spell
 	var damageSpells []Spell
 	var err error

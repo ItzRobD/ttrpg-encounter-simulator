@@ -61,7 +61,7 @@ func isRangedWeapon(id int) bool {
 
 // GetAttackModifier calculates the attack modifier for a weapon based on ability scores, character level, and proficiency status.
 // Returns the attack modifier or an error if any calculation fails.
-func (w *Weapon) GetAttackModifier(as *core.AbilityScores, clvl int, isProficient bool) (int, error) {
+func (w *Weapon) GetAttackModifier(as *core.AbilityScores, clvl uint8, isProficient bool) (int, error) {
 	mod, err := w.GetWeaponModifier(as)
 	if err != nil {
 		return 0, err
