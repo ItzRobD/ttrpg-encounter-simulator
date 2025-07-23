@@ -5,23 +5,25 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/monster_action_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"strings"
 )
 
+// TODO: Action manager should be complete
+//
+//	Next is to clean up monster spellcasting -> SpellCastingManager
+//	Configure entity state -> db queries fore resistances, we didn't add any resistatnace
+//	functionaility for characters. That also needs to be completed
 type Monster struct {
 	MonsterBase
 	EntityState         *entity_state_manager.EntityStateManager
 	SpellCastingManager *spellcasting_manager.SpellcastingManager
 	RollManager         *roll_manager.RollManager
-	Actions             []MonsterAction
-	Multiattacks        []MonsterMultiattack
-	LegendaryActions    []LegendaryAction
-	SpecialAbilities    []SpecialAbility
+	ActionManager       *monster_action_manager.MonsterActionManager
 	EventListener       func(event interface{})
 }
 
@@ -38,51 +40,20 @@ type MonsterBase struct {
 	IsSpellcaster       bool
 	IsInnateSpellcaster bool
 	AbilityScores       core.AbilityScores
-	HP                  shared.MonsterHP
-	// TODO: Don't need a save proficiencies struct -> can calculate PB based on CR
+	AbilityScoreProf    core.AbilityScoresProficiencies
+	HP                  MonsterHP
+}
+
+type MonsterHP struct {
+	HPAverage    int
+	NumberOfDice int
+	Die          core.DiceType
+	AmountToAdd  int
 }
 
 type MonsterDamageModifier struct {
 	DamageType   string
 	ModifierType string
-}
-
-type MonsterAction struct {
-	ActionID      int
-	Name          string
-	RechargeValue int
-	HasDC         bool // Used to determine if embedded struct is of value
-	Index         int
-	NumberOfDice  int
-	Die           int
-	AmountToAdd   int
-	AttackBonus   int
-	DamageType    string
-	MonsterActionDC
-}
-
-type MonsterActionDC struct {
-	Ability   string
-	OnSuccess string
-	DC        int
-}
-
-type MonsterMultiattack struct {
-	ActionID    int
-	AttackCount int
-	IsOption    bool
-	OptionIndex int
-}
-
-type LegendaryAction struct {
-	Cost int
-	MonsterAction
-}
-
-type SpecialAbility struct {
-	Name        string
-	UsageCount  int
-	Description string
 }
 
 type MSpellcasting struct {
@@ -112,7 +83,7 @@ type MonsterQueryParams struct {
 
 func NewSRDMonster(ctx context.Context, params MonsterQueryParams, em core.EntityModifiers) (*Monster, error) {
 	var err error
-	base, err := QueryMonsterData(ctx, params)
+	base, err := QueryMonsterBaseData(ctx, params)
 	if err != nil {
 		return nil, err
 	}

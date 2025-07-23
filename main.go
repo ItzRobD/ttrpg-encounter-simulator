@@ -71,7 +71,7 @@ func main() {
 	//var m monster.Monster
 	params := monster.MonsterQueryParams{ID: 1}
 	//params := monster.MonsterQueryParams{Name: "Archmage"}
-	//m, err := monster.QueryMonsterData(ctx, params)
+	//m, err := monster.QueryMonsterBaseData(ctx, params)
 	//if err != nil {
 	//	fmt.Println(err)
 	//}
@@ -82,7 +82,7 @@ func main() {
 	}
 
 	//params = monster.MonsterQueryParams{Name: "Adult Brass Dragon"}
-	//m2, err := monster.QueryMonsterData(ctx, params)
+	//m2, err := monster.QueryMonsterBaseData(ctx, params)
 	//if err != nil {
 	//	fmt.Println(err)
 	//}

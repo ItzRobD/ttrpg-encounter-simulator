@@ -1,14 +1,14 @@
 package core
 
-type AttackData interface {
-	GetAttackName() string
-	GetNumberOfDice() int
-	GetDie() DiceType
-	GetAttackModifier() int
-	GetDamageModifier() int
-	GetDamageType() string
-	GetIsVersatileAttack() bool
-}
+//type AttackData interface {
+//	GetAttackName() string
+//	GetNumberOfDice() int
+//	GetDie() DiceType
+//	GetAttackModifier() int
+//	GetDamageModifier() int
+//	GetDamageType() string
+//	GetIsVersatileAttack() bool
+//}
 
 type AttackOptions interface {
 	GetAdvantage() AdvantageType

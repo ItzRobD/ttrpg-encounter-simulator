@@ -381,6 +381,7 @@ func (rm *RollManager) RollHP() (*RollResult, error) {
 	var err error
 	var hp int
 	var options RollOptions
+	var res RollResult
 	options.RollType = core.DiceRollHP
 	options.Advantage = core.RollNormal
 	hitDie := rm.parent.GetHitDie()
@@ -388,7 +389,7 @@ func (rm *RollManager) RollHP() (*RollResult, error) {
 
 	if rm.parent.IsCharacter() {
 		if rm.parent.GetLevel() == 1 {
-			return &RollResult{
+			res = RollResult{
 				DiceRollType:   core.DiceRollHP,
 				NumberOfDice:   1,
 				Die:            hitDie,
@@ -397,38 +398,42 @@ func (rm *RollManager) RollHP() (*RollResult, error) {
 				Modifier:       options.Modifier,
 				Total:          hitDie.Int() + options.Modifier,
 				OriginalRolls:  []int{int(hitDie)},
-			}, nil
+			}
+		} else {
+			var numDice uint8
+			var cLevel uint8
+			if level, ok := rm.parent.GetLevel().(uint8); ok {
+				cLevel = level
+				numDice = level - 1
+			}
+
+			if err != nil {
+				return nil, err
+			}
+
+			rollValue, rolls := rm.rollDice(int(numDice), hitDie)
+
+			hp = hitDie.Int() + rollValue + (options.Modifier * int(cLevel))
+
+			res = RollResult{
+				DiceRollType:   core.DiceRollHP,
+				NumberOfDice:   int(numDice),
+				Die:            hitDie,
+				FinalRollValue: rollValue,
+				FinalRolls:     rolls,
+				Modifier:       options.Modifier,
+				Total:          hp,
+				OriginalRolls:  rolls,
+			}
 		}
-
-		var numDice uint8
-		var cLevel uint8
-		if level, ok := rm.parent.GetLevel().(uint8); ok {
-			cLevel = level
-			numDice = level - 1
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		rollValue, rolls := rm.rollDice(int(numDice), hitDie)
-
-		hp = hitDie.Int() + rollValue + (options.Modifier * int(cLevel))
-
-		return &RollResult{
-			DiceRollType:   core.DiceRollHP,
-			NumberOfDice:   int(numDice),
-			Die:            hitDie,
-			FinalRollValue: rollValue,
-			FinalRolls:     rolls,
-			Modifier:       options.Modifier,
-			Total:          hp,
-			OriginalRolls:  rolls,
-		}, nil
 	} else {
 		// TODO: Update this function once we fix the monster struct
 		return nil, fmt.Errorf("monster hp rolling not implemented")
 	}
+
+	events.LogDiceRollEvent(rm.parent, &res, rm.parent.GetEventListener())
+
+	return &res, nil
 }
 
 func (rm *RollManager) UseLuckyReroll() bool {

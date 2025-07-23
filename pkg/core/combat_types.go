@@ -301,3 +301,21 @@ func NewResistBreaker(s string) (ResistBreaker, error) {
 		return ResistBreakerNone, fmt.Errorf("invalid resistance breaker")
 	}
 }
+
+type AttackData struct {
+	Name              string
+	NumberOfDice      int
+	Die               DiceType
+	AttackModifier    int // Added to attack roll. Character: Proficiency + Ability Mod; Monster: To Hit Bonus
+	DamageModifier    int
+	DamageType        DamageType
+	IsVersatileAttack bool
+}
+
+func (ad AttackData) GetAttackName() string      { return ad.Name }
+func (ad AttackData) GetNumberOfDice() int       { return ad.NumberOfDice }
+func (ad AttackData) GetDie() DiceType           { return ad.Die }
+func (ad AttackData) GetAttackModifier() int     { return ad.AttackModifier }
+func (ad AttackData) GetDamageModifier() int     { return ad.DamageModifier }
+func (ad AttackData) GetDamageType() string      { return ad.DamageType.String() }
+func (ad AttackData) GetIsVersatileAttack() bool { return ad.IsVersatileAttack }

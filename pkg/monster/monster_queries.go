@@ -6,13 +6,37 @@ import (
 	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
 	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/shared"
+	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/monster_action_manager"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 )
+
+func QueryMonsterBaseData(ctx context.Context, params MonsterQueryParams) (MonsterBase, error) {
+	var monsterBaseResult MonsterBase
+	var err error
+
+	if params.ID != 0 {
+		monsterBaseResult, err = getMonsterBaseDataByID(ctx, params.ID)
+	} else if params.Name != "" {
+		var id int
+		id, err = getMonsterIDByName(ctx, params.Name)
+		if err != nil {
+			return monsterBaseResult, err
+		}
+		monsterBaseResult, err = getMonsterBaseDataByID(ctx, id)
+		if err != nil {
+			return monsterBaseResult, err
+		}
+	} else {
+		err = fmt.Errorf("no name or id provided for monster data query")
+		return MonsterBase{}, err
+	}
+
+	return monsterBaseResult, nil
+}
 
 func getMonsterIDByName(ctx context.Context, name string) (int, error) {
 	var id int
@@ -37,6 +61,7 @@ func getMonsterIDByName(ctx context.Context, name string) (int, error) {
 
 func getMonsterBaseDataByID(ctx context.Context, id int) (MonsterBase, error) {
 	var monsterResult MonsterBase
+	var strSave, dexSave, conSave, intSave, wisSave, chaSave sql.NullInt32 // Used as placeholders for save profs
 	stmt := SELECT(
 		Monsters.ID,
 		Monsters.Name,
@@ -98,16 +123,19 @@ func getMonsterBaseDataByID(ctx context.Context, id int) (MonsterBase, error) {
 		&monsterResult.HP.NumberOfDice,
 		&monsterResult.HP.Die,
 		&monsterResult.HP.AmountToAdd,
-		&monsterResult.SaveProficiencies.Strength,
-		&monsterResult.SaveProficiencies.Dexterity,
-		&monsterResult.SaveProficiencies.Constitution,
-		&monsterResult.SaveProficiencies.Intelligence,
-		&monsterResult.SaveProficiencies.Wisdom,
-		&monsterResult.SaveProficiencies.Charisma,
+		&strSave, &dexSave, &conSave, &intSave, &wisSave, &chaSave,
 	)
 	if err != nil {
 		return monsterResult, fmt.Errorf("failed to scan monster base data by id: %w", err)
 	}
+
+	monsterResult.AbilityScoreProf = core.NewAbilityScoresProficiencies(
+		strSave.Valid && strSave.Int32 != 0,
+		dexSave.Valid && dexSave.Int32 != 0,
+		conSave.Valid && conSave.Int32 != 0,
+		intSave.Valid && intSave.Int32 != 0,
+		wisSave.Valid && wisSave.Int32 != 0,
+		chaSave.Valid && chaSave.Int32 != 0)
 
 	return monsterResult, nil
 }
@@ -146,47 +174,47 @@ func getMonsterDamageModifiersByID(ctx context.Context, id int) ([]MonsterDamage
 	return monsterDamageModifiers, nil
 }
 
-func getMonsterResistBreakersByID(ctx context.Context, id int) ([]shared.DamageBreaker, error) {
-	var monsterResistBreakers []shared.DamageBreaker
-	stmt := SELECT(
-		MonsterDamageModifiers.DamageType,
-		MonsterResistBreakers.ResistBreakerType,
-	).FROM(
-		Monsters.
-			INNER_JOIN(MonsterDamageModifiers, Monsters.ID.EQ(MonsterDamageModifiers.MonsterID)).
-			LEFT_JOIN(MonsterDamageResistBreakers, MonsterDamageResistBreakers.ModifierID.EQ(MonsterDamageModifiers.ModifierID)).
-			LEFT_JOIN(MonsterResistBreakers, MonsterResistBreakers.ResistBreakerID.EQ(MonsterDamageResistBreakers.ResistBreakerID))).
-		WHERE(Monsters.ID.EQ(Int(int64(id))))
+//func getMonsterResistBreakersByID(ctx context.Context, id int) ([]shared.DamageBreaker, error) {
+//	var monsterResistBreakers []shared.DamageBreaker
+//	stmt := SELECT(
+//		MonsterDamageModifiers.DamageType,
+//		MonsterResistBreakers.ResistBreakerType,
+//	).FROM(
+//		Monsters.
+//			INNER_JOIN(MonsterDamageModifiers, Monsters.ID.EQ(MonsterDamageModifiers.MonsterID)).
+//			LEFT_JOIN(MonsterDamageResistBreakers, MonsterDamageResistBreakers.ModifierID.EQ(MonsterDamageModifiers.ModifierID)).
+//			LEFT_JOIN(MonsterResistBreakers, MonsterResistBreakers.ResistBreakerID.EQ(MonsterDamageResistBreakers.ResistBreakerID))).
+//		WHERE(Monsters.ID.EQ(Int(int64(id))))
+//
+//	query, args := stmt.Sql()
+//	rows, err := database.Query(ctx, query, args...)
+//	if err != nil {
+//		return monsterResistBreakers, fmt.Errorf("failed to query monster resist breakers by id: %w", err)
+//	}
+//	defer rows.Close()
+//
+//	for rows.Next() {
+//		var damageBreaker shared.DamageBreaker
+//		var damageBreakerName pgtype.Text
+//		err = rows.Scan(&damageBreaker.DamageType, &damageBreakerName)
+//		if err != nil {
+//			return monsterResistBreakers, fmt.Errorf("failed to scan monster resist breakers by id: %w", err)
+//		}
+//		if damageBreakerName.Valid {
+//			damageBreaker.Breaker = shared.WeaponBreakerType(damageBreakerName.String)
+//			monsterResistBreakers = append(monsterResistBreakers, damageBreaker)
+//		}
+//	}
+//
+//	if err := rows.Err(); err != nil {
+//		return monsterResistBreakers, fmt.Errorf("failed to query monster resist breakers by id: %w", err)
+//	}
+//
+//	return monsterResistBreakers, nil
+//}
 
-	query, args := stmt.Sql()
-	rows, err := database.Query(ctx, query, args...)
-	if err != nil {
-		return monsterResistBreakers, fmt.Errorf("failed to query monster resist breakers by id: %w", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var damageBreaker shared.DamageBreaker
-		var damageBreakerName pgtype.Text
-		err = rows.Scan(&damageBreaker.DamageType, &damageBreakerName)
-		if err != nil {
-			return monsterResistBreakers, fmt.Errorf("failed to scan monster resist breakers by id: %w", err)
-		}
-		if damageBreakerName.Valid {
-			damageBreaker.Breaker = shared.WeaponBreakerType(damageBreakerName.String)
-			monsterResistBreakers = append(monsterResistBreakers, damageBreaker)
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return monsterResistBreakers, fmt.Errorf("failed to query monster resist breakers by id: %w", err)
-	}
-
-	return monsterResistBreakers, nil
-}
-
-func getMonsterActionsByID(ctx context.Context, id int) ([]MonsterAction, error) {
-	var monsterActions []MonsterAction
+func getMonsterActionsByID(ctx context.Context, id int) (map[int]monster_action_manager.Action, error) {
+	monsterActions := make(map[int]monster_action_manager.Action)
 	stmt := SELECT(
 		MonsterActions.ActionID,
 		MonsterActions.Name,
@@ -241,43 +269,103 @@ func getMonsterActionsByID(ctx context.Context, id int) ([]MonsterAction, error)
 		return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", err)
 	}
 	defer rows.Close()
-	monsterActions, err = pgx.CollectRows(rows, pgx.RowToStructByPos[MonsterAction])
-	if err != nil {
-		return monsterActions, fmt.Errorf("failed to scan monster actions by id: %w", err)
+
+	for rows.Next() {
+		var action monster_action_manager.Action
+		err = rows.Scan(&action.ActionID,
+			&action.Name,
+			&action.RechargeValue,
+			&action.HasDC,
+			&action.Index,
+			&action.NumberOfDice,
+			&action.Die,
+			&action.AmountToAdd,
+			&action.AttackBonus,
+			&action.DamageType,
+			&action.DCAbility,
+			&action.DCOnSuccess,
+			&action.DC)
+		if err != nil {
+			return monsterActions, fmt.Errorf("failed to scan monster actions by id: %w", err)
+		}
+		if _, exists := monsterActions[action.ActionID]; exists {
+			fmt.Printf("action %d already exists\n", action.ActionID)
+		} else {
+			monsterActions[action.ActionID] = action
+		}
+	}
+
+	if errI := rows.Err(); errI != nil {
+		return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", errI)
 	}
 
 	return monsterActions, nil
 }
 
-func getMonsterMultiattacksByID(ctx context.Context, id int) ([]MonsterMultiattack, error) {
-	var monsterMultiattacks []MonsterMultiattack
+func getMonsterMultiattacksByID(ctx context.Context, id int) (map[int][]monster_action_manager.Multiattack, error) {
+	multiattackMap := make(map[int][]monster_action_manager.Multiattack)
+
 	stmt := SELECT(
 		MonsterMultiattacks.ActionID,
 		MonsterMultiattacks.AttackCount,
 		MonsterMultiattacks.IsOption,
-		MonsterMultiattacks.OptionIndex,
-	).FROM(
-		MonsterMultiattacks,
-	).WHERE(
-		MonsterMultiattacks.MonsterID.EQ(Int(int64(id))),
-	).ORDER_BY(MonsterMultiattacks.ActionID.ASC())
+		MonsterMultiattacks.OptionIndex).
+		FROM(MonsterMultiattacks).
+		WHERE(MonsterMultiattacks.MonsterID.EQ(Int(int64(id)))).
+		ORDER_BY(MonsterMultiattacks.OptionIndex.ASC(), MonsterMultiattacks.ActionID.ASC())
 
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return monsterMultiattacks, fmt.Errorf("failed to query monster multiattacks by id: %w", err)
+		return nil, fmt.Errorf("error querying monster multiattacks: %w", err)
 	}
 	defer rows.Close()
-	monsterMultiattacks, err = pgx.CollectRows(rows, pgx.RowToStructByPos[MonsterMultiattack])
-	if err != nil {
-		return monsterMultiattacks, fmt.Errorf("failed to query monster multiattacks by id collect rows: %w", err)
+
+	for rows.Next() {
+		var aid, count, index int
+		var isOption bool
+		err = rows.Scan(&aid, &count, &isOption, &index)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning monster multiattacks: %w", err)
+		}
+
+		//comp := monster_action_manager.MultiAttackComponent{
+		//	ActionID: aid,
+		//	Count:    count,
+		//}
+		//
+		//multiattack, exists := multiattackMap[index]
+		//if !exists {
+		//	multiattack = monster_action_manager.Multiattack{
+		//		IsOption:   false,
+		//		Components: []monster_action_manager.MultiAttackComponent{},
+		//	}
+		//}
+		//
+		//multiattack.Components = append(multiattack.Components, comp)
+		//multiattackMap[index] = multiattack
+
+		multiattack, exists := multiattackMap[index]
+		if !exists {
+			ma := monster_action_manager.Multiattack{
+				ActionID: aid,
+				Count:    count,
+			}
+			multiattack = append(multiattack, ma)
+		}
+
+		multiattackMap[index] = multiattack
 	}
 
-	return monsterMultiattacks, nil
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating monster multiattacks: %w", err)
+	}
+
+	return multiattackMap, nil
 }
 
-func getMonsterLegendaryActionsByID(ctx context.Context, id int) ([]LegendaryAction, error) {
-	var monsterLegendaryActions []LegendaryAction
+func getMonsterLegendaryActionsByID(ctx context.Context, id int) ([]monster_action_manager.LegendaryAction, error) {
+	var monsterLegendaryActions []monster_action_manager.LegendaryAction
 	stmt := SELECT(
 		MonsterActionsLegendary.ActionCost,
 		MonsterActions.ActionID,
@@ -333,7 +421,7 @@ func getMonsterLegendaryActionsByID(ctx context.Context, id int) ([]LegendaryAct
 		return monsterLegendaryActions, fmt.Errorf("failed to query monster legendary actions by id: %w", err)
 	}
 	defer rows.Close()
-	monsterLegendaryActions, err = pgx.CollectRows(rows, pgx.RowToStructByPos[LegendaryAction])
+	monsterLegendaryActions, err = pgx.CollectRows(rows, pgx.RowToStructByPos[monster_action_manager.LegendaryAction])
 	if err != nil {
 		return monsterLegendaryActions, fmt.Errorf("failed to assign legendary actions by id: %w", err)
 	}
@@ -341,8 +429,8 @@ func getMonsterLegendaryActionsByID(ctx context.Context, id int) ([]LegendaryAct
 	return monsterLegendaryActions, nil
 }
 
-func getMonsterSpecialAbilities(ctx context.Context, id int) ([]SpecialAbility, error) {
-	var specialAbilities []SpecialAbility
+func getMonsterSpecialAbilities(ctx context.Context, id int) ([]monster_action_manager.SpecialAbility, error) {
+	var specialAbilities []monster_action_manager.SpecialAbility
 	stmt := SELECT(
 		MonsterSpecialAbilities.Name,
 		MonsterSpecialAbilities.UsageCount,
@@ -361,7 +449,7 @@ func getMonsterSpecialAbilities(ctx context.Context, id int) ([]SpecialAbility, 
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sa SpecialAbility
+		var sa monster_action_manager.SpecialAbility
 		var name string
 		var usageCount sql.NullInt64
 		var description string
@@ -545,112 +633,26 @@ func getMonsterSpellcastingByID(ctx context.Context, id int) (MSpellcasting, err
 	return spellcasting, nil
 }
 
-// DEPRECATED
-//func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (Monster, error) {
-//	var monsterResult Monster
-//	var monsterBaseResult MonsterBase
-//	var err error
-//
-//	if params.ID != 0 {
-//		monsterBaseResult, err = getMonsterBaseDataByID(ctx, params.ID)
-//	} else if params.Name != "" {
-//		var id int
-//		id, err = getMonsterIDByName(ctx, params.Name)
-//		if err != nil {
-//			return monsterResult, err
-//		}
-//		monsterBaseResult, err = getMonsterBaseDataByID(ctx, id)
-//		if err != nil {
-//			return monsterResult, err
-//		}
-//	} else {
-//		err = fmt.Errorf("no name or id provided for monster data query")
-//		return monsterResult, err
-//	}
-//
-//	monsterResult.MonsterBase = monsterBaseResult
-//
-//	if monsterBaseResult.ID != 0 {
-//		var monsterDamageModifiers []MonsterDamageModifier
-//		monsterDamageModifiers, err = getMonsterDamageModifiersByID(ctx, monsterBaseResult.ID)
-//		if err != nil {
-//			return monsterResult, err
-//		}
-//		monsterResult.DamageModifiers = monsterDamageModifiers
-//
-//		var monsterResistBreakers []shared.DamageBreaker
-//		monsterResistBreakers, err = getMonsterResistBreakersByID(ctx, monsterBaseResult.ID)
-//		if err != nil {
-//			return monsterResult, err
-//		}
-//		monsterResult.ResistBreakers = monsterResistBreakers
-//
-//		var monsterActions []MonsterAction
-//		monsterActions, err = getMonsterActionsByID(ctx, monsterBaseResult.ID)
-//		if err != nil {
-//			return monsterResult, err
-//		}
-//		monsterResult.Actions = monsterActions
-//
-//		var monsterMultiattacks []MonsterMultiattack
-//		monsterMultiattacks, err = getMonsterMultiattacksByID(ctx, monsterBaseResult.ID)
-//		if err != nil {
-//			return monsterResult, err
-//		}
-//		monsterResult.Multiattacks = monsterMultiattacks
-//
-//		var mSpecialAbilities []SpecialAbility
-//		mSpecialAbilities, err = getMonsterSpecialAbilities(ctx, monsterBaseResult.ID)
-//		if err != nil {
-//			return monsterResult, err
-//		}
-//		monsterResult.SpecialAbilities = mSpecialAbilities
-//
-//		if monsterResult.IsLegendary {
-//			var monsterLegendaryActions []LegendaryAction
-//			monsterLegendaryActions, err = getMonsterLegendaryActionsByID(ctx, monsterBaseResult.ID)
-//			if err != nil {
-//				return monsterResult, err
-//			}
-//			monsterResult.LegendaryActions = monsterLegendaryActions
-//		}
-//
-//		if monsterResult.IsSpellcaster || monsterResult.IsInnateSpellcaster {
-//			var monsterSpellcasting MSpellcasting
-//			monsterSpellcasting, err = getMonsterSpellcastingByID(ctx, monsterBaseResult.ID)
-//			if err != nil {
-//				return monsterResult, err
-//			}
-//			monsterResult.Spellcasting = monsterSpellcasting
-//		}
-//	} else {
-//		err = fmt.Errorf("invalid monster id to query additional data")
-//		return monsterResult, err
-//	}
-//
-//	return monsterResult, nil
-//}
-
-func QueryMonsterData(ctx context.Context, params MonsterQueryParams) (MonsterBase, error) {
-	var monsterBaseResult MonsterBase
+func getMonsterActionManagerConfig(ctx context.Context, id int) (*monster_action_manager.MAMConfig, error) {
 	var err error
+	var config monster_action_manager.MAMConfig
 
-	if params.ID != 0 {
-		monsterBaseResult, err = getMonsterBaseDataByID(ctx, params.ID)
-	} else if params.Name != "" {
-		var id int
-		id, err = getMonsterIDByName(ctx, params.Name)
-		if err != nil {
-			return monsterBaseResult, err
-		}
-		monsterBaseResult, err = getMonsterBaseDataByID(ctx, id)
-		if err != nil {
-			return monsterBaseResult, err
-		}
-	} else {
-		err = fmt.Errorf("no name or id provided for monster data query")
-		return MonsterBase{}, err
+	config.Actions, err = getMonsterActionsByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster actions by id: %w", err)
+	}
+	config.Multiattacks, err = getMonsterMultiattacksByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster multiattacks by id: %w", err)
+	}
+	config.LegendaryActions, err = getMonsterLegendaryActionsByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster legendary actions by id: %w", err)
+	}
+	config.SpecialAbilities, err = getMonsterSpecialAbilities(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster special abilities by id: %w", err)
 	}
 
-	return monsterBaseResult, nil
+	return &config, nil
 }

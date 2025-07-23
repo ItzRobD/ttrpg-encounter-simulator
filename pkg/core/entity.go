@@ -2,7 +2,7 @@ package core
 
 type Entity interface {
 	IsUnconscious() bool                                                  // Added C
-	GetHPStatus() HPStatus                                                // Added C TODO: Fix type
+	GetHPStatus() HPStatus                                                // Added C
 	GetName() string                                                      // Added C
 	GetAC() int                                                           // Added C
 	GetEventListener() func(event interface{})                            // Added C

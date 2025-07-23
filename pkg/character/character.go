@@ -6,6 +6,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/equipment_manager"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/martial_attack_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
@@ -71,6 +72,7 @@ func New(ctx context.Context, name string, classID classes.ClassID, level uint8,
 	char.RollManager = initializeRollManager(ctx, &char, &char.Configuration)
 
 	// Entity State Manager
+	// TODO: Implement resistances for characters
 	config := entity_state_manager.EntityStateConfig{
 		AttackCount: c.AttackCount,
 		Conditions:  core.NewEntityConditions(),
@@ -112,9 +114,9 @@ func initalizeEntityStateManager(ctx context.Context, c *Character, config *enti
 	return esm, nil
 }
 
-// initializeSpellcastingManager initializes and configures a SpellcastingManager for the provided character.
-// It retrieves the spell slots and usable spell IDs based on the character's level and class.
-// Returns a pointer to the SpellcastingManager and an error if any issue occurs during initialization.
+// initializeSpellcastingManager initializes and returns a SpellcastingManager for the given character and context.
+// It configures spell slots, casting options, usable spells, and other spell-related properties.
+// Returns an error if data retrieval or initialization fails.
 func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcasting_manager.SpellcastingManager, error) {
 	slots, err := classes.GetSpellSlotsByLevelAndClassID(ctx, c.Level, c.Class.ID.Int())
 	if err != nil {
@@ -140,6 +142,11 @@ func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcas
 	return sm, nil
 }
 
+// setHP sets the character's hit points (HP) using the specified method and value.
+// Arguments:
+// - m: The HP set method, which determines whether to set HP by value, average, or rolling.
+// - value: The value used to set HP when the method is HPSetValue.
+// Returns an error if an invalid method is provided or internal operations fail.
 func (c *Character) setHP(m core.HPSetMethod, value int) error {
 	switch m {
 	case core.HPSetValue:
@@ -149,23 +156,45 @@ func (c *Character) setHP(m core.HPSetMethod, value int) error {
 			TempHP:    0,
 			HitDie:    c.GetHitDie(),
 		}
+		hpRoll := roll_manager.RollResult{
+			DiceRollType:   core.DiceRollHPValueUsed,
+			FinalRollValue: value,
+			Total:          value,
+		}
+		events.LogDiceRollEvent(c, &hpRoll, c.EventListener)
 		c.EntityState.SetHPValues(hp)
+
+		return nil
 	case core.HPSetAverage:
 		modifier, err := c.getAbilityScoreModifier(core.AbilityConstitution)
 		if err != nil {
 			return err
 		}
 		hpAvg := math.Round(float64(c.Class.HitDie.Int()) + (float64(c.Level-1) * c.Class.HitDie.Avg()) + float64(int(c.Level)*modifier))
-		hpv := entity_state_manager.HPValues{
+		hp := entity_state_manager.HPValues{
 			CurrentHP: int(hpAvg),
 			MaxHP:     int(hpAvg),
 			TempHP:    0,
 			HitDie:    c.GetHitDie(),
 		}
+		hpRoll := roll_manager.RollResult{
+			DiceRollType:   core.DiceRollHPAvgUsed,
+			NumberOfDice:   int(c.Level - 1),
+			Die:            c.GetHitDie(),
+			FinalRollValue: int(hpAvg),
+			Modifier:       modifier,
+			Total:          int(hpAvg),
+		}
+		events.LogDiceRollEvent(c, &hpRoll, c.EventListener)
+		c.EntityState.SetHPValues(hp)
+
+		return nil
 	case core.HPSetRoll:
 		c.RollManager.RollHP()
+		return nil
+	default:
+		return fmt.Errorf("invalid HP set method: %s", m)
 	}
-
 }
 
 // GetSpellBonus calculates the spellcasting bonus based on the character's ability score and optionally adds proficiency bonus.
@@ -235,25 +264,22 @@ func (c *Character) GetSpellSaveDC(ability core.Ability) int {
 // slot specifies the weapon slot to retrieve the weapon from.
 // useVersatile indicates whether to use the weapon in versatile mode, if applicable.
 // Returns the constructed AttackData and an error if any issue occurs in retrieving or calculating weapon properties.
-func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bool) (martial_attack_manager.AttackData, error) {
+func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bool) (core.AttackData, error) {
 	w, err := c.EquipmentManager.GetWeaponFromSlot(slot)
 	if err != nil {
-		return martial_attack_manager.AttackData{}, err
+		return core.AttackData{}, err
 	}
 
 	prof := c.EquipmentManager.GetIsProficientWithSlot(slot)
-	if err != nil {
-		return martial_attack_manager.AttackData{}, err
-	}
 
 	attackMod, err := w.GetAttackModifier(&c.AbilityScores, c.Level, prof)
 	if err != nil {
-		return martial_attack_manager.AttackData{}, err
+		return core.AttackData{}, err
 	}
 
 	damageMod, err := w.GetWeaponModifier(&c.AbilityScores)
 	if err != nil {
-		return martial_attack_manager.AttackData{}, err
+		return core.AttackData{}, err
 	}
 
 	die := w.Die
@@ -263,7 +289,7 @@ func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bo
 		v = true
 	}
 
-	return martial_attack_manager.AttackData{
+	return core.AttackData{
 		Name:              w.Name,
 		NumberOfDice:      w.NumberOfDice,
 		Die:               die,
@@ -276,7 +302,7 @@ func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bo
 
 // CreateAttackRequest generates an attack request with specific weapon data, modifiers, advantage type, and attack count.
 func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, useVersatile bool, advantage core.AdvantageType, simulationOptions core.SimulationOptions) (*martial_attack_manager.AttackRequest, error) {
-	attackData, err := c.CreateWeaponAttackData(slot, useVersatile)
+	attackData, err := c.EquipmentManager.GetWeaponAttackData(slot, useVersatile)
 	if err != nil {
 		return nil, err
 	}

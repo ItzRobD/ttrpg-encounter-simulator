@@ -25,26 +25,8 @@ func (ao AttackOptions) GetIsPowerAttack() bool           { return ao.PowerAttac
 func (ao AttackOptions) GetIsImprovedCritical() bool      { return ao.ImprovedCritical }
 func (ao AttackOptions) GetTreatOnesAsTwos() bool         { return ao.RerollOnesAndTwos }
 
-type AttackData struct {
-	Name              string
-	NumberOfDice      int
-	Die               core.DiceType
-	AttackModifier    int // Added to attack roll. Character: Proficiency + Ability Mod; Monster: To Hit Bonus
-	DamageModifier    int
-	DamageType        core.DamageType
-	IsVersatileAttack bool
-}
-
-func (ad AttackData) GetAttackName() string      { return ad.Name }
-func (ad AttackData) GetNumberOfDice() int       { return ad.NumberOfDice }
-func (ad AttackData) GetDie() core.DiceType      { return ad.Die }
-func (ad AttackData) GetAttackModifier() int     { return ad.AttackModifier }
-func (ad AttackData) GetDamageModifier() int     { return ad.DamageModifier }
-func (ad AttackData) GetDamageType() string      { return ad.DamageType.String() }
-func (ad AttackData) GetIsVersatileAttack() bool { return ad.IsVersatileAttack }
-
 type AttackRequest struct {
-	AttackData        AttackData
+	AttackData        core.AttackData
 	AttackOptions     AttackOptions
 	SimulationOptions core.SimulationOptions
 	Target            core.Entity

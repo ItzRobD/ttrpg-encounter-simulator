@@ -56,7 +56,10 @@ Encounter handle turn
 
 */
 
-func (mam *MartialAttackManager) CalculateAttackResults(req *AttackRequest, options AttackOptions) ([]AttackResult, error) {
+// ProcessAttackRequest processes an attack request by performing attack rolls and calculating damage for each attack.
+// It uses the attack request data and options to execute attacks and returns a list of results for each attempt.
+// Returns an error if the attack roll or damage roll fails at any point.
+func (mam *MartialAttackManager) ProcessAttackRequest(req *AttackRequest, options AttackOptions) ([]AttackResult, error) {
 	var results []AttackResult
 
 	for i := 0; i < req.GetAttackOptions().GetNumberOfAttacks(); i++ {

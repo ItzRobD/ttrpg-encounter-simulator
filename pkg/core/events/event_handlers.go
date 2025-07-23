@@ -239,6 +239,29 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.Modifier,
 			e.TargetValue,
 			e.IsSuccess)
+	case core.DiceRollHP:
+		s = fmt.Sprintf("[Round %d] <HP roll> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Modifier: %d,\n",
+			e.GetRound(),
+			e.GetActor(),
+			e.RollType,
+			e.NumberOfDice,
+			e.Die,
+			e.Total,
+			e.FinalRolls,
+			e.Modifier)
+	case core.DiceRollHPAvgUsed:
+		s = fmt.Sprintf("[Round %d] <HP roll> %s used average values for hp. Dice: %dd%s, Total: %d, Modifier: %d,\n",
+			e.GetRound(),
+			e.GetActor(),
+			e.NumberOfDice,
+			e.Die,
+			e.Total,
+			e.Modifier)
+	case core.DiceRollHPValueUsed:
+		s = fmt.Sprintf("[Round %d] <HP roll> %s used direct values for hp. Total: %d.\n",
+			e.GetRound(),
+			e.GetActor(),
+			e.Total)
 	}
 
 	if e.WasRerolled {
