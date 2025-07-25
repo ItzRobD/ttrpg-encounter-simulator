@@ -20,6 +20,7 @@ const (
 type DiceType int
 
 const (
+	D0   DiceType = 0
 	D4   DiceType = 4
 	D6   DiceType = 6
 	D8   DiceType = 8

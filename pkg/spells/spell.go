@@ -47,9 +47,8 @@ func (s SpellDC) GetAbility() core.Ability       { return s.Ability }
 func (s SpellDC) GetOnSuccess() core.DCOnSuccess { return s.OnSuccess }
 
 type SpellQueryParams struct {
-	Name  string
-	ID    int
-	Level int
+	Name []string
+	ID   []int
 }
 
 func (s *Spell) GetHighestAverageAmount() int {

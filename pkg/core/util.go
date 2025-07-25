@@ -114,6 +114,15 @@ func GetDieAverage(die DiceType) (float64, error) {
 	return dieAverageValues[die.Int()], nil
 }
 
+// GetAverageRoll calculates the average roll of a specified number of dice with a modifier and returns the result or an error.
+func GetAverageRoll(numDice int, die DiceType, amtToAdd int) (int, error) {
+	dAvg, err := GetDieAverage(die)
+	if err != nil {
+		return 0, err
+	}
+	return int(dAvg*float64(numDice) + float64(amtToAdd)), nil
+}
+
 var validDamageTypes = []string{"acid", "bludgeoning", "cold", "fire", "force", "lightning",
 	"necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"}
 

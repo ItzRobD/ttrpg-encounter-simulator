@@ -4,7 +4,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
-	"dnd5e-encounter-simulator-backend/pkg/core/martial_attacks"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
 )

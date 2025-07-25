@@ -17,7 +17,7 @@ func (dcs DCOnSuccess) String() string {
 	return string(dcs)
 }
 
-func NewDCOnSuccess(s string) (DCOnSuccess, error) {
+func MakeDCOnSuccess(s string) (DCOnSuccess, error) {
 	switch strings.ToLower(s) {
 	case "none":
 		return DCOnSuccessNone, nil
