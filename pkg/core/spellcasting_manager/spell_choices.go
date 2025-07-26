@@ -338,7 +338,7 @@ func (scm *SpellcastingManager) GetBestFormulaForSpell(spell spells.Spell, p cor
 	switch p {
 	case core.SPLowestLevel:
 		if spell.Level == 0 {
-			value, formula, err = spell.GetAverageDamageCantrip(scm.parent.GetCasterLevel(), scm.spellcastModifierValue)
+			value, formula, err = spell.GetAverageDamageCantrip(int(scm.parent.GetCasterLevel()), scm.spellcastModifierValue)
 			if err != nil {
 				return nil, err
 			}
@@ -365,7 +365,7 @@ func (scm *SpellcastingManager) GetBestFormulaForSpell(spell spells.Spell, p cor
 		return formula, nil
 	case core.SPHighestLevel:
 		if spell.Level == 0 {
-			value, formula, err = spell.GetAverageDamageCantrip(scm.parent.GetCasterLevel(), scm.spellcastModifierValue)
+			value, formula, err = spell.GetAverageDamageCantrip(int(scm.parent.GetCasterLevel()), scm.spellcastModifierValue)
 			if err != nil {
 				return nil, err
 			}

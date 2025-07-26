@@ -26,11 +26,20 @@ type SpellcastingManager struct {
 	maxSlots               spells.SpellSlots
 	healingSpells          map[int][]*spells.Spell
 	damageSpells           map[int][]*spells.Spell
-	damageSpellCount       int
-	healingSpellCount      int
-	usableSpellIDs         []int // TODO: Not currently being used for anything
+	healingSpellsInnate    map[int][]*spells.InnateSpell // TODO: Added
+	damageSpellsInnate     map[int][]*spells.InnateSpell // TODO: Added
+	damageSpellCount       int                           // TODO: Handle this for innate
+	healingSpellCount      int                           // TODO: Handle this for innate
+	usableSpellIDs         []int                         // TODO: Not currently being used for anything
 	canUpcast              bool
 	spellcastModifierValue int
+
+	// New TODO: Consider these
+	CastingLevel   int
+	Ability        core.Ability
+	AttackModifier int
+	SaveDC         int
+	IsInnate       bool
 }
 
 func NewSpellcastingManager(parent core.Entity, rm *roll_manager.RollManager, casterType core.CasterType, casterLevel int, currentSlots spells.SpellSlots, maxSlots spells.SpellSlots, canUpcast bool, spellcastModValue int) *SpellcastingManager {
@@ -43,8 +52,8 @@ func NewSpellcastingManager(parent core.Entity, rm *roll_manager.RollManager, ca
 		maxSlots:               maxSlots,
 		canUpcast:              canUpcast,
 		spellcastModifierValue: spellcastModValue,
-		healingSpells:          map[int][]*spells.Spell{},
-		damageSpells:           map[int][]*spells.Spell{},
+		healingSpells:          map[int][]*spells.Spell{}, // Key is spell level
+		damageSpells:           map[int][]*spells.Spell{}, // Key is spell level
 	}
 }
 
@@ -64,6 +73,22 @@ func (scm *SpellcastingManager) AddKnownSpell(spell *spells.Spell) error {
 		return nil
 	}
 
+	return fmt.Errorf("Spells is of non healing or damage type")
+}
+
+func (scm *SpellcastingManager) AddKnownSpells(spell []spells.Spell) error {
+	for _, s := range spell {
+		//scm.calculateFormulaAverages(s)
+		if s.SpellType == core.STHealing {
+			scm.healingSpells[s.Level] = append(scm.healingSpells[s.Level], &s)
+			scm.healingSpellCount++
+			return nil
+		} else if s.SpellType == core.STDamage {
+			scm.damageSpells[s.Level] = append(scm.damageSpells[s.Level], &s)
+			scm.healingSpellCount++
+			return nil
+		}
+	}
 	return fmt.Errorf("Spells is of non healing or damage type")
 }
 

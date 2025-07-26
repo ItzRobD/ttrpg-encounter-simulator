@@ -1,16 +1,18 @@
 package monster_action_manager
 
+import "dnd5e-encounter-simulator-backend/pkg/core"
+
 type Action struct {
-	ActionID      int    // Action
-	Name          string // Action
-	RechargeValue int    // Action
-	HasDC         bool   // Used to determine if embedded struct is of value
-	Index         int    // Action
-	NumberOfDice  int    // DC || Attack Bonus Blocks
-	Die           int    // DC || Attack Bonus Blocks
-	AmountToAdd   int    // DC || Attack Bonus Blocks
-	AttackBonus   int    // DC || Attack Bonus Blocks
-	DamageType    string // DC || Attack Bonus Blocks
+	ActionID      int             // Action
+	Name          string          // Action
+	RechargeValue int             // Action
+	HasDC         bool            // Used to determine if embedded struct is of value
+	Index         int             // Action
+	NumberOfDice  int             // DC || Attack Bonus Blocks
+	Die           core.DiceType   // DC || Attack Bonus Blocks
+	AmountToAdd   int             // DC || Attack Bonus Blocks
+	AttackBonus   int             // DC || Attack Bonus Blocks
+	DamageType    core.DamageType // DC || Attack Bonus Blocks
 
 	// Optional fields - use pointers
 	DCAbility   *string // nil if no DC

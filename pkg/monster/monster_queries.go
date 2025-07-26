@@ -6,61 +6,127 @@ import (
 	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
 	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
+	"dnd5e-encounter-simulator-backend/internal/util"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/monster_action_manager"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
+	"encoding/json"
 	"fmt"
 	. "github.com/go-jet/jet/v2/postgres"
-	"github.com/jackc/pgx/v5"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
-func QueryMonsterBaseData(ctx context.Context, params MonsterQueryParams) (MonsterBase, error) {
-	var monsterBaseResult MonsterBase
+// TODO: We commented out some things here in order to get the program to run for testing
+func QueryMonsterConfigData(ctx context.Context, params MonsterQueryParams) (map[int]MonsterConfig, error) {
+	var config map[int]MonsterConfig
 	var err error
 
-	if params.ID != 0 {
-		monsterBaseResult, err = getMonsterBaseDataByID(ctx, params.ID)
-	} else if params.Name != "" {
-		var id int
-		id, err = getMonsterIDByName(ctx, params.Name)
+	if len(params.ID) == 0 {
+		ids, err := getMonsterIDsByName(ctx, params.Name)
 		if err != nil {
-			return monsterBaseResult, err
+			return nil, fmt.Errorf("failed to get monster ids by name: %w", err)
 		}
-		monsterBaseResult, err = getMonsterBaseDataByID(ctx, id)
+		config, err = getMonsterConfigByID(ctx, ids)
 		if err != nil {
-			return monsterBaseResult, err
+			return nil, fmt.Errorf("failed to get monster config by id: %w", err)
 		}
 	} else {
-		err = fmt.Errorf("no name or id provided for monster data query")
-		return MonsterBase{}, err
+		config, err = getMonsterConfigByID(ctx, params.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get monster config by id: %w", err)
+		}
 	}
 
-	return monsterBaseResult, nil
+	return config, nil
+}
+func getMonsterConfigByID(ctx context.Context, ids []int) (map[int]MonsterConfig, error) {
+	config := make(map[int]MonsterConfig)
+
+	bases, err := getMonsterBaseDataByID(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster base data by id: %w", err)
+	}
+	actions, err := getMonsterActionsByID(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster actions by id: %w", err)
+	}
+	multiattacks, err := getMonsterMultiattacksByID(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster multiattacks by id: %w", err)
+	}
+	legendaryActions, err := getMonsterLegendaryActionsByID(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster legendary actions by id: %w", err)
+	}
+	specialAbilities, err := getMonsterSpecialAbilitiesByID(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster special abilities: %w", err)
+	}
+	resistances, err := getMonsterResistancesByID(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster resistances by id: %w", err)
+	}
+	scConfig, err := GetMonsterSpellcastingConfigByID(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get monster spellcasting config by id: %w", err)
+	}
+
+	for _, i := range ids {
+		monster := MonsterConfig{
+			Base:               bases[i],
+			Actions:            actions[i],
+			Multiattacks:       multiattacks[i],
+			LegendaryActions:   legendaryActions[i],
+			SpecialAbilities:   specialAbilities[i],
+			Resistances:        resistances[i],
+			spellcastingConfig: scConfig[i],
+		}
+		config[i] = monster
+	}
+
+	return config, nil
 }
 
-func getMonsterIDByName(ctx context.Context, name string) (int, error) {
-	var id int
-	stmt := SELECT(
-		Monsters.ID,
-	).FROM(
-		Monsters,
-	).WHERE(Monsters.Name.EQ(String(name)))
+func getMonsterIDsByName(ctx context.Context, names []string) ([]int, error) {
+	if len(names) == 0 {
+		return nil, fmt.Errorf("no names provided")
+	}
+	var ids []int
+
+	titlized := make([]string, len(names))
+	caser := cases.Title(language.English)
+	for i, name := range names {
+		titlized[i] = caser.String(name)
+	}
+
+	stmt := SELECT(Monsters.ID).
+		FROM(Monsters).
+		WHERE(Monsters.Name.IN(util.StringsToExpressions(titlized)...))
 
 	query, args := stmt.Sql()
-	row, err := database.QueryRow(ctx, query, args...)
+	row, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return id, fmt.Errorf("failed to query monster base data by name: %w", err)
+		return nil, fmt.Errorf("failed to query monster id by name: %w", err)
 	}
-	err = row.Scan(&id)
-	if err != nil {
-		return id, fmt.Errorf("failed to scan monster base data by name: %w", err)
+	defer row.Close()
+	for row.Next() {
+		var id int
+		err = row.Scan(&id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan monster id by name: %w", err)
+		}
+		ids = append(ids, id)
 	}
 
-	return id, nil
+	return ids, nil
 }
 
-func getMonsterBaseDataByID(ctx context.Context, id int) (MonsterBase, error) {
-	var monsterResult MonsterBase
+func getMonsterBaseDataByID(ctx context.Context, ids []int) (map[int]MonsterBase, error) {
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("no ids provided")
+	}
+	bases := make(map[int]MonsterBase)
 	var strSave, dexSave, conSave, intSave, wisSave, chaSave sql.NullInt32 // Used as placeholders for save profs
 	stmt := SELECT(
 		Monsters.ID,
@@ -94,128 +160,66 @@ func getMonsterBaseDataByID(ctx context.Context, id int) (MonsterBase, error) {
 		LEFT_JOIN(MonsterAbilityScoreBlock, Monsters.ID.EQ(MonsterAbilityScoreBlock.MonsterID)).
 		LEFT_JOIN(MonsterHitPointFormulas, Monsters.ID.EQ(MonsterHitPointFormulas.MonsterID)).
 		LEFT_JOIN(MonsterSaveProficiencies, Monsters.ID.EQ(MonsterSaveProficiencies.MonsterID))).
-		WHERE(Monsters.ID.EQ(Int(int64(id))))
-
-	query, args := stmt.Sql()
-	row, err := database.QueryRow(ctx, query, args...)
-	if err != nil {
-		return monsterResult, fmt.Errorf("failed to query monster base data by id: %w", err)
-	}
-	err = row.Scan(
-		&monsterResult.ID,
-		&monsterResult.Name,
-		&monsterResult.Size,
-		&monsterResult.Type,
-		&monsterResult.AC,
-		&monsterResult.ProficiencyBonus,
-		&monsterResult.CR,
-		&monsterResult.ApiURL,
-		&monsterResult.IsLegendary,
-		&monsterResult.IsSpellcaster,
-		&monsterResult.IsInnateSpellcaster,
-		&monsterResult.AbilityScores.Strength,
-		&monsterResult.AbilityScores.Dexterity,
-		&monsterResult.AbilityScores.Constitution,
-		&monsterResult.AbilityScores.Intelligence,
-		&monsterResult.AbilityScores.Wisdom,
-		&monsterResult.AbilityScores.Charisma,
-		&monsterResult.HP.HPAverage,
-		&monsterResult.HP.NumberOfDice,
-		&monsterResult.HP.Die,
-		&monsterResult.HP.AmountToAdd,
-		&strSave, &dexSave, &conSave, &intSave, &wisSave, &chaSave,
-	)
-	if err != nil {
-		return monsterResult, fmt.Errorf("failed to scan monster base data by id: %w", err)
-	}
-
-	monsterResult.AbilityScoreProf = core.NewAbilityScoresProficiencies(
-		strSave.Valid && strSave.Int32 != 0,
-		dexSave.Valid && dexSave.Int32 != 0,
-		conSave.Valid && conSave.Int32 != 0,
-		intSave.Valid && intSave.Int32 != 0,
-		wisSave.Valid && wisSave.Int32 != 0,
-		chaSave.Valid && chaSave.Int32 != 0)
-
-	return monsterResult, nil
-}
-
-func getMonsterDamageModifiersByID(ctx context.Context, id int) ([]MonsterDamageModifier, error) {
-	var monsterDamageModifiers []MonsterDamageModifier
-	stmt := SELECT(
-		MonsterDamageModifiers.DamageType,
-		MonsterDamageModifiers.ModifierType,
-	).
-		FROM(
-			MonsterDamageModifiers,
-		).WHERE(
-		MonsterDamageModifiers.MonsterID.EQ(Int(int64(id))))
+		WHERE(Monsters.ID.IN(util.IntsToExpressions(ids)...))
 
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return monsterDamageModifiers, fmt.Errorf("failed to query monster damage modifiers by id: %w", err)
+		return nil, fmt.Errorf("failed to query monster base data by id: %w", err)
 	}
 	defer rows.Close()
-
 	for rows.Next() {
-		var monsterDamageModifier MonsterDamageModifier
-		err = rows.Scan(&monsterDamageModifier.DamageType, &monsterDamageModifier.ModifierType)
+		var base MonsterBase
+		err = rows.Scan(
+			&base.ID,
+			&base.Name,
+			&base.Size,
+			&base.Type,
+			&base.AC,
+			&base.ProficiencyBonus,
+			&base.CR,
+			&base.ApiURL,
+			&base.IsLegendary,
+			&base.IsSpellcaster,
+			&base.IsInnateSpellcaster,
+			&base.AbilityScores.Strength,
+			&base.AbilityScores.Dexterity,
+			&base.AbilityScores.Constitution,
+			&base.AbilityScores.Intelligence,
+			&base.AbilityScores.Wisdom,
+			&base.AbilityScores.Charisma,
+			&base.HP.HPAverage,
+			&base.HP.NumberOfDice,
+			&base.HP.Die,
+			&base.HP.AmountToAdd,
+			&strSave, &dexSave, &conSave, &intSave, &wisSave, &chaSave,
+		)
 		if err != nil {
-			return monsterDamageModifiers, fmt.Errorf("failed to scan monster damage modifiers by id: %w", err)
+			return nil, fmt.Errorf("failed to scan monster base data by id: %w", err)
 		}
-		monsterDamageModifiers = append(monsterDamageModifiers, monsterDamageModifier)
+
+		base.AbilityScoreProf = core.NewAbilityScoresProficiencies(
+			strSave.Valid && strSave.Int32 != 0,
+			dexSave.Valid && dexSave.Int32 != 0,
+			conSave.Valid && conSave.Int32 != 0,
+			intSave.Valid && intSave.Int32 != 0,
+			wisSave.Valid && wisSave.Int32 != 0,
+			chaSave.Valid && chaSave.Int32 != 0)
+
+		bases[base.ID] = base
 	}
 
-	if err := rows.Err(); err != nil {
-		return monsterDamageModifiers, fmt.Errorf("failed to query monster damage modifiers by id: %w", err)
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error during row iteration: %w", err)
 	}
 
-	return monsterDamageModifiers, nil
+	return bases, nil
 }
 
-//func getMonsterResistBreakersByID(ctx context.Context, id int) ([]shared.DamageBreaker, error) {
-//	var monsterResistBreakers []shared.DamageBreaker
-//	stmt := SELECT(
-//		MonsterDamageModifiers.DamageType,
-//		MonsterResistBreakers.ResistBreakerType,
-//	).FROM(
-//		Monsters.
-//			INNER_JOIN(MonsterDamageModifiers, Monsters.ID.EQ(MonsterDamageModifiers.MonsterID)).
-//			LEFT_JOIN(MonsterDamageResistBreakers, MonsterDamageResistBreakers.ModifierID.EQ(MonsterDamageModifiers.ModifierID)).
-//			LEFT_JOIN(MonsterResistBreakers, MonsterResistBreakers.ResistBreakerID.EQ(MonsterDamageResistBreakers.ResistBreakerID))).
-//		WHERE(Monsters.ID.EQ(Int(int64(id))))
-//
-//	query, args := stmt.Sql()
-//	rows, err := database.Query(ctx, query, args...)
-//	if err != nil {
-//		return monsterResistBreakers, fmt.Errorf("failed to query monster resist breakers by id: %w", err)
-//	}
-//	defer rows.Close()
-//
-//	for rows.Next() {
-//		var damageBreaker shared.DamageBreaker
-//		var damageBreakerName pgtype.Text
-//		err = rows.Scan(&damageBreaker.DamageType, &damageBreakerName)
-//		if err != nil {
-//			return monsterResistBreakers, fmt.Errorf("failed to scan monster resist breakers by id: %w", err)
-//		}
-//		if damageBreakerName.Valid {
-//			damageBreaker.Breaker = shared.WeaponBreakerType(damageBreakerName.String)
-//			monsterResistBreakers = append(monsterResistBreakers, damageBreaker)
-//		}
-//	}
-//
-//	if err := rows.Err(); err != nil {
-//		return monsterResistBreakers, fmt.Errorf("failed to query monster resist breakers by id: %w", err)
-//	}
-//
-//	return monsterResistBreakers, nil
-//}
-
-func getMonsterActionsByID(ctx context.Context, id int) (map[int]monster_action_manager.Action, error) {
-	monsterActions := make(map[int]monster_action_manager.Action)
+func getMonsterActionsByID(ctx context.Context, ids []int) (map[int]map[int]monster_action_manager.Action, error) {
+	mActionsMap := make(map[int]map[int]monster_action_manager.Action)
 	stmt := SELECT(
+		MonsterActions.MonsterID,
 		MonsterActions.ActionID,
 		MonsterActions.Name,
 		MonsterActions.RechargeValue,
@@ -259,20 +263,23 @@ func getMonsterActionsByID(ctx context.Context, id int) (map[int]monster_action_
 				LEFT_JOIN(MonsterAttackBonusBlocks, MonsterActions.ActionID.EQ(MonsterAttackBonusBlocks.ActionID)).
 				LEFT_JOIN(MonsterDcDamageBlocks, MonsterActions.ActionID.EQ(MonsterDcDamageBlocks.ActionID)),
 		).WHERE(
-		MonsterActions.MonsterID.EQ(Int(int64(id))),
+		MonsterActions.MonsterID.IN(util.IntsToExpressions(ids)...),
 	).ORDER_BY(
-		MonsterActions.ActionID.ASC())
+		MonsterActions.MonsterID.ASC(), MonsterActions.ActionID.ASC())
 
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", err)
+		return mActionsMap, fmt.Errorf("failed to query monster actions by id: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var action monster_action_manager.Action
-		err = rows.Scan(&action.ActionID,
+		var monsterID int
+		err = rows.Scan(
+			&monsterID,
+			&action.ActionID,
 			&action.Name,
 			&action.RechargeValue,
 			&action.HasDC,
@@ -286,33 +293,38 @@ func getMonsterActionsByID(ctx context.Context, id int) (map[int]monster_action_
 			&action.DCOnSuccess,
 			&action.DC)
 		if err != nil {
-			return monsterActions, fmt.Errorf("failed to scan monster actions by id: %w", err)
+			return mActionsMap, fmt.Errorf("failed to scan monster actions by monsterID: %w", err)
 		}
-		if _, exists := monsterActions[action.ActionID]; exists {
-			fmt.Printf("action %d already exists\n", action.ActionID)
+
+		monster, exists := mActionsMap[monsterID]
+		if exists {
+			monster[action.ActionID] = action
 		} else {
-			monsterActions[action.ActionID] = action
+			monster = make(map[int]monster_action_manager.Action)
+			monster[action.ActionID] = action
+			mActionsMap[monsterID] = monster
 		}
 	}
 
 	if errI := rows.Err(); errI != nil {
-		return monsterActions, fmt.Errorf("failed to query monster actions by id: %w", errI)
+		return mActionsMap, fmt.Errorf("failed to query monster actions by id: %w", errI)
 	}
 
-	return monsterActions, nil
+	return mActionsMap, nil
 }
 
-func getMonsterMultiattacksByID(ctx context.Context, id int) (map[int][]monster_action_manager.Multiattack, error) {
-	multiattackMap := make(map[int][]monster_action_manager.Multiattack)
+func getMonsterMultiattacksByID(ctx context.Context, id []int) (map[int]map[int][]monster_action_manager.Multiattack, error) {
+	mMAMap := make(map[int]map[int][]monster_action_manager.Multiattack)
 
 	stmt := SELECT(
+		MonsterMultiattacks.MonsterID,
 		MonsterMultiattacks.ActionID,
 		MonsterMultiattacks.AttackCount,
 		MonsterMultiattacks.IsOption,
 		MonsterMultiattacks.OptionIndex).
 		FROM(MonsterMultiattacks).
-		WHERE(MonsterMultiattacks.MonsterID.EQ(Int(int64(id)))).
-		ORDER_BY(MonsterMultiattacks.OptionIndex.ASC(), MonsterMultiattacks.ActionID.ASC())
+		WHERE(MonsterMultiattacks.MonsterID.IN(util.IntsToExpressions(id)...)).
+		ORDER_BY(MonsterMultiattacks.MonsterID.ASC(), MonsterMultiattacks.OptionIndex.ASC(), MonsterMultiattacks.ActionID.ASC())
 
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
@@ -322,51 +334,38 @@ func getMonsterMultiattacksByID(ctx context.Context, id int) (map[int][]monster_
 	defer rows.Close()
 
 	for rows.Next() {
+		var monsterID int
 		var aid, count, index int
 		var isOption bool
-		err = rows.Scan(&aid, &count, &isOption, &index)
+		err = rows.Scan(&monsterID, &aid, &count, &isOption, &index)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning monster multiattacks: %w", err)
 		}
 
-		//comp := monster_action_manager.MultiAttackComponent{
-		//	ActionID: aid,
-		//	Count:    count,
-		//}
-		//
-		//multiattack, exists := multiattackMap[index]
-		//if !exists {
-		//	multiattack = monster_action_manager.Multiattack{
-		//		IsOption:   false,
-		//		Components: []monster_action_manager.MultiAttackComponent{},
-		//	}
-		//}
-		//
-		//multiattack.Components = append(multiattack.Components, comp)
-		//multiattackMap[index] = multiattack
-
-		multiattack, exists := multiattackMap[index]
-		if !exists {
-			ma := monster_action_manager.Multiattack{
-				ActionID: aid,
-				Count:    count,
-			}
-			multiattack = append(multiattack, ma)
+		if mMAMap[monsterID] == nil {
+			mMAMap[monsterID] = make(map[int][]monster_action_manager.Multiattack)
 		}
 
-		multiattackMap[index] = multiattack
+		multiattack := monster_action_manager.Multiattack{
+			ActionID: aid,
+			Count:    count,
+		}
+
+		mMAMap[monsterID][index] = append(mMAMap[monsterID][index], multiattack)
+
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating monster multiattacks: %w", err)
 	}
 
-	return multiattackMap, nil
+	return mMAMap, nil
 }
 
-func getMonsterLegendaryActionsByID(ctx context.Context, id int) ([]monster_action_manager.LegendaryAction, error) {
-	var monsterLegendaryActions []monster_action_manager.LegendaryAction
+func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int][]monster_action_manager.LegendaryAction, error) {
+	mLAMap := make(map[int][]monster_action_manager.LegendaryAction)
 	stmt := SELECT(
+		MonsterActionsLegendary.MonsterID,
 		MonsterActionsLegendary.ActionCost,
 		MonsterActions.ActionID,
 		MonsterActions.Name,
@@ -411,248 +410,353 @@ func getMonsterLegendaryActionsByID(ctx context.Context, id int) ([]monster_acti
 			LEFT_JOIN(MonsterAttackBonusBlocks, MonsterActions.ActionID.EQ(MonsterAttackBonusBlocks.ActionID)).
 			LEFT_JOIN(MonsterDcDamageBlocks, MonsterActions.ActionID.EQ(MonsterDcDamageBlocks.ActionID)),
 	).WHERE(
-		MonsterActionsLegendary.MonsterID.EQ(Int(int64(id))),
+		MonsterActionsLegendary.MonsterID.IN(util.IntsToExpressions(id)...),
 	).ORDER_BY(
+		MonsterActionsLegendary.MonsterID.ASC(),
 		MonsterActionsLegendary.ActionID.ASC())
 
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return monsterLegendaryActions, fmt.Errorf("failed to query monster legendary actions by id: %w", err)
+		return nil, fmt.Errorf("failed to query monster legendary actions by id: %w", err)
 	}
 	defer rows.Close()
-	monsterLegendaryActions, err = pgx.CollectRows(rows, pgx.RowToStructByPos[monster_action_manager.LegendaryAction])
-	if err != nil {
-		return monsterLegendaryActions, fmt.Errorf("failed to assign legendary actions by id: %w", err)
+
+	for rows.Next() {
+		var monsterID int
+		var la monster_action_manager.LegendaryAction
+		err = rows.Scan(
+			&monsterID,
+			&la.Cost,
+			&la.Action.ActionID,
+			&la.Action.Name,
+			&la.Action.RechargeValue,
+			&la.Action.HasDC,
+			&la.Action.Index,
+			&la.Action.NumberOfDice,
+			&la.Action.Die,
+			&la.Action.AmountToAdd,
+			&la.Action.AttackBonus,
+			&la.Action.DamageType,
+			&la.Action.DCAbility,
+			&la.Action.DCOnSuccess,
+			&la.Action.DC)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan monster legendary actions by monsterID: %w", err)
+		}
+
+		mLAMap[monsterID] = append(mLAMap[monsterID], la)
 	}
 
-	return monsterLegendaryActions, nil
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to query monster legendary actions by id: %w", err)
+	}
+
+	return mLAMap, nil
 }
 
-func getMonsterSpecialAbilities(ctx context.Context, id int) ([]monster_action_manager.SpecialAbility, error) {
-	var specialAbilities []monster_action_manager.SpecialAbility
+func getMonsterSpecialAbilitiesByID(ctx context.Context, id []int) (map[int][]monster_action_manager.SpecialAbility, error) {
+	mSAMap := make(map[int][]monster_action_manager.SpecialAbility)
 	stmt := SELECT(
+		MonsterSpecialAbilities.MonsterID,
 		MonsterSpecialAbilities.Name,
 		MonsterSpecialAbilities.UsageCount,
 		MonsterSpecialAbilities.Description,
 	).FROM(
 		MonsterSpecialAbilities,
 	).WHERE(
-		MonsterSpecialAbilities.MonsterID.EQ(Int(int64(id))),
+		MonsterSpecialAbilities.MonsterID.IN(util.IntsToExpressions(id)...),
 	).ORDER_BY(
-		MonsterSpecialAbilities.Name.ASC())
+		MonsterSpecialAbilities.MonsterID.ASC(), MonsterSpecialAbilities.Name.ASC())
 
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return specialAbilities, fmt.Errorf("failed to query monster special abilities by id: %w")
+		return nil, fmt.Errorf("failed to query monster special abilities by id: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var sa monster_action_manager.SpecialAbility
-		var name string
+		var monsterID int
 		var usageCount sql.NullInt64
-		var description string
-		err = rows.Scan(&name, &usageCount, &description)
+		err = rows.Scan(&monsterID, &sa.Name, &usageCount, &sa.Description)
 		if err != nil {
-			return specialAbilities, fmt.Errorf("failed to scan monster special abilities by id: %w", err)
+			return nil, fmt.Errorf("failed to scan monster special abilities by id: %w", err)
 		}
 		if usageCount.Valid {
 			sa.UsageCount = int(usageCount.Int64)
 		} else {
 			sa.UsageCount = 0
 		}
-		sa.Name = name
-		sa.Description = description
 
-		specialAbilities = append(specialAbilities, sa)
+		mSAMap[monsterID] = append(mSAMap[monsterID], sa)
 	}
 
-	return specialAbilities, nil
-}
-
-func getMonsterSpellcastingSlotsByID(ctx context.Context, id int) (map[int]int, error) {
-	var spellcastingSlots map[int]int
-	stmt := SELECT(
-		MonsterSpellcastingSlots.SpellLevel,
-		MonsterSpellcastingSlots.Slots,
-	).FROM(
-		MonsterSpellcastingSlots,
-	).WHERE(
-		MonsterSpellcastingSlots.MonsterID.EQ(Int(int64(id))),
-	)
-
-	query, args := stmt.Sql()
-	rows, err := database.Query(ctx, query, args...)
-	for rows.Next() {
-		var spellLevel int
-		var slots int
-		err = rows.Scan(&spellLevel, &slots)
-		if err != nil {
-			return spellcastingSlots, fmt.Errorf("failed to scan monster spellcasting slots by id: %w", err)
-		}
-		if spellcastingSlots == nil {
-			spellcastingSlots = make(map[int]int)
-		}
-		spellcastingSlots[spellLevel] = slots
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to query monster special abilities by id: %w", err)
 	}
 
-	return spellcastingSlots, nil
+	return mSAMap, nil
 }
 
-func getMonsterSpellsByID(ctx context.Context, id int) ([]int, error) {
-	var spellIDs []int
+func getMonsterResistancesByID(ctx context.Context, id []int) (map[int]core.DamageResistances, error) {
+	mResistanceMap := make(map[int]core.DamageResistances)
 	stmt := SELECT(
-		MonsterAvailableSpells.SpellID,
-	).FROM(
-		MonsterAvailableSpells.
-			LEFT_JOIN(Spells, MonsterAvailableSpells.SpellID.EQ(Spells.ID)),
-	).WHERE(
-		MonsterAvailableSpells.MonsterID.EQ(Int(int64(id))).
-			AND(
-				Spells.SpellType.EQ(enum.Stype.Damage).
-					OR(Spells.SpellType.EQ(enum.Stype.Healing)),
-			),
-	)
+		MonsterResistances.MonsterID,
+		MonsterResistances.ResistanceType,
+		MonsterResistances.DamageType,
+		ResistBreakers.ResistBreakerType,
+	).FROM(MonsterResistances.
+		LEFT_JOIN(MonsterResistBreakers, MonsterResistances.ResistanceID.EQ(MonsterResistBreakers.ResistanceID)).
+		LEFT_JOIN(ResistBreakers, MonsterResistBreakers.ResistBreakerID.EQ(ResistBreakers.ResistBreakerID)),
+	).WHERE(MonsterResistances.MonsterID.IN(util.IntsToExpressions(id)...)).
+		ORDER_BY(MonsterResistances.MonsterID.ASC(), MonsterResistances.DamageType.ASC())
 
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return spellIDs, fmt.Errorf("failed to query monster spell ids by monster id: %w", err)
+		return nil, fmt.Errorf("failed to query monster resistances by id: %w", err)
 	}
 	defer rows.Close()
+
 	for rows.Next() {
-		var spellID int
-		err = rows.Scan(&spellID)
+		var monsterID int
+		var rType, dmgType, bType sql.NullString
+
+		err = rows.Scan(&monsterID, &rType, &dmgType, &bType)
 		if err != nil {
-			return spellIDs, fmt.Errorf("failed to scan monster spell ids by monster id: %w", err)
+			return nil, fmt.Errorf("failed to scan monster resistances by id: %w", err)
 		}
-		spellIDs = append(spellIDs, spellID)
+
+		if !dmgType.Valid {
+			return nil, fmt.Errorf("damage type cannot be null")
+		}
+		damageType, err := core.MakeDamageType(dmgType.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to make damage type: %w", err)
+		}
+
+		// Initialize monster's resistance map if needed (but keep it empty initially)
+		if mResistanceMap[monsterID] == nil {
+			mResistanceMap[monsterID] = make(core.DamageResistances)
+		}
+
+		// Get existing resistance or create new one
+		resistance := mResistanceMap[monsterID][damageType]
+
+		// Set resistance type (should be same across rows for same monster+damageType)
+		if rType.Valid {
+			resistanceType, err := core.MakeResistanceType(rType.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to make resistance type: %w", err)
+			}
+			resistance.Resistance = resistanceType
+		} else {
+			resistance.Resistance = core.ResistanceNone
+		}
+
+		// Add breaker if present
+		if bType.Valid {
+			breakerType, err := core.MakeResistBreaker(bType.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to make resist breaker: %w", err)
+			}
+			resistance.Breakers = append(resistance.Breakers, breakerType)
+		}
+
+		// Put the updated resistance back
+		mResistanceMap[monsterID][damageType] = resistance
+
 	}
 
-	return spellIDs, nil
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to query monster resistances by id: %w", err)
+	}
+
+	return mResistanceMap, nil
 }
 
-func getMonsterSpellcastingByID(ctx context.Context, id int) (MSpellcasting, error) {
-	var spellcasting MSpellcasting
+func GetMonsterSpellcastingConfigByID(ctx context.Context, id []int) (map[int]MonsterSpellcastingConfig, error) {
+	configMap := make(map[int]MonsterSpellcastingConfig)
 
-	var isInnateCaster bool
-
-	stmt := SELECT(Monsters.IsInnateCaster).FROM(Monsters).WHERE(Monsters.ID.EQ(Int(int64(id))))
-	query, args := stmt.Sql()
-	row, err := database.QueryRow(ctx, query, args...)
-	if err != nil {
-		return spellcasting, fmt.Errorf("failed to query is innate caster by id: %w", err)
-	}
-	err = row.Scan(&isInnateCaster)
-	if err != nil {
-		return spellcasting, fmt.Errorf("failed to scan is innate caster by id: %w", err)
-	}
-
-	stmt = SELECT(
+	stmt := SELECT(
+		MonsterSpellcasting.MonsterID,
 		MonsterSpellcasting.CastingLevel,
 		MonsterSpellcasting.Ability,
 		MonsterSpellcasting.AttackModifier,
 		MonsterSpellcasting.SaveDc,
-	).FROM(
-		MonsterSpellcasting,
-	).WHERE(
-		MonsterSpellcasting.MonsterID.EQ(Int(int64(id))),
-	)
+		Raw("COALESCE(ARRAY_AGG(DISTINCT monster_available_spells.spell_id) FILTER (WHERE monster_available_spells.spell_id IS NOT NULL), '{}')").AS("standard_spell_ids"),
+		Raw("COALESCE(JSON_OBJECT_AGG(monster_available_spells_innate.spell_id, monster_available_spells_innate.times_per_day) FILTER (WHERE monster_available_spells_innate.spell_id IS NOT NULL), '{}')").AS("innate_spells"),
+		Raw("COALESCE(JSON_OBJECT_AGG(monster_spellcasting_slots.spell_level, monster_spellcasting_slots.slots) FILTER (WHERE monster_spellcasting_slots.spell_level IS NOT NULL), '{}')").AS("spell_slots"),
+	).FROM(MonsterSpellcasting.
+		LEFT_JOIN(MonsterAvailableSpells, MonsterSpellcasting.MonsterID.EQ(MonsterAvailableSpells.MonsterID)).
+		LEFT_JOIN(MonsterAvailableSpellsInnate, MonsterSpellcasting.MonsterID.EQ(MonsterAvailableSpellsInnate.MonsterID)).
+		LEFT_JOIN(MonsterSpellcastingSlots, MonsterSpellcasting.MonsterID.EQ(MonsterSpellcastingSlots.MonsterID)),
+	).WHERE(MonsterSpellcasting.MonsterID.IN(util.IntsToExpressions(id)...)).
+		GROUP_BY(MonsterSpellcasting.MonsterID, MonsterSpellcasting.CastingLevel, MonsterSpellcasting.Ability, MonsterSpellcasting.AttackModifier, MonsterSpellcasting.SaveDc).
+		ORDER_BY(MonsterSpellcasting.MonsterID.ASC())
 
-	query, args = stmt.Sql()
-	row, err = database.QueryRow(ctx, query, args...)
+	query, args := stmt.Sql()
+	rows, err := database.Query(ctx, query, args...)
 	if err != nil {
-		return spellcasting, fmt.Errorf("failed to query monster spellcasting by id: %w", err)
+		return nil, fmt.Errorf("failed to query monster spellcasting by id: %w", err)
 	}
-	err = row.Scan(&spellcasting.CastingLevel, &spellcasting.Ability, &spellcasting.AttackModifier, &spellcasting.SaveDC)
-	if err != nil {
-		return spellcasting, fmt.Errorf("failed to scan monster spellcasting by id: %w", err)
+	defer rows.Close()
+
+	type tempConfig struct {
+		MonsterID      int
+		CastingLevel   int
+		Ability        core.Ability
+		AttackModifier int
+		SaveDC         int
+		StandardSpells []int
+		InnateSpells   map[int]int // spell_id -> times_per_day
+		SpellSlots     map[int]int
 	}
 
-	if isInnateCaster {
-		stmt = SELECT(
-			MonsterAvailableSpellsInnate.SpellID,
-			MonsterAvailableSpellsInnate.TimesPerDay,
-		).FROM(
-			MonsterAvailableSpellsInnate.
-				LEFT_JOIN(Spells, MonsterAvailableSpellsInnate.SpellID.EQ(Spells.ID)),
-		).WHERE(
-			MonsterAvailableSpellsInnate.MonsterID.EQ(Int(int64(id))).
-				AND(
-					Spells.SpellType.EQ(enum.Stype.Damage).
-						OR(Spells.SpellType.EQ(enum.Stype.Healing)),
-				),
-		)
+	// Collect all spell IDs from both standard and innate spells
+	allSpellIDs := make(map[int]struct{})
+	tempConfigs := make(map[int]tempConfig)
 
-		query, args = stmt.Sql()
-		rows, err2 := database.Query(ctx, query, args...)
-		if err2 != nil {
-			return spellcasting, fmt.Errorf("failed to query monster innate spells by id: %w", err2)
+	for rows.Next() {
+		var monsterID, castingLevel int
+		var am, dc sql.NullInt64
+		var a string
+		var standardSpellIDs []int
+		var innateSpellsJSON, spellSlotsJSON string
+
+		err = rows.Scan(&monsterID, &castingLevel, &a, &am, &dc, &standardSpellIDs, &innateSpellsJSON, &spellSlotsJSON)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan monster spellcasting by id: %w", err)
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var spellID int
-			var timesPerDay int
-			err2 = rows.Scan(&spellID, &timesPerDay)
-			if err2 != nil {
-				return spellcasting, fmt.Errorf("failed to scan monster innate spell ids: %w", err2)
+
+		// Parse innate spells JSON
+		innateSpells := make(map[int]int)
+		if innateSpellsJSON != "{}" {
+			err = json.Unmarshal([]byte(innateSpellsJSON), &innateSpells)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal innate spells: %w", err)
 			}
-			var s spells.Spell
-			sQueryParams := spells.SpellQueryParams{ID: spellID, Level: 1}
-			s, err2 = spells.QuerySpellData(ctx, sQueryParams)
-			if err2 != nil {
-				return spellcasting, fmt.Errorf("failed to query spell data by id: %w", err2)
+		}
+
+		// Parse spell slots JSON
+		spellSlots := make(map[int]int)
+		if spellSlotsJSON != "{}" {
+			err = json.Unmarshal([]byte(spellSlotsJSON), &spellSlots)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal spell slots: %w", err)
 			}
-			var iSpell InnateSpell
-			iSpell.Spell = s
-			iSpell.TimePerDay = timesPerDay
-			spellcasting.InnateSpells = append(spellcasting.InnateSpells, iSpell)
+		}
+
+		// Collect all spell IDs
+		for _, spellID := range standardSpellIDs {
+			allSpellIDs[spellID] = struct{}{}
+		}
+		for spellID := range innateSpells {
+			allSpellIDs[spellID] = struct{}{}
+		}
+
+		tempConfigs[monsterID] = tempConfig{
+			MonsterID:    monsterID,
+			CastingLevel: castingLevel,
+			Ability:      core.MakeAbility(a),
+			AttackModifier: func() int {
+				if am.Valid {
+					return int(am.Int64)
+				}
+				return 0
+			}(),
+			SaveDC: func() int {
+				if dc.Valid {
+					return int(dc.Int64)
+				}
+				return 0
+			}(),
+			StandardSpells: standardSpellIDs,
+			InnateSpells:   innateSpells,
+			SpellSlots:     spellSlots,
+		}
+	}
+
+	if errR := rows.Err(); errR != nil {
+		return nil, fmt.Errorf("failed to query monster spellcasting by id: %w", errR)
+	}
+
+	// Get all spells in one query
+	spellIDSlice := make([]int, 0, len(allSpellIDs))
+	for spellID := range allSpellIDs {
+		spellIDSlice = append(spellIDSlice, spellID)
+	}
+
+	var allSpells map[int]spells.Spell
+	if len(spellIDSlice) > 0 {
+		params := spells.SpellQueryParams{ID: spellIDSlice}
+		allSpells, err = spells.QuerySpellData(ctx, params)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query spells by id: %w", err)
 		}
 	} else {
-		// Get all spells
-		spellIDs, err2 := getMonsterSpellsByID(ctx, id)
-		for _, spellID := range spellIDs {
-			var s spells.Spell
-			sQueryParams := spells.SpellQueryParams{ID: spellID, Level: 0}
-			s, err2 = spells.QuerySpellData(ctx, sQueryParams)
-			if err2 != nil {
-				return spellcasting, err2
+		allSpells = make(map[int]spells.Spell)
+	}
+
+	// Build final configs
+	for monsterID, temp := range tempConfigs {
+		// Combine standard and innate spells
+		var standardSpells []spells.Spell
+		var innateSpells []spells.InnateSpell
+
+		// Standard spells
+		for _, spellID := range temp.StandardSpells {
+			if spell, exists := allSpells[spellID]; exists {
+				standardSpells = append(standardSpells, spell)
 			}
-			spellcasting.SC.Spells = append(spellcasting.SC.Spells, s)
 		}
-		// Get spell slots
-		scSlots, err2 := getMonsterSpellcastingSlotsByID(ctx, id)
-		if err2 != nil {
-			return MSpellcasting{}, err2
-		}
-		spellcasting.SC.SpellSlots = scSlots
-		spellcasting.SC.MaxSpellSlots = scSlots
 
+		// Innate spells with usage
+		for spellID, timesPerDay := range temp.InnateSpells {
+			if spell, exists := allSpells[spellID]; exists {
+				innateSpells = append(innateSpells, spells.InnateSpell{
+					Spell:          spell,
+					MaxCastsPerDay: timesPerDay,
+				})
+			}
+		}
+
+		configMap[monsterID] = MonsterSpellcastingConfig{
+			MonsterID:      temp.MonsterID,
+			CastingLevel:   temp.CastingLevel,
+			Ability:        temp.Ability,
+			AttackModifier: temp.AttackModifier,
+			SaveDC:         temp.SaveDC,
+			LeveledSpells:  standardSpells, // Regular spells
+			InnateSpells:   innateSpells,   // Innate spells with usage
+			SpellSlots:     temp.SpellSlots,
+		}
 	}
-	return spellcasting, nil
+
+	return configMap, nil
 }
 
-func getMonsterActionManagerConfig(ctx context.Context, id int) (*monster_action_manager.MAMConfig, error) {
-	var err error
-	var config monster_action_manager.MAMConfig
-
-	config.Actions, err = getMonsterActionsByID(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get monster actions by id: %w", err)
-	}
-	config.Multiattacks, err = getMonsterMultiattacksByID(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get monster multiattacks by id: %w", err)
-	}
-	config.LegendaryActions, err = getMonsterLegendaryActionsByID(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get monster legendary actions by id: %w", err)
-	}
-	config.SpecialAbilities, err = getMonsterSpecialAbilities(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get monster special abilities by id: %w", err)
-	}
-
-	return &config, nil
-}
+//func getMonsterActionManagerConfig(ctx context.Context, id int) (*monster_action_manager.MAMConfig, error) {
+//	var err error
+//	var config monster_action_manager.MAMConfig
+//
+//	config.Actions, err = getMonsterActionsByID(ctx, id)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to get monster actions by id: %w", err)
+//	}
+//	config.Multiattacks, err = getMonsterMultiattacksByID(ctx, id)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to get monster multiattacks by id: %w", err)
+//	}
+//	config.LegendaryActions, err = getMonsterLegendaryActionsByID(ctx, id)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to get monster legendary actions by id: %w", err)
+//	}
+//	config.SpecialAbilities, err = getMonsterSpecialAbilitiesByID(ctx, id)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed to get monster special abilities by id: %w", err)
+//	}
+//
+//	return &config, nil
+//}

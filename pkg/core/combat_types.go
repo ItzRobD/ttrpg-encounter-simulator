@@ -27,7 +27,7 @@ func (dt DamageType) String() string {
 	return string(dt)
 }
 
-func NewDamageType(s string) (DamageType, error) {
+func MakeDamageType(s string) (DamageType, error) {
 	switch strings.ToLower(s) {
 	case "acid":
 		return DamageAcid, nil
@@ -142,7 +142,7 @@ func NewCondition(s string) (Condition, error) {
 
 type ExhaustionLevel int
 
-func NewExhaustionLevel(i int) (ExhaustionLevel, error) {
+func MakeExhaustionLevel(i int) (ExhaustionLevel, error) {
 	if i < 1 || i > 6 {
 		return 0, fmt.Errorf("exhaustion level must be between 1 and 6")
 	}
@@ -181,7 +181,7 @@ type ResistanceType string
 
 const (
 	ResistanceNone       ResistanceType = "none"
-	ResistanceResist     ResistanceType = "resist"
+	ResistanceResistant  ResistanceType = "resist"
 	ResistanceVulnerable ResistanceType = "vulnerable"
 	ResistanceImmune     ResistanceType = "immune"
 )
@@ -190,12 +190,12 @@ func (rt ResistanceType) String() string {
 	return string(rt)
 }
 
-func NewResistanceType(s string) (ResistanceType, error) {
+func MakeResistanceType(s string) (ResistanceType, error) {
 	switch strings.ToLower(s) {
 	case "none":
 		return ResistanceNone, nil
-	case "resist":
-		return ResistanceResist, nil
+	case "resistant":
+		return ResistanceResistant, nil
 	case "vulnerable":
 		return ResistanceVulnerable, nil
 	case "immune":
@@ -285,7 +285,7 @@ func (rb ResistBreaker) String() string {
 	return string(rb)
 }
 
-func NewResistBreaker(s string) (ResistBreaker, error) {
+func MakeResistBreaker(s string) (ResistBreaker, error) {
 	switch strings.ToLower(s) {
 	case "none", "":
 		return ResistBreakerNone, nil

@@ -1,7 +1,8 @@
-package helpers
+package util
 
 import (
 	"fmt"
+	. "github.com/go-jet/jet/v2/postgres"
 	"reflect"
 )
 
@@ -33,4 +34,20 @@ func PrintStructFields(v interface{}, prefix string) {
 	} else {
 		fmt.Println("Provided value is not a struct")
 	}
+}
+
+func IntsToExpressions(ints []int) []Expression {
+	expressions := make([]Expression, len(ints))
+	for i, v := range ints {
+		expressions[i] = Int(int64(v))
+	}
+	return expressions
+}
+
+func StringsToExpressions(strings []string) []Expression {
+	expressions := make([]Expression, len(strings))
+	for i, v := range strings {
+		expressions[i] = String(v)
+	}
+	return expressions
 }

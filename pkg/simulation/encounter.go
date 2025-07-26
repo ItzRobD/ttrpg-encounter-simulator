@@ -1,7 +1,7 @@
 package simulation
 
 import (
-	"dnd5e-encounter-simulator-backend/internal/helpers"
+	"dnd5e-encounter-simulator-backend/internal/util"
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
@@ -30,11 +30,11 @@ func (e *Encounter) PrintEncounterMembers() {
 	fmt.Println("Encounter Members")
 	for _, c := range e.Party {
 		fmt.Printf("Name: %s\n", c)
-		helpers.PrintStructFields(c, "")
+		util.PrintStructFields(c, "")
 	}
 	for _, m := range e.Monsters {
 		fmt.Printf("Name: %s\n", m.GetName())
-		helpers.PrintStructFields(m, "")
+		util.PrintStructFields(m, "")
 	}
 }
 

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg/spells"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
 )
 
@@ -17,17 +17,19 @@ func main() {
 	defer database.CloseDb()
 
 	ctx := context.Background()
-	var ids []int
 
-	for i := 1; i <= 319; i++ {
-		ids = append(ids, i)
-	}
+	//params := spells.SpellQueryParams{Name: []string{"Fireball", "Acid Splash"}}
+	//s, err := spells.QuerySpellData(ctx, params)
+	//if err != nil {
+	//	fmt.Println(err)
+	//
+	//}
+	//fmt.Println(s)
 
-	params := spells.SpellQueryParams{Name: []string{"Fireball", "Acid Splash"}}
-	s, err := spells.QuerySpellData(ctx, params)
+	params := monster.MonsterQueryParams{ID: []int{1, 5}}
+	c, err := monster.QueryMonsterConfigData(ctx, params)
 	if err != nil {
 		fmt.Println(err)
-
 	}
-	fmt.Println(s)
+	fmt.Println(c)
 }

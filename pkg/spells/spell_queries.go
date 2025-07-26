@@ -6,6 +6,7 @@ import (
 	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
 	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
+	"dnd5e-encounter-simulator-backend/internal/util"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
 	. "github.com/go-jet/jet/v2/postgres"
@@ -13,6 +14,10 @@ import (
 	"golang.org/x/text/language"
 )
 
+// QuerySpellData retrieves spells based on the provided IDs or names in the params.
+// If IDs are provided in the params, it fetches spells directly by those IDs.
+// If only names are provided, it resolves the IDs first by matching spell names, then retrieves the spells.
+// Returns a map of spell IDs to Spell objects or an error if the query fails.
 func QuerySpellData(ctx context.Context, params SpellQueryParams) (map[int]Spell, error) {
 	var spells map[int]Spell
 	var err error
@@ -79,11 +84,10 @@ func getSpellIDsByName(ctx context.Context, names []string) ([]int, error) {
 	for i, name := range names {
 		titlized[i] = caser.String(name)
 	}
-	fmt.Println(titlized)
 
 	stmt := SELECT(Spells.ID).
 		FROM(Spells).
-		WHERE(Spells.Name.IN(stringsToExpressions(titlized)...))
+		WHERE(Spells.Name.IN(util.StringsToExpressions(titlized)...))
 
 	query, args := stmt.Sql()
 	rows, err := database.Query(ctx, query, args...)
@@ -140,7 +144,7 @@ func getSpellsByID(ctx context.Context, ids []int) (map[int]Spell, error) {
 			LEFT_JOIN(SpellDamage, SpellFormulas.FormulaID.EQ(SpellDamage.SpellFormulaID)).
 			LEFT_JOIN(SpellHeal, SpellFormulas.FormulaID.EQ(SpellHeal.SpellFormulaID)),
 		).WHERE(
-		Spells.ID.IN(intsToExpressions(ids)...),
+		Spells.ID.IN(util.IntsToExpressions(ids)...),
 	)
 
 	query, args := stmt.Sql()
@@ -265,7 +269,7 @@ func getSpellsByID(ctx context.Context, ids []int) (map[int]Spell, error) {
 
 			// Damage type
 			if damageType.Valid {
-				formula.DamageType, err = core.NewDamageType(damageType.String)
+				formula.DamageType, err = core.MakeDamageType(damageType.String)
 				if err != nil {
 					return nil, fmt.Errorf("failed to collect spells: invalid damage type returned: spellID %d", s.ID)
 				}
@@ -298,22 +302,6 @@ func getSpellsByID(ctx context.Context, ids []int) (map[int]Spell, error) {
 	}
 
 	return spellMap, nil
-}
-
-func intsToExpressions(ints []int) []Expression {
-	expressions := make([]Expression, len(ints))
-	for i, v := range ints {
-		expressions[i] = Int(int64(v))
-	}
-	return expressions
-}
-
-func stringsToExpressions(strings []string) []Expression {
-	expressions := make([]Expression, len(strings))
-	for i, v := range strings {
-		expressions[i] = String(v)
-	}
-	return expressions
 }
 
 //func getSpellCastLevelsByID(ctx context.Context, id int) ([]int, error) {
