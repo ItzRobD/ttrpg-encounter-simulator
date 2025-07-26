@@ -137,7 +137,7 @@ func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcas
 		return nil, err
 	}
 
-	sm.SetUsableSpellIDs(availableSpellIDs)
+	// TODO: Query spell ids and add to scm
 
 	return sm, nil
 }
@@ -234,10 +234,13 @@ func (c *Character) GetSpellBonus(addProficiency bool) (int, error) {
 }
 
 // GetSpellSaveDC calculates the spell save DC for the character based on the given ability modifier and a base value of 8.
-func (c *Character) GetSpellSaveDC(ability core.Ability) int {
+func (c *Character) GetSpellSaveDC(ability *core.Ability) (int, error) {
+	if ability == nil {
+		return 8, fmt.Errorf("ability cannot be nil")
+	}
 	var abilityMod int
 	var err error
-	switch ability {
+	switch *ability {
 	case core.AbilityStrength:
 		abilityMod, err = core.GetAbilityScoreModifier(c.AbilityScores.Strength)
 	case core.AbilityDexterity:
@@ -255,9 +258,9 @@ func (c *Character) GetSpellSaveDC(ability core.Ability) int {
 		err = fmt.Errorf("invalid ability provided: %s", ability)
 	}
 	if err != nil {
-		return 0
+		return 0, err
 	}
-	return 8 + abilityMod
+	return 8 + abilityMod, nil
 }
 
 // CreateWeaponAttackData generates an AttackData object for a given weapon slot, considering proficiency and versatility.
@@ -435,8 +438,8 @@ func (c *Character) getAbilityScoreModifier(ability core.Ability) (int, error) {
 	return abilityMod, nil
 }
 
-// GetIsProficientInAbility checks if the character is proficient in the specified ability and returns true if proficient.
-func (c *Character) GetIsProficientInAbility(ability core.Ability) bool {
+// getIsProficientInAbility checks if the character is proficient in the specified ability and returns true if proficient.
+func (c *Character) getIsProficientInAbility(ability core.Ability) bool {
 	switch ability {
 	case core.AbilityStrength:
 		return c.AbilityScoreProf.Strength
@@ -467,7 +470,7 @@ func (c *Character) getSavingThrowBonus(ability core.Ability) (int, error) {
 		return 0, err
 	}
 
-	if c.GetIsProficientInAbility(ability) {
+	if c.getIsProficientInAbility(ability) {
 		return pb + mod, nil
 	}
 	return mod, nil
@@ -484,8 +487,8 @@ func (c *Character) IsUnconscious() bool                  { return c.EntityState
 func (c *Character) GetHPStatus() core.HPStatus           { return c.EntityState.GetHPStatus() }
 func (c *Character) GetName() string                      { return c.Name }
 func (c *Character) GetAbilityScores() core.AbilityScores { return c.AbilityScores }
-func (c *Character) GetLevel() interface{}                { return c.Level }
-func (c *Character) GetCasterLevel() uint8                { return c.Level }
+func (c *Character) GetLevel() interface{}                { return int(c.Level) }
+func (c *Character) GetCasterLevel() int                  { return int(c.Level) }
 func (c *Character) GetAC() int                           { return c.EquipmentManager.GetAC() }
 func (c *Character) GetAbilityScore(a core.Ability) int   { return c.getAbilityScore(a) }
 func (c *Character) GetAbilityScoreModifier(a core.Ability) (int, error) {

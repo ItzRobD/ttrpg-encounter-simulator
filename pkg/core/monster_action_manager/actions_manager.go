@@ -6,7 +6,7 @@ import (
 )
 
 type MonsterActionManager struct {
-	parent      *core.Entity
+	parent      core.Entity
 	rollManager *roll_manager.RollManager
 
 	// Raw
@@ -49,7 +49,7 @@ func (mam *MonsterActionManager) InitializeActions(config *MAMConfig) {
 
 // NewMonsterActionManager initializes and returns a MonsterActionManager with the provided parent, roll manager, and configuration.
 // If the provided config is nil, an empty configuration is used for initialization. Actions must be initialized later.
-func NewMonsterActionManager(parent *core.Entity, rm *roll_manager.RollManager, config *MAMConfig) *MonsterActionManager {
+func NewMonsterActionManager(parent core.Entity, rm *roll_manager.RollManager, config *MAMConfig) *MonsterActionManager {
 	if config == nil {
 		return &MonsterActionManager{
 			parent:      parent,

@@ -17,7 +17,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// TODO: We commented out some things here in order to get the program to run for testing
 func QueryMonsterConfigData(ctx context.Context, params MonsterQueryParams) (map[int]MonsterConfig, error) {
 	var config map[int]MonsterConfig
 	var err error
@@ -293,7 +292,7 @@ func getMonsterActionsByID(ctx context.Context, ids []int) (map[int]map[int]mons
 			&action.DCOnSuccess,
 			&action.DC)
 		if err != nil {
-			return mActionsMap, fmt.Errorf("failed to scan monster actions by monsterID: %w", err)
+			return mActionsMap, fmt.Errorf("failed to scan monster actions by monsterID (%d): %w", monsterID, err)
 		}
 
 		monster, exists := mActionsMap[monsterID]

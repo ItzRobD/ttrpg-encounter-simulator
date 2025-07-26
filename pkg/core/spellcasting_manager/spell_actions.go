@@ -24,7 +24,10 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 	case true:
 		// Has DC So no attack roll needed -> target makes saving throw
 		ability := req.SpellCastData.SpellChoice.Spell.GetSpellDC().GetAbility()
-		targetDC := scm.parent.GetSpellSaveDC(ability)
+		targetDC, err := scm.parent.GetSpellSaveDC(&ability)
+		if err != nil {
+			return nil, err
+		}
 
 		saveRes, err := req.GetTarget().MakeSavingThrow(ability, targetDC)
 		if err != nil {

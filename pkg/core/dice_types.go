@@ -5,16 +5,17 @@ import "fmt"
 type DiceRollType string
 
 const (
-	DiceRollGeneral      DiceRollType = "general"
-	DiceRollAttack       DiceRollType = "attack"
-	DiceRollDamage       DiceRollType = "damage"
-	DiceRollHealing      DiceRollType = "healing"
-	DiceRollInitiative   DiceRollType = "initiative"
-	DiceRollAbilityCheck DiceRollType = "ability check"
-	DiceRollSavingThrow  DiceRollType = "saving throw"
-	DiceRollHP           DiceRollType = "hp"
-	DiceRollHPAvgUsed    DiceRollType = "hp average"
-	DiceRollHPValueUsed  DiceRollType = "hp value"
+	DiceRollGeneral          DiceRollType = "general"
+	DiceRollAttack           DiceRollType = "attack"
+	DiceRollDamage           DiceRollType = "damage"
+	DiceRollHealing          DiceRollType = "healing"
+	DiceRollInitiative       DiceRollType = "initiative"
+	DiceRollAbilityCheck     DiceRollType = "ability check"
+	DiceRollSavingThrow      DiceRollType = "saving throw"
+	DiceRollHP               DiceRollType = "hp"
+	DiceRollHPAvgUsed        DiceRollType = "hp average"
+	DiceRollHPAvgUsedMonster DiceRollType = "hp average"
+	DiceRollHPValueUsed      DiceRollType = "hp value"
 )
 
 type DiceType int
