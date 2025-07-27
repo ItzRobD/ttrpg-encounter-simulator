@@ -130,11 +130,7 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 	prof := em.GetIsProficientWithSlot(slot)
 
 	as := em.parent.GetAbilityScores()
-	cLvl, ok := em.parent.GetLevel().(uint8)
-	if !ok {
-		return fmt.Errorf("character level is not a uint8")
-	}
-	attackMod, err := w.Weapon.GetAttackModifier(&as, cLvl, prof)
+	attackMod, err := w.Weapon.GetAttackModifier(&as, uint8(em.parent.GetLevel()), prof)
 	if err != nil {
 		return err
 	}

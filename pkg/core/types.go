@@ -5,6 +5,28 @@ import (
 	"strings"
 )
 
+type EntityType string
+
+const (
+	EntityCharacter EntityType = "character"
+	EntityMonster   EntityType = "monster"
+)
+
+func (et EntityType) String() string {
+	return string(et)
+}
+
+func NewEntityType(s string) (EntityType, error) {
+	switch strings.ToLower(s) {
+	case "character":
+		return EntityCharacter, nil
+	case "monster":
+		return EntityMonster, nil
+	default:
+		return EntityCharacter, fmt.Errorf("invalid entity type")
+	}
+}
+
 type DeathSaves map[SaveType]int
 
 type SaveType string
@@ -63,3 +85,18 @@ const (
 	HPSetAverage
 	HPSetRoll
 )
+
+type HPConfig struct {
+	HPSetMethod  HPSetMethod
+	Value        int
+	HPAverage    int
+	NumberOfDice int
+	HitDie       DiceType
+	AmountToAdd  int
+	Modifier     int
+}
+
+type Seed struct {
+	Seed1 uint64
+	Seed2 uint64
+}

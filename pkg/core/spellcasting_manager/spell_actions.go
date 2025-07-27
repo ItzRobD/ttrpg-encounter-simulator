@@ -126,7 +126,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 			TargetValue:       req.Target.GetAC(),
 		}
 
-		attackRollResult, err := scm.rollManager.RollD20(rollOpts)
+		attackRollResult, err := scm.rollManager.RollD20(rollOpts, false)
 		if err != nil {
 			return nil, err
 		}

@@ -1,4 +1,4 @@
-package simulation
+package simulation_bk
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
@@ -76,13 +76,13 @@ func (e *Encounter) selectMonsterByPriority(monsters []*monster.Monster) (*monst
 	case core.NoPriority:
 		//fmt.Println("No TargetPriority")
 		target = monsters[rand.IntN(len(monsters))]
-	case core.PrioritizeHighestCR:
+	case core.PrioritizeHighestLevel:
 		for _, m := range monsters {
 			if target == nil || m.CR > target.CR {
 				target = m
 			}
 		}
-	case core.PrioritizeLowestCR:
+	case core.PrioritizeLowestLevel:
 		for _, m := range monsters {
 			if target == nil || m.CR < target.CR {
 				target = m
@@ -140,8 +140,8 @@ func (e *Encounter) selectCharacterByPriority(characters []*character.Character)
 	case core.NoPriority:
 		fmt.Println("No TargetPriority")
 		target = characters[rand.IntN(len(characters))]
-	case core.PrioritizeHighestCR,
-		core.PrioritizeLowestCR:
+	case core.PrioritizeHighestLevel,
+		core.PrioritizeLowestLevel:
 		fallthrough
 	case core.PrioritizeMostDamaged:
 		for _, c := range characters {
@@ -170,7 +170,7 @@ func (e *Encounter) selectCharacterByPriority(characters []*character.Character)
 	case core.PrioritizeHealer:
 		for _, c := range characters {
 			if c.Class.SpellcastingMod != core.AbilityNone {
-				if c.SpellcastingManager.HasHealingSpells() {
+				if c.SpellCastingManager.HasHealingSpells() {
 					return c, nil
 				}
 			}
@@ -178,7 +178,7 @@ func (e *Encounter) selectCharacterByPriority(characters []*character.Character)
 	case core.PrioritizeSpellcaster:
 		for _, c := range characters {
 			if c.Class.SpellcastingMod != core.AbilityNone {
-				if c.SpellcastingManager.HasAnyKnownSpells() {
+				if c.SpellCastingManager.HasAnyKnownSpells() {
 					return c, nil
 				}
 			}
@@ -245,7 +245,7 @@ func (e *Encounter) findMostDamagedCharacter(characters []*character.Character) 
 func (e *Encounter) findBestHealer(characters []*character.Character) *character.Character {
 	bestHealer := characters[0]
 	for _, c := range characters[1:] {
-		if c.SpellcastingManager.GetHealingSpellCount() > bestHealer.SpellcastingManager.GetHealingSpellCount() {
+		if c.SpellCastingManager.GetHealingSpellCount() > bestHealer.SpellCastingManager.GetHealingSpellCount() {
 			bestHealer = c
 		}
 	}
@@ -255,7 +255,7 @@ func (e *Encounter) findBestHealer(characters []*character.Character) *character
 func (e *Encounter) findBestDamageSpellcaster(characters []*character.Character) *character.Character {
 	bestCaster := characters[0]
 	for _, c := range characters[1:] {
-		if c.SpellcastingManager.GetDamageSpellCount() > bestCaster.SpellcastingManager.GetDamageSpellCount() {
+		if c.SpellCastingManager.GetDamageSpellCount() > bestCaster.SpellCastingManager.GetDamageSpellCount() {
 			bestCaster = c
 		}
 	}

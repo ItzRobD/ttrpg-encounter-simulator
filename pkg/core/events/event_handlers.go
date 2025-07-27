@@ -214,7 +214,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.Advantage,
 			e.Modifier)
 	case core.DiceRollSavingThrow:
-		s = fmt.Sprintf("[Round %d] <Saving Throw> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, DC: %d, Success: %t\n",
+		s = fmt.Sprintf("[Round %d] <Saving Throw> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, DC: %d, Success: %t",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,
@@ -227,7 +227,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.TargetValue,
 			e.IsSuccess)
 	case core.DiceRollAbilityCheck:
-		s = fmt.Sprintf("[Round %d] <Ability Check> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t\n",
+		s = fmt.Sprintf("[Round %d] <Ability Check> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,
@@ -240,17 +240,17 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.TargetValue,
 			e.IsSuccess)
 	case core.DiceRollHP:
-		s = fmt.Sprintf("[Round %d] <HP roll> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Modifier: %d,\n",
+		s = fmt.Sprintf("[Round %d] <HP roll> %s rolls for %s. Dice: %dd%s, Final rolls: %v, Modifier: %d, Total: %d.",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
-			e.Total,
 			e.FinalRolls,
-			e.Modifier)
+			e.Modifier,
+			e.Total)
 	case core.DiceRollHPAvgUsed:
-		s = fmt.Sprintf("[Round %d] <HP roll> %s used average values for hp. Dice: %dd%s, Total: %d, Modifier: %d,\n",
+		s = fmt.Sprintf("[Round %d] <HP roll> %s used average values for hp. Dice: %dd%s, Total: %d, Modifier: %d,",
 			e.GetRound(),
 			e.GetActor(),
 			e.NumberOfDice,
@@ -258,7 +258,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.Total,
 			e.Modifier)
 	case core.DiceRollHPValueUsed:
-		s = fmt.Sprintf("[Round %d] <HP roll> %s used direct values for hp. Total: %d.\n",
+		s = fmt.Sprintf("[Round %d] <HP roll> %s used direct values for hp. Total: %d.",
 			e.GetRound(),
 			e.GetActor(),
 			e.Total)

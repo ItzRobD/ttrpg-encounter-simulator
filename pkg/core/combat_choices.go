@@ -61,21 +61,24 @@ func NewSpellPriority(s string) SpellPriority {
 	}
 }
 
-type TargetPrioritization int
+// TargetPriority defines prioritization logic for targeting entities in combat simulations.
+// Healer|Spellcaster secondarily prioritizes most damaged (effective healing)
+type TargetPriority int
 
 const (
-	NoPriority TargetPrioritization = iota
+	NoPriority TargetPriority = iota
 	PrioritizeLowestHealth
 	PrioritizeMostDamaged
+	PrioritizeLeastDamaged
 	PrioritizeSpellcaster
 	PrioritizeHealer
-	PrioritizeHighestCR
-	PrioritizeLowestCR
+	PrioritizeHighestLevel
+	PrioritizeLowestLevel
 	PrioritizeHighestMaxHP
 	PrioritizeLowestMaxHP
 )
 
-func (p TargetPrioritization) String() string {
+func (p TargetPriority) String() string {
 	switch p {
 	case NoPriority:
 		return "no priority"
@@ -87,9 +90,9 @@ func (p TargetPrioritization) String() string {
 		return "spellcaster"
 	case PrioritizeHealer:
 		return "healer"
-	case PrioritizeHighestCR:
+	case PrioritizeHighestLevel:
 		return "highest CR"
-	case PrioritizeLowestCR:
+	case PrioritizeLowestLevel:
 		return "lowest CR"
 	case PrioritizeHighestMaxHP:
 		return "highest max HP"
@@ -100,7 +103,7 @@ func (p TargetPrioritization) String() string {
 	}
 }
 
-func NewPrioritization(s string) TargetPrioritization {
+func NewPrioritization(s string) TargetPriority {
 	switch strings.ToLower(s) {
 	case "no priority":
 		return NoPriority
@@ -113,9 +116,9 @@ func NewPrioritization(s string) TargetPrioritization {
 	case "healer":
 		return PrioritizeHealer
 	case "highest CR":
-		return PrioritizeHighestCR
+		return PrioritizeHighestLevel
 	case "lowest CR":
-		return PrioritizeLowestCR
+		return PrioritizeLowestLevel
 	case "highest max HP":
 		return PrioritizeHighestMaxHP
 	case "lowest max HP":

@@ -1,4 +1,4 @@
-package simulation
+package simulation_bk
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core/events"

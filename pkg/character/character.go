@@ -14,6 +14,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"math"
+	"math/rand/v2"
 )
 
 // Character represents a player or NPC with attributes like name, class, level, and various managers for gameplay systems.
@@ -25,88 +26,123 @@ type Character struct {
 	AbilityScoreProf     core.AbilityScoresProficiencies
 	EntityState          *entity_state_manager.EntityStateManager
 	EquipmentManager     *equipment_manager.EquipmentManager
-	SpellcastingManager  *spellcasting_manager.SpellcastingManager
+	SpellCastingManager  *spellcasting_manager.SpellcastingManager
 	MartialAttackManager *martial_attack_manager.MartialAttackManager
 	RollManager          *roll_manager.RollManager
 	Configuration        entity_configuration.EntityConfiguration
+	HPConfig             core.HPConfig
+	Seed                 core.Seed
 	EventListener        func(event interface{})
 }
 
-// New initializes and returns a new Character with the specified parameters or an error if validation fails.
-func New(ctx context.Context, name string, classID classes.ClassID, level uint8, asConfig core.AbilityScoresConfig) (Character, error) {
-	if classID < 0 || classID > 13 {
-		return Character{}, fmt.Errorf("invalid class id during character initialization: %d", classID)
+type CharacterConfig struct {
+	Name     string
+	ClassID  classes.ClassID
+	Level    uint8
+	AsConfig core.AbilityScoresConfig
+	HPMethod core.HPSetMethod
+	HPValue  int
+	Seed     core.Seed
+}
+
+// NewCharacter initializes and returns a new Character with the specified parameters or an error if validation fails.
+func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, error) {
+	if charConfig.ClassID < 0 || charConfig.ClassID > 13 {
+		return nil, fmt.Errorf("invalid class id during character initialization: %d", charConfig.ClassID)
 	}
-	if level < 0 || level > 20 {
-		return Character{}, fmt.Errorf("invalid level during character initialization, must be in range 1-20: %d", level)
+	if charConfig.Level < 0 || charConfig.Level > 20 {
+		return nil, fmt.Errorf("invalid level during character initialization, must be in range 1-20: %d", charConfig.Level)
 	}
-	if name == "" {
-		name = "Unnamed Character"
+	if charConfig.Name == "" {
+		charConfig.Name = "Unnamed Character"
 	}
 
 	var params classes.ClassQueryParams
-	params.ID = classID
-	params.Level = level
+	params.ID = charConfig.ClassID
+	params.Level = charConfig.Level
 	c, err := classes.QueryClassData(ctx, params)
 	if err != nil {
-		return Character{}, err
+		return nil, err
+	}
+
+	var seed core.Seed
+	if charConfig.Seed.Seed1 == 0 {
+		seed.Seed1 = rand.Uint64()
+	}
+	if charConfig.Seed.Seed2 == 0 {
+		seed.Seed2 = rand.Uint64()
 	}
 
 	// Set initial values for character
 	char := Character{
-		Name:                 name,
+		Name:                 charConfig.Name,
 		Class:                c,
-		Level:                level,
-		AbilityScores:        asConfig.AbilityScores,
-		AbilityScoreProf:     asConfig.Proficiencies,
+		Level:                charConfig.Level,
+		AbilityScores:        charConfig.AsConfig.AbilityScores,
+		AbilityScoreProf:     charConfig.AsConfig.Proficiencies,
 		EntityState:          &entity_state_manager.EntityStateManager{},
 		EquipmentManager:     &equipment_manager.EquipmentManager{},
-		SpellcastingManager:  &spellcasting_manager.SpellcastingManager{},
+		SpellCastingManager:  &spellcasting_manager.SpellcastingManager{},
 		MartialAttackManager: &martial_attack_manager.MartialAttackManager{},
 		RollManager:          &roll_manager.RollManager{},
-		Configuration:        entity_configuration.EntityConfiguration{},
+		Configuration:        entity_configuration.EntityConfiguration{}, // TODO: this isn't being set up
+		HPConfig:             core.HPConfig{HPSetMethod: charConfig.HPMethod, Value: charConfig.HPValue},
+		Seed:                 seed,
 	}
 
 	// Initialize managers
 	// Roll Manager
-	char.RollManager = initializeRollManager(ctx, &char, &char.Configuration)
+	char.RollManager = initializeRollManager(&char, &char.Configuration)
 
 	// Entity State Manager
 	// TODO: Implement resistances for characters
-	config := entity_state_manager.EntityStateConfig{
+	esmConfig := entity_state_manager.EntityStateConfig{
 		AttackCount: c.AttackCount,
 		Conditions:  core.NewEntityConditions(),
 	}
-	esm, err := initalizeEntityStateManager(ctx, &char, &config)
+	esm, err := initializeEntityStateManager(&char, &esmConfig)
 	if err != nil {
-		return Character{}, err
+		return nil, err
 	}
 	char.EntityState = esm
 
 	// Equipment Manager
 	char.EquipmentManager, err = equipment_manager.NewEquipmentManager(&char)
 	if err != nil {
-		return Character{}, err
+		return nil, err
 	}
 
 	// Spellcasting Manager
-	char.SpellcastingManager, err = initializeSpellcastingManager(ctx, &char)
+	char.SpellCastingManager, err = initializeSpellcastingManager(ctx, &char)
 	if err != nil {
-		return Character{}, err
+		return nil, err
 	}
 
 	// Martial Attack Manager
 	char.MartialAttackManager = martial_attack_manager.NewMartialAttackManager(&char, char.RollManager)
 
-	return char, nil
+	// Set up HP Config and character hp
+	char.HPConfig.HitDie = char.GetHitDie()
+	char.HPConfig.NumberOfDice = int(char.Level - 1)
+	modifier, _ := char.getAbilityScoreModifier(core.AbilityConstitution)
+	char.HPConfig.HPAverage = int(math.Round(float64(char.GetHitDie().Int())+float64(char.HPConfig.NumberOfDice)*char.Class.HitDie.Avg()) + float64(int(char.Level)*modifier))
+	char.HPConfig.Modifier = modifier
+
+	// Moving HP Setup to during simulation
+	//err = char.setHP(char.HPConfig)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	return &char, nil
 }
 
-func initializeRollManager(ctx context.Context, c *Character, eConfig *entity_configuration.EntityConfiguration) *roll_manager.RollManager {
-	rm := roll_manager.NewRollManager(c, eConfig.CombatFeatures.ReRollAbilities)
+func initializeRollManager(c *Character, eConfig *entity_configuration.EntityConfiguration) *roll_manager.RollManager {
+	rm := roll_manager.NewRollManager(c, eConfig.CombatFeatures.ReRollAbilities, c.Seed)
 	return rm
 }
 
-func initalizeEntityStateManager(ctx context.Context, c *Character, config *entity_state_manager.EntityStateConfig) (*entity_state_manager.EntityStateManager, error) {
+func initializeEntityStateManager(c *Character, config *entity_state_manager.EntityStateConfig) (*entity_state_manager.EntityStateManager, error) {
 	esm, err := entity_state_manager.NewEntityStateManager(c, *config)
 	if err != nil {
 		return nil, err
@@ -114,7 +150,7 @@ func initalizeEntityStateManager(ctx context.Context, c *Character, config *enti
 	return esm, nil
 }
 
-// initializeSpellcastingManager initializes and returns a SpellcastingManager for the given character and context.
+// initializeSpellcastingManager initializes and returns a SpellCastingManager for the given character and context.
 // It configures spell slots, casting options, usable spells, and other spell-related properties.
 // Returns an error if data retrieval or initialization fails.
 func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcasting_manager.SpellcastingManager, error) {
@@ -137,7 +173,15 @@ func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcas
 		return nil, err
 	}
 
-	// TODO: Query spell ids and add to scm
+	spellMap, err := spells.QuerySpellData(ctx, spells.SpellQueryParams{ID: availableSpellIDs})
+	if err != nil {
+		return nil, err
+	}
+
+	err = sm.AddKnownSpellsFromMap(spellMap)
+	if err != nil {
+		return nil, err
+	}
 
 	return sm, nil
 }
@@ -147,53 +191,58 @@ func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcas
 // - m: The HP set method, which determines whether to set HP by value, average, or rolling.
 // - value: The value used to set HP when the method is HPSetValue.
 // Returns an error if an invalid method is provided or internal operations fail.
-func (c *Character) setHP(m core.HPSetMethod, value int) error {
-	switch m {
+func (c *Character) setHP(config core.HPConfig) error {
+	switch config.HPSetMethod {
 	case core.HPSetValue:
 		hp := entity_state_manager.HPValues{
-			CurrentHP: value,
-			MaxHP:     value,
+			CurrentHP: config.Value,
+			MaxHP:     config.Value,
 			TempHP:    0,
-			HitDie:    c.GetHitDie(),
+			HitDie:    config.HitDie,
 		}
 		hpRoll := roll_manager.RollResult{
 			DiceRollType:   core.DiceRollHPValueUsed,
-			FinalRollValue: value,
-			Total:          value,
+			FinalRollValue: config.Value,
+			Total:          config.Value,
 		}
 		events.LogDiceRollEvent(c, &hpRoll, c.EventListener)
 		c.EntityState.SetHPValues(hp)
 
 		return nil
 	case core.HPSetAverage:
-		modifier, err := c.getAbilityScoreModifier(core.AbilityConstitution)
-		if err != nil {
-			return err
-		}
-		hpAvg := math.Round(float64(c.Class.HitDie.Int()) + (float64(c.Level-1) * c.Class.HitDie.Avg()) + float64(int(c.Level)*modifier))
 		hp := entity_state_manager.HPValues{
-			CurrentHP: int(hpAvg),
-			MaxHP:     int(hpAvg),
+			CurrentHP: config.HPAverage,
+			MaxHP:     config.HPAverage,
 			TempHP:    0,
-			HitDie:    c.GetHitDie(),
+			HitDie:    config.HitDie,
 		}
 		hpRoll := roll_manager.RollResult{
 			DiceRollType:   core.DiceRollHPAvgUsed,
-			NumberOfDice:   int(c.Level - 1),
-			Die:            c.GetHitDie(),
-			FinalRollValue: int(hpAvg),
-			Modifier:       modifier,
-			Total:          int(hpAvg),
+			NumberOfDice:   config.NumberOfDice,
+			Die:            config.HitDie,
+			FinalRollValue: config.HPAverage,
+			Modifier:       config.Modifier,
+			Total:          config.HPAverage,
 		}
 		events.LogDiceRollEvent(c, &hpRoll, c.EventListener)
 		c.EntityState.SetHPValues(hp)
 
 		return nil
 	case core.HPSetRoll:
-		c.RollManager.RollHP()
+		hpRoll, err := c.RollManager.RollHP(config)
+		if err != nil {
+			return err
+		}
+		hp := entity_state_manager.HPValues{
+			CurrentHP: hpRoll.Total,
+			MaxHP:     hpRoll.Total,
+			TempHP:    0,
+			HitDie:    hpRoll.Die,
+		}
+		c.EntityState.SetHPValues(hp)
 		return nil
 	default:
-		return fmt.Errorf("invalid HP set method: %s", m)
+		return fmt.Errorf("invalid HP set method: %v", config.HPSetMethod)
 	}
 }
 
@@ -304,7 +353,7 @@ func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bo
 }
 
 // CreateAttackRequest generates an attack request with specific weapon data, modifiers, advantage type, and attack count.
-func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, useVersatile bool, advantage core.AdvantageType, simulationOptions core.SimulationOptions) (*martial_attack_manager.AttackRequest, error) {
+func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, useVersatile bool, simulationOptions core.SimulationOptions) (*martial_attack_manager.AttackRequest, error) {
 	attackData, err := c.EquipmentManager.GetWeaponAttackData(slot, useVersatile)
 	if err != nil {
 		return nil, err
@@ -476,25 +525,54 @@ func (c *Character) getSavingThrowBonus(ability core.Ability) (int, error) {
 	return mod, nil
 }
 
+func (c *Character) RollInitiative() (int, error) {
+	var err error
+	opts := roll_manager.NewRollOptions()
+	opts.Modifier, err = c.getAbilityScoreModifier(core.AbilityDexterity)
+	if err != nil {
+		return 0, err
+	}
+	// TODO: Handle chaaracter feats such as Alert for +5
+
+	res, err := c.RollManager.RollInitiative(opts)
+	if err != nil {
+		return 0, err
+	}
+
+	c.EntityState.SetInitiative(res.Total)
+
+	return res.Total, nil
+}
+
 // Interface Required Functions
 
-func (c *Character) IsCharacter() bool { return true }
-func (c *Character) IsMonster() bool   { return false }
-func (c *Character) GetEventListener() func(event interface{}) {
-	return c.EventListener
-}
-func (c *Character) IsUnconscious() bool                  { return c.EntityState.GetIsUnconscious() }
-func (c *Character) GetHPStatus() core.HPStatus           { return c.EntityState.GetHPStatus() }
-func (c *Character) GetName() string                      { return c.Name }
-func (c *Character) GetAbilityScores() core.AbilityScores { return c.AbilityScores }
-func (c *Character) GetLevel() interface{}                { return int(c.Level) }
-func (c *Character) GetCasterLevel() int                  { return int(c.Level) }
-func (c *Character) GetAC() int                           { return c.EquipmentManager.GetAC() }
-func (c *Character) GetAbilityScore(a core.Ability) int   { return c.getAbilityScore(a) }
+func (c *Character) IsCharacter() bool                          { return true }
+func (c *Character) IsMonster() bool                            { return false }
+func (c *Character) GetEventListener() func(event interface{})  { return c.EventListener }
+func (c *Character) SetEventListener(f func(event interface{})) { c.EventListener = f }
+func (c *Character) IsUnconscious() bool                        { return c.EntityState.GetIsUnconscious() }
+func (c *Character) GetHPStatus() core.HPStatus                 { return c.EntityState.GetHPStatus() }
+func (c *Character) GetName() string                            { return c.Name }
+func (c *Character) GetAbilityScores() core.AbilityScores       { return c.AbilityScores }
+func (c *Character) GetLevel() float64                          { return float64(c.Level) }
+func (c *Character) GetHPConfig() core.HPConfig                 { return c.HPConfig }
+func (c *Character) GetCasterLevel() int                        { return int(c.Level) }
+func (c *Character) GetAC() int                                 { return c.EquipmentManager.GetAC() }
+func (c *Character) GetAbilityScore(a core.Ability) int         { return c.getAbilityScore(a) }
 func (c *Character) GetAbilityScoreModifier(a core.Ability) (int, error) {
 	return c.getAbilityScoreModifier(a)
 }
 func (c *Character) GetSavingThrowBonus(a core.Ability) (int, error) { return c.getSavingThrowBonus(a) }
 func (c *Character) GetHitDie() core.DiceType                        { return c.Class.HitDie }
+func (c *Character) GetState() interface{}                           { return c.EntityState }
+func (c *Character) InitializeHP() error                             { return c.setHP(c.HPConfig) }
+func (c *Character) IsSpellcaster() bool                             { return c.SpellCastingManager.HasAnyKnownSpells() }
+func (c *Character) IsHealer() bool                                  { return c.SpellCastingManager.HasHealingSpells() }
+func (c *Character) GetTargetPriority() core.TargetPriority {
+	return c.EntityState.TargetPrioritization
+}
+func (c *Character) SetTargetPriority(priority core.TargetPriority) {
+	c.EntityState.TargetPrioritization = priority
+}
 
 var _ core.Entity = &Character{}

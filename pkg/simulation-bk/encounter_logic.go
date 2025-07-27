@@ -1,4 +1,4 @@
-package simulation
+package simulation_bk
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
@@ -13,7 +13,7 @@ import (
 // ChooseCharacterActionType selects the action type for a character, preferring healing if available and needed.
 func (e *Encounter) ChooseCharacterActionType(actor *character.Character) (core.ActionType, error) {
 	// Choose between a damage action or a healing action
-	if e.Options.AllowCharacterHeals && actor.SpellcastingManager.HasHealingSpells() {
+	if e.Options.AllowCharacterHeals && actor.SpellCastingManager.HasHealingSpells() {
 		if e.doesAPlayerNeedHealing() {
 			events.LogCharacterActionChoiceEvent(actor, core.ATHeal, actor.EventListener)
 			return core.ATHeal, nil
@@ -25,7 +25,7 @@ func (e *Encounter) ChooseCharacterActionType(actor *character.Character) (core.
 func (e *Encounter) chooseCharacterDamageAction(actor *character.Character) (core.ActionType, error) {
 	switch e.Options.ActionPreference {
 	case core.APNoPreference:
-		if !actor.SpellcastingManager.HasDamageSpells() {
+		if !actor.SpellCastingManager.HasDamageSpells() {
 			return chooseFromNoSpellsPreference(actor)
 		} else {
 			return chooseFromHasSpellsPreference(actor)
@@ -37,7 +37,7 @@ func (e *Encounter) chooseCharacterDamageAction(actor *character.Character) (cor
 		events.LogCharacterActionChoiceEvent(actor, core.ATRanged, actor.EventListener)
 		return core.ATRanged, nil
 	case core.APPreferSpells:
-		if !actor.SpellcastingManager.HasDamageSpells() {
+		if !actor.SpellCastingManager.HasDamageSpells() {
 			return chooseFromNoSpellsPreference(actor)
 		}
 		// TODO: There is a logic issue here where if spells are preferred but there are no spell slots available it tries anyway
@@ -105,10 +105,10 @@ func (e *Encounter) chooseBestHealingSpell(actor core.Entity, target core.Entity
 	switch a := actor.(type) {
 	case *character.Character:
 		hpDiff := target.GetMaxHP() - target.GetCurrentHP()
-		s, err := a.SpellcastingManager.GetMostEfficientHealingSpell(hpDiff)
+		s, err := a.SpellCastingManager.GetMostEfficientHealingSpell(hpDiff)
 		event := events.SpellChoiceEvent{
 			SpellChoice:   s,
-			ManagerStatus: a.SpellcastingManager.GetStatus(),
+			ManagerStatus: a.SpellCastingManager.GetStatus(),
 		}
 		events.LogSpellChoiceEvent(a, event, a.EventListener)
 		if err != nil {
@@ -124,13 +124,13 @@ func (e *Encounter) chooseBestHealingSpell(actor core.Entity, target core.Entity
 func (e *Encounter) chooseDamageSpell(actor core.Entity, priority core.SpellPriority) (*spellcasting_manager.SpellChoice, error) {
 	switch a := actor.(type) {
 	case *character.Character:
-		damageSpell, err := a.SpellcastingManager.ChooseSpellByPriority(spells.STDamage, priority)
+		damageSpell, err := a.SpellCastingManager.ChooseSpellByPriority(spells.STDamage, priority)
 		if err != nil {
 			return nil, err
 		}
 		event := events.SpellChoiceEvent{
 			SpellChoice:   damageSpell,
-			ManagerStatus: a.SpellcastingManager.GetStatus(),
+			ManagerStatus: a.SpellCastingManager.GetStatus(),
 		}
 		events.LogSpellChoiceEvent(a, event, a.EventListener)
 		return damageSpell, nil

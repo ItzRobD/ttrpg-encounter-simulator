@@ -26,10 +26,10 @@ type SpellcastingManager struct {
 	maxSlots               spells.SpellSlots
 	healingSpells          map[int][]*spells.Spell
 	damageSpells           map[int][]*spells.Spell
-	healingSpellsInnate    map[int][]*spells.InnateSpell // TODO: Added
-	damageSpellsInnate     map[int][]*spells.InnateSpell // TODO: Added
-	damageSpellCount       int                           // TODO: Handle this for innate
-	healingSpellCount      int                           // TODO: Handle this for innate
+	healingSpellsInnate    map[int][]*spells.InnateSpell
+	damageSpellsInnate     map[int][]*spells.InnateSpell
+	damageSpellCount       int
+	healingSpellCount      int
 	canUpcast              bool
 	spellcastModifierValue int
 
@@ -77,27 +77,32 @@ func (scm *SpellcastingManager) AddKnownSpell(spell *spells.Spell) error {
 		return nil
 	} else if spell.SpellType == core.STDamage {
 		scm.damageSpells[spell.Level] = append(scm.damageSpells[spell.Level], spell)
-		scm.healingSpellCount++
+		scm.damageSpellCount++
+		return nil
+	} else {
+		fmt.Printf("SpellID: %d, Name: %s - is of non healing or damage type. Skipping\n", spell.ID, spell.Name)
 		return nil
 	}
-
-	return fmt.Errorf("Spells is of non healing or damage type")
 }
 
-func (scm *SpellcastingManager) AddKnownSpells(spell []spells.Spell) error {
-	for _, s := range spell {
-		//scm.calculateFormulaAverages(s)
-		if s.SpellType == core.STHealing {
-			scm.healingSpells[s.Level] = append(scm.healingSpells[s.Level], &s)
-			scm.healingSpellCount++
-			return nil
-		} else if s.SpellType == core.STDamage {
-			scm.damageSpells[s.Level] = append(scm.damageSpells[s.Level], &s)
-			scm.damageSpellCount++
-			return nil
+func (scm *SpellcastingManager) AddKnownSpells(spellSlice []spells.Spell) error {
+	for _, spell := range spellSlice {
+		err := scm.AddKnownSpell(&spell)
+		if err != nil {
+			return fmt.Errorf("failed to add spell %d: %w", spell.ID, err)
 		}
 	}
-	return fmt.Errorf("Spells is of non healing or damage type")
+	return nil
+}
+
+func (scm *SpellcastingManager) AddKnownSpellsFromMap(spellMap map[int]spells.Spell) error {
+	for _, spell := range spellMap {
+		err := scm.AddKnownSpell(&spell)
+		if err != nil {
+			return fmt.Errorf("failed to add spell %d: %w", spell.ID, err)
+		}
+	}
+	return nil
 }
 
 func (scm *SpellcastingManager) AddKnownInnateSpells(spell []spells.InnateSpell) error {

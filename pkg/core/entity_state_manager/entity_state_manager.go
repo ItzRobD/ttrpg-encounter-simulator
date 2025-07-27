@@ -28,7 +28,7 @@ type EntityStateConfig struct {
 	Conditions           core.EntityConditions
 	ActionPreference     core.ActionPreference
 	VersatilePreference  core.VersatileWeaponPreference
-	TargetPrioritization core.TargetPrioritization
+	TargetPrioritization core.TargetPriority
 	SpellcastingPriority core.SpellPriority
 	InitiativeAdvantage  core.AdvantageType
 	InitiativeBonus      int
@@ -52,11 +52,12 @@ type EntityStateManager struct {
 	// Conditions
 	Conditions core.EntityConditions
 	DeathSaves core.DeathSaves
+	Initiative int
 
 	// Preferences
 	ActionPreference          core.ActionPreference
 	VersatileWeaponPreference core.VersatileWeaponPreference
-	TargetPrioritization      core.TargetPrioritization
+	TargetPrioritization      core.TargetPriority
 	SpellcastingPriority      core.SpellPriority
 
 	// Bonuses
@@ -244,11 +245,11 @@ func (esm *EntityStateManager) GetVersatileWeaponPreference() core.VersatileWeap
 	return esm.VersatileWeaponPreference
 }
 
-func (esm *EntityStateManager) SetTargetPrioritization(p core.TargetPrioritization) {
+func (esm *EntityStateManager) SetTargetPrioritization(p core.TargetPriority) {
 	esm.TargetPrioritization = p
 }
 
-func (esm *EntityStateManager) GetTargetPrioritization() core.TargetPrioritization {
+func (esm *EntityStateManager) GetTargetPrioritization() core.TargetPriority {
 	return esm.TargetPrioritization
 }
 
@@ -263,6 +264,10 @@ func (esm *EntityStateManager) GetSpellcastingPriority() core.SpellPriority {
 func (esm *EntityStateManager) SetInitiativeAdvantage(a core.AdvantageType) {
 	esm.InitiativeAdvantage = a
 }
+
+func (esm *EntityStateManager) SetInitiative(value int) { esm.Initiative = value }
+
+func (esm *EntityStateManager) GetInitiative() int { return esm.Initiative }
 
 func (esm *EntityStateManager) GetInitiativeAdvantage() core.AdvantageType {
 	return esm.InitiativeAdvantage
@@ -293,8 +298,8 @@ func (esm *EntityStateManager) ResetHP() {
 
 func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*EntityStateManager, error) {
 	// Handle mistakes
-	if config.MaxHP <= 0 {
-		return nil, fmt.Errorf("max HP must be greater than 0")
+	if config.MaxHP < 0 {
+		return nil, fmt.Errorf("max HP must not be negative")
 	}
 	if config.CurrentHP > config.MaxHP {
 		config.CurrentHP = config.MaxHP

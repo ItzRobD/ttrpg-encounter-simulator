@@ -15,6 +15,8 @@ type MonsterConfig struct {
 	Resistances        core.DamageResistances
 	DamageBreakers     []core.ResistBreaker
 	spellcastingConfig MonsterSpellcastingConfig
+	HPSetMethod        core.HPSetMethod
+	Seed               core.Seed
 }
 
 type MonsterSpellcastingConfig struct {

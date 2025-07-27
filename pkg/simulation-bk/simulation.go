@@ -1,4 +1,4 @@
-package simulation
+package simulation_bk
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
@@ -14,19 +14,6 @@ type Simulation struct {
 
 func New(options core.SimulationOptions) Simulation {
 	dispatcher := events.NewEventDispatcher()
-	//dispatcher.RegisterHandler(&events.AttackHandler{})
-	//dispatcher.RegisterHandler(&events.SpellAttackHandler{})
-	//dispatcher.RegisterHandler(&events.SpellDCHandler{})
-	//dispatcher.RegisterHandler(&events.HealHandler{})
-	//dispatcher.RegisterHandler(&events.DeathHandler{})
-	//dispatcher.RegisterHandler(&events.DamageHandler{})
-	//dispatcher.RegisterHandler(&events.UnconsciousHandler{})
-	//dispatcher.RegisterHandler(&events.RollHandler{})
-	//dispatcher.RegisterHandler(&events.HPRollHandler{})
-	//dispatcher.RegisterHandler(&events.ActionChoiceHandler{})
-	//dispatcher.RegisterHandler(&events.SpellChoiceHandler{})
-	//dispatcher.RegisterHandler(&events.HPModifiedHandler{})
-	//dispatcher.RegisterHandler(&events.TargetChoiceEvent{})
 	dispatcher.RegisterHandler(&events.UniversalEventHandler{})
 
 	var s Simulation

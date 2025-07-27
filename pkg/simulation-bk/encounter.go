@@ -1,4 +1,4 @@
-package simulation
+package simulation_bk
 
 import (
 	"dnd5e-encounter-simulator-backend/internal/util"
@@ -22,7 +22,7 @@ type Encounter struct {
 func (e *Encounter) PrintCombatTracker() {
 	fmt.Println("Combat Tracker")
 	for _, c := range e.CombatTracker {
-		fmt.Printf("Initiative: %d, Name: %s\n", c.InitiativeScore, c.Entity.GetName())
+		fmt.Printf("Initiative: %d, Name: %s\n", c.Initiative, c.Entity.GetName())
 	}
 }
 
@@ -59,8 +59,8 @@ func (e *Encounter) SetupCombatTracker() error {
 		}
 		events.LogDiceRollEvent(m, initiative, []int{roll}, core.DiceRollInitiative, m.EntityModifiers.InitiativeBonus, m.EventListener)
 		err = e.AddCombatant(core.Combatant{
-			InitiativeScore: initiative,
-			Entity:          m,
+			Initiative: initiative,
+			Entity:     m,
 		})
 		if err != nil {
 			return err
@@ -73,8 +73,8 @@ func (e *Encounter) SetupCombatTracker() error {
 		}
 		events.LogDiceRollEvent(p, initiative, []int{roll}, core.DiceRollInitiative, p.EntityModifiers.InitiativeBonus, p.EventListener)
 		err = e.AddCombatant(core.Combatant{
-			InitiativeScore: initiative,
-			Entity:          p,
+			Initiative: initiative,
+			Entity:     p,
 		})
 		if err != nil {
 			return err
@@ -82,7 +82,7 @@ func (e *Encounter) SetupCombatTracker() error {
 	}
 
 	sort.Slice(e.CombatTracker, func(i, j int) bool {
-		return e.CombatTracker[i].InitiativeScore > e.CombatTracker[j].InitiativeScore
+		return e.CombatTracker[i].Initiative > e.CombatTracker[j].Initiative
 	})
 
 	return nil

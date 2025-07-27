@@ -1,6 +1,6 @@
 package entity_configuration
 
-type CharacterSpecficFeatures struct {
+type CharacterSpecificFeatures struct {
 	Feats CharacterFeats
 }
 
@@ -19,6 +19,7 @@ type CharacterFeats struct {
 }
 
 type ClassFeatureSet struct {
+	// TODO: Implement other class features ie rage
 	RogueFeatures *RogueFeatures
 }
 

@@ -2,10 +2,12 @@ package classes
 
 import (
 	"context"
+	"database/sql"
 	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
+	"errors"
 	"fmt"
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -181,14 +183,22 @@ func GetNumberOfAttacksFromLevelAndClass(ctx context.Context, level uint8, class
 	if err != nil {
 		return numberOfAttacks, fmt.Errorf("failed to query extra attacks by level and class: %w", err)
 	}
-	err = row.Scan(&numberOfAttacks)
+
+	var numberOfAttacksNullable sql.NullInt64
+	err = row.Scan(&numberOfAttacksNullable)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return numberOfAttacks, nil
+		}
 		return numberOfAttacks, fmt.Errorf("failed to scan extra attacks by level and class: %w", err)
 	}
 
-	if numberOfAttacks == 0 {
+	if numberOfAttacksNullable.Valid {
+		numberOfAttacks = int(numberOfAttacksNullable.Int64)
+	} else {
 		numberOfAttacks = 1
 	}
+
 	return numberOfAttacks, nil
 }
 

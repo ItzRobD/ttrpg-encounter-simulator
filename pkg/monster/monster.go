@@ -9,6 +9,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"fmt"
+	"math/rand/v2"
 )
 
 // TODO: Action manager should be complete
@@ -22,6 +23,7 @@ type Monster struct {
 	SpellCastingManager *spellcasting_manager.SpellcastingManager
 	RollManager         *roll_manager.RollManager
 	ActionManager       *monster_action_manager.MonsterActionManager
+	Seed                core.Seed
 	EventListener       func(event interface{})
 }
 
@@ -39,14 +41,7 @@ type MonsterBase struct {
 	IsInnateSpellcaster bool
 	AbilityScores       core.AbilityScores
 	AbilityScoreProf    core.AbilityScoresProficiencies
-	HP                  MonsterHP
-}
-
-type MonsterHP struct {
-	HPAverage    int
-	NumberOfDice int
-	Die          core.DiceType
-	AmountToAdd  int
+	HP                  core.HPConfig
 }
 
 type MonsterQueryParams struct {
@@ -55,12 +50,21 @@ type MonsterQueryParams struct {
 }
 
 func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
+	var seed core.Seed
+	if config.Seed.Seed1 == 0 {
+		seed.Seed1 = rand.Uint64()
+	}
+	if config.Seed.Seed2 == 0 {
+		seed.Seed2 = rand.Uint64()
+	}
+
 	monster := &Monster{
 		MonsterBase:         config.Base,
 		EntityState:         &entity_state_manager.EntityStateManager{},
 		SpellCastingManager: &spellcasting_manager.SpellcastingManager{},
 		RollManager:         &roll_manager.RollManager{},
 		ActionManager:       &monster_action_manager.MonsterActionManager{},
+		Seed:                seed,
 	}
 
 	// Initialize managers
@@ -81,11 +85,14 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	if err != nil {
 		return nil, err
 	}
+	monster.EntityState.Resistances = config.Resistances
 
 	// Spellcasting Manager
-	monster.SpellCastingManager, err = initializeSpellcastingManager(ctx, monster, config.spellcastingConfig)
-	if err != nil {
-		return nil, err
+	if monster.MonsterBase.IsSpellcaster {
+		monster.SpellCastingManager, err = initializeSpellcastingManager(ctx, monster, config.spellcastingConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Action manager
@@ -97,11 +104,20 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	}
 	monster.ActionManager = initializeActionManager(monster, mamConfig)
 
+	// Set up HP Config and monster hp
+	monster.HP.HPSetMethod = config.HPSetMethod
+
+	// Moving hp setup to during simulation
+	//err = monster.setHP(monster.HP)
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	return monster, nil
 }
 
 func initializeRollManager(m *Monster) *roll_manager.RollManager {
-	rm := roll_manager.NewRollManager(m, roll_manager.RerollAbilities{})
+	rm := roll_manager.NewRollManager(m, roll_manager.RerollAbilities{}, m.Seed)
 	return rm
 }
 
@@ -110,6 +126,7 @@ func initalizeEntityStateManager(m *Monster, config entity_state_manager.EntityS
 	if err != nil {
 		return nil, err
 	}
+
 	return esm, nil
 }
 
@@ -125,9 +142,15 @@ func initializeSpellcastingManager(ctx context.Context, m *Monster, config Monst
 	sm.SetSaveDC(config.SaveDC)
 
 	if casterType == core.CasterMonsterInnate {
-		sm.AddKnownInnateSpells(config.InnateSpells)
+		err := sm.AddKnownInnateSpells(config.InnateSpells)
+		if err != nil {
+			return nil, err
+		}
 	} else {
-		sm.AddKnownSpells(config.LeveledSpells)
+		err := sm.AddKnownSpells(config.LeveledSpells)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return sm, nil
@@ -138,19 +161,19 @@ func initializeActionManager(m *Monster, config *monster_action_manager.MAMConfi
 	return mam
 }
 
-func (m *Monster) setHP(method core.HPSetMethod, value int) error {
-	switch method {
+func (m *Monster) setHP(config core.HPConfig) error {
+	switch config.HPSetMethod {
 	case core.HPSetValue:
 		hp := entity_state_manager.HPValues{
-			CurrentHP: value,
-			MaxHP:     value,
+			CurrentHP: config.Value,
+			MaxHP:     config.Value,
 			TempHP:    0,
-			HitDie:    m.HP.Die,
+			HitDie:    config.HitDie,
 		}
 		hpRoll := roll_manager.RollResult{
 			DiceRollType:   core.DiceRollHPValueUsed,
-			FinalRollValue: value,
-			Total:          value,
+			FinalRollValue: config.Value,
+			Total:          config.Value,
 		}
 		events.LogDiceRollEvent(m, &hpRoll, m.EventListener)
 		m.EntityState.SetHPValues(hp)
@@ -158,26 +181,36 @@ func (m *Monster) setHP(method core.HPSetMethod, value int) error {
 		return nil
 	case core.HPSetAverage:
 		hp := entity_state_manager.HPValues{
-			CurrentHP: m.HP.HPAverage,
-			MaxHP:     m.HP.HPAverage,
+			CurrentHP: config.HPAverage,
+			MaxHP:     config.HPAverage,
 			TempHP:    0,
-			HitDie:    m.HP.Die,
+			HitDie:    config.HitDie,
 		}
 		hpRoll := roll_manager.RollResult{
 			DiceRollType:   core.DiceRollHPAvgUsedMonster,
-			Die:            m.HP.Die,
-			FinalRollValue: m.HP.HPAverage,
-			Total:          m.HP.HPAverage,
+			Die:            config.HitDie,
+			FinalRollValue: config.HPAverage,
+			Total:          config.HPAverage,
 		}
 		events.LogDiceRollEvent(m, &hpRoll, m.EventListener)
 		m.EntityState.SetHPValues(hp)
 
 		return nil
 	case core.HPSetRoll:
-		m.RollManager.RollHP() //TODO: This function needs to be added for monsters
+		hpRoll, err := m.RollManager.RollHP(config)
+		if err != nil {
+			return err
+		}
+		hp := entity_state_manager.HPValues{
+			CurrentHP: hpRoll.Total,
+			MaxHP:     hpRoll.Total,
+			TempHP:    0,
+			HitDie:    hpRoll.Die,
+		}
+		m.EntityState.SetHPValues(hp)
 		return nil
 	default:
-		return fmt.Errorf("invalid HP set method: %s", m)
+		return fmt.Errorf("invalid HP set method: %v", config.HPSetMethod)
 	}
 }
 
@@ -210,6 +243,14 @@ func (m *Monster) GetEventListener() func(event interface{}) {
 	return m.EventListener
 }
 
+func (m *Monster) SetEventListener(listener func(event interface{})) {
+	m.EventListener = listener
+}
+
+func (m *Monster) GetState() interface{} {
+	return m.EntityState
+}
+
 func (m *Monster) GetName() string {
 	return m.Name
 }
@@ -224,11 +265,15 @@ func (m *Monster) GetHPStatus() core.HPStatus {
 
 func (m *Monster) GetHitDie() core.DiceType { return m.EntityState.GetHitDie() }
 
-func (m *Monster) GetCR() float64 { return m.CR }
-
 func (m *Monster) GetAC() int { return m.AC }
 
-func (m *Monster) GetLevel() interface{} { return m.CR }
+func (m *Monster) GetLevel() float64 { return m.CR }
+
+func (m *Monster) GetHPConfig() core.HPConfig { return m.HP }
+
+func (m *Monster) SetHP(method core.HPSetMethod, value int) error {
+	return m.setHP(core.HPConfig{HPSetMethod: method, Value: value})
+}
 
 func (m *Monster) GetCasterLevel() int { return m.SpellCastingManager.GetCasterLevel() }
 
@@ -322,7 +367,36 @@ func (m *Monster) GetSavingThrowBonus(ability core.Ability) (int, error) {
 	return mod, nil
 }
 
+func (m *Monster) RollInitiative() (int, error) {
+	var err error
+	opts := roll_manager.NewRollOptions()
+	opts.Modifier, err = m.GetAbilityScoreModifier(core.AbilityDexterity)
+	if err != nil {
+		return 0, err
+	}
+
+	res, err := m.RollManager.RollInitiative(opts)
+	if err != nil {
+		return 0, err
+	}
+
+	m.EntityState.SetInitiative(res.Total)
+
+	return res.Total, nil
+}
+
 func (m *Monster) IsCharacter() bool { return false }
 func (m *Monster) IsMonster() bool   { return true }
+
+func (m *Monster) GetID() int          { return m.ID }
+func (m *Monster) InitializeHP() error { return m.setHP(m.HP) }
+func (m *Monster) IsSpellcaster() bool { return m.MonsterBase.IsSpellcaster }
+func (m *Monster) IsHealer() bool      { return m.SpellCastingManager.HasHealingSpells() }
+func (m *Monster) GetTargetPriority() core.TargetPriority {
+	return m.EntityState.TargetPrioritization
+}
+func (m *Monster) SetTargetPriority(priority core.TargetPriority) {
+	m.EntityState.TargetPrioritization = priority
+}
 
 var _ core.Entity = &Monster{}

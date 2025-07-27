@@ -33,6 +33,13 @@ type RollOptions struct {
 	TargetValue int
 }
 
+func NewRollOptions() RollOptions {
+	return RollOptions{
+		Advantage:         core.RollNormal,
+		CriticalThreshold: 20,
+	}
+}
+
 type RerollAbilities struct {
 	HasHalflingLucky       bool
 	HasLuckyFeat           bool
@@ -112,15 +119,21 @@ func (rt RerollType) String() string {
 	return string(rt)
 }
 
-func NewRollManager(parent core.Entity, abilities RerollAbilities) *RollManager {
-	return &RollManager{
+func NewRollManager(parent core.Entity, abilities RerollAbilities, seed core.Seed) *RollManager {
+	pcg := rand.NewPCG(seed.Seed1, seed.Seed2)
+	rm := RollManager{
 		parent:             parent,
 		luckyUsesRemaining: 3, // Lucky feat gives 3 uses
 		RerollAbilities:    abilities,
+		rng:                rand.New(pcg),
 	}
+
+	return &rm
 }
 
-func (rm *RollManager) RollD20(options RollOptions) (*RollResult, error) {
+// RollD20 rolls a single D20 die with options for advantage, disadvantage, modifiers, and halfling lucky re-rolls.
+// Options required: Advantage, Critical Threshold
+func (rm *RollManager) RollD20(options RollOptions, shouldLogEvent bool) (*RollResult, error) {
 	var res RollResult // Single return value
 	res.Advantage = options.Advantage
 	res.Modifier = options.Modifier
@@ -165,11 +178,15 @@ func (rm *RollManager) RollD20(options RollOptions) (*RollResult, error) {
 	}
 
 	// Log all events
-	events.LogDiceRollEvent(rm.parent, &res, rm.parent.GetEventListener())
+	if shouldLogEvent {
+		events.LogDiceRollEvent(rm.parent, &res, rm.parent.GetEventListener())
+	}
 
 	return &res, nil
 }
 
+// RollInitiative rolls a d20 for initiative and applies applicable modifiers, returning the result or an error if any occur.
+// Options required: Advantage, Modifier
 func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) {
 	// Roll a d20 and apply applicable modifiers
 	mod, err := core.GetAbilityScoreModifier(rm.parent.GetAbilityScores().Dexterity)
@@ -181,10 +198,11 @@ func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) 
 	options.Modifier += mod
 	options.RollType = core.DiceRollInitiative
 
-	res, err := rm.RollD20(options)
+	res, err := rm.RollD20(options, false)
 	if err != nil {
 		return nil, err
 	}
+	res.DiceRollType = options.RollType
 
 	// Log initiative roll
 	events.LogDiceRollEvent(rm.parent, res, rm.parent.GetEventListener())
@@ -192,6 +210,7 @@ func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) 
 	return res, nil
 }
 
+// RollDamage rolls damage dice for an attack, applies modifiers, handles reroll rules, critical hits, and logs events.
 func (rm *RollManager) RollDamage(req core.AttackRequest, isCritical bool, opts RollOptions) (*RollResult, error) {
 	// Handle damage rolls
 	// Apply Great Weapon Fighting, Elemental Adept
@@ -328,7 +347,7 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 func (rm *RollManager) RollSavingThrow(ability core.Ability, options RollOptions) (*RollResult, error) {
 	options.RollType = core.DiceRollSavingThrow
 
-	res, err := rm.RollD20(options)
+	res, err := rm.RollD20(options, false)
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +363,7 @@ func (rm *RollManager) RollSavingThrow(ability core.Ability, options RollOptions
 }
 
 func (rm *RollManager) RollAttack(options RollOptions) (*RollResult, error) {
-	res, err := rm.RollD20(options)
+	res, err := rm.RollD20(options, false)
 	if err != nil {
 		return nil, err
 	}
@@ -362,73 +381,38 @@ func (rm *RollManager) RollAbilityCheck(ability core.Ability, options RollOption
 	options.Modifier += mod
 	options.RollType = core.DiceRollAbilityCheck
 
-	res, err := rm.RollD20(options)
+	res, err := rm.RollD20(options, false)
 	if err != nil {
 		return nil, err
 	}
 
 	rm.calculateSuccess(res, options)
-	// Log ability check roll
-	// TODO: Ability checks likely aren't going to be used
-	// 		Do we need to actually need to keep this function?
 
+	// Log ability check roll
 	events.LogDiceRollEvent(rm.parent, res, rm.parent.GetEventListener())
 
 	return res, nil
 }
 
-func (rm *RollManager) RollHP() (*RollResult, error) {
-	var err error
-	var hp int
-	var options RollOptions
+// RollHP rolls hit points based on the provided configuration and returns the result or an error if input is invalid.
+// Uses the parent type to determine if rolling for a character or a monster.
+// Logs dice roll events using the parent's event listener.
+func (rm *RollManager) RollHP(config core.HPConfig) (*RollResult, error) {
+	if config.NumberOfDice <= 0 || config.HitDie == 0 {
+		return nil, fmt.Errorf("invalid HP configuration: NumberOfDice=%d, HitDie=%v",
+			config.NumberOfDice, config.HitDie)
+	}
 	var res RollResult
-	options.RollType = core.DiceRollHP
-	options.Advantage = core.RollNormal
-	hitDie := rm.parent.GetHitDie()
-	options.Modifier, err = rm.parent.GetAbilityScoreModifier(core.AbilityConstitution)
+	options := RollOptions{
+		RollType:  core.DiceRollHP,
+		Advantage: core.RollNormal,
+		Modifier:  config.Modifier,
+	}
 
 	if rm.parent.IsCharacter() {
-		if rm.parent.GetLevel() == 1 {
-			res = RollResult{
-				DiceRollType:   core.DiceRollHP,
-				NumberOfDice:   1,
-				Die:            hitDie,
-				FinalRollValue: int(hitDie),
-				FinalRolls:     []int{int(hitDie)},
-				Modifier:       options.Modifier,
-				Total:          hitDie.Int() + options.Modifier,
-				OriginalRolls:  []int{int(hitDie)},
-			}
-		} else {
-			var numDice uint8
-			var cLevel uint8
-			if level, ok := rm.parent.GetLevel().(uint8); ok {
-				cLevel = level
-				numDice = level - 1
-			}
-
-			if err != nil {
-				return nil, err
-			}
-
-			rollValue, rolls := rm.rollDice(int(numDice), hitDie)
-
-			hp = hitDie.Int() + rollValue + (options.Modifier * int(cLevel))
-
-			res = RollResult{
-				DiceRollType:   core.DiceRollHP,
-				NumberOfDice:   int(numDice),
-				Die:            hitDie,
-				FinalRollValue: rollValue,
-				FinalRolls:     rolls,
-				Modifier:       options.Modifier,
-				Total:          hp,
-				OriginalRolls:  rolls,
-			}
-		}
+		res = rm.rollCharacterHP(config, options)
 	} else {
-		// TODO: Update this function once we fix the monster struct
-		return nil, fmt.Errorf("monster hp rolling not implemented")
+		res = rm.rollMonsterHP(config)
 	}
 
 	events.LogDiceRollEvent(rm.parent, &res, rm.parent.GetEventListener())
@@ -446,6 +430,60 @@ func (rm *RollManager) UseLuckyReroll() bool {
 
 func (rm *RollManager) RestoreLuckyUses() {
 	rm.luckyUsesRemaining = 3
+}
+
+// rollCharacterHP calculates and returns the HP roll result for a character based on level, hit die, and modifiers.
+func (rm *RollManager) rollCharacterHP(config core.HPConfig, options RollOptions) RollResult {
+	if rm.parent.GetLevel() == 1 {
+		// Level 1 characters get max HP
+		return RollResult{
+			DiceRollType:   core.DiceRollHP,
+			NumberOfDice:   1,
+			Die:            config.HitDie,
+			FinalRollValue: config.HitDie.Int(),
+			FinalRolls:     []int{config.HitDie.Int()},
+			Modifier:       options.Modifier,
+			Total:          config.HitDie.Int() + options.Modifier,
+			OriginalRolls:  []int{config.HitDie.Int()},
+		}
+	}
+
+	// For levels 2+, roll for additional HP
+	cLevel := rm.parent.GetLevel()
+	numDice := int(cLevel - 1)
+
+	rollValue, rolls := rm.rollDice(numDice, config.HitDie)
+	totalHP := config.HitDie.Int() + rollValue + (options.Modifier * int(cLevel))
+
+	return RollResult{
+		DiceRollType:   core.DiceRollHP,
+		NumberOfDice:   numDice,
+		Die:            config.HitDie,
+		FinalRollValue: rollValue,
+		FinalRolls:     rolls,
+		Modifier:       options.Modifier,
+		Total:          totalHP,
+		OriginalRolls:  rolls,
+	}
+}
+
+// rollMonsterHP calculates the total hit points for a monster based on the dice rolls and configuration parameters.
+// It rolls the specified number of dice, adds any modifiers and a fixed amount to determine the final HP value.
+// Returns a RollResult containing details of the roll, including individual rolls, dice type, modifiers, and total HP.
+func (rm *RollManager) rollMonsterHP(config core.HPConfig) RollResult {
+	rollValue, rolls := rm.rollDice(config.NumberOfDice, config.HitDie)
+	totalHP := rollValue + config.AmountToAdd
+
+	return RollResult{
+		DiceRollType:   core.DiceRollHP,
+		NumberOfDice:   config.NumberOfDice,
+		Die:            config.HitDie,
+		FinalRollValue: rollValue,
+		FinalRolls:     rolls,
+		Modifier:       config.Modifier,
+		Total:          totalHP,
+		OriginalRolls:  rolls,
+	}
 }
 
 // applyElementalAdept adjusts dice rolls to avoid results of 1 if the Elemental Adept feature is active.

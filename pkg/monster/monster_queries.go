@@ -189,7 +189,7 @@ func getMonsterBaseDataByID(ctx context.Context, ids []int) (map[int]MonsterBase
 			&base.AbilityScores.Charisma,
 			&base.HP.HPAverage,
 			&base.HP.NumberOfDice,
-			&base.HP.Die,
+			&base.HP.HitDie,
 			&base.HP.AmountToAdd,
 			&strSave, &dexSave, &conSave, &intSave, &wisSave, &chaSave,
 		)
