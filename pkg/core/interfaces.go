@@ -163,3 +163,17 @@ type EffectData interface {
 	GetDamageType() DamageType
 	GetCondition() *Condition
 }
+
+type HPModificationResult interface {
+	GetModificationValue() int
+	GetOriginalHP() int
+	GetOriginalTempHP() int
+	GetNewHP() int
+	GetNewTempHP() int
+	GetDidHealHP() bool
+	GetDidHealTempHP() bool
+	GetDidTempDamage() bool
+	GetDidHPDamage() bool
+	GetIsUnconscious() bool
+	GetIsMaxHealth() bool
+}

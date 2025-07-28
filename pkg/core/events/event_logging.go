@@ -117,11 +117,21 @@ func LogSpellHealEvent(actor core.Entity, res core.SpellResult, listener func(ev
 	}
 }
 
-func LogHPModifiedEvent(actor core.Entity, amt int, prevHP int, newHP int, listener func(event interface{})) {
+func LogHPModifiedEvent(actor core.Entity, subject core.Entity, res core.HPModificationResult, listener func(event interface{})) {
 	event := &HPModifiedEvent{
-		Amount:     amt,
-		PreviousHP: prevHP,
-		CurrentHP:  newHP,
+		BaseEvent:         BaseEvent{},
+		SubjectName:       subject.GetName(),
+		ModificationValue: res.GetModificationValue(),
+		OriginalHP:        res.GetOriginalHP(),
+		OriginalTempHP:    res.GetOriginalTempHP(),
+		NewHP:             res.GetNewHP(),
+		NewTempHP:         res.GetNewTempHP(),
+		DidHealHP:         res.GetDidHealHP(),
+		DidHealTempHP:     res.GetDidHealTempHP(),
+		DidTempDamage:     res.GetDidTempDamage(),
+		DidHPDamage:       res.GetDidHPDamage(),
+		IsUnconscious:     res.GetIsUnconscious(),
+		IsMaxHealth:       res.GetIsMaxHealth(),
 	}
 	event.SetActor(actor.GetName())
 

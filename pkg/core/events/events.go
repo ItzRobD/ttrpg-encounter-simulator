@@ -168,9 +168,18 @@ func (e *UnconsciousEvent) GetEventType() EventType { return ETUnconsciousEvent 
 
 type HPModifiedEvent struct {
 	BaseEvent
-	Amount     int
-	PreviousHP int
-	CurrentHP  int
+	SubjectName       string
+	ModificationValue int
+	OriginalHP        int
+	OriginalTempHP    int
+	NewHP             int
+	NewTempHP         int
+	DidHealHP         bool
+	DidHealTempHP     bool
+	DidTempDamage     bool
+	DidHPDamage       bool
+	IsUnconscious     bool
+	IsMaxHealth       bool
 }
 
 func (e *HPModifiedEvent) GetEventType() EventType { return ETHPModifiedEvent }

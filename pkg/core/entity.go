@@ -1,6 +1,8 @@
 package core
 
-import "math/rand/v2"
+import (
+	"math/rand/v2"
+)
 
 type Entity interface {
 	IsUnconscious() bool
@@ -36,6 +38,7 @@ type Entity interface {
 	GetAIRequest(actorID int, t AIRequestType) (*AIRequest, error)
 	ExecuteAIRequest(req *AIRequest) (*ActionOutcome, error)
 	UpdateAICombatContext(ctx *CombatContext) error
+	ModifyHP(value int, isTemp bool, tempStacking bool) (HPModificationResult, error)
 }
 
 type Combatant struct {

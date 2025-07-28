@@ -2,7 +2,9 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
+	"math"
 	"sort"
 )
 
@@ -56,12 +58,45 @@ func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
 	return ce.processActionResults(results)
 }
 
-func (ce *CombatEngine) processActionResults(results *core.ActionOutcome) error {
-	switch results.ActionType {
-	case core.ATMelee, core.ATRanged:
-		return ce.processAttackResults(results)
-		// TODO: Reworked the results here. process the new ones accordingly
+func (ce *CombatEngine) processActionResults(outcome *core.ActionOutcome) error {
+	target, exists := ce.CombatContext.AllCombatants[outcome.TargetID]
+	if !exists {
+		return fmt.Errorf("target entity not found in combat context")
 	}
+
+	var hpModResult core.HPModificationResult
+	var err error
+	for _, effect := range outcome.Effects {
+		switch effect.Type {
+		case core.EffectDamage:
+			v := -effect.Value
+			hpModResult, err = target.GetEntity().ModifyHP(v, false, false)
+			if err != nil {
+				return fmt.Errorf("failed to modify target entity HP: %v", err)
+			}
+		case core.EffectHealing:
+			v := math.Abs(float64(effect.Value))
+			hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false)
+			if err != nil {
+				return fmt.Errorf("failed to modify target entity HP: %v", err)
+			}
+		case core.EffectTempHP:
+			v := math.Abs(float64(effect.Value))
+			hpModResult, err = target.GetEntity().ModifyHP(int(v), true, false)
+			if err != nil {
+				return fmt.Errorf("failed to modify target entity HP: %v", err)
+			}
+		case core.EffectCondition:
+			return fmt.Errorf("effects of type %v are not supported", core.EffectCondition)
+		}
+	}
+
+	entity := ce.CombatContext.AllCombatants[outcome.ActorID].GetEntity()
+
+	events.LogHPModifiedEvent(entity, target.GetEntity(), hpModResult, entity.GetEventListener())
+
+	ce.Combatants[outcome.TargetID] = target
+
 	return nil
 }
 

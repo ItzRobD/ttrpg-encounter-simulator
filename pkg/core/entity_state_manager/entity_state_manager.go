@@ -19,6 +19,18 @@ type HPModificationResult struct {
 	IsMaxHealth       bool
 }
 
+func (hpmr HPModificationResult) GetModificationValue() int { return hpmr.ModificationValue }
+func (hpmr HPModificationResult) GetOriginalHP() int        { return hpmr.OriginalHP }
+func (hpmr HPModificationResult) GetOriginalTempHP() int    { return hpmr.OriginalTempHP }
+func (hpmr HPModificationResult) GetNewHP() int             { return hpmr.NewHP }
+func (hpmr HPModificationResult) GetNewTempHP() int         { return hpmr.NewTempHP }
+func (hpmr HPModificationResult) GetDidHealHP() bool        { return hpmr.DidHealHP }
+func (hpmr HPModificationResult) GetDidHealTempHP() bool    { return hpmr.DidHealTempHP }
+func (hpmr HPModificationResult) GetDidTempDamage() bool    { return hpmr.DidTempDamage }
+func (hpmr HPModificationResult) GetDidHPDamage() bool      { return hpmr.DidHPDamage }
+func (hpmr HPModificationResult) GetIsUnconscious() bool    { return hpmr.IsUnconscious }
+func (hpmr HPModificationResult) GetIsMaxHealth() bool      { return hpmr.IsMaxHealth }
+
 type EntityStateConfig struct {
 	CurrentHP            int
 	MaxHP                int

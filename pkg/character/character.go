@@ -664,10 +664,13 @@ func (c *Character) IsSpellcaster() bool                             { return c.
 func (c *Character) IsHealer() bool                                  { return c.SpellCastingManager.HasHealingSpells() }
 func (c *Character) GetRNG() *rand.Rand                              { return c.RNG }
 func (c *Character) GetTargetPriority() core.TargetPriority {
-	return c.EntityState.TargetPrioritization
+	return c.EntityState.GetTargetPrioritization()
 }
-func (c *Character) SetTargetPriority(priority core.TargetPriority) {
-	c.EntityState.TargetPrioritization = priority
+func (c *Character) SetTargetPriority(p core.TargetPriority) {
+	c.EntityState.SetTargetPrioritization(p)
+}
+func (c *Character) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPModificationResult, error) {
+	return c.EntityState.ModifyHP(value, isTemp, tempStacking)
 }
 func (c *Character) ChooseSpellByHealingEfficiency(targetValue int) (*core.SpellChoice, error) {
 	choice, err := c.SpellCastingManager.GetMostEfficientHealingSpell(targetValue)

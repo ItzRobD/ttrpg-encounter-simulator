@@ -411,6 +411,9 @@ func (m *Monster) GetTargetPriority() core.TargetPriority {
 func (m *Monster) SetTargetPriority(priority core.TargetPriority) {
 	m.EntityState.TargetPrioritization = priority
 }
+func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPModificationResult, error) {
+	return m.EntityState.ModifyHP(value, isTemp, tempStacking)
+}
 func (m *Monster) ChooseSpellByHealingEfficiency(targetValue int) (*core.SpellChoice, error) {
 	choice, err := m.SpellCastingManager.GetMostEfficientHealingSpell(targetValue)
 	if err != nil {

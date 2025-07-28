@@ -174,12 +174,13 @@ func (h *UniversalEventHandler) handleDeath(e *DeathEvent) {
 }
 
 func (h *UniversalEventHandler) handleHPModified(e *HPModifiedEvent) {
-	fmt.Printf("[Round %d] <HP Modified> %s had hp modified by %+d. Previous hp: %d, Current hp: %d\n",
+	fmt.Printf("[Round %d] <HP Modified> %s modified %s's hp by %d. New hp: %d, IsUnconscious: %t\n",
 		e.GetRound(),
 		e.GetActor(),
-		e.Amount,
-		e.PreviousHP,
-		e.CurrentHP)
+		e.SubjectName,
+		e.ModificationValue,
+		e.NewHP,
+		e.IsUnconscious)
 }
 
 func (h *UniversalEventHandler) handleUnconscious(e *UnconsciousEvent) {
