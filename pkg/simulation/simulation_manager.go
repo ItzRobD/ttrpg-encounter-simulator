@@ -11,13 +11,13 @@ import (
 
 type SimulationManager struct {
 	rng          *rand.Rand
-	config       SimulationConfig
+	options      core.SimulationOptions
 	dispatcher   *events.EventDispatcher
 	combatEngine *CombatEngine
 	simLog       []events.CombatEvent
 }
 
-func NewSimulationManager(config SimulationConfig, seed core.Seed) *SimulationManager {
+func NewSimulationManager(options core.SimulationOptions, seed core.Seed) *SimulationManager {
 	var s SimulationManager
 	if seed.Seed1 == 0 {
 		seed.Seed1 = rand.Uint64()
@@ -29,9 +29,9 @@ func NewSimulationManager(config SimulationConfig, seed core.Seed) *SimulationMa
 
 	dispatcher := events.NewEventDispatcher()
 	dispatcher.RegisterHandler(&events.UniversalEventHandler{})
-	s.config = config
+	s.options = options
 	s.dispatcher = dispatcher
-	s.combatEngine = NewCombatEngine()
+	s.combatEngine = NewCombatEngine(&s.options)
 	return &s
 }
 
@@ -75,6 +75,10 @@ func (s *SimulationManager) RunSimulation(maxRounds int) error {
 	if err != nil {
 		return err
 	}
+	err = s.combatEngine.RunCombat(maxRounds, s.options)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -86,7 +90,7 @@ func (s *SimulationManager) InitializeCombatants() {
 }
 
 func (s *SimulationManager) SetupCombatantsFromAPI(ctx context.Context, characterConfigs []character.CharacterConfig, monsterIDs []int) (*SetupResult, error) {
-	setupManager := NewCombatantSetupManager(ctx, s.config.UseHPAverageCharacter, s.config.UseHPAverageMonster)
+	setupManager := NewCombatantSetupManager(ctx, s.options.UseHPAverageCharacter, s.options.UseHPAverageMonster)
 
 	result, err := setupManager.SetupCombatants(characterConfigs, monsterIDs)
 	if err != nil {
@@ -95,6 +99,7 @@ func (s *SimulationManager) SetupCombatantsFromAPI(ctx context.Context, characte
 
 	// Add all valid combatants to the engine
 	for _, combatant := range result.Combatants {
+		fmt.Println(combatant.Entity.GetName() + " added to combat engine")
 		s.combatEngine.AddCombatant(combatant)
 	}
 

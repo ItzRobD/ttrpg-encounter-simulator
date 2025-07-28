@@ -47,7 +47,7 @@ type EntityStateManager struct {
 	HasUsedBonusAction       bool
 	LegendaryActionPoints    int
 	LegendaryActionPointsMax int
-	NumberOfExtraAttacks     int
+	NumberOfAttacks          int
 
 	// Conditions
 	Conditions core.EntityConditions
@@ -205,12 +205,12 @@ func (esm *EntityStateManager) ReplenishLegendaryActionPoints(value int) {
 	esm.LegendaryActionPoints = max(esm.LegendaryActionPoints+value, esm.LegendaryActionPointsMax)
 }
 
-func (esm *EntityStateManager) GetNumberOfExtraAttacks() int {
-	return esm.NumberOfExtraAttacks
+func (esm *EntityStateManager) GetNumberOfAttacks() int {
+	return esm.NumberOfAttacks
 }
 
 func (esm *EntityStateManager) SetNumberOfExtraAttacks(value int) {
-	esm.NumberOfExtraAttacks = value
+	esm.NumberOfAttacks = value
 }
 
 func (esm *EntityStateManager) AddCondition(c core.Condition) {
@@ -329,7 +329,7 @@ func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*Entit
 		HasUsedBonusAction:        false,
 		LegendaryActionPoints:     config.MaxLegendaryActions,
 		LegendaryActionPointsMax:  config.MaxLegendaryActions,
-		NumberOfExtraAttacks:      config.AttackCount,
+		NumberOfAttacks:           config.AttackCount,
 		Conditions:                config.Conditions,
 		ActionPreference:          config.ActionPreference,
 		VersatileWeaponPreference: config.VersatilePreference,

@@ -7,19 +7,19 @@ import (
 	"fmt"
 )
 
-func (scm *SpellcastingManager) CastSpell(req *SpellCastRequest, options SpellOptions) (*SpellResult, error) {
+func (scm *SpellcastingManager) CastSpell(req *SpellCastRequest) (*SpellResult, error) {
 	switch req.SpellCastData.SpellChoice.Spell.GetSpellType() {
 	case core.STDamage:
-		scm.castDamageSpell(req, options)
+		scm.castDamageSpell(req)
 	case core.STHealing:
-		scm.castHealingSpell(req, options)
+		scm.castHealingSpell(req)
 	default:
 		return nil, fmt.Errorf("Invalid spell cast data")
 	}
 	return nil, nil
 }
 
-func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options SpellOptions) (*SpellResult, error) {
+func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellResult, error) {
 	switch req.SpellCastData.SpellChoice.Spell.GetHasDC() {
 	case true:
 		// Has DC So no attack roll needed -> target makes saving throw
@@ -67,8 +67,8 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 		rollOpts := roll_manager.RollOptions{
 			Advantage:         core.RollNormal,
 			Modifier:          0,
-			CriticalThreshold: 0,                       // Not relevant to damage function
-			TreatOnesAsTwos:   options.TreatOnesAsTwos, // TODO: Does this make sense to pull from options
+			CriticalThreshold: 0,                                // Not relevant to damage function
+			TreatOnesAsTwos:   req.SpellOptions.TreatOnesAsTwos, // TODO: Does this make sense to pull from options
 			RollType:          core.DiceRollDamage,
 			TargetValue:       0, // Not relevant
 		}
@@ -113,15 +113,15 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 		// Attack Roll
 		attackMod := req.SpellCastData.AttackModifier + req.SpellOptions.BonusToAttackRoll
 		cT := 20
-		if options.ImprovedCritical {
+		if req.SpellOptions.ImprovedCritical {
 			cT = 19
 		}
 
 		rollOpts := roll_manager.RollOptions{
-			Advantage:         options.Advantage,
+			Advantage:         req.SpellOptions.Advantage,
 			Modifier:          attackMod,
 			CriticalThreshold: cT,
-			TreatOnesAsTwos:   options.TreatOnesAsTwos, // Not relevant to the attack roll
+			TreatOnesAsTwos:   req.SpellOptions.TreatOnesAsTwos, // Not relevant to the attack roll
 			RollType:          core.DiceRollAttack,
 			TargetValue:       req.Target.GetAC(),
 		}
@@ -135,8 +135,8 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 		rollOpts = roll_manager.RollOptions{
 			Advantage:         core.RollNormal,
 			Modifier:          0,
-			CriticalThreshold: 0,                       // Not relevant to damage function
-			TreatOnesAsTwos:   options.TreatOnesAsTwos, // TODO: Does this make sense to pull from options
+			CriticalThreshold: 0,                                // Not relevant to damage function
+			TreatOnesAsTwos:   req.SpellOptions.TreatOnesAsTwos, // TODO: Does this make sense to pull from options
 			RollType:          core.DiceRollDamage,
 			TargetValue:       0, // Not relevant
 		}
@@ -173,7 +173,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest, options S
 	}
 }
 
-func (scm *SpellcastingManager) castHealingSpell(req *SpellCastRequest, options SpellOptions) (*SpellResult, error) {
+func (scm *SpellcastingManager) castHealingSpell(req *SpellCastRequest) (*SpellResult, error) {
 	res := SpellResult{
 		ActorName:        scm.parent.GetName(),
 		TargetName:       req.Target.GetName(),

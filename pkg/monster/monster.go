@@ -8,6 +8,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/monster_action_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 )
@@ -22,8 +23,10 @@ type Monster struct {
 	EntityState         *entity_state_manager.EntityStateManager
 	SpellCastingManager *spellcasting_manager.SpellcastingManager
 	RollManager         *roll_manager.RollManager
+	AI                  *MonsterAI
 	ActionManager       *monster_action_manager.MonsterActionManager
 	Seed                core.Seed
+	RNG                 *rand.Rand
 	EventListener       func(event interface{})
 }
 
@@ -58,19 +61,24 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 		seed.Seed2 = rand.Uint64()
 	}
 
-	monster := &Monster{
+	monster := Monster{
 		MonsterBase:         config.Base,
 		EntityState:         &entity_state_manager.EntityStateManager{},
 		SpellCastingManager: &spellcasting_manager.SpellcastingManager{},
 		RollManager:         &roll_manager.RollManager{},
+		AI:                  &MonsterAI{},
 		ActionManager:       &monster_action_manager.MonsterActionManager{},
 		Seed:                seed,
+		RNG:                 rand.New(rand.NewPCG(seed.Seed1, seed.Seed2)),
 	}
 
 	// Initialize managers
 	var err error
 	// Roll manager
-	monster.RollManager = initializeRollManager(monster)
+	monster.RollManager = initializeRollManager(&monster)
+
+	// AI
+	monster.AI = NewMonsterAI(&monster)
 
 	// ESM
 	esmConfig := entity_state_manager.EntityStateConfig{
@@ -81,7 +89,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 		esmConfig.MaxLegendaryActions = 3
 	}
 
-	monster.EntityState, err = initalizeEntityStateManager(monster, esmConfig)
+	monster.EntityState, err = initalizeEntityStateManager(&monster, esmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +97,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 
 	// Spellcasting Manager
 	if monster.MonsterBase.IsSpellcaster {
-		monster.SpellCastingManager, err = initializeSpellcastingManager(ctx, monster, config.spellcastingConfig)
+		monster.SpellCastingManager, err = initializeSpellcastingManager(ctx, &monster, config.spellcastingConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -102,9 +110,9 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 		LegendaryActions: config.LegendaryActions,
 		SpecialAbilities: config.SpecialAbilities,
 	}
-	monster.ActionManager = initializeActionManager(monster, mamConfig)
+	monster.ActionManager = initializeActionManager(&monster, mamConfig)
 
-	// Set up HP Config and monster hp
+	// Set up HP SimOptions and monster hp
 	monster.HP.HPSetMethod = config.HPSetMethod
 
 	// Moving hp setup to during simulation
@@ -113,11 +121,11 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	//	return nil, err
 	//}
 
-	return monster, nil
+	return &monster, nil
 }
 
 func initializeRollManager(m *Monster) *roll_manager.RollManager {
-	rm := roll_manager.NewRollManager(m, roll_manager.RerollAbilities{}, m.Seed)
+	rm := roll_manager.NewRollManager(m, roll_manager.RerollAbilities{})
 	return rm
 }
 
@@ -198,6 +206,10 @@ func (m *Monster) setHP(config core.HPConfig) error {
 		return nil
 	case core.HPSetRoll:
 		hpRoll, err := m.RollManager.RollHP(config)
+		if hpRoll.Total <= 0 {
+			hpRoll.Total = 1
+			hpRoll.FinalRollValue = 1
+		}
 		if err != nil {
 			return err
 		}
@@ -388,6 +400,7 @@ func (m *Monster) RollInitiative() (int, error) {
 func (m *Monster) IsCharacter() bool { return false }
 func (m *Monster) IsMonster() bool   { return true }
 
+func (m *Monster) GetRNG() *rand.Rand  { return m.RNG }
 func (m *Monster) GetID() int          { return m.ID }
 func (m *Monster) InitializeHP() error { return m.setHP(m.HP) }
 func (m *Monster) IsSpellcaster() bool { return m.MonsterBase.IsSpellcaster }
@@ -397,6 +410,34 @@ func (m *Monster) GetTargetPriority() core.TargetPriority {
 }
 func (m *Monster) SetTargetPriority(priority core.TargetPriority) {
 	m.EntityState.TargetPrioritization = priority
+}
+func (m *Monster) ChooseSpellByHealingEfficiency(targetValue int) (*core.SpellChoice, error) {
+	choice, err := m.SpellCastingManager.GetMostEfficientHealingSpell(targetValue)
+	if err != nil {
+		return nil, err
+	}
+	return choice, nil
+}
+func (m *Monster) ChooseDamageSpellByPriority(p core.SpellPriority) (*core.SpellChoice, error) {
+	return m.SpellCastingManager.ChooseSpellByPriority(core.STDamage, p)
+}
+func (m *Monster) GetHealingSpellCount() int {
+	return m.SpellCastingManager.GetHealingSpellCount()
+}
+func (m *Monster) GetDamageSpellCount() int {
+	return m.SpellCastingManager.GetDamageSpellCount()
+}
+
+func (m *Monster) UpdateAICombatContext(ctx *core.CombatContext) error {
+	return nil
+}
+
+func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIRequest, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, error) {
+	return nil, errors.New("not implemented")
 }
 
 var _ core.Entity = &Monster{}

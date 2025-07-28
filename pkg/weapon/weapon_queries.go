@@ -70,11 +70,13 @@ func QueryWeaponData(ctx context.Context, params WeaponQueryParams) (Weapon, err
 	if params.ID != 0 {
 		weaponResult, err = getWeaponByID(ctx, params.ID)
 		weaponResult.IsRanged = isRangedWeapon(params.ID)
+		weaponResult.IsMelee = isMeleeWeapon(params.ID)
 	} else if params.Name != "" {
 		var id int
 		id, err = getWeaponIDByName(ctx, params.Name)
 		weaponResult, err = getWeaponByID(ctx, id)
 		weaponResult.IsRanged = isRangedWeapon(id)
+		weaponResult.IsMelee = isMeleeWeapon(id)
 	} else {
 		err = fmt.Errorf("no name or id provided for weapon query")
 	}

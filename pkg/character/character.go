@@ -2,6 +2,7 @@ package character
 
 import (
 	"context"
+	"dnd5e-encounter-simulator-backend/pkg/armor"
 	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
@@ -12,6 +13,8 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/entity_configuration"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
+	"dnd5e-encounter-simulator-backend/pkg/weapon"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand/v2"
@@ -29,26 +32,36 @@ type Character struct {
 	SpellCastingManager  *spellcasting_manager.SpellcastingManager
 	MartialAttackManager *martial_attack_manager.MartialAttackManager
 	RollManager          *roll_manager.RollManager
+	AI                   *CharacterAI
 	Configuration        entity_configuration.EntityConfiguration
 	HPConfig             core.HPConfig
 	Seed                 core.Seed
+	RNG                  *rand.Rand
 	EventListener        func(event interface{})
 }
 
 type CharacterConfig struct {
-	Name     string
-	ClassID  classes.ClassID
-	Level    uint8
-	AsConfig core.AbilityScoresConfig
-	HPMethod core.HPSetMethod
-	HPValue  int
-	Seed     core.Seed
+	Name      string
+	ClassID   classes.ClassID
+	Level     uint8
+	AsConfig  core.AbilityScoresConfig
+	HPMethod  core.HPSetMethod
+	HPValue   int
+	Seed      core.Seed
+	Equipment EquipmentConfig
+}
+
+type EquipmentConfig struct {
+	ArmorID       int
+	PrimarySlot   map[int]bool
+	SecondarySlot map[int]bool
+	RangedSlot    map[int]bool
 }
 
 // NewCharacter initializes and returns a new Character with the specified parameters or an error if validation fails.
 func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, error) {
 	if charConfig.ClassID < 0 || charConfig.ClassID > 13 {
-		return nil, fmt.Errorf("invalid class id during character initialization: %d", charConfig.ClassID)
+		return nil, fmt.Errorf("invalid classData id during character initialization: %d", charConfig.ClassID)
 	}
 	if charConfig.Level < 0 || charConfig.Level > 20 {
 		return nil, fmt.Errorf("invalid level during character initialization, must be in range 1-20: %d", charConfig.Level)
@@ -60,7 +73,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	var params classes.ClassQueryParams
 	params.ID = charConfig.ClassID
 	params.Level = charConfig.Level
-	c, err := classes.QueryClassData(ctx, params)
+	classData, err := classes.QueryClassData(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +89,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	// Set initial values for character
 	char := Character{
 		Name:                 charConfig.Name,
-		Class:                c,
+		Class:                classData,
 		Level:                charConfig.Level,
 		AbilityScores:        charConfig.AsConfig.AbilityScores,
 		AbilityScoreProf:     charConfig.AsConfig.Proficiencies,
@@ -85,19 +98,23 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		SpellCastingManager:  &spellcasting_manager.SpellcastingManager{},
 		MartialAttackManager: &martial_attack_manager.MartialAttackManager{},
 		RollManager:          &roll_manager.RollManager{},
+		AI:                   &CharacterAI{},
 		Configuration:        entity_configuration.EntityConfiguration{}, // TODO: this isn't being set up
 		HPConfig:             core.HPConfig{HPSetMethod: charConfig.HPMethod, Value: charConfig.HPValue},
 		Seed:                 seed,
+		RNG:                  rand.New(rand.NewPCG(seed.Seed1, seed.Seed2)),
 	}
 
 	// Initialize managers
 	// Roll Manager
 	char.RollManager = initializeRollManager(&char, &char.Configuration)
 
+	// AI
+	char.AI = NewCharacterAI(&char)
 	// Entity State Manager
 	// TODO: Implement resistances for characters
 	esmConfig := entity_state_manager.EntityStateConfig{
-		AttackCount: c.AttackCount,
+		AttackCount: classData.AttackCount,
 		Conditions:  core.NewEntityConditions(),
 	}
 	esm, err := initializeEntityStateManager(&char, &esmConfig)
@@ -112,16 +129,23 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		return nil, err
 	}
 
+	// Add equipment from config
+	err = char.setupEquipmentFromConfig(ctx, charConfig.Equipment)
+	if err != nil {
+		return nil, err
+	}
+
 	// Spellcasting Manager
 	char.SpellCastingManager, err = initializeSpellcastingManager(ctx, &char)
 	if err != nil {
+		fmt.Printf("Error initializing spellcasting manager: %v\n", err)
 		return nil, err
 	}
 
 	// Martial Attack Manager
 	char.MartialAttackManager = martial_attack_manager.NewMartialAttackManager(&char, char.RollManager)
 
-	// Set up HP Config and character hp
+	// Set up HP SimOptions and character hp
 	char.HPConfig.HitDie = char.GetHitDie()
 	char.HPConfig.NumberOfDice = int(char.Level - 1)
 	modifier, _ := char.getAbilityScoreModifier(core.AbilityConstitution)
@@ -138,7 +162,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 }
 
 func initializeRollManager(c *Character, eConfig *entity_configuration.EntityConfiguration) *roll_manager.RollManager {
-	rm := roll_manager.NewRollManager(c, eConfig.CombatFeatures.ReRollAbilities, c.Seed)
+	rm := roll_manager.NewRollManager(c, eConfig.CombatFeatures.ReRollAbilities)
 	return rm
 }
 
@@ -154,6 +178,9 @@ func initializeEntityStateManager(c *Character, config *entity_state_manager.Ent
 // It configures spell slots, casting options, usable spells, and other spell-related properties.
 // Returns an error if data retrieval or initialization fails.
 func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcasting_manager.SpellcastingManager, error) {
+	if c.Class.ID == classes.Barbarian {
+		return &spellcasting_manager.SpellcastingManager{}, nil
+	}
 	slots, err := classes.GetSpellSlotsByLevelAndClassID(ctx, c.Level, c.Class.ID.Int())
 	if err != nil {
 		return nil, err
@@ -173,14 +200,16 @@ func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcas
 		return nil, err
 	}
 
-	spellMap, err := spells.QuerySpellData(ctx, spells.SpellQueryParams{ID: availableSpellIDs})
-	if err != nil {
-		return nil, err
-	}
+	if len(availableSpellIDs) > 0 {
+		spellMap, err := spells.QuerySpellData(ctx, spells.SpellQueryParams{ID: availableSpellIDs})
+		if err != nil {
+			return nil, err
+		}
 
-	err = sm.AddKnownSpellsFromMap(spellMap)
-	if err != nil {
-		return nil, err
+		err = sm.AddKnownSpellsFromMap(spellMap)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return sm, nil
@@ -353,7 +382,7 @@ func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bo
 }
 
 // CreateAttackRequest generates an attack request with specific weapon data, modifiers, advantage type, and attack count.
-func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, useVersatile bool, simulationOptions core.SimulationOptions) (*martial_attack_manager.AttackRequest, error) {
+func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, adv core.AdvantageType, useVersatile bool, simulationOptions *core.SimulationOptions) (*martial_attack_manager.AttackRequest, error) {
 	attackData, err := c.EquipmentManager.GetWeaponAttackData(slot, useVersatile)
 	if err != nil {
 		return nil, err
@@ -362,12 +391,14 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 	// TODO: This will have to be handled internally by other functions to get the values of each of these
 	//		Will have to account for character feats
 	attackOptions := martial_attack_manager.AttackOptions{
+		NumberOfAttacks:      c.EntityState.GetNumberOfAttacks(),
 		BonusToAttackRoll:    0,
 		BonusToDamageRoll:    0,
-		ShouldApplyDamageMod: false,
+		ShouldApplyDamageMod: true,
 		PowerAttack:          false,
 		ImprovedCritical:     false,
 		RerollOnesAndTwos:    false,
+		Advantage:            adv,
 	}
 
 	return &martial_attack_manager.AttackRequest{
@@ -401,10 +432,20 @@ func (c *Character) CreateSpellAttackData(spellChoice core.SpellChoice) (spellca
 }
 
 // CreateSpellCastRequest generates a new SpellCastRequest based on the given spell choice and advantage type.
-func (c *Character) CreateSpellCastRequest(spellChoice core.SpellChoice, options spellcasting_manager.SpellOptions, simOptions core.SimulationOptions) (*spellcasting_manager.SpellCastRequest, error) {
+func (c *Character) CreateSpellCastRequest(spellChoice core.SpellChoice, adv core.AdvantageType, simOptions *core.SimulationOptions) (*spellcasting_manager.SpellCastRequest, error) {
 	spellcastData, err := c.CreateSpellAttackData(spellChoice)
 	if err != nil {
 		return nil, err
+	}
+
+	// TODO: Handle the creation of these options dynamically
+	options := spellcasting_manager.SpellOptions{
+		Advantage:            adv,
+		BonusToAttackRoll:    0,
+		BonusToDamageRoll:    0,
+		ShouldApplyDamageMod: false,
+		ImprovedCritical:     false,
+		TreatOnesAsTwos:      false,
 	}
 
 	return &spellcasting_manager.SpellCastRequest{
@@ -525,6 +566,59 @@ func (c *Character) getSavingThrowBonus(ability core.Ability) (int, error) {
 	return mod, nil
 }
 
+func (c *Character) setupEquipmentFromConfig(ctx context.Context, config EquipmentConfig) error {
+	// Handle armor
+	if config.ArmorID > 0 {
+		a, err := armor.QueryArmorData(ctx, armor.ArmorQueryParams{ID: config.ArmorID})
+		if err != nil {
+			return fmt.Errorf("failed to get armor ID %d: %w", config.ArmorID, err)
+		}
+		c.EquipmentManager.SetArmor(a)
+	}
+
+	// Handle primary slot weapons
+	for weaponID, isProficient := range config.PrimarySlot {
+		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: weaponID})
+		if err != nil {
+			return fmt.Errorf("failed to get w ID %d for primary slot: %w", weaponID, err)
+		}
+
+		err = c.EquipmentManager.SetWeapon(core.WSPrimary, &w, isProficient)
+		if err != nil {
+			return fmt.Errorf("failed to set primary w: %w", err)
+		}
+	}
+
+	// Handle secondary slot weapons
+	for weaponID, isProficient := range config.SecondarySlot {
+		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: weaponID})
+		if err != nil {
+			return fmt.Errorf("failed to get w ID %d for secondary slot: %w", weaponID, err)
+		}
+
+		err = c.EquipmentManager.SetWeapon(core.WSSecondary, &w, isProficient)
+		if err != nil {
+			return fmt.Errorf("failed to set secondary w: %w", err)
+		}
+	}
+
+	// Handle ranged slot weapons
+	for weaponID, isProficient := range config.RangedSlot {
+		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: weaponID})
+		if err != nil {
+			return fmt.Errorf("failed to get w ID %d for ranged slot: %w", weaponID, err)
+		}
+
+		err = c.EquipmentManager.SetWeapon(core.WSRanged, &w, isProficient)
+		if err != nil {
+			return fmt.Errorf("failed to set ranged w: %w", err)
+		}
+	}
+
+	return nil
+
+}
+
 func (c *Character) RollInitiative() (int, error) {
 	var err error
 	opts := roll_manager.NewRollOptions()
@@ -568,11 +662,122 @@ func (c *Character) GetState() interface{}                           { return c.
 func (c *Character) InitializeHP() error                             { return c.setHP(c.HPConfig) }
 func (c *Character) IsSpellcaster() bool                             { return c.SpellCastingManager.HasAnyKnownSpells() }
 func (c *Character) IsHealer() bool                                  { return c.SpellCastingManager.HasHealingSpells() }
+func (c *Character) GetRNG() *rand.Rand                              { return c.RNG }
 func (c *Character) GetTargetPriority() core.TargetPriority {
 	return c.EntityState.TargetPrioritization
 }
 func (c *Character) SetTargetPriority(priority core.TargetPriority) {
 	c.EntityState.TargetPrioritization = priority
+}
+func (c *Character) ChooseSpellByHealingEfficiency(targetValue int) (*core.SpellChoice, error) {
+	choice, err := c.SpellCastingManager.GetMostEfficientHealingSpell(targetValue)
+	if err != nil {
+		return nil, err
+	}
+	return choice, nil
+}
+func (c *Character) ChooseDamageSpellByPriority(p core.SpellPriority) (*core.SpellChoice, error) {
+	return c.SpellCastingManager.ChooseSpellByPriority(core.STDamage, p)
+}
+func (c *Character) GetHealingSpellCount() int {
+	return c.SpellCastingManager.GetHealingSpellCount()
+}
+func (c *Character) GetDamageSpellCount() int {
+	return c.SpellCastingManager.GetDamageSpellCount()
+}
+
+func (c *Character) UpdateAICombatContext(ctx *core.CombatContext) error {
+	c.AI.UpdateCombatContext(ctx)
+	return nil
+}
+
+func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIRequest, error) {
+	var req *core.AIRequest
+	var err error
+	switch t {
+	case core.AIReqChooseAction:
+		req, err = c.AI.chooseCharacterAction()
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return req, fmt.Errorf("invalid AI request type: %s", t)
+	}
+
+	events.LogCharacterActionChoiceEvent(c, req.ActionType, c.EventListener)
+
+	req.ActorID = actorID
+
+	return req, nil
+}
+
+func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, error) {
+	switch req.ActionType {
+	case core.ATMelee, core.ATRanged:
+		attackReq, err := c.CreateAttackRequest(req.Target, req.WeaponSlot, req.Advantage, req.UseVersatile, req.SimOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		results, err := c.MartialAttackManager.ProcessAttackRequest(attackReq)
+		if err != nil {
+			return nil, err
+		}
+
+		var effects []core.Effect
+		for _, res := range results {
+			if res.GetIsHit() {
+				effects = append(effects, core.Effect{
+					Type:       core.EffectDamage,
+					Value:      res.GetDamageResult().GetTotal(),
+					DamageType: res.GetDamageType(),
+				})
+			}
+		}
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			TargetID:   req.TargetID,
+			ActorID:    req.ActorID,
+			Effects:    effects,
+		}, nil
+	case core.ATSpell:
+		scReq, err := c.CreateSpellCastRequest(*req.SpellChoice, req.Advantage, req.SimOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err := c.SpellCastingManager.CastSpell(scReq)
+		if err != nil {
+			return nil, err
+		}
+
+		var effects []core.Effect
+		if res.GetIsHit() {
+			if req.SpellChoice.Spell.GetSpellType() == core.STDamage {
+				effects = append(effects, core.Effect{
+					Type:       core.EffectDamage,
+					Value:      res.GetSpellTotalValue(),
+					DamageType: res.GetDamageType(),
+				})
+			} else if req.SpellChoice.Spell.GetSpellType() == core.STHealing {
+				effects = append(effects, core.Effect{
+					Type:  core.EffectHealing,
+					Value: res.GetSpellTotalValue(),
+				})
+			}
+		}
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			TargetID:   req.TargetID,
+			ActorID:    req.ActorID,
+			Effects:    effects,
+		}, nil
+	case core.ATHeal:
+		return nil, errors.New("not implemented")
+	}
+	return nil, errors.New("invalid action type")
 }
 
 var _ core.Entity = &Character{}

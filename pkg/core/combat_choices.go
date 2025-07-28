@@ -175,6 +175,7 @@ const (
 	ATRanged              = "ranged attack"
 	ATSpell               = "spell attack"
 	ATHeal                = "healing"
+	ATUnarmed             = "unarmed attack"
 )
 
 func (a ActionType) String() string {
@@ -193,6 +194,8 @@ func NewActionType(s string) ActionType {
 		return ATSpell
 	case "healing":
 		return ATHeal
+	case "unarmed attack":
+		return ATUnarmed
 	default:
 		return ATNoAction
 	}

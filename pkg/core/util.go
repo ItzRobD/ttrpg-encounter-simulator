@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 )
 
@@ -77,6 +78,8 @@ var abilityScoreModifiers = []AbilityScoreModifier{
 
 func GetAbilityScoreModifier(score int) (int, error) {
 	if score < 1 || score > 30 {
+
+		runtime.Breakpoint()
 		return 0, fmt.Errorf("score must be between 1 and 30")
 	}
 	for _, entry := range abilityScoreModifiers {

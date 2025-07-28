@@ -6,10 +6,15 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"fmt"
 )
+
+// TODO: I completed the ai targeting for characters
+// 		Still need to handle turn logic for characters, relatively simple
+// 		Need to figure out what to do for monster ai with action selections etc
+//		Need to also account for legendary actions, this would be a call every turn
+//		Would be smart to have an is legendary monster present bool within the simulation
 
 func main() {
 	dbErr := database.InitDb()
@@ -31,7 +36,7 @@ func main() {
 	//fmt.Println(s)
 
 	frank := setupFrank()
-	testSimulation([]character.CharacterConfig{frank}, []int{2, 4, 52})
+	testSimulation([]character.CharacterConfig{frank}, []int{2})
 }
 
 func setupFrank() character.CharacterConfig {
@@ -39,8 +44,8 @@ func setupFrank() character.CharacterConfig {
 	ctx = context.WithValue(ctx, "CanUpcast", true)
 	charConfig := character.CharacterConfig{
 		Name:    "Frank",
-		ClassID: classes.Wizard,
-		Level:   5,
+		ClassID: classes.Fighter,
+		Level:   4,
 		AsConfig: core.AbilityScoresConfig{
 			AbilityScores: core.AbilityScores{
 				Strength:     18,
@@ -67,28 +72,35 @@ func setupFrank() character.CharacterConfig {
 		},
 	}
 
+	charConfig.Equipment = character.EquipmentConfig{
+		ArmorID:       5,
+		PrimarySlot:   map[int]bool{22: true},
+		SecondarySlot: nil,
+		RangedSlot:    nil,
+	}
+
 	return charConfig
 }
 
-func setupMonsters(ctx context.Context, ids []int) ([]core.Combatant, error) {
-	var combatants []core.Combatant
-	cfg, err := monster.QueryMonsterConfigData(ctx, monster.MonsterQueryParams{ID: ids})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, c := range cfg {
-		monster, err2 := monster.NewMonster(ctx, c)
-		if err2 != nil {
-			return nil, err2
-		}
-		combatants = append(combatants, core.NewCombatant(monster, 0))
-	}
-	return combatants, nil
-}
+//func setupMonsters(ctx context.Context, ids []int) ([]core.Combatant, error) {
+//	var combatants []core.Combatant
+//	cfg, err := monster.QueryMonsterConfigData(ctx, monster.MonsterQueryParams{ID: ids})
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	for _, c := range cfg {
+//		monster, err2 := monster.NewMonster(ctx, c)
+//		if err2 != nil {
+//			return nil, err2
+//		}
+//		combatants = append(combatants, core.NewCombatant(monster, 0))
+//	}
+//	return combatants, nil
+//}
 
 func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
-	config := simulation.SimulationConfig{
+	config := core.SimulationOptions{
 		Seed:                      0,
 		UseHPAverageCharacter:     false,
 		UseHPAverageMonster:       false,
@@ -100,9 +112,6 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 		MonstersAlwaysUpcast:      false,
 		AllowCharacterHeals:       false,
 		AllowMonsterHeals:         false,
-		TargetPriority:            0,
-		HealPriority:              0,
-		ActionPreference:          0,
 		AOEHitsAllEnemies:         false,
 		CharacterHealThresholdPct: 0,
 		MonsterHealThresholdPct:   0,
@@ -117,7 +126,10 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 		monsterIds)
 	sim.SetupEventListeners()
 	sim.InitializeCombatants()
-	sim.RunSimulation(50)
+	err := sim.RunSimulation(4)
+	if err != nil {
+		fmt.Println(err)
+	}
 	sim.GetCombatEngine().PrintCombatTracker()
 	//sim.PrintSimulationLog()
 }

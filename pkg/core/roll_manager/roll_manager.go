@@ -119,13 +119,12 @@ func (rt RerollType) String() string {
 	return string(rt)
 }
 
-func NewRollManager(parent core.Entity, abilities RerollAbilities, seed core.Seed) *RollManager {
-	pcg := rand.NewPCG(seed.Seed1, seed.Seed2)
+func NewRollManager(parent core.Entity, abilities RerollAbilities) *RollManager {
 	rm := RollManager{
 		parent:             parent,
 		luckyUsesRemaining: 3, // Lucky feat gives 3 uses
 		RerollAbilities:    abilities,
-		rng:                rand.New(pcg),
+		rng:                parent.GetRNG(),
 	}
 
 	return &rm
@@ -369,7 +368,6 @@ func (rm *RollManager) RollAttack(options RollOptions) (*RollResult, error) {
 	}
 
 	rm.calculateSuccess(res, options)
-
 	return res, nil
 }
 
@@ -591,7 +589,7 @@ func (rm *RollManager) calculateSingleDieFinalValue(res *RollResult) {
 
 // calculateSuccess determines if a roll result meets or exceeds the desired target value and updates the result accordingly.
 func (rm *RollManager) calculateSuccess(res *RollResult, options RollOptions) {
-	res.IsSuccess = res.FinalRollValue >= options.TargetValue
+	res.IsSuccess = res.Total >= options.TargetValue
 	res.TargetValue = options.TargetValue
 }
 

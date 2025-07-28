@@ -1,23 +1,25 @@
 package core
 
+import "math/rand/v2"
+
 type Entity interface {
-	IsUnconscious() bool                       // Added C|M
-	GetHPStatus() HPStatus                     // Added C|M
-	GetName() string                           // Added C|M
-	GetAC() int                                // Added C|M
-	GetEventListener() func(event interface{}) // Added C|M
+	IsUnconscious() bool
+	GetHPStatus() HPStatus
+	GetName() string
+	GetAC() int
+	GetEventListener() func(event interface{})
 	SetEventListener(listener func(event interface{}))
-	GetLevel() float64                                                    // Added C|M
-	GetHitDie() DiceType                                                  // Added C|M
-	GetCasterLevel() int                                                  // Added C|M
-	MakeSavingThrow(ability Ability, targetValue int) (RollResult, error) // Added C|M
-	GetSpellSaveDC(ability *Ability) (int, error)                         // Added C|M
-	GetAbilityScores() AbilityScores                                      // Added C|M
-	GetAbilityScore(ability Ability) int                                  // Added C|M
-	GetAbilityScoreModifier(ability Ability) (int, error)                 // Added C|M
-	GetSavingThrowBonus(ability Ability) (int, error)                     // Added C|M
-	IsCharacter() bool                                                    // Added C|M
-	IsMonster() bool                                                      // Added C|M
+	GetLevel() float64
+	GetHitDie() DiceType
+	GetCasterLevel() int
+	MakeSavingThrow(ability Ability, targetValue int) (RollResult, error)
+	GetSpellSaveDC(ability *Ability) (int, error)
+	GetAbilityScores() AbilityScores
+	GetAbilityScore(ability Ability) int
+	GetAbilityScoreModifier(ability Ability) (int, error)
+	GetSavingThrowBonus(ability Ability) (int, error)
+	IsCharacter() bool
+	IsMonster() bool
 	GetHPConfig() HPConfig
 	GetState() interface{}
 	RollInitiative() (int, error)
@@ -26,15 +28,24 @@ type Entity interface {
 	IsHealer() bool
 	GetTargetPriority() TargetPriority
 	SetTargetPriority(priority TargetPriority)
+	ChooseSpellByHealingEfficiency(targetValue int) (*SpellChoice, error)
+	ChooseDamageSpellByPriority(p SpellPriority) (*SpellChoice, error)
+	GetHealingSpellCount() int
+	GetDamageSpellCount() int
+	GetRNG() *rand.Rand
+	GetAIRequest(actorID int, t AIRequestType) (*AIRequest, error)
+	ExecuteAIRequest(req *AIRequest) (*ActionOutcome, error)
+	UpdateAICombatContext(ctx *CombatContext) error
 }
 
 type Combatant struct {
 	Entity     Entity
 	Initiative int
+	CanAct     bool
 }
 
 func NewCombatant(entity Entity, initiative int) Combatant {
-	return Combatant{entity, initiative}
+	return Combatant{entity, initiative, true}
 }
 
 func (c Combatant) GetInitiative() int {
@@ -45,6 +56,8 @@ func (c Combatant) GetEntity() Entity {
 	return c.Entity
 }
 
-func (c Combatant) CanAct() bool {
-	return true
+func (c Combatant) GetCanAct() bool {
+	return c.CanAct
 }
+
+func (c Combatant) SetCanAct(b bool) { c.CanAct = false }

@@ -68,6 +68,7 @@ type MeleeAttackEvent struct {
 	AttackRoll     int
 	AttackModifier int
 	AttackTotal    int
+	TargetValue    int
 	Success        bool
 	CriticalHit    bool
 	DamageTotal    int

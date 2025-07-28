@@ -174,7 +174,7 @@ func GetNumberOfAttacksFromLevelAndClass(ctx context.Context, level uint8, class
 
 	stmt := SELECT(ClassesExtraAttack.NumberOfAttacks).
 		FROM(ClassesExtraAttack).
-		WHERE(ClassesExtraAttack.ClassID.EQ(Int(int64(classID))).AND(ClassesExtraAttack.ClassLevel.GT_EQ(Int(int64(level))))).
+		WHERE(ClassesExtraAttack.ClassID.EQ(Int(int64(classID))).AND(ClassesExtraAttack.ClassLevel.LT_EQ(Int(int64(level))))).
 		ORDER_BY(ClassesExtraAttack.ClassLevel.DESC()).
 		LIMIT(1)
 
@@ -295,7 +295,7 @@ func GetSpellSlotsByLevelAndClassID(ctx context.Context, level uint8, classID ui
 		return nil, fmt.Errorf("invalid class id provided: %d", classID)
 	}
 	if classID == 2 {
-		return nil, fmt.Errorf("barbarian spell slots not implemented")
+		return nil, fmt.Errorf("barbarian does not have spell slots")
 	}
 
 	stmt := SELECT(ClassesSpellSlots.Level1, ClassesSpellSlots.Level2, ClassesSpellSlots.Level3,

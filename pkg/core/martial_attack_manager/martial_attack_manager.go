@@ -59,7 +59,7 @@ Encounter handle turn
 // ProcessAttackRequest processes an attack request by performing attack rolls and calculating damage for each attack.
 // It uses the attack request data and options to execute attacks and returns a list of results for each attempt.
 // Returns an error if the attack roll or damage roll fails at any point.
-func (mam *MartialAttackManager) ProcessAttackRequest(req *AttackRequest, options AttackOptions) ([]AttackResult, error) {
+func (mam *MartialAttackManager) ProcessAttackRequest(req *AttackRequest) ([]AttackResult, error) {
 	var results []AttackResult
 
 	for i := 0; i < req.GetAttackOptions().GetNumberOfAttacks(); i++ {
@@ -67,12 +67,12 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *AttackRequest, option
 		attackMod := req.AttackData.AttackModifier + req.AttackOptions.BonusToAttackRoll
 
 		cT := 20
-		if options.ImprovedCritical {
+		if req.AttackOptions.ImprovedCritical {
 			cT = 19
 		}
 
 		rollOpts := roll_manager.RollOptions{
-			Advantage: options.Advantage,
+			Advantage: req.AttackOptions.Advantage,
 			Modifier:  attackMod,
 			//RerollAbilities:   mam.rollManager.RerollAbilities,
 			CriticalThreshold: cT,
@@ -106,6 +106,7 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *AttackRequest, option
 			TargetName:    req.Target.GetName(),
 			AttackName:    req.AttackData.Name,
 			AttackCount:   i,
+			TargetValue:   attackRollResult.TargetValue,
 			IsHit:         attackRollResult.IsSuccess,
 			IsCriticalHit: attackRollResult.IsCritical,
 			AttackTotal:   attackRollResult.Total,

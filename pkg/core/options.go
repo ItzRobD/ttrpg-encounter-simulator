@@ -1,7 +1,9 @@
 package core
 
 type SimulationOptions struct {
-	UseMonsterHPAverage       bool
+	Seed                      int
+	UseHPAverageMonster       bool
+	UseHPAverageCharacter     bool
 	CanMonstersCrit           bool
 	CanCharactersCrit         bool
 	HasIncreasedCrits         bool
@@ -10,9 +12,6 @@ type SimulationOptions struct {
 	MonstersAlwaysUpcast      bool
 	AllowCharacterHeals       bool
 	AllowMonsterHeals         bool
-	TargetPriority            TargetPriority
-	HealPriority              TargetPriority
-	ActionPreference          ActionPreference
 	AOEHitsAllEnemies         bool
 	CharacterHealThresholdPct int
 	MonsterHealThresholdPct   int

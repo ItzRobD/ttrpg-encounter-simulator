@@ -19,11 +19,12 @@ func LogCharacterActionChoiceEvent(actor core.Entity, choice core.ActionType, li
 func LogMeleeAttackEvent(actor core.Entity, attackResult core.AttackResult, listener func(event interface{})) {
 	event := &MeleeAttackEvent{
 		Target:         attackResult.GetTargetName(),
-		AttackName:     attackResult.GetActorName(),
+		AttackName:     attackResult.GetAttackName(),
 		AttackCount:    attackResult.GetAttackCount(),
 		AttackRoll:     attackResult.GetAttackRoll(),
 		AttackModifier: attackResult.GetAttackTotal() - attackResult.GetAttackRoll(),
 		AttackTotal:    attackResult.GetAttackTotal(),
+		TargetValue:    attackResult.GetTargetValue(),
 		Success:        attackResult.GetIsHit(),
 		CriticalHit:    attackResult.GetIsCriticalHit(),
 		DamageTotal:    attackResult.GetDamageResult().GetTotal(),

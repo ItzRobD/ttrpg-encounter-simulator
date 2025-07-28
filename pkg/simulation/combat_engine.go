@@ -10,14 +10,59 @@ type CombatEngine struct {
 	CurrentRound  int
 	Combatants    map[int]core.Combatant
 	CombatTracker []int
+	CombatContext *core.CombatContext
+	SimOptions    *core.SimulationOptions
 }
 
-func NewCombatEngine() *CombatEngine {
+func NewCombatEngine(simOptions *core.SimulationOptions) *CombatEngine {
 	return &CombatEngine{
 		CurrentRound:  0,
 		Combatants:    make(map[int]core.Combatant),
 		CombatTracker: nil,
+		CombatContext: nil,
+		SimOptions:    simOptions,
 	}
+}
+
+func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
+	ce.attachOptionsToAIRequest(req)
+	switch req.ActionType {
+	case core.ATMelee, core.ATRanged:
+		return ce.executeWeaponAttack(req)
+	//case core.ATSpell:
+	//	return ce.executeSpellCast(req)
+	//case core.ATHeal:
+	//	return ce.executeHeal(req)
+	//case core.ATUnarmed:
+	//	return ce.executeUnarmedAttack(req)
+	default:
+		return fmt.Errorf("unknown action type: %v", req.ActionType)
+	}
+
+}
+
+func (ce *CombatEngine) attachOptionsToAIRequest(aiReq *core.AIRequest) {
+	aiReq.SimOptions = ce.SimOptions
+}
+
+func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
+	// TODO: Choose weapons slot | versatile
+	aiReq.WeaponSlot = core.WSPrimary
+	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	if err != nil {
+		return err
+	}
+
+	return ce.processActionResults(results)
+}
+
+func (ce *CombatEngine) processActionResults(results *core.ActionOutcome) error {
+	switch results.ActionType {
+	case core.ATMelee, core.ATRanged:
+		return ce.processAttackResults(results)
+		// TODO: Reworked the results here. process the new ones accordingly
+	}
+	return nil
 }
 
 func (ce *CombatEngine) AddCombatant(c core.Combatant) {
@@ -83,24 +128,47 @@ func (ce *CombatEngine) rollInitiativeForAllCombatants() error {
 	return nil
 }
 
-//func (ce *CombatEngine) SimulateRound() {
-//	for _, combatantID := range ce.CombatTracker {
-//		combatant := ce.Combatants[combatantID]
-//
-//		if !combatant.CanAct() {
-//			continue // Skip unconscious combatants
-//		}
-//
-//		switch combatant.GetEntity().IsCharacter() {
-//		case true:
-//			ce.handleCharacterTurn(entity)
-//		case false:
-//			ce.handleMonsterTurn(entity)
-//		default:
-//			fmt.Printf("Unknown entity type: %T\n", entity)
-//		}
-//	}
-//}
+func (ce *CombatEngine) RunCombat(maxRounds int, config core.SimulationOptions) error {
+	for round := ce.CurrentRound; round <= maxRounds; round++ {
+		err := ce.SimulateRound()
+		if err != nil {
+			return err
+		}
+		ce.CurrentRound++
+	}
+
+	return nil
+}
+
+func (ce *CombatEngine) SimulateRound() error {
+	for _, combatantID := range ce.CombatTracker {
+		ce.updateCombatContext(combatantID)
+		combatant := ce.Combatants[combatantID]
+
+		if !combatant.GetCanAct() {
+			continue // Skip unconscious combatants
+		}
+
+		if combatant.GetEntity().IsMonster() {
+			continue
+		}
+
+		// Update Combatant's AI Context
+		combatant.GetEntity().UpdateAICombatContext(ce.CombatContext)
+
+		// Choose entity action
+		aiReq, err := combatant.GetEntity().GetAIRequest(combatantID, core.AIReqChooseAction)
+		if err != nil {
+			return err
+		}
+
+		err = ce.ProcessAIRequest(aiReq)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // Debug function
 func (ce *CombatEngine) PrintCombatTracker() {
@@ -116,4 +184,74 @@ func (ce *CombatEngine) PrintCombatants() {
 	for _, c := range ce.Combatants {
 		fmt.Printf("Name: %s\n", c.GetEntity().GetName())
 	}
+}
+
+func (ce *CombatEngine) processAttackResults(attackResults []core.AttackResult) error {
+	for _, result := range attackResults {
+		if result.GetIsHit() {
+			fmt.Println(result)
+		}
+	}
+
+	return nil
+}
+
+func (ce *CombatEngine) updateCombatContext(actorID int) {
+	if ce.CombatContext == nil {
+		ce.CombatContext = &core.CombatContext{}
+	}
+	if ce.CombatContext.AllCombatants == nil {
+		ce.CombatContext.AllCombatants = make(map[int]core.Combatant)
+	}
+
+	ce.CombatContext.AllCombatants = ce.Combatants
+	ce.CombatContext.CurrentRound = ce.CurrentRound
+	ce.CombatContext.ActingEntityID = actorID
+
+	if ce.SimOptions != nil {
+		ce.CombatContext.AllowCharacterHeals = ce.SimOptions.AllowCharacterHeals
+		ce.CombatContext.AllMonsterHeals = ce.SimOptions.AllowMonsterHeals
+		ce.CombatContext.AOEHitsAllEnemies = ce.SimOptions.AOEHitsAllEnemies
+		ce.CombatContext.CharacterHealThresholdPct = ce.SimOptions.CharacterHealThresholdPct
+		ce.CombatContext.MonsterHealThresholdPct = ce.SimOptions.MonsterHealThresholdPct
+	}
+
+	ce.CombatContext.NeedHealingIDs = ce.calculateEntitiesNeedingHealing()
+
+	for id, combatant := range ce.Combatants {
+		entity := combatant.GetEntity()
+
+		// Check if combatant is unconscious/defeated
+		if entity.IsUnconscious() {
+			// Mark as unable to act but keep in combat for potential revival
+			combatant.SetCanAct(false)
+			ce.Combatants[id] = combatant
+			ce.CombatContext.AllCombatants[id] = combatant
+		}
+	}
+
+}
+
+func (ce *CombatEngine) calculateEntitiesNeedingHealing() []int {
+	var needHealing []int
+
+	for id, combatant := range ce.Combatants {
+		entity := combatant.GetEntity()
+
+		// Calculate HP percentage
+		var threshold int
+		if entity.IsCharacter() {
+			threshold = ce.CombatContext.CharacterHealThresholdPct
+		} else {
+			threshold = ce.CombatContext.MonsterHealThresholdPct
+		}
+
+		// Entity needs healing if below threshold and not unconscious
+		// TODO: Unconscious can get healed to no longer be unconscious
+		if entity.GetHPStatus().GetHPPct() <= threshold && !entity.IsUnconscious() {
+			needHealing = append(needHealing, id)
+		}
+	}
+
+	return needHealing
 }

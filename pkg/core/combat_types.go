@@ -319,3 +319,57 @@ func (ad AttackData) GetAttackModifier() int     { return ad.AttackModifier }
 func (ad AttackData) GetDamageModifier() int     { return ad.DamageModifier }
 func (ad AttackData) GetDamageType() string      { return ad.DamageType.String() }
 func (ad AttackData) GetIsVersatileAttack() bool { return ad.IsVersatileAttack }
+
+type CombatContext struct {
+	AllCombatants  map[int]Combatant
+	NeedHealingIDs []int
+	CurrentRound   int
+	ActingEntityID int
+
+	// Combat options
+	AllowCharacterHeals       bool
+	AllMonsterHeals           bool
+	AOEHitsAllEnemies         bool
+	CharacterHealThresholdPct int
+	MonsterHealThresholdPct   int
+}
+
+type CombatContextConfig struct {
+	AllCombatants  map[int]Combatant
+	NeedHealingIDs []int
+	CurrentRound   int
+	ActingEntityID int
+} // ???
+
+func NewCombatContext(config CombatContextConfig) CombatContext {
+	// TODO: Finish implementation of this
+	return CombatContext{
+		//AllCombatants:  combatants,
+		//NeedHealingIDs: needHealing,
+		//CurrentRound:   round,
+	}
+}
+
+type ActionOutcome struct {
+	ActionType ActionType
+	TargetID   int
+	ActorID    int
+	Success    bool
+	Effects    []Effect
+}
+
+type Effect struct {
+	Type       EffectType
+	Value      int
+	DamageType DamageType
+	Condition  *Condition
+}
+
+type EffectType string
+
+const (
+	EffectDamage    EffectType = "damage"
+	EffectHealing   EffectType = "healing"
+	EffectCondition EffectType = "condition"
+	EffectTempHP    EffectType = "temp_hp"
+)

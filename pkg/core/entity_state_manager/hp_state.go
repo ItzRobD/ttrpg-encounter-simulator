@@ -28,3 +28,4 @@ func (hp HPValues) GetMaxHP() int            { return hp.MaxHP }
 func (hp HPValues) GetTempHP() int           { return hp.TempHP }
 func (hp HPValues) GetHPPct() int            { return hp.HPPct }
 func (hp HPValues) GetHitDie() core.DiceType { return hp.HitDie }
+func (hp HPValues) GetHPDifference() int     { return hp.MaxHP - hp.CurrentHP }

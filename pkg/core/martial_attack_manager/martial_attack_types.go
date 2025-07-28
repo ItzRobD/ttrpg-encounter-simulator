@@ -28,20 +28,21 @@ func (ao AttackOptions) GetTreatOnesAsTwos() bool         { return ao.RerollOnes
 type AttackRequest struct {
 	AttackData        core.AttackData
 	AttackOptions     AttackOptions
-	SimulationOptions core.SimulationOptions
+	SimulationOptions *core.SimulationOptions
 	Target            core.Entity
 }
 
-func (ar *AttackRequest) GetAttackData() core.AttackData               { return ar.AttackData }
-func (ar *AttackRequest) GetAttackOptions() core.AttackOptions         { return ar.AttackOptions }
-func (ar *AttackRequest) GetSimulationOptions() core.SimulationOptions { return ar.SimulationOptions }
-func (ar *AttackRequest) GetTarget() core.Entity                       { return ar.Target }
+func (ar *AttackRequest) GetAttackData() core.AttackData                { return ar.AttackData }
+func (ar *AttackRequest) GetAttackOptions() core.AttackOptions          { return ar.AttackOptions }
+func (ar *AttackRequest) GetSimulationOptions() *core.SimulationOptions { return ar.SimulationOptions }
+func (ar *AttackRequest) GetTarget() core.Entity                        { return ar.Target }
 
 type AttackResult struct {
 	ActorName     string
 	TargetName    string
 	AttackName    string
 	AttackCount   int
+	TargetValue   int
 	IsHit         bool
 	IsCriticalHit bool
 	AttackTotal   int
@@ -60,3 +61,4 @@ func (r AttackResult) GetAttackTotal() int              { return r.AttackTotal }
 func (r AttackResult) GetAttackRoll() int               { return r.AttackRoll }
 func (r AttackResult) GetDamageResult() core.RollResult { return r.DamageRoll }
 func (r AttackResult) GetDamageType() core.DamageType   { return r.DamageType }
+func (r AttackResult) GetTargetValue() int              { return r.TargetValue }

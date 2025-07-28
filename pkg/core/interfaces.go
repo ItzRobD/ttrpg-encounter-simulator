@@ -24,7 +24,7 @@ type AttackOptions interface {
 type AttackRequest interface {
 	GetAttackData() AttackData
 	GetAttackOptions() AttackOptions
-	GetSimulationOptions() SimulationOptions
+	GetSimulationOptions() *SimulationOptions
 	GetTarget() Entity
 }
 
@@ -37,6 +37,7 @@ type AttackResult interface {
 	GetIsCriticalHit() bool
 	GetAttackTotal() int
 	GetAttackRoll() int
+	GetTargetValue() int
 	GetDamageResult() RollResult
 	GetDamageType() DamageType
 }
@@ -116,7 +117,7 @@ type SpellOptions interface {
 type SpellCastRequest interface {
 	GetSpellCastData() SpellCastData
 	GetSpellOptions() SpellOptions
-	GetSimulationOptions() SimulationOptions
+	GetSimulationOptions() *SimulationOptions
 	GetTarget() Entity
 }
 
@@ -145,5 +146,20 @@ type HPStatus interface {
 	GetMaxHP() int
 	GetTempHP() int
 	GetHPPct() int
+	GetHPDifference() int
 	GetHitDie() DiceType
+}
+
+type ActionOutcomeData interface {
+	GetActionType() ActionType
+	GetTargetID() int
+	GetActorID() int
+	GetEffects() []Effect
+}
+
+type EffectData interface {
+	GetType() EffectType
+	GetValue() int
+	GetDamageType() DamageType
+	GetCondition() *Condition
 }

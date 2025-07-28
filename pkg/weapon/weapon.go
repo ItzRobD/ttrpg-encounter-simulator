@@ -5,6 +5,18 @@ import (
 	"fmt"
 )
 
+var (
+	rangedWeaponIDs = map[int]bool{
+		2: true, 4: true, 5: true, 6: true, 10: true,
+		12: true, 14: true, 29: true, 33: true, 34: true, 35: true,
+	}
+
+	dedicatedRangedIDs = map[int]bool{
+		11: true, 12: true, 13: true, 14: true,
+		33: true, 34: true, 35: true,
+	}
+)
+
 // Weapon represents a weapon with properties such as name, damage type, and special attributes.
 // Name refers to the name of the weapon.
 // IsVersatile indicates if the weapon can be used with one or two hands.
@@ -21,6 +33,7 @@ type Weapon struct {
 	Die          core.DiceType
 	DamageType   core.DamageType
 	IsRanged     bool
+	IsMelee      bool
 }
 
 // WeaponQueryParams defines the parameters for querying weapon data, including weapon name and ID.
@@ -30,7 +43,7 @@ type WeaponQueryParams struct {
 }
 
 // New creates a new weapon with specified attributes, validating inputs and returning an error for invalid configurations.
-func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die core.DiceType, damageType core.DamageType, isRanged bool) (Weapon, error) {
+func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die core.DiceType, damageType core.DamageType, isRanged bool, isMelee bool) (Weapon, error) {
 	if name == "" {
 		name = "Unnamed weapon"
 	}
@@ -45,18 +58,19 @@ func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die co
 		Die:          die,
 		DamageType:   damageType,
 		IsRanged:     isRanged,
+		IsMelee:      isMelee,
 	}, nil
 }
 
 // isRangedWeapon determines if the given weapon ID corresponds to a ranged weapon and returns true if it does.
 func isRangedWeapon(id int) bool {
-	rangedIDs := []int{2, 4, 5, 6, 10, 12, 14, 29, 33, 34, 35}
-	for _, v := range rangedIDs {
-		if v == id {
-			return true
-		}
-	}
-	return false
+	return rangedWeaponIDs[id]
+
+}
+
+// isMeleeWeapon checks if the given weapon ID corresponds to a melee weapon by excluding certain ranged weapon IDs.
+func isMeleeWeapon(id int) bool {
+	return !dedicatedRangedIDs[id]
 }
 
 // GetAttackModifier calculates the attack modifier for a weapon based on ability scores, character level, and proficiency status.

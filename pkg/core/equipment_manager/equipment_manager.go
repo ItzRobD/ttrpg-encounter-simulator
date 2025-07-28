@@ -30,7 +30,11 @@ func NewEquipmentManager(parent core.Entity) (*EquipmentManager, error) {
 	if parent == nil {
 		return nil, fmt.Errorf("parent cannot be nil")
 	}
-	return &EquipmentManager{parent: parent}, nil
+	return &EquipmentManager{
+		parent:           parent,
+		Weapons:          make(map[core.WeaponSlot]*WeaponSlotData),
+		WeaponAttackData: make(map[core.WeaponSlot]WeaponAttackData),
+	}, nil
 }
 
 func (em *EquipmentManager) GetParent() core.Entity {
@@ -53,6 +57,10 @@ func (em *EquipmentManager) GetAC() int {
 // SetWeapon equips a weapon in the specified slot and sets proficiency status for the EquipmentManager.
 func (em *EquipmentManager) SetWeapon(slot core.WeaponSlot, w *weapon.Weapon, isProficient bool) error {
 	ws := em.Weapons[slot]
+	if ws == nil {
+		ws = &WeaponSlotData{} // Create new WeaponSlotData if it doesn't exist
+	}
+
 	ws.Weapon = w
 	ws.IsProficient = isProficient
 	em.Weapons[slot] = ws
@@ -87,12 +95,38 @@ func (em *EquipmentManager) SetWeaponProficiencyBySlot(slot core.WeaponSlot, isP
 	em.Weapons[slot] = ws
 }
 
+func (em *EquipmentManager) HasMeleeWeapon() bool {
+	if em.Weapons == nil {
+		return false
+	}
+
+	for _, weaponSlot := range em.Weapons {
+		if weaponSlot != nil && weaponSlot.Weapon != nil && weaponSlot.Weapon.IsMelee {
+			return true
+		}
+	}
+	return false
+}
+
+func (em *EquipmentManager) HasRangedWeapon() bool {
+	if em.Weapons == nil {
+		return false
+	}
+
+	for _, weaponSlot := range em.Weapons {
+		if weaponSlot != nil && weaponSlot.Weapon != nil && weaponSlot.Weapon.IsRanged {
+			return true
+		}
+	}
+	return false
+}
+
 // GetWeaponAttackData retrieves the attack data for a weapon in a specified slot, optionally using versatile attack data.
 // Returns the retrieved attack data and any error if the slot has no data or if any issues occur.
 func (em *EquipmentManager) GetWeaponAttackData(slot core.WeaponSlot, useVersatile bool) (core.AttackData, error) {
 	ad, exists := em.WeaponAttackData[slot]
 	if !exists {
-		return core.AttackData{}, fmt.Errorf("no attack data for weapon slot %w", slot)
+		return core.AttackData{}, fmt.Errorf("no attack data for weapon slot %s", slot.String())
 	}
 
 	if useVersatile && ad.Versatile != nil {
@@ -123,8 +157,8 @@ func (em *EquipmentManager) GetAvailableWeaponSlots() []core.WeaponSlot {
 // Returns an error if the weapon does not exist in the slot or if any calculation-related operation fails.
 func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error {
 	w, exists := em.Weapons[slot]
-	if !exists {
-		return fmt.Errorf("no w in slot %v", slot)
+	if !exists || w == nil {
+		return fmt.Errorf("no weapon in slot %s", slot.String())
 	}
 
 	prof := em.GetIsProficientWithSlot(slot)

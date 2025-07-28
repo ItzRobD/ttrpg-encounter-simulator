@@ -7,13 +7,13 @@ import (
 type SpellCastRequest struct {
 	SpellCastData     SpellCastData
 	SpellOptions      SpellOptions
-	SimulationOptions core.SimulationOptions
+	SimulationOptions *core.SimulationOptions
 	Target            core.Entity
 }
 
 func (scr SpellCastRequest) GetSpellCastData() core.SpellCastData { return scr.SpellCastData }
 func (scr SpellCastRequest) GetSpellOptions() core.SpellOptions   { return scr.SpellOptions }
-func (scr SpellCastRequest) GetSimulationOptions() core.SimulationOptions {
+func (scr SpellCastRequest) GetSimulationOptions() *core.SimulationOptions {
 	return scr.SimulationOptions
 }
 func (scr SpellCastRequest) GetTarget() core.Entity { return scr.Target }
