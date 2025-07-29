@@ -286,6 +286,13 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.Total,
 			e.FinalRolls,
 			e.Modifier)
+	case core.DiceRollRecharge:
+		s = fmt.Sprintf("[Round %d] <Recharge roll> %s rolls to recharge ability: %s. Total: %d. Succcess: %t",
+			e.GetRound(),
+			e.GetActor(),
+			e.Name,
+			e.Total,
+			e.IsSuccess)
 	}
 
 	if e.WasRerolled {

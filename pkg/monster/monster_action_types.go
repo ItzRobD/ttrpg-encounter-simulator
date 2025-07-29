@@ -1,4 +1,4 @@
-package monster_action_manager
+package monster
 
 import "dnd5e-encounter-simulator-backend/pkg/core"
 
@@ -35,12 +35,11 @@ type Multiattack struct {
 	Count    int
 }
 
-//type MonsterMultiattack struct {
-//	ActionID    int
-//	AttackCount int
-//	IsOption    bool
-//	OptionIndex int
-//}
+type MultiattackData struct {
+	AttackDataBlocks []core.AttackData
+	TotalAverage     int
+	AveragePerAttack int
+}
 
 type LegendaryAction struct {
 	Cost   int

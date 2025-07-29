@@ -5,7 +5,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
-	"dnd5e-encounter-simulator-backend/pkg/core/monster_action_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"errors"
@@ -24,7 +23,7 @@ type Monster struct {
 	SpellCastingManager *spellcasting_manager.SpellcastingManager
 	RollManager         *roll_manager.RollManager
 	AI                  *MonsterAI
-	ActionManager       *monster_action_manager.MonsterActionManager
+	ActionManager       *MonsterActionManager
 	Seed                core.Seed
 	RNG                 *rand.Rand
 	EventListener       func(event interface{})
@@ -67,7 +66,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 		SpellCastingManager: &spellcasting_manager.SpellcastingManager{},
 		RollManager:         &roll_manager.RollManager{},
 		AI:                  &MonsterAI{},
-		ActionManager:       &monster_action_manager.MonsterActionManager{},
+		ActionManager:       &MonsterActionManager{},
 		Seed:                seed,
 		RNG:                 rand.New(rand.NewPCG(seed.Seed1, seed.Seed2)),
 	}
@@ -104,7 +103,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	}
 
 	// Action manager
-	mamConfig := &monster_action_manager.MAMConfig{
+	mamConfig := &MAMConfig{
 		Actions:          config.Actions,
 		Multiattacks:     config.Multiattacks,
 		LegendaryActions: config.LegendaryActions,
@@ -164,8 +163,8 @@ func initializeSpellcastingManager(ctx context.Context, m *Monster, config Monst
 	return sm, nil
 }
 
-func initializeActionManager(m *Monster, config *monster_action_manager.MAMConfig) *monster_action_manager.MonsterActionManager {
-	mam := monster_action_manager.NewMonsterActionManager(m, m.RollManager, config)
+func initializeActionManager(m *Monster, config *MAMConfig) *MonsterActionManager {
+	mam := NewMonsterActionManager(m, m.RollManager, config)
 	return mam
 }
 

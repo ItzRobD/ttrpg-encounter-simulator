@@ -116,7 +116,7 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *AttackRequest) ([]Att
 		}
 
 		events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())
-
+		events.LogDiceRollEvent(mam.parent, dmgRollResult, mam.parent.GetEventListener())
 		results = append(results, attackResult)
 	}
 

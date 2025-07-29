@@ -10,7 +10,6 @@ type CharacterAI struct {
 	parent    *Character
 	combatCtx *core.CombatContext
 	rng       *rand.Rand
-	//simConfig *simulation.SimulationConfig
 }
 
 func NewCharacterAI(c *Character) *CharacterAI {
@@ -24,7 +23,7 @@ func (cai *CharacterAI) UpdateCombatContext(ctx *core.CombatContext) {
 	cai.combatCtx = ctx
 }
 
-func (cai *CharacterAI) chooseCharacterAction() (*core.AIRequest, error) {
+func (cai *CharacterAI) createCharacterActionRequest() (*core.AIRequest, error) {
 	if cai.combatCtx == nil {
 		return nil, fmt.Errorf("combat context not set")
 	}

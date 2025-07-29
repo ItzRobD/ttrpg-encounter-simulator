@@ -8,7 +8,6 @@ import (
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/internal/util"
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/core/monster_action_manager"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"encoding/json"
 	"fmt"
@@ -215,8 +214,8 @@ func getMonsterBaseDataByID(ctx context.Context, ids []int) (map[int]MonsterBase
 	return bases, nil
 }
 
-func getMonsterActionsByID(ctx context.Context, ids []int) (map[int]map[int]monster_action_manager.Action, error) {
-	mActionsMap := make(map[int]map[int]monster_action_manager.Action)
+func getMonsterActionsByID(ctx context.Context, ids []int) (map[int]map[int]Action, error) {
+	mActionsMap := make(map[int]map[int]Action)
 	stmt := SELECT(
 		MonsterActions.MonsterID,
 		MonsterActions.ActionID,
@@ -274,7 +273,7 @@ func getMonsterActionsByID(ctx context.Context, ids []int) (map[int]map[int]mons
 	defer rows.Close()
 
 	for rows.Next() {
-		var action monster_action_manager.Action
+		var action Action
 		var monsterID int
 		err = rows.Scan(
 			&monsterID,
@@ -299,7 +298,7 @@ func getMonsterActionsByID(ctx context.Context, ids []int) (map[int]map[int]mons
 		if exists {
 			monster[action.ActionID] = action
 		} else {
-			monster = make(map[int]monster_action_manager.Action)
+			monster = make(map[int]Action)
 			monster[action.ActionID] = action
 			mActionsMap[monsterID] = monster
 		}
@@ -312,8 +311,8 @@ func getMonsterActionsByID(ctx context.Context, ids []int) (map[int]map[int]mons
 	return mActionsMap, nil
 }
 
-func getMonsterMultiattacksByID(ctx context.Context, id []int) (map[int]map[int][]monster_action_manager.Multiattack, error) {
-	mMAMap := make(map[int]map[int][]monster_action_manager.Multiattack)
+func getMonsterMultiattacksByID(ctx context.Context, id []int) (map[int]map[int][]Multiattack, error) {
+	mMAMap := make(map[int]map[int][]Multiattack)
 
 	stmt := SELECT(
 		MonsterMultiattacks.MonsterID,
@@ -342,10 +341,10 @@ func getMonsterMultiattacksByID(ctx context.Context, id []int) (map[int]map[int]
 		}
 
 		if mMAMap[monsterID] == nil {
-			mMAMap[monsterID] = make(map[int][]monster_action_manager.Multiattack)
+			mMAMap[monsterID] = make(map[int][]Multiattack)
 		}
 
-		multiattack := monster_action_manager.Multiattack{
+		multiattack := Multiattack{
 			ActionID: aid,
 			Count:    count,
 		}
@@ -361,8 +360,8 @@ func getMonsterMultiattacksByID(ctx context.Context, id []int) (map[int]map[int]
 	return mMAMap, nil
 }
 
-func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int][]monster_action_manager.LegendaryAction, error) {
-	mLAMap := make(map[int][]monster_action_manager.LegendaryAction)
+func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int][]LegendaryAction, error) {
+	mLAMap := make(map[int][]LegendaryAction)
 	stmt := SELECT(
 		MonsterActionsLegendary.MonsterID,
 		MonsterActionsLegendary.ActionCost,
@@ -423,7 +422,7 @@ func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int][]mo
 
 	for rows.Next() {
 		var monsterID int
-		var la monster_action_manager.LegendaryAction
+		var la LegendaryAction
 		err = rows.Scan(
 			&monsterID,
 			&la.Cost,
@@ -454,8 +453,8 @@ func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int][]mo
 	return mLAMap, nil
 }
 
-func getMonsterSpecialAbilitiesByID(ctx context.Context, id []int) (map[int][]monster_action_manager.SpecialAbility, error) {
-	mSAMap := make(map[int][]monster_action_manager.SpecialAbility)
+func getMonsterSpecialAbilitiesByID(ctx context.Context, id []int) (map[int][]SpecialAbility, error) {
+	mSAMap := make(map[int][]SpecialAbility)
 	stmt := SELECT(
 		MonsterSpecialAbilities.MonsterID,
 		MonsterSpecialAbilities.Name,
@@ -475,7 +474,7 @@ func getMonsterSpecialAbilitiesByID(ctx context.Context, id []int) (map[int][]mo
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sa monster_action_manager.SpecialAbility
+		var sa SpecialAbility
 		var monsterID int
 		var usageCount sql.NullInt64
 		err = rows.Scan(&monsterID, &sa.Name, &usageCount, &sa.Description)

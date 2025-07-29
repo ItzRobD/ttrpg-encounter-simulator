@@ -68,6 +68,7 @@ type RollResult struct {
 	IsNaturalOne bool
 	IsSuccess    bool
 	TargetValue  int
+	Name         string // Used for recharge only
 }
 
 func (rr RollResult) GetDiceRollType() core.DiceRollType { return rr.DiceRollType }
@@ -209,6 +210,25 @@ func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) 
 	return res, nil
 }
 
+func (rm *RollManager) RollRecharge(options RollOptions) *RollResult {
+	roll := rm.rollDie(core.D6)
+	res := RollResult{
+		DiceRollType:   options.RollType,
+		NumberOfDice:   1,
+		Die:            core.D6,
+		FinalRollValue: roll,
+		FinalRolls:     []int{roll},
+		Modifier:       0,
+		Total:          roll,
+		Advantage:      core.RollNormal,
+		OriginalRolls:  []int{roll},
+		TargetValue:    options.TargetValue,
+		IsSuccess:      roll >= options.TargetValue,
+	}
+
+	return &res
+}
+
 // RollDamage rolls damage dice for an attack, applies modifiers, handles reroll rules, critical hits, and logs events.
 func (rm *RollManager) RollDamage(req core.AttackRequest, isCritical bool, opts RollOptions) (*RollResult, error) {
 	// Handle damage rolls
@@ -272,8 +292,7 @@ func (rm *RollManager) RollDamage(req core.AttackRequest, isCritical bool, opts 
 		}
 	}
 
-	// log rolls
-	events.LogDiceRollEvent(rm.parent, &res, rm.parent.GetEventListener())
+	// logging takes place in the calling function
 
 	return &res, nil
 }

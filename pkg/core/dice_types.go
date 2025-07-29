@@ -16,6 +16,7 @@ const (
 	DiceRollHPAvgUsed        DiceRollType = "hp average"
 	DiceRollHPAvgUsedMonster DiceRollType = "hp average"
 	DiceRollHPValueUsed      DiceRollType = "hp value"
+	DiceRollRecharge         DiceRollType = "recharge"
 )
 
 type DiceType int

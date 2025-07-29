@@ -60,6 +60,7 @@ type EntityStateManager struct {
 	LegendaryActionPoints    int
 	LegendaryActionPointsMax int
 	NumberOfAttacks          int
+	RechargeActionStatus     map[int]bool // Key: Action index; Value: IsAvailable
 
 	// Conditions
 	Conditions core.EntityConditions
@@ -306,6 +307,45 @@ func (esm *EntityStateManager) ResetConditions() {
 func (esm *EntityStateManager) ResetHP() {
 	esm.CurrentHP = esm.MaxHP
 	esm.TempHP = 0
+}
+
+func (esm *EntityStateManager) GetRechargeActionStatus() map[int]bool {
+	return esm.RechargeActionStatus
+}
+
+func (esm *EntityStateManager) GetRechargeActionStatusAtIndex(index int) bool {
+	return esm.RechargeActionStatus[index]
+}
+
+func (esm *EntityStateManager) GetExpendedRechargeActionsIndex() []int {
+	var result []int
+	for i, v := range esm.RechargeActionStatus {
+		if !v {
+			result = append(result, i)
+		}
+	}
+	return result
+}
+
+func (esm *EntityStateManager) ExpendRechargeAction(index int) {
+	esm.RechargeActionStatus[index] = false
+}
+
+func (esm *EntityStateManager) RechargeRechargeAction(index int) {
+	esm.RechargeActionStatus[index] = true
+}
+
+func (esm *EntityStateManager) ResetAllRechargeActions() {
+	for i := 0; i < len(esm.RechargeActionStatus); i++ {
+		esm.RechargeActionStatus[i] = true
+	}
+}
+
+func (esm *EntityStateManager) AddRechargeAction(index int) {
+	if esm.RechargeActionStatus == nil {
+		esm.RechargeActionStatus = make(map[int]bool)
+	}
+	esm.RechargeActionStatus[index] = true
 }
 
 func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*EntityStateManager, error) {

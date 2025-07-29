@@ -2,18 +2,294 @@ package monster
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
+	"fmt"
 	"math/rand/v2"
 )
 
+type MonsterAIMode int
+
+const (
+	MAISimple MonsterAIMode = iota
+	MAITactical
+)
+
 type MonsterAI struct {
-	parent    *Monster
-	combatCtx *core.CombatContext
-	rng       *rand.Rand
+	parent             *Monster
+	combatCtx          *core.CombatContext
+	rng                *rand.Rand
+	isLegendary        bool
+	hasRechargeActions bool
+	hasMultiattack     bool
+	hasSpecialAbility  bool
+	AIMode             MonsterAIMode
+	PrioritizeTotalAvg bool
 }
 
 func NewMonsterAI(m *Monster) *MonsterAI {
-	return &MonsterAI{
-		parent: m,
-		rng:    m.GetRNG(),
+	hasRecharge := false
+	hasMultiattack := false
+	hasSpecialAbility := false
+
+	if m.ActionManager.SpecialAbilities != nil {
+		hasSpecialAbility = true
 	}
+	if m.ActionManager.Multiattacks != nil {
+		hasMultiattack = true
+	}
+	if m.ActionManager.RechargeActions != nil {
+		hasRecharge = true
+	}
+
+	return &MonsterAI{
+		parent:             m,
+		combatCtx:          nil,
+		rng:                m.GetRNG(),
+		isLegendary:        m.IsLegendary,
+		hasRechargeActions: hasRecharge,
+		hasMultiattack:     hasMultiattack,
+		hasSpecialAbility:  hasSpecialAbility,
+	}
+}
+
+func (mai *MonsterAI) UpdateCombatContext(ctx *core.CombatContext) {
+	mai.combatCtx = ctx
+}
+
+func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error) {
+	// TODO: Working on finishing this part:
+	//		Need to be able to build AI requests based off decisions made in this tree
+	//		return this request to the sim
+	//		pass the request back to the monster to execute
+	// TODO: Need to implement monster healing
+	// TODO: When characters check for healing, are they including themselves?
+
+	var actionChoiceID int
+	var spellChoice *core.SpellChoice
+	var err error
+
+	// Use recharge actions first
+	if mai.hasRechargeActions {
+		rechargeIndexes := mai.getAvailableRechargeActionIndexes()
+		if len(rechargeIndexes) > 0 {
+			actionChoiceID, err = mai.chooseRechargeAction(rechargeIndexes)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				return mai.buildAIRequest()
+			}
+		}
+	}
+
+	// Consider spellcasting vs multi attack
+	if mai.hasMultiattack {
+		switch mai.AIMode {
+		case MAISimple:
+			if mai.parent.IsSpellcaster() {
+				if mai.rng.IntN(2) == 0 {
+					spellChoice, err = mai.chooseSpell()
+					if err != nil {
+						fmt.Println(err)
+					} else {
+						return mai.buildAIRequest()
+					}
+				}
+			} else {
+				actionChoiceID, err = mai.chooseMultiattackOption()
+				if err != nil {
+					fmt.Println(err)
+				} else {
+					return mai.buildAIRequest()
+				}
+			}
+
+		case MAITactical:
+			if mai.parent.IsSpellcaster() {
+				// choose most effective -> highest damage and aoe vs multiattack choice
+			} else {
+				actionChoiceID, err = mai.chooseMultiattackOption()
+				if err != nil {
+					fmt.Println(err)
+				} else {
+					return mai.buildAIRequest()
+				}
+			}
+		}
+	}
+
+	// No multiattack -> Spellcasting first
+	if mai.parent.IsSpellcaster() {
+		spellChoice, err = mai.chooseSpell()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			return mai.buildAIRequest()
+		}
+	}
+
+	action, err := mai.chooseMonsterAction()
+	if err != nil {
+		return nil, err
+	} else {
+		return mai.buildAIRequest()
+	}
+}
+
+// TODO: This should likely be moved to entity state -> AI doesn't need to make a decision about this
+func (mai *MonsterAI) rollRechargeActions() {
+	idxs := mai.parent.EntityState.GetExpendedRechargeActionsIndex()
+	if len(idxs) == 0 {
+		return
+	}
+
+	for _, idx := range idxs {
+		rechargeValue := mai.parent.ActionManager.Actions[idx].RechargeValue
+		opts := roll_manager.RollOptions{
+			Advantage:   core.RollNormal,
+			RollType:    core.DiceRollRecharge,
+			TargetValue: rechargeValue,
+		}
+		res := mai.parent.RollManager.RollRecharge(opts)
+		res.Name = mai.parent.ActionManager.Actions[idx].Name
+		if res.IsSuccess {
+			mai.parent.EntityState.RechargeRechargeAction(idx)
+		}
+
+		events.LogDiceRollEvent(mai.parent, res, mai.parent.GetEventListener())
+	}
+}
+
+func (mai *MonsterAI) getAvailableRechargeActionIndexes() []int {
+	availableIdx := make([]int, 0, len(mai.parent.ActionManager.RechargeActions))
+	for idx, status := range mai.parent.EntityState.GetRechargeActionStatus() {
+		if status {
+			availableIdx = append(availableIdx, idx)
+		}
+	}
+
+	return availableIdx
+}
+
+func (mai *MonsterAI) chooseRechargeAction(indexes []int) (int, error) {
+	if len(indexes) == 0 {
+		return -1, fmt.Errorf("no recharge actions available")
+	}
+	bestIndex := -1
+	bestAvg := 0
+
+	for _, idx := range indexes {
+		if bestIndex == -1 {
+			bestIndex = idx
+			bestAvg = mai.parent.ActionManager.ActionAttackData[idx].Average
+			continue
+		}
+
+		idxAvg := mai.parent.ActionManager.ActionAttackData[idx].Average
+		if idxAvg > bestAvg {
+			bestIndex = idx
+			bestAvg = idxAvg
+		}
+	}
+
+	if bestIndex == -1 {
+		return -1, fmt.Errorf("no recharge actions available")
+	}
+
+	return bestIndex, nil
+}
+
+func (mai *MonsterAI) chooseMultiattackOption() (int, error) {
+	if len(mai.parent.ActionManager.Multiattacks) == 0 {
+		return -1, fmt.Errorf("no multiattack options available")
+	}
+
+	switch mai.AIMode {
+	case MAISimple:
+		idx := mai.rng.IntN(len(mai.parent.ActionManager.Multiattacks))
+		return idx, nil
+	case MAITactical:
+		bestIndex := -1
+		bestAvg := 0
+
+		for idx, option := range mai.parent.ActionManager.MultiAttackData {
+			if bestIndex == -1 {
+				bestIndex = idx
+				if mai.PrioritizeTotalAvg {
+					bestAvg = option.TotalAverage
+				} else {
+					bestAvg = option.AveragePerAttack
+				}
+			}
+			if mai.PrioritizeTotalAvg {
+				if option.TotalAverage > bestAvg {
+					bestIndex = idx
+					bestAvg = option.TotalAverage
+				}
+			} else {
+				if option.AveragePerAttack > bestAvg {
+					bestIndex = idx
+					bestAvg = option.AveragePerAttack
+				}
+			}
+		}
+
+		if bestIndex == -1 {
+			return -1, fmt.Errorf("no multiattack options available")
+		}
+
+		return bestIndex, nil
+	}
+
+	return -1, fmt.Errorf("invalid monster AI mode")
+}
+
+func (mai *MonsterAI) chooseMonsterAction() (int, error) {
+	if len(mai.parent.ActionManager.Actions) == 0 {
+		return -1, fmt.Errorf("no actions available")
+	}
+
+	switch mai.AIMode {
+	case MAISimple:
+		idx := mai.rng.IntN(len(mai.parent.ActionManager.Actions))
+		return idx, nil
+	case MAITactical:
+		bestIndex := -1
+		bestAvg := 0
+
+		for idx, action := range mai.parent.ActionManager.ActionAttackData {
+			if bestIndex == -1 {
+				bestIndex = idx
+				bestAvg = action.Average
+			}
+			if action.Average > bestAvg {
+				bestIndex = idx
+				bestAvg = action.Average
+			}
+		}
+
+		if bestIndex == -1 {
+			return -1, fmt.Errorf("no actions available")
+		}
+
+		return bestIndex, nil
+	}
+
+	return -1, fmt.Errorf("invalid monster AI mode")
+}
+
+func (mai *MonsterAI) chooseSpell() (*core.SpellChoice, error) {
+	if mai.parent.SpellCastingManager == nil || !mai.parent.IsSpellcaster() {
+		return nil, fmt.Errorf("monster is not a spellcaster")
+	}
+	spellChoice, err := mai.parent.SpellCastingManager.ChooseSpellByPriority(core.STDamage, mai.parent.EntityState.SpellcastingPriority)
+	if err != nil {
+		return nil, err
+	}
+
+	return spellChoice, nil
+}
+
+func (mai *MonsterAI) buildAIRequest(values int) (*core.AIRequest, error) {
+	return nil, nil
 }

@@ -2,16 +2,15 @@ package monster
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/core/monster_action_manager"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 )
 
 type MonsterConfig struct {
 	Base               MonsterBase
-	Actions            map[int]monster_action_manager.Action
-	Multiattacks       map[int][]monster_action_manager.Multiattack
-	LegendaryActions   []monster_action_manager.LegendaryAction
-	SpecialAbilities   []monster_action_manager.SpecialAbility
+	Actions            map[int]Action
+	Multiattacks       map[int][]Multiattack
+	LegendaryActions   []LegendaryAction
+	SpecialAbilities   []SpecialAbility
 	Resistances        core.DamageResistances
 	DamageBreakers     []core.ResistBreaker
 	spellcastingConfig MonsterSpellcastingConfig

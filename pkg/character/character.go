@@ -699,7 +699,7 @@ func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReq
 	var err error
 	switch t {
 	case core.AIReqChooseAction:
-		req, err = c.AI.chooseCharacterAction()
+		req, err = c.AI.createCharacterActionRequest()
 		if err != nil {
 			return nil, err
 		}

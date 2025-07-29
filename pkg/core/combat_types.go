@@ -310,6 +310,7 @@ type AttackData struct {
 	DamageModifier    int
 	DamageType        DamageType
 	IsVersatileAttack bool
+	Average           int
 }
 
 func (ad AttackData) GetAttackName() string      { return ad.Name }

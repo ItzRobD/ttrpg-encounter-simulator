@@ -205,6 +205,7 @@ type DiceRollEvent struct {
 	IsNaturalOne bool
 	IsSuccess    bool
 	TargetValue  int
+	Name         string // Used for recharges only
 }
 
 func (e *DiceRollEvent) GetEventType() EventType { return ETRollEvent }
