@@ -15,7 +15,7 @@ type CombatantSetupManager struct {
 }
 
 type SetupResult struct {
-	Combatants []core.Combatant
+	Combatants []*core.Combatant
 	Errors     []SetupError
 }
 
@@ -35,7 +35,7 @@ func NewCombatantSetupManager(ctx context.Context, useHPAverageCharacters bool, 
 
 func (csm *CombatantSetupManager) SetupCombatants(characterConfigs []character.CharacterConfig, monsterIDs []int) (*SetupResult, error) {
 	result := &SetupResult{
-		Combatants: make([]core.Combatant, 0),
+		Combatants: make([]*core.Combatant, 0),
 		Errors:     make([]SetupError, 0),
 	}
 
@@ -57,8 +57,8 @@ func (csm *CombatantSetupManager) SetupCombatants(characterConfigs []character.C
 	return result, nil
 }
 
-func (csm *CombatantSetupManager) createCharacters(configs []character.CharacterConfig) ([]core.Combatant, []SetupError) {
-	var combatants []core.Combatant
+func (csm *CombatantSetupManager) createCharacters(configs []character.CharacterConfig) ([]*core.Combatant, []SetupError) {
+	var combatants []*core.Combatant
 	var errors []SetupError
 
 	for _, config := range configs {
@@ -77,8 +77,8 @@ func (csm *CombatantSetupManager) createCharacters(configs []character.Character
 	return combatants, errors
 }
 
-func (csm *CombatantSetupManager) createMonsters(ids []int) ([]core.Combatant, []SetupError) {
-	var combatants []core.Combatant
+func (csm *CombatantSetupManager) createMonsters(ids []int) ([]*core.Combatant, []SetupError) {
+	var combatants []*core.Combatant
 	var errors []SetupError
 
 	if len(ids) == 0 {

@@ -2,6 +2,7 @@ package monster
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"fmt"
 )
@@ -51,6 +52,19 @@ func (mam *MonsterActionManager) GetSpecialAbilities() []SpecialAbility {
 	return mam.SpecialAbilities
 }
 
+func (mam *MonsterActionManager) GetAttackDataFromIndex(index int, actionType core.ActionType) []core.AttackData {
+	switch actionType {
+	case core.ATMonsterAction:
+		return []core.AttackData{mam.ActionAttackData[index]}
+	case core.ATMonsterMultiattack:
+		return mam.MultiAttackData[index].AttackDataBlocks
+	case core.ATLegendaryAction:
+		return []core.AttackData{mam.LegendaryAttackData[index]}
+	case core.ATMonsterSpecial:
+	}
+	return nil
+}
+
 // InitializeActions sets up actions, multiattacks, legendary actions, and special abilities from the provided configuration.
 func (mam *MonsterActionManager) InitializeActions(config *MAMConfig) {
 	mam.Actions = config.Actions
@@ -87,6 +101,67 @@ func NewMonsterActionManager(parent *Monster, rm *roll_manager.RollManager, conf
 	}
 	mam.precomputeAttackData()
 	return &mam
+}
+
+func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) ([]core.AttackResult, error) {
+	var results []core.AttackResult
+
+	for idx, ad := range req.AttackData {
+		// Attack Roll
+		attackMod := ad.AttackModifier
+		cT := 20
+		if req.AttackOptions.ImprovedCritical {
+			cT = 19
+		}
+
+		rollOpts := roll_manager.RollOptions{
+			Advantage:         req.AttackOptions.Advantage,
+			Modifier:          attackMod,
+			CriticalThreshold: cT,
+			RollType:          core.DiceRollAttack,
+			TargetValue:       req.Target.GetAC(),
+		}
+
+		attackRollResult, err := mam.rollManager.RollAttack(rollOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		// Damage roll
+		rollOpts = roll_manager.RollOptions{
+			Advantage: core.RollNormal,
+			Modifier:  ad.DamageModifier,
+			RollType:  core.DiceRollDamage,
+		}
+
+		dmgRollResult, err := mam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, rollOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		attackResult := core.AttackResult{
+			ActorName:     mam.parent.GetName(),
+			TargetName:    req.Target.GetName(),
+			AttackName:    ad.Name,
+			AttackCount:   idx + 1,
+			TargetValue:   attackRollResult.TargetValue,
+			IsHit:         attackRollResult.IsSuccess,
+			IsCriticalHit: attackRollResult.IsCritical,
+			AttackTotal:   attackRollResult.Total,
+			AttackRoll:    attackRollResult.FinalRollValue,
+			DamageRoll:    dmgRollResult,
+			DamageType:    ad.DamageType,
+		}
+
+		// TODO: Logging
+		events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())
+		if attackRollResult.IsSuccess {
+			events.LogDiceRollEvent(mam.parent, dmgRollResult, mam.parent.GetEventListener())
+		}
+		results = append(results, attackResult)
+	}
+
+	return results, nil
 }
 
 // createAttackDataFromAction converts an Action into an AttackData object used for computations and attack management.

@@ -10,38 +10,6 @@ package core
 //	GetIsVersatileAttack() bool
 //}
 
-type AttackOptions interface {
-	GetAdvantage() AdvantageType
-	GetNumberOfAttacks() int
-	GetBonusToAttackRoll() int
-	GetBonusToDamageRoll() int
-	GetShouldApplyDamageMod() bool
-	GetIsPowerAttack() bool
-	GetIsImprovedCritical() bool
-	GetTreatOnesAsTwos() bool
-}
-
-type AttackRequest interface {
-	GetAttackData() AttackData
-	GetAttackOptions() AttackOptions
-	GetSimulationOptions() *SimulationOptions
-	GetTarget() Entity
-}
-
-type AttackResult interface {
-	GetActorName() string
-	GetTargetName() string
-	GetAttackName() string
-	GetAttackCount() int
-	GetIsHit() bool
-	GetIsCriticalHit() bool
-	GetAttackTotal() int
-	GetAttackRoll() int
-	GetTargetValue() int
-	GetDamageResult() RollResult
-	GetDamageType() DamageType
-}
-
 type AttackResultData interface {
 	GetActorName() string
 	GetTargetName() string

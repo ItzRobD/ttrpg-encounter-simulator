@@ -36,7 +36,7 @@ func main() {
 	//fmt.Println(s)
 
 	frank := setupFrank()
-	testSimulation([]character.CharacterConfig{frank}, []int{2})
+	testSimulation([]character.CharacterConfig{frank}, []int{292})
 }
 
 func setupFrank() character.CharacterConfig {
@@ -126,7 +126,7 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 		monsterIds)
 	sim.SetupEventListeners()
 	sim.InitializeCombatants()
-	err := sim.RunSimulation(4)
+	err := sim.RunSimulation(24)
 	if err != nil {
 		fmt.Println(err)
 	}

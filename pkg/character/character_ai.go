@@ -44,8 +44,9 @@ func (cai *CharacterAI) createCharacterActionRequest() (*core.AIRequest, error) 
 		}
 		// return the action request
 		req = core.AIRequest{
-			TargetID:    targetID,
 			Actor:       cai.parent,
+			ActorType:   core.EntityCharacter,
+			TargetID:    targetID,
 			ActionType:  core.ATHeal,
 			SpellChoice: choice,
 		}
@@ -70,8 +71,9 @@ func (cai *CharacterAI) createCharacterActionRequest() (*core.AIRequest, error) 
 		}
 	}
 	req = core.AIRequest{
-		TargetID:    targetID,
 		Actor:       cai.parent,
+		ActorType:   core.EntityCharacter,
+		TargetID:    targetID,
 		Target:      cai.combatCtx.AllCombatants[targetID].GetEntity(),
 		ActionType:  at,
 		SpellChoice: choice,
@@ -139,7 +141,11 @@ func (cai *CharacterAI) chooseFallbackAction(exclude core.ActionType) core.Actio
 }
 
 func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (int, error) {
-	var validTargets map[int]core.Combatant
+	if cai.combatCtx == nil {
+		return -1, fmt.Errorf("combat context not set")
+	}
+
+	var validTargets map[int]*core.Combatant
 	switch targetType {
 	case core.TTDamage:
 		validTargets = cai.getEnemyTargets()
@@ -156,8 +162,8 @@ func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (int, error) 
 	return target, nil
 }
 
-func (cai *CharacterAI) getEnemyTargets() map[int]core.Combatant {
-	enemies := make(map[int]core.Combatant)
+func (cai *CharacterAI) getEnemyTargets() map[int]*core.Combatant {
+	enemies := make(map[int]*core.Combatant)
 	self := cai.parent
 
 	for id, combatant := range cai.combatCtx.AllCombatants {
@@ -170,8 +176,8 @@ func (cai *CharacterAI) getEnemyTargets() map[int]core.Combatant {
 	return enemies
 }
 
-func (cai *CharacterAI) getAllyTargets() map[int]core.Combatant {
-	allies := make(map[int]core.Combatant)
+func (cai *CharacterAI) getAllyTargets() map[int]*core.Combatant {
+	allies := make(map[int]*core.Combatant)
 	self := cai.parent
 
 	for id, combatant := range cai.combatCtx.AllCombatants {

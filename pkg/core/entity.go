@@ -47,20 +47,20 @@ type Combatant struct {
 	CanAct     bool
 }
 
-func NewCombatant(entity Entity, initiative int) Combatant {
-	return Combatant{entity, initiative, true}
+func NewCombatant(entity Entity, initiative int) *Combatant {
+	return &Combatant{entity, initiative, true}
 }
 
-func (c Combatant) GetInitiative() int {
+func (c *Combatant) GetInitiative() int {
 	return c.Initiative
 }
 
-func (c Combatant) GetEntity() Entity {
+func (c *Combatant) GetEntity() Entity {
 	return c.Entity
 }
 
-func (c Combatant) GetCanAct() bool {
+func (c *Combatant) GetCanAct() bool {
 	return c.CanAct
 }
 
-func (c Combatant) SetCanAct(b bool) { c.CanAct = false }
+func (c *Combatant) SetCanAct(b bool) { c.CanAct = b }

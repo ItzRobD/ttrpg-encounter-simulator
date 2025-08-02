@@ -16,7 +16,7 @@ func LogCharacterActionChoiceEvent(actor core.Entity, choice core.ActionType, li
 	}
 }
 
-func LogMeleeAttackEvent(actor core.Entity, attackResult core.AttackResult, listener func(event interface{})) {
+func LogMeleeAttackEvent(actor core.Entity, attackResult *core.AttackResult, listener func(event interface{})) {
 	event := &MeleeAttackEvent{
 		Target:         attackResult.GetTargetName(),
 		AttackName:     attackResult.GetAttackName(),
@@ -36,6 +36,10 @@ func LogMeleeAttackEvent(actor core.Entity, attackResult core.AttackResult, list
 		listener(event)
 	}
 }
+
+//func LogMonsterAttackEvent(actor core.Entity, attackResult *core.AttackResult, listener func(event interface{})) {
+//	event := &
+//}
 
 func LogDamageEvent(actor core.Entity, target core.Entity, damageType string, damage int, rolls []int, listener func(event interface{})) {
 	event := &DamageEvent{

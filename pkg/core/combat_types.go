@@ -321,8 +321,67 @@ func (ad AttackData) GetDamageModifier() int     { return ad.DamageModifier }
 func (ad AttackData) GetDamageType() string      { return ad.DamageType.String() }
 func (ad AttackData) GetIsVersatileAttack() bool { return ad.IsVersatileAttack }
 
+type AttackRequest struct {
+	AttackData        []AttackData
+	AttackOptions     AttackOptions
+	SimulationOptions *SimulationOptions
+	Target            Entity
+}
+
+func (ar *AttackRequest) GetAttackData() []AttackData              { return ar.AttackData }
+func (ar *AttackRequest) GetAttackOptions() AttackOptions          { return ar.AttackOptions }
+func (ar *AttackRequest) GetSimulationOptions() *SimulationOptions { return ar.SimulationOptions }
+func (ar *AttackRequest) GetTarget() Entity                        { return ar.Target }
+
+type AttackResult struct {
+	ActorName     string
+	TargetName    string
+	AttackName    string
+	AttackCount   int
+	TargetValue   int
+	IsHit         bool
+	IsCriticalHit bool
+	AttackTotal   int
+	AttackRoll    int
+	DamageRoll    RollResult
+	DamageType    DamageType
+}
+
+func (r AttackResult) GetActorName() string        { return r.ActorName }
+func (r AttackResult) GetTargetName() string       { return r.TargetName }
+func (r AttackResult) GetAttackName() string       { return r.AttackName }
+func (r AttackResult) GetAttackCount() int         { return r.AttackCount }
+func (r AttackResult) GetIsHit() bool              { return r.IsHit }
+func (r AttackResult) GetIsCriticalHit() bool      { return r.IsCriticalHit }
+func (r AttackResult) GetAttackTotal() int         { return r.AttackTotal }
+func (r AttackResult) GetAttackRoll() int          { return r.AttackRoll }
+func (r AttackResult) GetDamageResult() RollResult { return r.DamageRoll }
+func (r AttackResult) GetDamageType() DamageType   { return r.DamageType }
+func (r AttackResult) GetTargetValue() int         { return r.TargetValue }
+
+type AttackOptions struct {
+	Advantage            AdvantageType
+	NumberOfAttacks      int
+	BonusToAttackRoll    int  // Flat bonus, ie magic weapons
+	BonusToDamageRoll    int  // Flat bonus, ie magic weapons, rage, hexblade curse
+	ShouldApplyDamageMod bool // Off hand attacks, TWF
+	PowerAttack          bool // GWM / Sharpshooter (-5 attack, +10 damage) // TODO: Implement logic for this choice
+	ImprovedCritical     bool // Crits on 19 and 20, Hexblade, Champion
+	RerollOnesAndTwos    bool // GWF
+	// TODO: GWF Creates an extra attack
+}
+
+func (ao AttackOptions) GetAdvantage() AdvantageType   { return ao.Advantage }
+func (ao AttackOptions) GetNumberOfAttacks() int       { return ao.NumberOfAttacks }
+func (ao AttackOptions) GetBonusToAttackRoll() int     { return ao.BonusToAttackRoll }
+func (ao AttackOptions) GetBonusToDamageRoll() int     { return ao.BonusToDamageRoll }
+func (ao AttackOptions) GetShouldApplyDamageMod() bool { return ao.ShouldApplyDamageMod }
+func (ao AttackOptions) GetIsPowerAttack() bool        { return ao.PowerAttack }
+func (ao AttackOptions) GetIsImprovedCritical() bool   { return ao.ImprovedCritical }
+func (ao AttackOptions) GetTreatOnesAsTwos() bool      { return ao.RerollOnesAndTwos }
+
 type CombatContext struct {
-	AllCombatants  map[int]Combatant
+	AllCombatants  map[int]*Combatant
 	NeedHealingIDs []int
 	CurrentRound   int
 	ActingEntityID int

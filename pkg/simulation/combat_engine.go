@@ -10,7 +10,7 @@ import (
 
 type CombatEngine struct {
 	CurrentRound  int
-	Combatants    map[int]core.Combatant
+	Combatants    map[int]*core.Combatant
 	CombatTracker []int
 	CombatContext *core.CombatContext
 	SimOptions    *core.SimulationOptions
@@ -19,7 +19,7 @@ type CombatEngine struct {
 func NewCombatEngine(simOptions *core.SimulationOptions) *CombatEngine {
 	return &CombatEngine{
 		CurrentRound:  0,
-		Combatants:    make(map[int]core.Combatant),
+		Combatants:    make(map[int]*core.Combatant),
 		CombatTracker: nil,
 		CombatContext: nil,
 		SimOptions:    simOptions,
@@ -37,6 +37,10 @@ func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
 	//	return ce.executeHeal(req)
 	//case core.ATUnarmed:
 	//	return ce.executeUnarmedAttack(req)
+	case core.ATMonsterAction:
+		return ce.executeMonsterAction(req)
+	case core.ATMonsterMultiattack:
+		return ce.executeMonsterMultiattack(req)
 	default:
 		return fmt.Errorf("unknown action type: %v", req.ActionType)
 	}
@@ -58,51 +62,71 @@ func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
 	return ce.processActionResults(results)
 }
 
+func (ce *CombatEngine) executeMonsterAction(aiReq *core.AIRequest) error {
+	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	if err != nil {
+		return err
+	}
+
+	return ce.processActionResults(results)
+}
+
+func (ce *CombatEngine) executeMonsterMultiattack(aiReq *core.AIRequest) error {
+	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	if err != nil {
+		return err
+	}
+
+	return ce.processActionResults(results)
+}
+
 func (ce *CombatEngine) processActionResults(outcome *core.ActionOutcome) error {
 	target, exists := ce.CombatContext.AllCombatants[outcome.TargetID]
 	if !exists {
 		return fmt.Errorf("target entity not found in combat context")
 	}
 
-	var hpModResult core.HPModificationResult
-	var err error
-	for _, effect := range outcome.Effects {
-		switch effect.Type {
-		case core.EffectDamage:
-			v := -effect.Value
-			hpModResult, err = target.GetEntity().ModifyHP(v, false, false)
-			if err != nil {
-				return fmt.Errorf("failed to modify target entity HP: %v", err)
+	if len(outcome.Effects) > 0 {
+		var hpModResult core.HPModificationResult
+		var err error
+		for _, effect := range outcome.Effects {
+			switch effect.Type {
+			case core.EffectDamage:
+				v := -effect.Value
+				hpModResult, err = target.GetEntity().ModifyHP(v, false, false)
+				if err != nil {
+					return fmt.Errorf("failed to modify target entity HP: %v", err)
+				}
+			case core.EffectHealing:
+				v := math.Abs(float64(effect.Value))
+				hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false)
+				if err != nil {
+					return fmt.Errorf("failed to modify target entity HP: %v", err)
+				}
+			case core.EffectTempHP:
+				v := math.Abs(float64(effect.Value))
+				hpModResult, err = target.GetEntity().ModifyHP(int(v), true, false)
+				if err != nil {
+					return fmt.Errorf("failed to modify target entity HP: %v", err)
+				}
+			case core.EffectCondition:
+				return fmt.Errorf("effects of type %v are not supported", core.EffectCondition)
 			}
-		case core.EffectHealing:
-			v := math.Abs(float64(effect.Value))
-			hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false)
-			if err != nil {
-				return fmt.Errorf("failed to modify target entity HP: %v", err)
-			}
-		case core.EffectTempHP:
-			v := math.Abs(float64(effect.Value))
-			hpModResult, err = target.GetEntity().ModifyHP(int(v), true, false)
-			if err != nil {
-				return fmt.Errorf("failed to modify target entity HP: %v", err)
-			}
-		case core.EffectCondition:
-			return fmt.Errorf("effects of type %v are not supported", core.EffectCondition)
 		}
+
+		entity := ce.CombatContext.AllCombatants[outcome.ActorID].GetEntity()
+
+		events.LogHPModifiedEvent(entity, target.GetEntity(), hpModResult, entity.GetEventListener())
+
+		ce.Combatants[outcome.TargetID] = target
 	}
-
-	entity := ce.CombatContext.AllCombatants[outcome.ActorID].GetEntity()
-
-	events.LogHPModifiedEvent(entity, target.GetEntity(), hpModResult, entity.GetEventListener())
-
-	ce.Combatants[outcome.TargetID] = target
 
 	return nil
 }
 
-func (ce *CombatEngine) AddCombatant(c core.Combatant) {
+func (ce *CombatEngine) AddCombatant(c *core.Combatant) {
 	if ce.Combatants == nil {
-		ce.Combatants = make(map[int]core.Combatant)
+		ce.Combatants = make(map[int]*core.Combatant)
 	}
 
 	ce.Combatants[len(ce.Combatants)] = c
@@ -184,12 +208,15 @@ func (ce *CombatEngine) SimulateRound() error {
 			continue // Skip unconscious combatants
 		}
 
-		if combatant.GetEntity().IsMonster() {
-			continue
-		}
+		//if combatant.GetEntity().IsMonster() {
+		//	continue
+		//}
 
 		// Update Combatant's AI Context
-		combatant.GetEntity().UpdateAICombatContext(ce.CombatContext)
+		err := combatant.GetEntity().UpdateAICombatContext(ce.CombatContext)
+		if err != nil {
+			return err
+		}
 
 		// Choose entity action
 		aiReq, err := combatant.GetEntity().GetAIRequest(combatantID, core.AIReqChooseAction)
@@ -236,7 +263,7 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 		ce.CombatContext = &core.CombatContext{}
 	}
 	if ce.CombatContext.AllCombatants == nil {
-		ce.CombatContext.AllCombatants = make(map[int]core.Combatant)
+		ce.CombatContext.AllCombatants = make(map[int]*core.Combatant)
 	}
 
 	ce.CombatContext.AllCombatants = ce.Combatants
@@ -258,11 +285,15 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 
 		// Check if combatant is unconscious/defeated
 		if entity.IsUnconscious() {
+			fmt.Println("COMBATANT DOWN!!")
 			// Mark as unable to act but keep in combat for potential revival
-			combatant.SetCanAct(false)
-			ce.Combatants[id] = combatant
-			ce.CombatContext.AllCombatants[id] = combatant
+			temp := combatant
+			temp.SetCanAct(false)
+			ce.Combatants[id] = temp
+			ce.CombatContext.AllCombatants[id] = temp
+
 		}
+		fmt.Printf("Can act: %s - %t\n", combatant.GetEntity().GetName(), combatant.GetCanAct())
 	}
 
 }

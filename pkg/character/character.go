@@ -382,7 +382,7 @@ func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bo
 }
 
 // CreateAttackRequest generates an attack request with specific weapon data, modifiers, advantage type, and attack count.
-func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, adv core.AdvantageType, useVersatile bool, simulationOptions *core.SimulationOptions) (*martial_attack_manager.AttackRequest, error) {
+func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, adv core.AdvantageType, useVersatile bool, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
 	attackData, err := c.EquipmentManager.GetWeaponAttackData(slot, useVersatile)
 	if err != nil {
 		return nil, err
@@ -390,19 +390,19 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 
 	// TODO: This will have to be handled internally by other functions to get the values of each of these
 	//		Will have to account for character feats
-	attackOptions := martial_attack_manager.AttackOptions{
+	attackOptions := core.AttackOptions{
 		NumberOfAttacks:      c.EntityState.GetNumberOfAttacks(),
 		BonusToAttackRoll:    0,
 		BonusToDamageRoll:    0,
 		ShouldApplyDamageMod: true,
 		PowerAttack:          false,
-		ImprovedCritical:     false,
+		ImprovedCritical:     simulationOptions.UseImprovedCriticals,
 		RerollOnesAndTwos:    false,
 		Advantage:            adv,
 	}
 
-	return &martial_attack_manager.AttackRequest{
-		AttackData:        attackData,
+	return &core.AttackRequest{
+		AttackData:        []core.AttackData{attackData},
 		AttackOptions:     attackOptions,
 		SimulationOptions: simulationOptions,
 		Target:            target,

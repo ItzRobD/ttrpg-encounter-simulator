@@ -59,65 +59,70 @@ Encounter handle turn
 // ProcessAttackRequest processes an attack request by performing attack rolls and calculating damage for each attack.
 // It uses the attack request data and options to execute attacks and returns a list of results for each attempt.
 // Returns an error if the attack roll or damage roll fails at any point.
-func (mam *MartialAttackManager) ProcessAttackRequest(req *AttackRequest) ([]AttackResult, error) {
-	var results []AttackResult
+func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) ([]core.AttackResult, error) {
+	var results []core.AttackResult
 
-	for i := 0; i < req.GetAttackOptions().GetNumberOfAttacks(); i++ {
-		// Attack Roll
-		attackMod := req.AttackData.AttackModifier + req.AttackOptions.BonusToAttackRoll
+	// TODO: Verify using index here - newly added to conform to monster reqs
+	for idx, ad := range req.AttackData {
+		for i := 1; i <= req.GetAttackOptions().GetNumberOfAttacks(); i++ {
+			// Attack Roll
+			attackMod := ad.AttackModifier + req.AttackOptions.GetBonusToAttackRoll()
 
-		cT := 20
-		if req.AttackOptions.ImprovedCritical {
-			cT = 19
+			cT := 20
+			if req.AttackOptions.ImprovedCritical {
+				cT = 19
+			}
+
+			rollOpts := roll_manager.RollOptions{
+				Advantage: req.AttackOptions.Advantage,
+				Modifier:  attackMod,
+				//RerollAbilities:   mam.rollManager.RerollAbilities,
+				CriticalThreshold: cT,
+				TreatOnesAsTwos:   false,
+				RollType:          core.DiceRollAttack,
+				TargetValue:       req.Target.GetAC(),
+			}
+
+			//attackRollResult, err := mam.rollManager.RollD20(rollOpts)
+			attackRollResult, err := mam.rollManager.RollAttack(rollOpts)
+			if err != nil {
+				return nil, err
+			}
+
+			// roll damage
+			rollOpts = roll_manager.RollOptions{
+				Advantage:         core.RollNormal,
+				Modifier:          0,     // Set within damage function
+				CriticalThreshold: 0,     // Not relevant to damage function
+				TreatOnesAsTwos:   false, // Not relevant
+				RollType:          core.DiceRollDamage,
+				TargetValue:       0, // Not relevant
+			}
+			dmgRollResult, err := mam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, rollOpts)
+			if err != nil {
+				return nil, err
+			}
+
+			attackResult := core.AttackResult{
+				ActorName:     mam.parent.GetName(),
+				TargetName:    req.Target.GetName(),
+				AttackName:    ad.Name,
+				AttackCount:   i,
+				TargetValue:   attackRollResult.TargetValue,
+				IsHit:         attackRollResult.IsSuccess,
+				IsCriticalHit: attackRollResult.IsCritical,
+				AttackTotal:   attackRollResult.Total,
+				AttackRoll:    attackRollResult.FinalRollValue,
+				DamageRoll:    dmgRollResult,
+				DamageType:    ad.DamageType,
+			}
+
+			events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())
+			if attackRollResult.IsSuccess {
+				events.LogDiceRollEvent(mam.parent, dmgRollResult, mam.parent.GetEventListener())
+			}
+			results = append(results, attackResult)
 		}
-
-		rollOpts := roll_manager.RollOptions{
-			Advantage: req.AttackOptions.Advantage,
-			Modifier:  attackMod,
-			//RerollAbilities:   mam.rollManager.RerollAbilities,
-			CriticalThreshold: cT,
-			TreatOnesAsTwos:   false,
-			RollType:          core.DiceRollAttack,
-			TargetValue:       req.Target.GetAC(),
-		}
-
-		//attackRollResult, err := mam.rollManager.RollD20(rollOpts)
-		attackRollResult, err := mam.rollManager.RollAttack(rollOpts)
-		if err != nil {
-			return nil, err
-		}
-
-		// roll damage
-		rollOpts = roll_manager.RollOptions{
-			Advantage:         core.RollNormal,
-			Modifier:          0,     // Set within damage function
-			CriticalThreshold: 0,     // Not relevant to damage function
-			TreatOnesAsTwos:   false, // Not relevant
-			RollType:          core.DiceRollDamage,
-			TargetValue:       0, // Not relevant
-		}
-		dmgRollResult, err := mam.rollManager.RollDamage(req, attackRollResult.IsCritical, rollOpts)
-		if err != nil {
-			return nil, err
-		}
-
-		attackResult := AttackResult{
-			ActorName:     mam.parent.GetName(),
-			TargetName:    req.Target.GetName(),
-			AttackName:    req.AttackData.Name,
-			AttackCount:   i,
-			TargetValue:   attackRollResult.TargetValue,
-			IsHit:         attackRollResult.IsSuccess,
-			IsCriticalHit: attackRollResult.IsCritical,
-			AttackTotal:   attackRollResult.Total,
-			AttackRoll:    attackRollResult.FinalRollValue,
-			DamageRoll:    dmgRollResult,
-			DamageType:    req.AttackData.DamageType,
-		}
-
-		events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())
-		events.LogDiceRollEvent(mam.parent, dmgRollResult, mam.parent.GetEventListener())
-		results = append(results, attackResult)
 	}
 
 	return results, nil

@@ -20,16 +20,6 @@ type Action struct {
 	DC          *int    // nil if no DC
 }
 
-//type Multiattack struct {
-//	//IsOption   bool
-//	Components []MultiAttackComponent
-//}
-//
-//type MultiAttackComponent struct {
-//	ActionID int
-//	Count    int
-//}
-
 type Multiattack struct {
 	ActionID int
 	Count    int

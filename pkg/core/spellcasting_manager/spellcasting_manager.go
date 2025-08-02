@@ -69,6 +69,10 @@ func (scm *SpellcastingManager) GetSaveDC() int {
 	return scm.saveDC
 }
 
+func (scm *SpellcastingManager) GetSpellcastModifierValue() int {
+	return scm.spellcastModifierValue
+}
+
 func (scm *SpellcastingManager) AddKnownSpell(spell *spells.Spell) error {
 	scm.calculateFormulaAverages(spell)
 	if spell.SpellType == core.STHealing {

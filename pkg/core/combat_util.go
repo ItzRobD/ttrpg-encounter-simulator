@@ -5,21 +5,7 @@ import (
 	"math/rand/v2"
 )
 
-func DoesAttackHit(attackTotal int, ac int) bool {
-	if attackTotal >= ac {
-		return true
-	}
-	return false
-}
-
-func IsCriticalHit(attackRoll int, critThreshold int) bool {
-	if attackRoll >= critThreshold {
-		return true
-	}
-	return false
-}
-
-func SelectTargetFromMap(validTargets map[int]Combatant, priority TargetPriority, rng *rand.Rand) (int, error) {
+func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriority, rng *rand.Rand) (int, error) {
 	if len(validTargets) == 0 {
 		return -1, fmt.Errorf("no valid targets found")
 	}
@@ -74,7 +60,7 @@ func SelectTargetFromMap(validTargets map[int]Combatant, priority TargetPriority
 			}
 		}
 	case PrioritizeHealer:
-		var targets map[int]Combatant = make(map[int]Combatant)
+		var targets map[int]*Combatant = make(map[int]*Combatant)
 		for id, c := range validTargets {
 			if c.GetEntity().IsSpellcaster() {
 				if c.GetEntity().IsHealer() {
@@ -86,7 +72,7 @@ func SelectTargetFromMap(validTargets map[int]Combatant, priority TargetPriority
 			return SelectTargetFromMap(targets, PrioritizeMostDamaged, rng)
 		}
 	case PrioritizeSpellcaster:
-		var targets map[int]Combatant = make(map[int]Combatant)
+		var targets map[int]*Combatant = make(map[int]*Combatant)
 		for id, c := range validTargets {
 			if c.GetEntity().IsSpellcaster() {
 				targets[id] = c

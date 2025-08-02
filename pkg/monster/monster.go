@@ -76,9 +76,6 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	// Roll manager
 	monster.RollManager = initializeRollManager(&monster)
 
-	// AI
-	monster.AI = NewMonsterAI(&monster)
-
 	// ESM
 	esmConfig := entity_state_manager.EntityStateConfig{
 		AttackCount: 1,
@@ -113,6 +110,9 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 
 	// Set up HP SimOptions and monster hp
 	monster.HP.HPSetMethod = config.HPSetMethod
+
+	// AI
+	monster.AI = NewMonsterAI(&monster)
 
 	// Moving hp setup to during simulation
 	//err = monster.setHP(monster.HP)
@@ -223,6 +223,69 @@ func (m *Monster) setHP(config core.HPConfig) error {
 	default:
 		return fmt.Errorf("invalid HP set method: %v", config.HPSetMethod)
 	}
+}
+
+func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actionType core.ActionType, adv core.AdvantageType, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
+	if !isValidMonsterActionType(actionType) {
+		return nil, fmt.Errorf("invalid action type for monster attack request")
+	}
+
+	// TODO: Handle these
+	attackOptions := core.AttackOptions{
+		Advantage:            adv,
+		ShouldApplyDamageMod: true,
+		ImprovedCritical:     simulationOptions.UseImprovedCriticals,
+	}
+
+	return &core.AttackRequest{
+		AttackData:        m.ActionManager.GetAttackDataFromIndex(actionIndex, actionType),
+		AttackOptions:     attackOptions,
+		SimulationOptions: simulationOptions,
+		Target:            target,
+	}, nil
+
+}
+
+func (m *Monster) createSpellAttackData(spellChoice core.SpellChoice) (spellcasting_manager.SpellCastData, error) {
+	spellBonus := m.SpellCastingManager.GetSpellcastModifierValue()
+
+	return spellcasting_manager.SpellCastData{
+		SpellChoice:          spellChoice,
+		AttackModifier:       spellBonus,
+		SpellcastingModifier: 0, // TODO: Will this ever be used for anything?
+	}, nil
+}
+
+func (m *Monster) createSpellCastRequest(spellchoice core.SpellChoice, adv core.AdvantageType, simOptions *core.SimulationOptions) (*spellcasting_manager.SpellCastRequest, error) {
+	spellcastData, err := m.createSpellAttackData(spellchoice)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Handle the creation of these options dynamically
+	options := spellcasting_manager.SpellOptions{
+		Advantage:            adv,
+		BonusToAttackRoll:    0,
+		BonusToDamageRoll:    0,
+		ShouldApplyDamageMod: false,
+		ImprovedCritical:     false,
+		TreatOnesAsTwos:      false,
+	}
+
+	return &spellcasting_manager.SpellCastRequest{
+		SpellCastData:     spellcastData,
+		SpellOptions:      options,
+		SimulationOptions: simOptions,
+		Target:            nil,
+	}, nil
+}
+
+func isValidMonsterActionType(actionType core.ActionType) bool {
+	return actionType == core.ATMonsterAction ||
+		actionType == core.ATLegendaryAction ||
+		actionType == core.ATMonsterSpecial ||
+		actionType == core.ATLegendaryAction ||
+		actionType == core.ATMonsterMultiattack
 }
 
 // MakeSavingThrow calculates a saving throw for the given ability and returns the total roll result or an error.
@@ -431,15 +494,92 @@ func (m *Monster) GetDamageSpellCount() int {
 }
 
 func (m *Monster) UpdateAICombatContext(ctx *core.CombatContext) error {
+	m.AI.UpdateCombatContext(ctx)
 	return nil
 }
 
 func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIRequest, error) {
-	return nil, errors.New("not implemented")
+	var req *core.AIRequest
+	var err error
+	switch t {
+	case core.AIReqChooseAction:
+		req, err = m.AI.createMonsterDamageActionRequest()
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return req, fmt.Errorf("invalid AI request type: %s", t)
+	}
+
+	// TODO: Logging
+
+	req.ActorID = actorID
+
+	return req, nil
 }
 
 func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, error) {
-	return nil, errors.New("not implemented")
+	switch req.ActionType {
+	case core.ATMonsterAction, core.ATMonsterMultiattack, core.ATMonsterSpecial:
+		attackReq, err := m.createAttackRequest(req.Target, req.ActionIndex, req.ActionType, req.Advantage, req.SimOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		results, err := m.ActionManager.ProcessAttackRequest(attackReq)
+		if err != nil {
+			return nil, err
+		}
+
+		var effects []core.Effect
+		for _, res := range results {
+			if res.GetIsHit() {
+				effects = append(effects, core.Effect{
+					Type:       core.EffectDamage,
+					Value:      res.GetDamageResult().GetTotal(),
+					DamageType: res.GetDamageType(),
+				})
+			}
+		}
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			TargetID:   req.TargetID,
+			ActorID:    req.ActorID,
+			Effects:    effects,
+		}, nil
+
+	case core.ATSpell:
+		scReq, err := m.createSpellCastRequest(*req.SpellChoice, req.Advantage, req.SimOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err := m.SpellCastingManager.CastSpell(scReq)
+		if err != nil {
+			return nil, err
+		}
+
+		var effects []core.Effect
+		if res.GetIsHit() {
+			if req.SpellChoice.Spell.GetSpellType() == core.STDamage {
+				effects = append(effects, core.Effect{
+					Type:       core.EffectDamage,
+					Value:      res.GetSpellTotalValue(),
+					DamageType: res.GetDamageType(),
+				})
+			} else if req.SpellChoice.Spell.GetSpellType() == core.STHealing {
+				effects = append(effects, core.Effect{
+					Type:  core.EffectHealing,
+					Value: res.GetSpellTotalValue(),
+				})
+			}
+		}
+	default:
+		return nil, fmt.Errorf("invalid action type: %s", req.ActionType)
+	}
+
+	return nil, errors.New("invalid action type")
 }
 
 var _ core.Entity = &Monster{}

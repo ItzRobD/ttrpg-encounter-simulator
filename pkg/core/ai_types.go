@@ -1,6 +1,8 @@
 package core
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type TargetType int
 
@@ -17,13 +19,15 @@ const (
 
 type AIRequest struct {
 	Actor        Entity
+	ActorType    EntityType
 	ActorID      int
-	TargetID     int
 	Target       Entity
+	TargetID     int
 	ActionType   ActionType
 	SpellChoice  *SpellChoice
 	WeaponSlot   WeaponSlot
 	UseVersatile bool
+	ActionIndex  int // Monsters only
 	Advantage    AdvantageType
 	Request      AIRequestType
 	SimOptions   *SimulationOptions

@@ -58,10 +58,6 @@ func (mai *MonsterAI) UpdateCombatContext(ctx *core.CombatContext) {
 }
 
 func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error) {
-	// TODO: Working on finishing this part:
-	//		Need to be able to build AI requests based off decisions made in this tree
-	//		return this request to the sim
-	//		pass the request back to the monster to execute
 	// TODO: Need to implement monster healing
 	// TODO: When characters check for healing, are they including themselves?
 
@@ -77,7 +73,7 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 			if err != nil {
 				fmt.Println(err)
 			} else {
-				return mai.buildAIRequest()
+				return mai.buildAIRequest(actionChoiceID, nil, core.ATMonsterAction)
 			}
 		}
 	}
@@ -86,21 +82,19 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 	if mai.hasMultiattack {
 		switch mai.AIMode {
 		case MAISimple:
-			if mai.parent.IsSpellcaster() {
-				if mai.rng.IntN(2) == 0 {
-					spellChoice, err = mai.chooseSpell()
-					if err != nil {
-						fmt.Println(err)
-					} else {
-						return mai.buildAIRequest()
-					}
+			if mai.parent.IsSpellcaster() && mai.rng.IntN(2) == 0 {
+				spellChoice, err = mai.chooseSpell()
+				if err != nil {
+					fmt.Println(err)
+				} else {
+					return mai.buildAIRequest(-1, spellChoice, core.ATSpell)
 				}
 			} else {
 				actionChoiceID, err = mai.chooseMultiattackOption()
 				if err != nil {
 					fmt.Println(err)
 				} else {
-					return mai.buildAIRequest()
+					return mai.buildAIRequest(actionChoiceID, nil, core.ATMonsterMultiattack)
 				}
 			}
 
@@ -112,7 +106,7 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 				if err != nil {
 					fmt.Println(err)
 				} else {
-					return mai.buildAIRequest()
+					return mai.buildAIRequest(actionChoiceID, nil, core.ATMonsterMultiattack)
 				}
 			}
 		}
@@ -124,15 +118,15 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			return mai.buildAIRequest()
+			return mai.buildAIRequest(-1, spellChoice, core.ATSpell)
 		}
 	}
 
-	action, err := mai.chooseMonsterAction()
+	actionChoiceID, err = mai.chooseMonsterAction()
 	if err != nil {
 		return nil, err
 	} else {
-		return mai.buildAIRequest()
+		return mai.buildAIRequest(actionChoiceID, nil, core.ATMonsterAction)
 	}
 }
 
@@ -245,25 +239,26 @@ func (mai *MonsterAI) chooseMultiattackOption() (int, error) {
 }
 
 func (mai *MonsterAI) chooseMonsterAction() (int, error) {
-	if len(mai.parent.ActionManager.Actions) == 0 {
+	actionIDs := mai.getActionIDs()
+	if len(actionIDs) == 0 {
 		return -1, fmt.Errorf("no actions available")
 	}
 
 	switch mai.AIMode {
 	case MAISimple:
 		idx := mai.rng.IntN(len(mai.parent.ActionManager.Actions))
-		return idx, nil
+		return actionIDs[idx], nil
 	case MAITactical:
 		bestIndex := -1
 		bestAvg := 0
 
 		for idx, action := range mai.parent.ActionManager.ActionAttackData {
 			if bestIndex == -1 {
-				bestIndex = idx
+				bestIndex = actionIDs[idx]
 				bestAvg = action.Average
 			}
 			if action.Average > bestAvg {
-				bestIndex = idx
+				bestIndex = actionIDs[idx]
 				bestAvg = action.Average
 			}
 		}
@@ -290,6 +285,101 @@ func (mai *MonsterAI) chooseSpell() (*core.SpellChoice, error) {
 	return spellChoice, nil
 }
 
-func (mai *MonsterAI) buildAIRequest(values int) (*core.AIRequest, error) {
-	return nil, nil
+func (mai *MonsterAI) buildAIRequest(actionIndex int, spellChoice *core.SpellChoice, actionType core.ActionType) (*core.AIRequest, error) {
+	if mai.combatCtx == nil {
+		return nil, fmt.Errorf("combat context not set")
+	}
+	if actionType == core.ATSpell && spellChoice == nil {
+		return nil, fmt.Errorf("spell choice not set")
+	}
+	if actionType != core.ATSpell && actionIndex == -1 {
+		return nil, fmt.Errorf("action index not set")
+	}
+
+	targetID, err := mai.selectTargetID(core.TTDamage)
+	if err != nil {
+		return nil, err
+	}
+	target := mai.combatCtx.AllCombatants[targetID].GetEntity()
+
+	req := core.AIRequest{
+		Actor:       mai.parent,
+		ActorType:   core.EntityMonster,
+		TargetID:    targetID,
+		Target:      target,
+		ActionType:  actionType,
+		ActionIndex: actionIndex,
+		SpellChoice: spellChoice,
+	}
+
+	// TODO: Logging
+
+	return &req, nil
+}
+
+func (mai *MonsterAI) selectTargetID(targetType core.TargetType) (int, error) {
+	if mai.combatCtx == nil {
+		return -1, fmt.Errorf("combat context not set")
+	}
+
+	var validTargets map[int]*core.Combatant
+	switch targetType {
+	case core.TTDamage:
+		validTargets = mai.getEnemyTargets()
+	case core.TTHealing:
+		validTargets = mai.getAllyTargets()
+	default:
+		return -1, fmt.Errorf("invalid target type")
+	}
+
+	target, err := core.SelectTargetFromMap(validTargets, mai.parent.EntityState.TargetPrioritization, mai.rng)
+	if err != nil {
+		return -1, err
+	}
+
+	return target, nil
+}
+
+func (mai *MonsterAI) getEnemyTargets() map[int]*core.Combatant {
+	if mai.combatCtx == nil {
+		return nil
+	}
+
+	enemies := make(map[int]*core.Combatant)
+	self := mai.parent
+
+	for id, combatant := range mai.combatCtx.AllCombatants {
+		e := combatant.GetEntity()
+		if !e.IsUnconscious() && (self.IsMonster() != e.IsMonster()) {
+			enemies[id] = combatant
+		}
+	}
+
+	return enemies
+}
+
+func (mai *MonsterAI) getAllyTargets() map[int]*core.Combatant {
+	allies := make(map[int]*core.Combatant)
+	self := mai.parent
+
+	for id, combatant := range mai.combatCtx.AllCombatants {
+		e := combatant.GetEntity()
+		if !e.IsUnconscious() && (self.IsMonster() == e.IsMonster()) {
+			allies[id] = combatant
+		}
+	}
+
+	return allies
+}
+
+func (mai *MonsterAI) getActionIDs() []int {
+	if mai.parent.ActionManager == nil {
+		return nil
+	}
+
+	actionIDs := make([]int, 0, len(mai.parent.ActionManager.Actions))
+	for idx := range mai.parent.ActionManager.Actions {
+		actionIDs = append(actionIDs, idx)
+	}
+	return actionIDs
 }
