@@ -91,6 +91,7 @@ func (h *UniversalEventHandler) handleSpellAttack(e *SpellAttackEvent) {
 			e.Target,
 			e.SpellName,
 			e.SpellLevel,
+			e.DCValue,
 			e.DCAbility,
 			e.SavingThrowResult,
 			e.SavingThrowSuccess)

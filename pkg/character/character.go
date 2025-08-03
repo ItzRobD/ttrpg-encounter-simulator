@@ -432,7 +432,7 @@ func (c *Character) CreateSpellAttackData(spellChoice core.SpellChoice) (spellca
 }
 
 // CreateSpellCastRequest generates a new SpellCastRequest based on the given spell choice and advantage type.
-func (c *Character) CreateSpellCastRequest(spellChoice core.SpellChoice, adv core.AdvantageType, simOptions *core.SimulationOptions) (*spellcasting_manager.SpellCastRequest, error) {
+func (c *Character) CreateSpellCastRequest(target core.Entity, spellChoice core.SpellChoice, adv core.AdvantageType, simOptions *core.SimulationOptions) (*spellcasting_manager.SpellCastRequest, error) {
 	spellcastData, err := c.CreateSpellAttackData(spellChoice)
 	if err != nil {
 		return nil, err
@@ -452,7 +452,7 @@ func (c *Character) CreateSpellCastRequest(spellChoice core.SpellChoice, adv cor
 		SpellCastData:     spellcastData,
 		SpellOptions:      options,
 		SimulationOptions: simOptions,
-		Target:            nil,
+		Target:            target,
 	}, nil
 }
 
@@ -745,7 +745,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			Effects:    effects,
 		}, nil
 	case core.ATSpell:
-		scReq, err := c.CreateSpellCastRequest(*req.SpellChoice, req.Advantage, req.SimOptions)
+		scReq, err := c.CreateSpellCastRequest(req.Target, *req.SpellChoice, req.Advantage, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}

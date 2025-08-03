@@ -8,15 +8,23 @@ import (
 )
 
 func (scm *SpellcastingManager) CastSpell(req *SpellCastRequest) (*SpellResult, error) {
+	var res *SpellResult
+	var err error
 	switch req.SpellCastData.SpellChoice.Spell.GetSpellType() {
 	case core.STDamage:
-		scm.castDamageSpell(req)
+		res, err = scm.castDamageSpell(req)
+		if err != nil {
+			return nil, err
+		}
 	case core.STHealing:
-		scm.castHealingSpell(req)
+		res, err = scm.castHealingSpell(req)
+		if err != nil {
+			return nil, err
+		}
 	default:
-		return nil, fmt.Errorf("Invalid spell cast data")
+		return nil, fmt.Errorf("invalid spell cast data")
 	}
-	return nil, nil
+	return res, nil
 }
 
 func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellResult, error) {

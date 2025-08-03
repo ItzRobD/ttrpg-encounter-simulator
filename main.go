@@ -36,7 +36,7 @@ func main() {
 	//fmt.Println(s)
 
 	frank := setupFrank()
-	testSimulation([]character.CharacterConfig{frank}, []int{292})
+	testSimulation([]character.CharacterConfig{frank}, []int{28})
 }
 
 func setupFrank() character.CharacterConfig {

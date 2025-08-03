@@ -7,7 +7,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
-	"errors"
 	"fmt"
 	"math/rand/v2"
 )
@@ -256,7 +255,7 @@ func (m *Monster) createSpellAttackData(spellChoice core.SpellChoice) (spellcast
 	}, nil
 }
 
-func (m *Monster) createSpellCastRequest(spellchoice core.SpellChoice, adv core.AdvantageType, simOptions *core.SimulationOptions) (*spellcasting_manager.SpellCastRequest, error) {
+func (m *Monster) createSpellCastRequest(target core.Entity, spellchoice core.SpellChoice, adv core.AdvantageType, simOptions *core.SimulationOptions) (*spellcasting_manager.SpellCastRequest, error) {
 	spellcastData, err := m.createSpellAttackData(spellchoice)
 	if err != nil {
 		return nil, err
@@ -276,7 +275,7 @@ func (m *Monster) createSpellCastRequest(spellchoice core.SpellChoice, adv core.
 		SpellCastData:     spellcastData,
 		SpellOptions:      options,
 		SimulationOptions: simOptions,
-		Target:            nil,
+		Target:            target,
 	}, nil
 }
 
@@ -550,7 +549,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}, nil
 
 	case core.ATSpell:
-		scReq, err := m.createSpellCastRequest(*req.SpellChoice, req.Advantage, req.SimOptions)
+		scReq, err := m.createSpellCastRequest(req.Target, *req.SpellChoice, req.Advantage, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -575,11 +574,16 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 				})
 			}
 		}
-	default:
-		return nil, fmt.Errorf("invalid action type: %s", req.ActionType)
-	}
 
-	return nil, errors.New("invalid action type")
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			TargetID:   req.TargetID,
+			ActorID:    req.ActorID,
+			Effects:    effects,
+		}, nil
+	default:
+		return nil, fmt.Errorf("monster execute ai req - invalid action type: %s", req.ActionType)
+	}
 }
 
 var _ core.Entity = &Monster{}

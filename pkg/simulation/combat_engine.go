@@ -31,8 +31,8 @@ func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
 	switch req.ActionType {
 	case core.ATMelee, core.ATRanged:
 		return ce.executeWeaponAttack(req)
-	//case core.ATSpell:
-	//	return ce.executeSpellCast(req)
+	case core.ATSpell:
+		return ce.executeSpellCast(req)
 	//case core.ATHeal:
 	//	return ce.executeHeal(req)
 	//case core.ATUnarmed:
@@ -59,6 +59,14 @@ func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
 		return err
 	}
 
+	return ce.processActionResults(results)
+}
+
+func (ce *CombatEngine) executeSpellCast(aiReq *core.AIRequest) error {
+	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	if err != nil {
+		return err
+	}
 	return ce.processActionResults(results)
 }
 
