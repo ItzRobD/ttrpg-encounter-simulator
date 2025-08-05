@@ -57,6 +57,66 @@ func (mai *MonsterAI) UpdateCombatContext(ctx *core.CombatContext) {
 	mai.combatCtx = ctx
 }
 
+func (mai *MonsterAI) createMonsterLegendaryActionRequest() (*core.AIRequest, error) {
+	if !mai.isLegendary {
+		return nil, fmt.Errorf("monster is not legendary")
+	}
+
+	if mai.parent.EntityState.LegendaryActionPoints == 0 {
+		return nil, fmt.Errorf("monster has no legendary action points")
+	}
+	actionChoiceID := -1
+	var err error
+	legendaryIndexes := mai.getAvailableLegendaryActions(mai.parent.EntityState.LegendaryActionPoints)
+	if len(legendaryIndexes) > 0 {
+		actionChoiceID, err = mai.chooseLegendaryAction(legendaryIndexes)
+	}
+
+	if actionChoiceID != -1 {
+		return mai.buildAIRequest(actionChoiceID, nil, core.ATLegendaryAction)
+	} else {
+		return nil, err
+	}
+}
+
+func (mai *MonsterAI) getAvailableLegendaryActions(legPointsRemaining int) []int {
+	availableIdx := make([]int, 0, len(mai.parent.ActionManager.LegendaryActions))
+	for idx, la := range mai.parent.ActionManager.LegendaryActions {
+		if la.Cost <= legPointsRemaining {
+			availableIdx = append(availableIdx, idx)
+		}
+	}
+	return availableIdx
+}
+
+func (mai *MonsterAI) chooseLegendaryAction(indexes []int) (int, error) {
+	if len(indexes) == 0 {
+		return -1, fmt.Errorf("no legendary actions available")
+	}
+	bestIndex := -1
+	bestAvg := 0
+
+	for _, idx := range indexes {
+		if bestIndex == -1 {
+			bestIndex = idx
+			bestAvg = mai.parent.ActionManager.LegendaryAttackData[idx].Average
+			continue
+		}
+
+		idxAvg := mai.parent.ActionManager.LegendaryAttackData[idx].Average
+		if idxAvg > bestAvg {
+			bestIndex = idx
+			bestAvg = idxAvg
+		}
+	}
+
+	if bestIndex == -1 {
+		return -1, fmt.Errorf("no legendary actions available")
+	}
+
+	return bestIndex, nil
+}
+
 func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error) {
 	// TODO: Need to implement monster healing
 	// TODO: When characters check for healing, are they including themselves?

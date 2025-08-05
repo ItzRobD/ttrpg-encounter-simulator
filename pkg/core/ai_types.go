@@ -15,6 +15,7 @@ type AIRequestType int
 
 const (
 	AIReqChooseAction AIRequestType = iota
+	AIReqLegendaryAction
 )
 
 type AIRequest struct {

@@ -14,7 +14,7 @@ type MonsterActionManager struct {
 	// Raw
 	Actions          map[int]Action        // Key: ActionID; Value: Action
 	Multiattacks     map[int][]Multiattack // Key: Option Index; Value: Slice of ActionIDs and Count
-	LegendaryActions []LegendaryAction
+	LegendaryActions map[int]LegendaryAction
 	SpecialAbilities []SpecialAbility
 	RechargeActions  map[int]uint8
 
@@ -32,7 +32,7 @@ func (mam *MonsterActionManager) GetMulitattacks() map[int][]Multiattack {
 	return mam.Multiattacks
 }
 
-func (mam *MonsterActionManager) GetLegendaryActions() []LegendaryAction {
+func (mam *MonsterActionManager) GetLegendaryActions() map[int]LegendaryAction {
 	return mam.LegendaryActions
 }
 

@@ -642,6 +642,8 @@ func (c *Character) RollInitiative() (int, error) {
 
 func (c *Character) IsCharacter() bool                          { return true }
 func (c *Character) IsMonster() bool                            { return false }
+func (c *Character) GetIsLegendary() bool                       { return false }
+func (c *Character) RefreshLegendaryActions()                   { return }
 func (c *Character) GetEventListener() func(event interface{})  { return c.EventListener }
 func (c *Character) SetEventListener(f func(event interface{})) { c.EventListener = f }
 func (c *Character) IsUnconscious() bool                        { return c.EntityState.GetIsUnconscious() }

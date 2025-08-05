@@ -75,7 +75,7 @@ func (s *SimulationManager) RunSimulation(maxRounds int) error {
 	if err != nil {
 		return err
 	}
-	err = s.combatEngine.RunCombat(maxRounds, s.options)
+	err = s.combatEngine.RunCombat(maxRounds)
 	if err != nil {
 		return err
 	}

@@ -45,6 +45,6 @@ type SpecialAbility struct {
 type MAMConfig struct {
 	Actions          map[int]Action
 	Multiattacks     map[int][]Multiattack
-	LegendaryActions []LegendaryAction
+	LegendaryActions map[int]LegendaryAction
 	SpecialAbilities []SpecialAbility
 }

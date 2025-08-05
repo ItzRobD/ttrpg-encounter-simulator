@@ -15,4 +15,5 @@ type SimulationOptions struct {
 	AOEHitsAllEnemies         bool
 	CharacterHealThresholdPct int
 	MonsterHealThresholdPct   int
+	LimitedLegendaryActions   bool
 }

@@ -360,8 +360,8 @@ func getMonsterMultiattacksByID(ctx context.Context, id []int) (map[int]map[int]
 	return mMAMap, nil
 }
 
-func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int][]LegendaryAction, error) {
-	mLAMap := make(map[int][]LegendaryAction)
+func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int]map[int]LegendaryAction, error) {
+	mLAMap := make(map[int]map[int]LegendaryAction)
 	stmt := SELECT(
 		MonsterActionsLegendary.MonsterID,
 		MonsterActionsLegendary.ActionCost,
@@ -443,7 +443,14 @@ func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int][]Le
 			return nil, fmt.Errorf("failed to scan monster legendary actions by monsterID: %w", err)
 		}
 
-		mLAMap[monsterID] = append(mLAMap[monsterID], la)
+		monster, exists := mLAMap[monsterID]
+		if exists {
+			monster[la.Action.ActionID] = la
+		} else {
+			monster = make(map[int]LegendaryAction)
+			monster[la.Action.ActionID] = la
+			mLAMap[monsterID] = monster
+		}
 	}
 
 	if err := rows.Err(); err != nil {

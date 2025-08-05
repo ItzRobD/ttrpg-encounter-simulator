@@ -22,6 +22,7 @@ type Entity interface {
 	GetSavingThrowBonus(ability Ability) (int, error)
 	IsCharacter() bool
 	IsMonster() bool
+	GetIsLegendary() bool
 	GetHPConfig() HPConfig
 	GetState() interface{}
 	RollInitiative() (int, error)
@@ -39,6 +40,7 @@ type Entity interface {
 	ExecuteAIRequest(req *AIRequest) (*ActionOutcome, error)
 	UpdateAICombatContext(ctx *CombatContext) error
 	ModifyHP(value int, isTemp bool, tempStacking bool) (HPModificationResult, error)
+	RefreshLegendaryActions()
 }
 
 type Combatant struct {

@@ -36,7 +36,51 @@ func main() {
 	//fmt.Println(s)
 
 	frank := setupFrank()
-	testSimulation([]character.CharacterConfig{frank}, []int{28})
+	//jack := setupJack()
+	testSimulation([]character.CharacterConfig{frank}, []int{287})
+}
+
+func setupJack() character.CharacterConfig {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "CanUpcast", true)
+	charConfig := character.CharacterConfig{
+		Name:    "Jack",
+		ClassID: classes.Wizard,
+		Level:   4,
+		AsConfig: core.AbilityScoresConfig{
+			AbilityScores: core.AbilityScores{
+				Strength:     18,
+				Dexterity:    14,
+				Constitution: 16,
+				Intelligence: 10,
+				Wisdom:       12,
+				Charisma:     10,
+			},
+			Proficiencies: core.AbilityScoresProficiencies{
+				Strength:     false,
+				Dexterity:    true,
+				Constitution: false,
+				Intelligence: true,
+				Wisdom:       false,
+				Charisma:     true,
+			},
+		},
+		HPMethod: core.HPSetRoll,
+		HPValue:  0,
+		Seed: core.Seed{
+			Seed1: 0,
+			Seed2: 0,
+		},
+	}
+
+	charConfig.Equipment = character.EquipmentConfig{
+		ArmorID:       5,
+		PrimarySlot:   map[int]bool{22: true},
+		SecondarySlot: nil,
+		RangedSlot:    nil,
+	}
+
+	return charConfig
 }
 
 func setupFrank() character.CharacterConfig {

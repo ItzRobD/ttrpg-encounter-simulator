@@ -41,6 +41,8 @@ func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
 		return ce.executeMonsterAction(req)
 	case core.ATMonsterMultiattack:
 		return ce.executeMonsterMultiattack(req)
+	case core.ATLegendaryAction:
+		return ce.executeMonsterLegendaryAction(req)
 	default:
 		return fmt.Errorf("unknown action type: %v", req.ActionType)
 	}
@@ -80,6 +82,15 @@ func (ce *CombatEngine) executeMonsterAction(aiReq *core.AIRequest) error {
 }
 
 func (ce *CombatEngine) executeMonsterMultiattack(aiReq *core.AIRequest) error {
+	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	if err != nil {
+		return err
+	}
+
+	return ce.processActionResults(results)
+}
+
+func (ce *CombatEngine) executeMonsterLegendaryAction(aiReq *core.AIRequest) error {
 	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
 	if err != nil {
 		return err
@@ -195,7 +206,8 @@ func (ce *CombatEngine) rollInitiativeForAllCombatants() error {
 	return nil
 }
 
-func (ce *CombatEngine) RunCombat(maxRounds int, config core.SimulationOptions) error {
+func (ce *CombatEngine) RunCombat(maxRounds int) error {
+	ce.initializeCombatContext()
 	for round := ce.CurrentRound; round <= maxRounds; round++ {
 		err := ce.SimulateRound()
 		if err != nil {
@@ -208,6 +220,8 @@ func (ce *CombatEngine) RunCombat(maxRounds int, config core.SimulationOptions) 
 }
 
 func (ce *CombatEngine) SimulateRound() error {
+	legIDActedThisRound := make(map[int]bool)
+	ce.refreshLegendaryActions()
 	for _, combatantID := range ce.CombatTracker {
 		ce.updateCombatContext(combatantID)
 		combatant := ce.Combatants[combatantID]
@@ -236,8 +250,38 @@ func (ce *CombatEngine) SimulateRound() error {
 		if err != nil {
 			return err
 		}
+
+		if len(ce.CombatContext.LegendaryCreatures) > 0 {
+			for _, id := range ce.CombatTracker {
+				if ce.isLegendaryCreature(id) && !legIDActedThisRound[id] && id != combatantID {
+					legAIReq, errL := ce.CombatContext.AllCombatants[id].GetEntity().GetAIRequest(id, core.AIReqLegendaryAction)
+					if errL != nil {
+						return errL
+					}
+					errL = ce.ProcessAIRequest(legAIReq)
+					if errL != nil {
+						return errL
+					}
+
+					legIDActedThisRound[id] = true
+
+					if ce.SimOptions.LimitedLegendaryActions {
+						break
+					}
+				}
+			}
+		}
+		// TODO: Multi attack HP modification is only logging one event not for each action
 	}
 	return nil
+}
+
+func (ce *CombatEngine) isLegendaryCreature(id int) bool {
+	if ce.CombatContext.LegendaryCreatures == nil {
+		return false
+	}
+	_, exists := ce.CombatContext.LegendaryCreatures[id]
+	return exists
 }
 
 // Debug function
@@ -266,17 +310,19 @@ func (ce *CombatEngine) processAttackResults(attackResults []core.AttackResult) 
 	return nil
 }
 
-func (ce *CombatEngine) updateCombatContext(actorID int) {
+func (ce *CombatEngine) initializeCombatContext() {
 	if ce.CombatContext == nil {
 		ce.CombatContext = &core.CombatContext{}
 	}
 	if ce.CombatContext.AllCombatants == nil {
 		ce.CombatContext.AllCombatants = make(map[int]*core.Combatant)
 	}
+	if ce.CombatContext.LegendaryCreatures == nil {
+		ce.CombatContext.LegendaryCreatures = make(map[int]uint8)
+	}
 
 	ce.CombatContext.AllCombatants = ce.Combatants
 	ce.CombatContext.CurrentRound = ce.CurrentRound
-	ce.CombatContext.ActingEntityID = actorID
 
 	if ce.SimOptions != nil {
 		ce.CombatContext.AllowCharacterHeals = ce.SimOptions.AllowCharacterHeals
@@ -286,6 +332,19 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 		ce.CombatContext.MonsterHealThresholdPct = ce.SimOptions.MonsterHealThresholdPct
 	}
 
+	for id, combatant := range ce.Combatants {
+		entity := combatant.GetEntity()
+		if entity.IsMonster() && entity.GetIsLegendary() {
+			ce.CombatContext.LegendaryCreatures[id] = 1
+		}
+	}
+}
+
+func (ce *CombatEngine) updateCombatContext(actorID int) {
+	ce.CombatContext.AllCombatants = ce.Combatants
+	ce.CombatContext.CurrentRound = ce.CurrentRound
+	ce.CombatContext.ActingEntityID = actorID
+
 	ce.CombatContext.NeedHealingIDs = ce.calculateEntitiesNeedingHealing()
 
 	for id, combatant := range ce.Combatants {
@@ -293,15 +352,13 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 
 		// Check if combatant is unconscious/defeated
 		if entity.IsUnconscious() {
-			fmt.Println("COMBATANT DOWN!!")
 			// Mark as unable to act but keep in combat for potential revival
 			temp := combatant
 			temp.SetCanAct(false)
 			ce.Combatants[id] = temp
 			ce.CombatContext.AllCombatants[id] = temp
-
 		}
-		fmt.Printf("Can act: %s - %t\n", combatant.GetEntity().GetName(), combatant.GetCanAct())
+
 	}
 
 }
@@ -328,4 +385,14 @@ func (ce *CombatEngine) calculateEntitiesNeedingHealing() []int {
 	}
 
 	return needHealing
+}
+
+func (ce *CombatEngine) refreshLegendaryActions() {
+	if len(ce.CombatContext.LegendaryCreatures) == 0 {
+		return
+	}
+
+	for id, _ := range ce.CombatContext.LegendaryCreatures {
+		ce.Combatants[id].GetEntity().RefreshLegendaryActions()
+	}
 }

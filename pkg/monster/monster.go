@@ -458,9 +458,12 @@ func (m *Monster) RollInitiative() (int, error) {
 	return res.Total, nil
 }
 
-func (m *Monster) IsCharacter() bool { return false }
-func (m *Monster) IsMonster() bool   { return true }
-
+func (m *Monster) IsCharacter() bool    { return false }
+func (m *Monster) IsMonster() bool      { return true }
+func (m *Monster) GetIsLegendary() bool { return m.MonsterBase.IsLegendary }
+func (m *Monster) RefreshLegendaryActions() {
+	m.EntityState.ReplenishLegendaryActionPoints(m.EntityState.LegendaryActionPointsMax)
+}
 func (m *Monster) GetRNG() *rand.Rand  { return m.RNG }
 func (m *Monster) GetID() int          { return m.ID }
 func (m *Monster) InitializeHP() error { return m.setHP(m.HP) }
@@ -506,6 +509,11 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 		if err != nil {
 			return nil, err
 		}
+	case core.AIReqLegendaryAction:
+		req, err = m.AI.createMonsterLegendaryActionRequest()
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return req, fmt.Errorf("invalid AI request type: %s", t)
 	}
@@ -519,7 +527,7 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 
 func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, error) {
 	switch req.ActionType {
-	case core.ATMonsterAction, core.ATMonsterMultiattack, core.ATMonsterSpecial:
+	case core.ATMonsterAction, core.ATMonsterMultiattack, core.ATMonsterSpecial, core.ATLegendaryAction:
 		attackReq, err := m.createAttackRequest(req.Target, req.ActionIndex, req.ActionType, req.Advantage, req.SimOptions)
 		if err != nil {
 			return nil, err
@@ -528,6 +536,12 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		results, err := m.ActionManager.ProcessAttackRequest(attackReq)
 		if err != nil {
 			return nil, err
+		}
+
+		// Legendary actions
+		if req.ActionType == core.ATLegendaryAction {
+			cost := m.ActionManager.LegendaryActions[req.ActionIndex].Cost
+			m.EntityState.ExpendLegendaryActionPoints(cost)
 		}
 
 		var effects []core.Effect
