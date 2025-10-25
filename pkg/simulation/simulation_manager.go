@@ -70,6 +70,7 @@ func (s *SimulationManager) GetCombatEngine() *CombatEngine {
 	return s.combatEngine
 }
 
+// RunSimulation executes a combat simulation for a given maximum number of rounds and returns an error if the simulation fails.
 func (s *SimulationManager) RunSimulation(maxRounds int) error {
 	err := s.combatEngine.SetupCombat()
 	if err != nil {

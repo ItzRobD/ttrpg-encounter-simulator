@@ -219,3 +219,8 @@ func (mam *MonsterActionManager) precomputeAttackData() {
 		mam.LegendaryAttackData[i] = mam.createAttackDataFromAction(la.Action)
 	}
 }
+
+func (mam *MonsterActionManager) HasHealingAbilities() bool {
+	// TODO: Implement this feature when the monster actions database is updated
+	return false
+}

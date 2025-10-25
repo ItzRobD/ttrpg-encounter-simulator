@@ -30,7 +30,7 @@ func (cai *CharacterAI) createCharacterActionRequest() (*core.AIRequest, error) 
 
 	var req core.AIRequest
 	var choice *core.SpellChoice
-	if cai.combatCtx.AllowCharacterHeals && cai.parent.IsHealer() && len(cai.combatCtx.NeedHealingIDs) > 0 {
+	if cai.combatCtx.AllowCharacterHeals && cai.parent.IsHealer() && len(cai.combatCtx.CharactersInNeedOfHealing) > 0 {
 		// choose target
 		targetID, err := cai.selectTargetID(core.TTHealing)
 		if err != nil {

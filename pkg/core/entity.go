@@ -49,6 +49,7 @@ type Combatant struct {
 	CanAct     bool
 }
 
+// NewCombatant creates a new Combatant with the specified Entity and initiative, defaulting CanAct to true.
 func NewCombatant(entity Entity, initiative int) *Combatant {
 	return &Combatant{entity, initiative, true}
 }

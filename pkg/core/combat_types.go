@@ -381,15 +381,16 @@ func (ao AttackOptions) GetIsImprovedCritical() bool   { return ao.ImprovedCriti
 func (ao AttackOptions) GetTreatOnesAsTwos() bool      { return ao.RerollOnesAndTwos }
 
 type CombatContext struct {
-	AllCombatants      map[int]*Combatant
-	LegendaryCreatures map[int]uint8
-	NeedHealingIDs     []int
-	CurrentRound       int
-	ActingEntityID     int
+	AllCombatants             map[int]*Combatant
+	LegendaryCreatures        map[int]uint8
+	CharactersInNeedOfHealing []int
+	MonstersInNeedOfHealing   []int
+	CurrentRound              int
+	ActingEntityID            int
 
 	// Combat options
 	AllowCharacterHeals       bool
-	AllMonsterHeals           bool
+	AllowMonsterHeals         bool
 	AOEHitsAllEnemies         bool
 	CharacterHealThresholdPct int
 	MonsterHealThresholdPct   int

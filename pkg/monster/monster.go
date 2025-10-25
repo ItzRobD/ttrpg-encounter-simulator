@@ -505,9 +505,21 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 	var err error
 	switch t {
 	case core.AIReqChooseAction:
-		req, err = m.AI.createMonsterDamageActionRequest()
+		var actionChoice core.ActionType
+		actionChoice, err = m.AI.chooseMonsterActionType()
 		if err != nil {
 			return nil, err
+		}
+		if actionChoice == core.ATMonsterHeal {
+			req, err = m.AI.createMonsterHealActionRequest()
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			req, err = m.AI.createMonsterDamageActionRequest()
+			if err != nil {
+				return nil, err
+			}
 		}
 	case core.AIReqLegendaryAction:
 		req, err = m.AI.createMonsterLegendaryActionRequest()

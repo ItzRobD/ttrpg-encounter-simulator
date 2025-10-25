@@ -117,6 +117,10 @@ func (mai *MonsterAI) chooseLegendaryAction(indexes []int) (int, error) {
 	return bestIndex, nil
 }
 
+func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) {
+	// TODO : Create healing req
+}
+
 func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error) {
 	// TODO: Need to implement monster healing
 	// TODO: When characters check for healing, are they including themselves?
@@ -442,4 +446,14 @@ func (mai *MonsterAI) getActionIDs() []int {
 		actionIDs = append(actionIDs, idx)
 	}
 	return actionIDs
+}
+
+func (mai *MonsterAI) chooseMonsterActionType() (core.ActionType, error) {
+	if mai.combatCtx.AllowMonsterHeals {
+		if (mai.parent.SpellCastingManager.HasHealingSpells() || mai.parent.ActionManager.HasHealingAbilities()) && len(mai.combatCtx.MonstersInNeedOfHealing) > 0 {
+			return core.ATMonsterHeal, nil
+		}
+	}
+
+	return core.ATMonsterDamage, nil
 }

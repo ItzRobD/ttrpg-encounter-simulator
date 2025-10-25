@@ -176,6 +176,8 @@ const (
 	ATSpell                         = "spell attack"
 	ATHeal                          = "healing"
 	ATUnarmed                       = "unarmed attack"
+	ATMonsterHeal                   = "monster heal"
+	ATMonsterDamage                 = "monster damage"
 	ATMonsterAction                 = "monster action"
 	ATMonsterMultiattack            = "monster multiattack"
 	ATLegendaryAction               = "legendary action"

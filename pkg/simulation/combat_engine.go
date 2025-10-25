@@ -151,6 +151,8 @@ func (ce *CombatEngine) AddCombatant(c *core.Combatant) {
 	ce.Combatants[len(ce.Combatants)] = c
 }
 
+// SetupCombat initializes the combat by resetting the current round, rolling initiatives, and updating combatants and the tracker.
+// Returns an error if combatants are missing or if an issue occurs during initiative rolling or tracker setup.
 func (ce *CombatEngine) SetupCombat() error {
 	ce.CurrentRound = 0
 
@@ -206,6 +208,8 @@ func (ce *CombatEngine) rollInitiativeForAllCombatants() error {
 	return nil
 }
 
+// RunCombat executes combat rounds for a maximum of maxRounds and handles the progression of the combat state.
+// Returns an error if any issue occurs during round simulation.
 func (ce *CombatEngine) RunCombat(maxRounds int) error {
 	ce.initializeCombatContext()
 	for round := ce.CurrentRound; round <= maxRounds; round++ {
@@ -219,6 +223,9 @@ func (ce *CombatEngine) RunCombat(maxRounds int) error {
 	return nil
 }
 
+// SimulateRound executes a single round of combat, processing AI decisions and actions for all combatants in the tracker.
+// It also manages legendary actions, ensuring legendary creatures can act within the constraints of the combat rules.
+// Returns an error if any part of the simulation encounters a failure.
 func (ce *CombatEngine) SimulateRound() error {
 	legIDActedThisRound := make(map[int]bool)
 	ce.refreshLegendaryActions()
@@ -230,9 +237,13 @@ func (ce *CombatEngine) SimulateRound() error {
 			continue // Skip unconscious combatants
 		}
 
-		//if combatant.GetEntity().IsMonster() {
-		//	continue
-		//}
+		if combatant.GetEntity().IsMonster() {
+			// Handle Monster Specific Actions
+
+		} else if combatant.GetEntity().IsCharacter() {
+			// Handle Character Specific Actions
+
+		}
 
 		// Update Combatant's AI Context
 		err := combatant.GetEntity().UpdateAICombatContext(ce.CombatContext)
@@ -310,6 +321,7 @@ func (ce *CombatEngine) processAttackResults(attackResults []core.AttackResult) 
 	return nil
 }
 
+// initializeCombatContext initializes the combat context by setting up combatants, rounds, and relevant configuration values.
 func (ce *CombatEngine) initializeCombatContext() {
 	if ce.CombatContext == nil {
 		ce.CombatContext = &core.CombatContext{}
@@ -326,7 +338,7 @@ func (ce *CombatEngine) initializeCombatContext() {
 
 	if ce.SimOptions != nil {
 		ce.CombatContext.AllowCharacterHeals = ce.SimOptions.AllowCharacterHeals
-		ce.CombatContext.AllMonsterHeals = ce.SimOptions.AllowMonsterHeals
+		ce.CombatContext.AllowMonsterHeals = ce.SimOptions.AllowMonsterHeals
 		ce.CombatContext.AOEHitsAllEnemies = ce.SimOptions.AOEHitsAllEnemies
 		ce.CombatContext.CharacterHealThresholdPct = ce.SimOptions.CharacterHealThresholdPct
 		ce.CombatContext.MonsterHealThresholdPct = ce.SimOptions.MonsterHealThresholdPct
@@ -345,7 +357,7 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 	ce.CombatContext.CurrentRound = ce.CurrentRound
 	ce.CombatContext.ActingEntityID = actorID
 
-	ce.CombatContext.NeedHealingIDs = ce.calculateEntitiesNeedingHealing()
+	ce.CombatContext.CharactersInNeedOfHealing, ce.CombatContext.MonstersInNeedOfHealing = ce.calculateEntitiesNeedingHealing()
 
 	for id, combatant := range ce.Combatants {
 		entity := combatant.GetEntity()
@@ -363,8 +375,9 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 
 }
 
-func (ce *CombatEngine) calculateEntitiesNeedingHealing() []int {
-	var needHealing []int
+func (ce *CombatEngine) calculateEntitiesNeedingHealing() ([]int, []int) {
+	var charNeedHealing []int
+	var monNeedHealing []int
 
 	for id, combatant := range ce.Combatants {
 		entity := combatant.GetEntity()
@@ -380,13 +393,18 @@ func (ce *CombatEngine) calculateEntitiesNeedingHealing() []int {
 		// Entity needs healing if below threshold and not unconscious
 		// TODO: Unconscious can get healed to no longer be unconscious
 		if entity.GetHPStatus().GetHPPct() <= threshold && !entity.IsUnconscious() {
-			needHealing = append(needHealing, id)
+			if entity.IsCharacter() {
+				charNeedHealing = append(charNeedHealing, id)
+			} else {
+				monNeedHealing = append(monNeedHealing, id)
+			}
 		}
 	}
 
-	return needHealing
+	return charNeedHealing, monNeedHealing
 }
 
+// refreshLegendaryActions resets the legendary action count for all legendary creatures in the combat context.
 func (ce *CombatEngine) refreshLegendaryActions() {
 	if len(ce.CombatContext.LegendaryCreatures) == 0 {
 		return
