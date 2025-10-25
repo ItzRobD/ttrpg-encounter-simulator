@@ -47,6 +47,7 @@ type Combatant struct {
 	Entity     Entity
 	Initiative int
 	CanAct     bool
+	IsLair     bool
 }
 
 // NewCombatant creates a new Combatant with the specified Entity and initiative, defaulting CanAct to true.

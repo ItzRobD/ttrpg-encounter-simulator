@@ -175,6 +175,7 @@ func (ce *CombatEngine) SetupCombat() error {
 	return ce.setupCombatTracker()
 }
 
+// setupCombatTracker initializes and sorts the combat tracker based on initiative, dexterity, and ID order of combatants.
 func (ce *CombatEngine) setupCombatTracker() error {
 	ce.CombatTracker = make([]int, 0, len(ce.Combatants))
 	for id := range ce.Combatants {
@@ -188,10 +189,50 @@ func (ce *CombatEngine) setupCombatTracker() error {
 		initI := ce.Combatants[idxI].GetInitiative()
 		initJ := ce.Combatants[idxJ].GetInitiative()
 
-		return initI > initJ
-	})
+		if initI != initJ {
+			return initI > initJ
+		}
 
+		// If initiative is the same, sort by dexterity modifier
+		dexI, err := ce.Combatants[idxI].GetEntity().GetAbilityScoreModifier(core.AbilityDexterity)
+		if err != nil {
+			return false
+		}
+		dexJ, err := ce.Combatants[idxJ].GetEntity().GetAbilityScoreModifier(core.AbilityDexterity)
+		if err != nil {
+			return false
+		}
+
+		if dexI != dexJ {
+			return dexI > dexJ
+		}
+
+		// If dexterity is the same, sort by ID
+		return idxI < idxJ
+	})
 	return nil
+}
+
+// insertLairCombatant adds a dummy lair combatant with fixed initiative to the combat tracker, maintaining initiative order.
+func (ce *CombatEngine) insertLairCombatant() {
+	insertIdx := 0
+	for i, id := range ce.CombatTracker {
+		if ce.Combatants[id].GetInitiative() >= 20 {
+			insertIdx = i + 1
+		} else {
+			break
+		}
+	}
+
+	lairCombatant := core.Combatant{
+		Entity:     nil,
+		Initiative: 20,
+		CanAct:     true,
+		IsLair:     true,
+	}
+	lairID := -1 // Lair will never be targeted
+	ce.Combatants[lairID] = &lairCombatant
+	ce.CombatTracker = append(ce.CombatTracker[:insertIdx], append([]int{lairID}, ce.CombatTracker[insertIdx:]...)...)
 }
 
 func (ce *CombatEngine) rollInitiativeForAllCombatants() error {
