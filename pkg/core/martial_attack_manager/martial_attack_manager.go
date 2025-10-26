@@ -73,15 +73,12 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) (
 				cT = 19
 			}
 
-			rollOpts := roll_manager.RollOptions{
-				Advantage: req.AttackOptions.Advantage,
-				Modifier:  attackMod,
-				//RerollAbilities:   mam.rollManager.RerollAbilities,
-				CriticalThreshold: cT,
-				TreatOnesAsTwos:   false,
-				RollType:          core.DiceRollAttack,
-				TargetValue:       req.Target.GetAC(),
-			}
+			rollOpts := roll_manager.NewRollOptions()
+			rollOpts.Advantage = req.AttackOptions.Advantage
+			rollOpts.Modifier = attackMod
+			rollOpts.CriticalThreshold = cT
+			rollOpts.RollType = core.DiceRollAttack
+			rollOpts.TargetValue = req.Target.GetAC()
 
 			//attackRollResult, err := mam.rollManager.RollD20(rollOpts)
 			attackRollResult, err := mam.rollManager.RollAttack(rollOpts)
@@ -90,14 +87,9 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) (
 			}
 
 			// roll damage
-			rollOpts = roll_manager.RollOptions{
-				Advantage:         core.RollNormal,
-				Modifier:          0,     // Set within damage function
-				CriticalThreshold: 0,     // Not relevant to damage function
-				TreatOnesAsTwos:   false, // Not relevant
-				RollType:          core.DiceRollDamage,
-				TargetValue:       0, // Not relevant
-			}
+			rollOpts = roll_manager.NewRollOptions()
+			rollOpts.RollType = core.DiceRollDamage
+
 			dmgRollResult, err := mam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, rollOpts)
 			if err != nil {
 				return nil, err

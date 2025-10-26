@@ -33,10 +33,21 @@ type RollOptions struct {
 	TargetValue int
 }
 
+// NewRollOptions initializes and returns a default RollOptions instance with predefined values for roll settings.
+// Advantage: Normal
+// Modifier: 0
+// Critical Threshold: 20
+// TreatOnesAsTwos: false
+// RollType: ""
+// TargetValue: 0;
 func NewRollOptions() RollOptions {
 	return RollOptions{
 		Advantage:         core.RollNormal,
+		Modifier:          0,
 		CriticalThreshold: 20,
+		TreatOnesAsTwos:   false,
+		RollType:          "",
+		TargetValue:       0,
 	}
 }
 
@@ -131,14 +142,14 @@ func NewRollManager(parent core.Entity, abilities RerollAbilities) *RollManager 
 	return &rm
 }
 
-// RollD20 rolls a single D20 die with options for advantage, disadvantage, modifiers, and halfling lucky re-rolls.
-// Options required: Advantage, Critical Threshold
+// RollD20 performs a d20 roll based on the given options, handles advantage/disadvantage, and calculates the final result.
 func (rm *RollManager) RollD20(options RollOptions, shouldLogEvent bool) (*RollResult, error) {
 	var res RollResult // Single return value
 	res.Advantage = options.Advantage
 	res.Modifier = options.Modifier
 	res.NumberOfDice = 1
 	res.Die = core.D20
+	res.DiceRollType = options.RollType
 
 	// Handle d20 rolls with advantage/disadvantage
 	switch options.Advantage {
@@ -159,7 +170,8 @@ func (rm *RollManager) RollD20(options RollOptions, shouldLogEvent bool) (*RollR
 	// Apply Halfling Lucky
 	canUseLucky := options.RollType == core.DiceRollAttack ||
 		options.RollType == core.DiceRollSavingThrow ||
-		options.RollType == core.DiceRollAbilityCheck
+		options.RollType == core.DiceRollAbilityCheck ||
+		options.RollType == core.DiceRollDeathSavingThrow
 	if containsOnes(res.OriginalRolls) && canUseLucky {
 		newRolls, rEvents := rm.applyHalflingLucky(res.OriginalRolls, core.D20)
 		if len(rEvents) > 0 {
@@ -176,6 +188,8 @@ func (rm *RollManager) RollD20(options RollOptions, shouldLogEvent bool) (*RollR
 	if res.FinalRollValue >= options.CriticalThreshold {
 		res.IsCritical = true
 	}
+
+	rm.calculateSuccess(&res, options)
 
 	// Log all events
 	if shouldLogEvent {
@@ -420,11 +434,10 @@ func (rm *RollManager) RollHP(config core.HPConfig) (*RollResult, error) {
 			config.NumberOfDice, config.HitDie)
 	}
 	var res RollResult
-	options := RollOptions{
-		RollType:  core.DiceRollHP,
-		Advantage: core.RollNormal,
-		Modifier:  config.Modifier,
-	}
+	options := NewRollOptions()
+	options.Advantage = core.RollNormal
+	options.Modifier = config.Modifier
+	options.RollType = core.DiceRollHP
 
 	if rm.parent.IsCharacter() {
 		res = rm.rollCharacterHP(config, options)
@@ -437,6 +450,7 @@ func (rm *RollManager) RollHP(config core.HPConfig) (*RollResult, error) {
 	return &res, nil
 }
 
+// UseLuckyReroll attempts to use a lucky reroll, decrementing the remaining count and returning true if available.
 func (rm *RollManager) UseLuckyReroll() bool {
 	if rm.luckyUsesRemaining > 0 {
 		rm.luckyUsesRemaining--
@@ -445,8 +459,24 @@ func (rm *RollManager) UseLuckyReroll() bool {
 	return false
 }
 
+// RestoreLuckyUses resets the count of lucky uses available to the default value of 3.
 func (rm *RollManager) RestoreLuckyUses() {
 	rm.luckyUsesRemaining = 3
+}
+
+// RollDeathSavingThrow performs a death saving throw roll using a D20 based on specified roll options.
+// Returns the result of the roll or an error if the roll could not be completed.
+func (rm *RollManager) RollDeathSavingThrow() (*RollResult, error) {
+	opts := NewRollOptions()
+	opts.Advantage = core.RollNormal
+	opts.RollType = core.DiceRollDeathSavingThrow
+	opts.TargetValue = 10
+	res, err := rm.RollD20(opts, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to roll death saving throw: %w", err)
+	}
+
+	return res, nil
 }
 
 // rollCharacterHP calculates and returns the HP roll result for a character based on level, hit die, and modifiers.
@@ -561,7 +591,8 @@ func (rm *RollManager) applyGreatWeaponFighting(rolls []int, die core.DiceType) 
 	return newRolls, rerollEvents
 }
 
-// applyHalflingLucky applies the Halfling Lucky trait to reroll dice rolls of 1, returning the updated rolls and reroll events.
+// applyHalflingLucky adjusts the rolls by applying the Halfling Lucky feature, rerolling a single roll of 1 per dice set.
+// It returns the updated rolls and a list of reroll events detailing the changes made, if any.
 func (rm *RollManager) applyHalflingLucky(rolls []int, die core.DiceType) ([]int, []RerollEvent) {
 	if !rm.RerollAbilities.HasHalflingLucky {
 		return nil, nil
@@ -584,8 +615,8 @@ func (rm *RollManager) applyHalflingLucky(rolls []int, die core.DiceType) ([]int
 				Die:          die,
 				RerollType:   RerollHalflingLucky,
 			})
+			break
 		}
-		break
 	}
 
 	return newRolls, rerollEvents

@@ -95,14 +95,11 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int) (core.R
 		return nil, err
 	}
 
-	opts := roll_manager.RollOptions{
-		Advantage:         core.RollNormal, // TODO: Will monsters ever have advantage? Features apply this
-		Modifier:          mod,
-		CriticalThreshold: 0,     // Not relevant
-		TreatOnesAsTwos:   false, // Not relevant
-		RollType:          core.DiceRollSavingThrow,
-		TargetValue:       targetValue,
-	}
+	opts := roll_manager.NewRollOptions()
+	// TODO: Will monsters ever have advantage? Features apply this
+	opts.Modifier = mod
+	opts.RollType = core.DiceRollSavingThrow
+	opts.TargetValue = targetValue
 
 	res, err := m.RollManager.RollSavingThrow(ability, opts)
 	if err != nil {

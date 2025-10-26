@@ -1,6 +1,7 @@
 package simulation
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
@@ -272,7 +273,10 @@ func (ce *CombatEngine) RunCombat(maxRounds int) error {
 // Returns an error if any part of the simulation encounters a failure.
 func (ce *CombatEngine) SimulateRound() error {
 	legIDActedThisRound := make(map[int]bool)
-	ce.roundStartEvents()
+	err := ce.roundStartEvents()
+	if err != nil {
+		return fmt.Errorf("failed to execute round start events: %v", err)
+	}
 	for _, combatantID := range ce.CombatTracker {
 		ce.updateCombatContext(combatantID)
 		combatant := ce.Combatants[combatantID]
@@ -471,9 +475,9 @@ func (ce *CombatEngine) roundStartEvents() error {
 }
 
 func (ce *CombatEngine) rollRechargeAbilities() error {
-	for _, e := range ce.Combatants {
-		if e.GetEntity().IsMonster() {
-			m, ok := e.GetEntity().(*monster.Monster)
+	for _, c := range ce.Combatants {
+		if c.GetEntity().IsMonster() {
+			m, ok := c.GetEntity().(*monster.Monster)
 			if !ok {
 				return fmt.Errorf("entity is monster but type assertion failed")
 			}
@@ -481,5 +485,36 @@ func (ce *CombatEngine) rollRechargeAbilities() error {
 			m.ActionManager.RollRechargeActions()
 		}
 	}
+	return nil
+}
+
+func (ce *CombatEngine) turnStartEvents(combatantID int) error {
+	combatant := ce.Combatants[combatantID]
+	entity := combatant.GetEntity()
+
+	// Character Specific Events
+	if entity.IsCharacter() {
+		c, ok := entity.(*character.Character)
+		if !ok {
+			return fmt.Errorf("entity is character but type assertion failed")
+		}
+
+		// Death Saves
+		if c.EntityState.GetIsUnconscious() && !c.EntityState.IsStable && !c.EntityState.IsDead {
+			res, err := c.RollManager.RollDeathSavingThrow()
+			if err != nil {
+				return fmt.Errorf("failed to roll death saving throw: %v", err)
+			}
+			err = c.EntityState.ApplyDeathSavingThrowResult(res)
+			if err != nil {
+				return fmt.Errorf("failed to apply death saving throw result: %v", err)
+			}
+		}
+
+		if !c.EntityState.IsDead && !c.EntityState.GetIsUnconscious() {
+			c.EntityState.RefreshActions()
+		}
+	}
+
 	return nil
 }

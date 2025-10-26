@@ -72,14 +72,9 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 		}
 
 		// Damage Roll
-		rollOpts := roll_manager.RollOptions{
-			Advantage:         core.RollNormal,
-			Modifier:          0,
-			CriticalThreshold: 0,                                // Not relevant to damage function
-			TreatOnesAsTwos:   req.SpellOptions.TreatOnesAsTwos, // TODO: Does this make sense to pull from options
-			RollType:          core.DiceRollDamage,
-			TargetValue:       0, // Not relevant
-		}
+		rollOpts := roll_manager.NewRollOptions()
+		rollOpts.TreatOnesAsTwos = req.SpellOptions.TreatOnesAsTwos
+		rollOpts.RollType = core.DiceRollDamage
 
 		dmgRollResult, err := scm.rollManager.RollSpellValue(req, false, rollOpts)
 		if err != nil {
@@ -125,14 +120,13 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			cT = 19
 		}
 
-		rollOpts := roll_manager.RollOptions{
-			Advantage:         req.SpellOptions.Advantage,
-			Modifier:          attackMod,
-			CriticalThreshold: cT,
-			TreatOnesAsTwos:   req.SpellOptions.TreatOnesAsTwos, // Not relevant to the attack roll
-			RollType:          core.DiceRollAttack,
-			TargetValue:       req.Target.GetAC(),
-		}
+		rollOpts := roll_manager.NewRollOptions()
+		rollOpts.Advantage = req.SpellOptions.Advantage
+		rollOpts.Modifier = attackMod
+		rollOpts.CriticalThreshold = cT
+		rollOpts.TreatOnesAsTwos = req.SpellOptions.TreatOnesAsTwos
+		rollOpts.RollType = core.DiceRollAttack
+		rollOpts.TargetValue = req.Target.GetAC()
 
 		attackRollResult, err := scm.rollManager.RollD20(rollOpts, false)
 		if err != nil {
@@ -140,14 +134,9 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 		}
 
 		// Damage Roll
-		rollOpts = roll_manager.RollOptions{
-			Advantage:         core.RollNormal,
-			Modifier:          0,
-			CriticalThreshold: 0,                                // Not relevant to damage function
-			TreatOnesAsTwos:   req.SpellOptions.TreatOnesAsTwos, // TODO: Does this make sense to pull from options
-			RollType:          core.DiceRollDamage,
-			TargetValue:       0, // Not relevant
-		}
+		rollOpts = roll_manager.NewRollOptions()
+		rollOpts.TreatOnesAsTwos = req.SpellOptions.TreatOnesAsTwos
+		rollOpts.RollType = core.DiceRollDamage
 
 		dmgRollResult, err := scm.rollManager.RollSpellValue(req, attackRollResult.IsCritical, rollOpts)
 		if err != nil {
@@ -203,9 +192,8 @@ func (scm *SpellcastingManager) castHealingSpell(req *SpellCastRequest) (*SpellR
 		DamageType:       "",
 	}
 
-	opts := roll_manager.RollOptions{
-		RollType: core.DiceRollHealing,
-	}
+	opts := roll_manager.NewRollOptions()
+	opts.RollType = core.DiceRollHealing
 
 	healRollResult, err := scm.rollManager.RollSpellValue(req, false, opts)
 	if err != nil {

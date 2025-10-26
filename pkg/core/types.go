@@ -58,8 +58,8 @@ func (ds *DeathSaves) AddSuccess() {
 	ds.SaveSuccess++
 }
 
-func (ds *DeathSaves) AddFailure(crit bool) {
-	if crit {
+func (ds *DeathSaves) AddFailure(addDouble bool) {
+	if addDouble {
 		ds.SaveFailure += 2
 	} else {
 		ds.SaveFailure++

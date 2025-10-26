@@ -99,14 +99,11 @@ func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int) (core
 		return nil, err
 	}
 
-	opts := roll_manager.RollOptions{
-		Advantage:         core.RollNormal, // TODO: Determining advantage needs to be handled ie racial traits
-		Modifier:          mod,
-		CriticalThreshold: 0,     // Not relevant
-		TreatOnesAsTwos:   false, // Not relevant
-		RollType:          core.DiceRollSavingThrow,
-		TargetValue:       targetValue,
-	}
+	opts := roll_manager.NewRollOptions()
+	// TODO: Determining advantage needs to be handled ie racial traits
+	opts.Modifier = mod
+	opts.RollType = core.DiceRollSavingThrow
+	opts.TargetValue = targetValue
 
 	res, err := c.RollManager.RollSavingThrow(ability, opts)
 	if err != nil {

@@ -57,6 +57,7 @@ type EntityStateManager struct {
 	// Action Economy
 	HasUsedAction            bool
 	HasUsedBonusAction       bool
+	HasUsedReaction          bool
 	LegendaryActionPoints    int
 	LegendaryActionPointsMax int
 	NumberOfAttacks          int
@@ -65,6 +66,9 @@ type EntityStateManager struct {
 	// Conditions
 	Conditions core.EntityConditions
 	DeathSaves core.DeathSaves
+	IsStable   bool
+	IsDead     bool
+
 	Initiative int
 
 	// Preferences
@@ -79,6 +83,179 @@ type EntityStateManager struct {
 	Resistances         core.DamageResistances
 }
 
+func (esm *EntityStateManager) ExpendAction() {
+	esm.HasUsedAction = true
+}
+
+func (esm *EntityStateManager) ExpendBonusAction() {
+	esm.HasUsedBonusAction = true
+}
+
+func (esm *EntityStateManager) ExpendReaction() {
+	esm.HasUsedReaction = true
+}
+
+func (esm *EntityStateManager) ReplenishAction() {
+	esm.HasUsedAction = false
+}
+
+func (esm *EntityStateManager) ReplenishBonusAction() {
+	esm.HasUsedBonusAction = false
+}
+
+func (esm *EntityStateManager) ReplenishReaction() {
+	esm.HasUsedReaction = false
+}
+
+func (esm *EntityStateManager) RefreshActions() {
+	esm.HasUsedAction = false
+	esm.HasUsedBonusAction = false
+	esm.HasUsedReaction = false
+	esm.LegendaryActionPoints = esm.LegendaryActionPointsMax
+}
+
+func (esm *EntityStateManager) CanTakeActions() bool {
+	// Conditions that prevent ALL actions
+	if esm.Conditions.Has(core.ConditionIncapacitated) ||
+		esm.Conditions.Has(core.ConditionStunned) ||
+		esm.Conditions.Has(core.ConditionParalyzed) ||
+		esm.Conditions.Has(core.ConditionPetrified) ||
+		esm.Conditions.Has(core.ConditionUnconscious) ||
+		esm.IsDead {
+		return false
+	}
+
+	// Check if any action economy is available
+	return !esm.HasUsedAction || !esm.HasUsedBonusAction || esm.LegendaryActionPoints > 0
+}
+
+func (esm *EntityStateManager) ExpendLegendaryActionPoints(value int) error {
+	if value > esm.LegendaryActionPoints {
+		return fmt.Errorf("cannot expend more legendary action points than available")
+	}
+	esm.LegendaryActionPoints -= value
+	return nil
+}
+
+func (esm *EntityStateManager) ReplenishLegendaryActionPoints(value int) {
+	esm.LegendaryActionPoints = max(esm.LegendaryActionPoints+value, esm.LegendaryActionPointsMax)
+}
+
+func (esm *EntityStateManager) GetNumberOfAttacks() int {
+	return esm.NumberOfAttacks
+}
+
+func (esm *EntityStateManager) SetNumberOfExtraAttacks(value int) {
+	esm.NumberOfAttacks = value
+}
+
+func (esm *EntityStateManager) SetActionPreference(p core.ActionPreference) {
+	esm.ActionPreference = p
+}
+
+func (esm *EntityStateManager) GetActionPreference() core.ActionPreference {
+	return esm.ActionPreference
+}
+
+func (esm *EntityStateManager) SetVersatileWeaponPreference(p core.VersatileWeaponPreference) {
+	esm.VersatileWeaponPreference = p
+}
+
+func (esm *EntityStateManager) GetVersatileWeaponPreference() core.VersatileWeaponPreference {
+	return esm.VersatileWeaponPreference
+}
+
+func (esm *EntityStateManager) SetTargetPrioritization(p core.TargetPriority) {
+	esm.TargetPrioritization = p
+}
+
+func (esm *EntityStateManager) GetTargetPrioritization() core.TargetPriority {
+	return esm.TargetPrioritization
+}
+
+func (esm *EntityStateManager) SetSpellcastingPriority(p core.SpellPriority) {
+	esm.SpellcastingPriority = p
+}
+
+func (esm *EntityStateManager) GetSpellcastingPriority() core.SpellPriority {
+	return esm.SpellcastingPriority
+}
+
+func (esm *EntityStateManager) SetInitiativeAdvantage(a core.AdvantageType) {
+	esm.InitiativeAdvantage = a
+}
+
+func (esm *EntityStateManager) SetInitiative(value int) { esm.Initiative = value }
+
+func (esm *EntityStateManager) GetInitiative() int { return esm.Initiative }
+
+func (esm *EntityStateManager) GetInitiativeAdvantage() core.AdvantageType {
+	return esm.InitiativeAdvantage
+}
+
+func (esm *EntityStateManager) SetInitiativeBonus(b int) {
+	esm.InitiativeBonus = b
+}
+
+func (esm *EntityStateManager) GetInitiativeBonus() int {
+	return esm.InitiativeBonus
+}
+
+// Conditions functions
+
+func (esm *EntityStateManager) AddCondition(c core.Condition) {
+	if c == core.ConditionUnconscious {
+		esm.SetUnconscious(true)
+	} else {
+		esm.Conditions.Add(c)
+	}
+}
+
+func (esm *EntityStateManager) RemoveCondition(c core.Condition) {
+	esm.Conditions.Remove(c)
+}
+
+func (esm *EntityStateManager) HasCondition(c core.Condition) bool {
+	return esm.Conditions.Has(c)
+}
+
+func (esm *EntityStateManager) GetConditions() core.EntityConditions {
+	return esm.Conditions
+}
+
+func (esm *EntityStateManager) GetActiveConditions() []core.Condition {
+	return esm.Conditions.GetActive()
+}
+
+func (esm *EntityStateManager) ResetConditions() {
+	esm.Conditions.Clear()
+}
+
+func (esm *EntityStateManager) SetUnconscious(isUnconscious bool) {
+	if isUnconscious {
+		esm.AddCondition(core.ConditionUnconscious)
+		esm.AddCondition(core.ConditionProne)
+	} else {
+		esm.RemoveCondition(core.ConditionUnconscious)
+	}
+}
+
+// GetIsUnconscious determines if the entity is unconscious based on its conditions or current health points.
+func (esm *EntityStateManager) GetIsUnconscious() bool {
+	return esm.Conditions.Has(core.ConditionUnconscious) || esm.CurrentHP <= 0
+}
+
+func (esm *EntityStateManager) GetIsStable() bool {
+	return esm.IsStable
+}
+
+// HP Functions
+
+func (esm *EntityStateManager) ResetHP() {
+	esm.CurrentHP = esm.MaxHP
+	esm.TempHP = 0
+}
+
 func (esm *EntityStateManager) SetHPValues(hp HPValues) {
 	esm.CurrentHP = hp.GetHP()
 	esm.MaxHP = hp.GetMaxHP()
@@ -90,9 +267,7 @@ func (esm *EntityStateManager) GetHitDie() core.DiceType {
 	return esm.HitDie
 }
 
-func (esm *EntityStateManager) SetHitDie(d core.DiceType) {
-	esm.HitDie = d
-}
+func (esm *EntityStateManager) SetHitDie(d core.DiceType) { esm.HitDie = d }
 
 func (esm *EntityStateManager) GetCurrentHP() int {
 	return esm.CurrentHP
@@ -104,10 +279,6 @@ func (esm *EntityStateManager) GetMaxHP() int {
 
 func (esm *EntityStateManager) GetTempHP() int {
 	return esm.TempHP
-}
-
-func (esm *EntityStateManager) GetIsUnconscious() bool {
-	return esm.CurrentHP <= 0
 }
 
 func (esm *EntityStateManager) GetIsMaxHealth() bool {
@@ -180,133 +351,19 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 
 	// TODO: Should this be handled within the manager during hp changes?
 	if res.IsUnconscious {
-		esm.AddCondition(core.ConditionUnconscious)
+		esm.SetUnconscious(true)
 	}
 
 	return res, nil
 }
 
-func (esm *EntityStateManager) ExpendAction() {
-	esm.HasUsedAction = true
-}
-
-func (esm *EntityStateManager) ExpendBonusAction() {
-	esm.HasUsedBonusAction = true
-}
-
-func (esm *EntityStateManager) ReplenishAction() {
-	esm.HasUsedAction = false
-}
-
-func (esm *EntityStateManager) ReplenishBonusAction() {
-	esm.HasUsedBonusAction = false
-}
-
-func (esm *EntityStateManager) CanTakeActions() bool {
-	return !esm.HasUsedAction || !esm.HasUsedBonusAction || esm.LegendaryActionPoints > 0
-}
-
-func (esm *EntityStateManager) ExpendLegendaryActionPoints(value int) error {
-	if value > esm.LegendaryActionPoints {
-		return fmt.Errorf("cannot expend more legendary action points than available")
+// CheckMassiveDamage determines if the entity has taken damage exceeding its maximum HP in the negative range.
+// Returns true if the entity's current HP is less than or equal to the negative value of its maximum HP.
+func (esm *EntityStateManager) CheckMassiveDamage() bool {
+	if esm.CurrentHP <= -esm.MaxHP {
+		return true
 	}
-	esm.LegendaryActionPoints -= value
-	return nil
-}
-
-func (esm *EntityStateManager) ReplenishLegendaryActionPoints(value int) {
-	esm.LegendaryActionPoints = max(esm.LegendaryActionPoints+value, esm.LegendaryActionPointsMax)
-}
-
-func (esm *EntityStateManager) GetNumberOfAttacks() int {
-	return esm.NumberOfAttacks
-}
-
-func (esm *EntityStateManager) SetNumberOfExtraAttacks(value int) {
-	esm.NumberOfAttacks = value
-}
-
-func (esm *EntityStateManager) AddCondition(c core.Condition) {
-	esm.Conditions[c] = true
-}
-
-func (esm *EntityStateManager) RemoveCondition(c core.Condition) {
-	esm.Conditions[c] = false
-}
-
-func (esm *EntityStateManager) HasCondition(c core.Condition) bool {
-	return esm.Conditions[c]
-}
-
-func (esm *EntityStateManager) GetConditions() core.EntityConditions {
-	return esm.Conditions
-}
-
-func (esm *EntityStateManager) SetActionPreference(p core.ActionPreference) {
-	esm.ActionPreference = p
-}
-
-func (esm *EntityStateManager) GetActionPreference() core.ActionPreference {
-	return esm.ActionPreference
-}
-
-func (esm *EntityStateManager) SetVersatileWeaponPreference(p core.VersatileWeaponPreference) {
-	esm.VersatileWeaponPreference = p
-}
-
-func (esm *EntityStateManager) GetVersatileWeaponPreference() core.VersatileWeaponPreference {
-	return esm.VersatileWeaponPreference
-}
-
-func (esm *EntityStateManager) SetTargetPrioritization(p core.TargetPriority) {
-	esm.TargetPrioritization = p
-}
-
-func (esm *EntityStateManager) GetTargetPrioritization() core.TargetPriority {
-	return esm.TargetPrioritization
-}
-
-func (esm *EntityStateManager) SetSpellcastingPriority(p core.SpellPriority) {
-	esm.SpellcastingPriority = p
-}
-
-func (esm *EntityStateManager) GetSpellcastingPriority() core.SpellPriority {
-	return esm.SpellcastingPriority
-}
-
-func (esm *EntityStateManager) SetInitiativeAdvantage(a core.AdvantageType) {
-	esm.InitiativeAdvantage = a
-}
-
-func (esm *EntityStateManager) SetInitiative(value int) { esm.Initiative = value }
-
-func (esm *EntityStateManager) GetInitiative() int { return esm.Initiative }
-
-func (esm *EntityStateManager) GetInitiativeAdvantage() core.AdvantageType {
-	return esm.InitiativeAdvantage
-}
-
-func (esm *EntityStateManager) SetInitiativeBonus(b int) {
-	esm.InitiativeBonus = b
-}
-
-func (esm *EntityStateManager) GetInitiativeBonus() int {
-	return esm.InitiativeBonus
-}
-
-func (esm *EntityStateManager) ResetActions() {
-	esm.HasUsedAction = false
-	esm.HasUsedBonusAction = false
-	esm.LegendaryActionPoints = esm.LegendaryActionPointsMax
-}
-
-func (esm *EntityStateManager) ResetConditions() {
-	esm.Conditions = core.NewEntityConditions()
-}
-
-func (esm *EntityStateManager) ResetHP() {
-	esm.CurrentHP = esm.MaxHP
-	esm.TempHP = 0
+	return false
 }
 
 // Recharge Actions
@@ -355,6 +412,81 @@ func (esm *EntityStateManager) AddRechargeAction(index int) {
 		esm.RechargeActionStatus = make(map[int]bool)
 	}
 	esm.RechargeActionStatus[index] = true
+}
+
+// Death Saves
+
+// ApplyDeathSavingThrowResult processes the result of a death saving throw and updates the entity's state accordingly.
+func (esm *EntityStateManager) ApplyDeathSavingThrowResult(result core.RollResult) error {
+	if result.GetDiceRollType() != core.DiceRollDeathSavingThrow {
+		return fmt.Errorf("non-Kill saving throw result passed to ApplyDeathSavingThrowResult")
+	}
+
+	if result.GetIsCritical() {
+		// Character revives with 1hp
+		esm.Revive(1)
+	} else if result.GetIsNaturalOne() {
+		// Two Death Failures
+		esm.DeathSaves.AddFailure(true)
+	} else {
+		if result.GetIsSuccess() {
+			esm.DeathSaves.AddSuccess()
+		} else {
+			esm.DeathSaves.AddFailure(false)
+		}
+	}
+
+	status := esm.DeathSaves.Evaluate()
+	switch status {
+	case core.DeathSaveSuccess:
+		esm.SetStable(true)
+	case core.DeathSaveFailure:
+		esm.Kill()
+	case core.DeathSaveNone:
+		break
+	default:
+		return fmt.Errorf("unknown Kill save status: %v", status)
+	}
+
+	return nil
+}
+
+func (esm *EntityStateManager) TakeDamageWhileUnconscious(isCrit bool) {
+	if isCrit {
+		esm.DeathSaves.AddFailure(true)
+	} else {
+		esm.DeathSaves.AddFailure(false)
+	}
+
+	if esm.DeathSaves.Evaluate() == core.DeathSaveFailure {
+		esm.Kill()
+	}
+}
+
+func (esm *EntityStateManager) SetStable(stable bool) {
+	esm.IsStable = stable
+	esm.DeathSaves.Reset()
+}
+
+// Revive attempts to revive an entity by setting its HP and resetting relevant states if it is currently not alive.
+// Returns an error if the entity is already alive.
+func (esm *EntityStateManager) Revive(hpValue int) error {
+	if esm.CurrentHP > 0 {
+		return fmt.Errorf("cannot revive an entity that is already alive")
+	}
+
+	esm.CurrentHP = hpValue
+	esm.IsStable = false
+	esm.DeathSaves.Reset()
+	esm.RemoveCondition(core.ConditionUnconscious)
+
+	return nil
+}
+
+func (esm *EntityStateManager) Kill() {
+	esm.IsDead = true
+	esm.IsStable = false
+	esm.Conditions.Clear()
 }
 
 // NewEntityStateManager initializes and returns a new EntityStateManager based on the provided parent entity and configuration.

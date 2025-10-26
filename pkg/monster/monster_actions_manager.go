@@ -58,11 +58,10 @@ func (mam *MonsterActionManager) RollRechargeActions() {
 
 	for _, idx := range idxs {
 		action := mam.Actions[idx]
-		rollOpts := roll_manager.RollOptions{
-			Advantage:   core.RollNormal,
-			RollType:    core.DiceRollRecharge,
-			TargetValue: action.RechargeValue,
-		}
+		rollOpts := roll_manager.NewRollOptions()
+		rollOpts.RollType = core.DiceRollRecharge
+		rollOpts.TargetValue = action.RechargeValue
+
 		res := mam.rollManager.RollRecharge(rollOpts)
 		res.Name = action.Name
 
@@ -140,13 +139,12 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 			cT = 19
 		}
 
-		rollOpts := roll_manager.RollOptions{
-			Advantage:         req.AttackOptions.Advantage,
-			Modifier:          attackMod,
-			CriticalThreshold: cT,
-			RollType:          core.DiceRollAttack,
-			TargetValue:       req.Target.GetAC(),
-		}
+		rollOpts := roll_manager.NewRollOptions()
+		rollOpts.Advantage = req.AttackOptions.Advantage
+		rollOpts.Modifier = attackMod
+		rollOpts.CriticalThreshold = cT
+		rollOpts.RollType = core.DiceRollAttack
+		rollOpts.TargetValue = req.Target.GetAC()
 
 		attackRollResult, err := mam.rollManager.RollAttack(rollOpts)
 		if err != nil {
@@ -154,11 +152,9 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 		}
 
 		// Damage roll
-		rollOpts = roll_manager.RollOptions{
-			Advantage: core.RollNormal,
-			Modifier:  ad.DamageModifier,
-			RollType:  core.DiceRollDamage,
-		}
+		rollOpts = roll_manager.NewRollOptions()
+		rollOpts.Modifier = ad.DamageModifier
+		rollOpts.RollType = core.DiceRollDamage
 
 		dmgRollResult, err := mam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, rollOpts)
 		if err != nil {

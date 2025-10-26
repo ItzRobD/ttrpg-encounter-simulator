@@ -105,6 +105,34 @@ func NewEntityConditions() EntityConditions {
 	}
 }
 
+func (ec EntityConditions) Add(c Condition) {
+	ec[c] = true
+}
+
+func (ec EntityConditions) Remove(c Condition) {
+	delete(ec, c)
+}
+
+func (ec EntityConditions) Has(c Condition) bool {
+	return ec[c]
+}
+
+func (ec EntityConditions) Clear() {
+	for c := range ec {
+		ec[c] = false
+	}
+}
+
+func (ec EntityConditions) GetActive() []Condition {
+	var active []Condition
+	for c := range ec {
+		if ec[c] {
+			active = append(active, c)
+		}
+	}
+	return active
+}
+
 func NewCondition(s string) (Condition, error) {
 	switch strings.ToLower(s) {
 	case "blinded":
