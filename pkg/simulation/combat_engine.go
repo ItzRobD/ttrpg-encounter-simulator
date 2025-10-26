@@ -3,6 +3,7 @@ package simulation
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
 	"math"
 	"sort"
@@ -210,6 +211,8 @@ func (ce *CombatEngine) setupCombatTracker() error {
 		// If dexterity is the same, sort by ID
 		return idxI < idxJ
 	})
+
+	ce.insertLairCombatant()
 	return nil
 }
 
@@ -269,7 +272,7 @@ func (ce *CombatEngine) RunCombat(maxRounds int) error {
 // Returns an error if any part of the simulation encounters a failure.
 func (ce *CombatEngine) SimulateRound() error {
 	legIDActedThisRound := make(map[int]bool)
-	ce.refreshLegendaryActions()
+	ce.roundStartEvents()
 	for _, combatantID := range ce.CombatTracker {
 		ce.updateCombatContext(combatantID)
 		combatant := ce.Combatants[combatantID]
@@ -454,4 +457,29 @@ func (ce *CombatEngine) refreshLegendaryActions() {
 	for id, _ := range ce.CombatContext.LegendaryCreatures {
 		ce.Combatants[id].GetEntity().RefreshLegendaryActions()
 	}
+}
+
+// roundStartEvents triggers necessary actions or states at the start of a combat round, including updates and ability rolls.
+func (ce *CombatEngine) roundStartEvents() error {
+	ce.refreshLegendaryActions()
+	err := ce.rollRechargeAbilities()
+	if err != nil {
+		return err
+	}
+	// TODO: Condition duration tracking
+	return nil
+}
+
+func (ce *CombatEngine) rollRechargeAbilities() error {
+	for _, e := range ce.Combatants {
+		if e.GetEntity().IsMonster() {
+			m, ok := e.GetEntity().(*monster.Monster)
+			if !ok {
+				return fmt.Errorf("entity is monster but type assertion failed")
+			}
+
+			m.ActionManager.RollRechargeActions()
+		}
+	}
+	return nil
 }

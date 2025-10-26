@@ -309,14 +309,19 @@ func (esm *EntityStateManager) ResetHP() {
 	esm.TempHP = 0
 }
 
+// Recharge Actions
+
+// GetRechargeActionStatus returns the current recharge status for all actions as a map where keys are action indexes.
 func (esm *EntityStateManager) GetRechargeActionStatus() map[int]bool {
 	return esm.RechargeActionStatus
 }
 
+// GetRechargeActionStatusAtIndex checks if the recharge action at the specified index is available.
 func (esm *EntityStateManager) GetRechargeActionStatusAtIndex(index int) bool {
 	return esm.RechargeActionStatus[index]
 }
 
+// GetExpendedRechargeActionsIndex returns a list of indexes for recharge actions that are currently expended (unavailable).
 func (esm *EntityStateManager) GetExpendedRechargeActionsIndex() []int {
 	var result []int
 	for i, v := range esm.RechargeActionStatus {
@@ -327,20 +332,24 @@ func (esm *EntityStateManager) GetExpendedRechargeActionsIndex() []int {
 	return result
 }
 
+// ExpendRechargeAction sets the recharge action at the specified index to unavailable (false).
 func (esm *EntityStateManager) ExpendRechargeAction(index int) {
 	esm.RechargeActionStatus[index] = false
 }
 
+// RechargeRechargeAction sets the recharge action at the specified index to available (true).
 func (esm *EntityStateManager) RechargeRechargeAction(index int) {
 	esm.RechargeActionStatus[index] = true
 }
 
+// ResetAllRechargeActions resets all recharge actions to available by setting their status to true.
 func (esm *EntityStateManager) ResetAllRechargeActions() {
 	for i := 0; i < len(esm.RechargeActionStatus); i++ {
 		esm.RechargeActionStatus[i] = true
 	}
 }
 
+// AddRechargeAction adds a recharge action at the specified index and initializes the RechargeActionStatus map if nil.
 func (esm *EntityStateManager) AddRechargeAction(index int) {
 	if esm.RechargeActionStatus == nil {
 		esm.RechargeActionStatus = make(map[int]bool)
@@ -348,6 +357,8 @@ func (esm *EntityStateManager) AddRechargeAction(index int) {
 	esm.RechargeActionStatus[index] = true
 }
 
+// NewEntityStateManager initializes and returns a new EntityStateManager based on the provided parent entity and configuration.
+// Returns an error if the configuration contains invalid values.
 func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*EntityStateManager, error) {
 	// Handle mistakes
 	if config.MaxHP < 0 {

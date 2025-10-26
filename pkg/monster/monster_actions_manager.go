@@ -28,6 +28,8 @@ func (mam *MonsterActionManager) GetActions() map[int]Action {
 	return mam.Actions
 }
 
+func (mam *MonsterActionManager) GetActionAtIndex(index int) Action { return mam.Actions[index] }
+
 func (mam *MonsterActionManager) GetMulitattacks() map[int][]Multiattack {
 	return mam.Multiattacks
 }
@@ -46,6 +48,30 @@ func (mam *MonsterActionManager) ExpendRechargeAction(actionID int) {
 
 func (mam *MonsterActionManager) RechargeAction(actionID int) {
 	mam.parent.EntityState.RechargeRechargeAction(actionID)
+}
+
+func (mam *MonsterActionManager) RollRechargeActions() {
+	idxs := mam.parent.EntityState.GetExpendedRechargeActionsIndex()
+	if len(idxs) == 0 {
+		return
+	}
+
+	for _, idx := range idxs {
+		action := mam.Actions[idx]
+		rollOpts := roll_manager.RollOptions{
+			Advantage:   core.RollNormal,
+			RollType:    core.DiceRollRecharge,
+			TargetValue: action.RechargeValue,
+		}
+		res := mam.rollManager.RollRecharge(rollOpts)
+		res.Name = action.Name
+
+		if res.IsSuccess {
+			mam.parent.EntityState.RechargeRechargeAction(idx)
+		}
+
+		events.LogDiceRollEvent(mam.parent, res, mam.parent.GetEventListener())
+	}
 }
 
 func (mam *MonsterActionManager) GetSpecialAbilities() []SpecialAbility {

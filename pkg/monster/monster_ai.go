@@ -2,8 +2,6 @@ package monster
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/core/events"
-	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"fmt"
 	"math/rand/v2"
 )
@@ -191,30 +189,6 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 		return nil, err
 	} else {
 		return mai.buildAIRequest(actionChoiceID, nil, core.ATMonsterAction)
-	}
-}
-
-// TODO: This should likely be moved to entity state -> AI doesn't need to make a decision about this
-func (mai *MonsterAI) rollRechargeActions() {
-	idxs := mai.parent.EntityState.GetExpendedRechargeActionsIndex()
-	if len(idxs) == 0 {
-		return
-	}
-
-	for _, idx := range idxs {
-		rechargeValue := mai.parent.ActionManager.Actions[idx].RechargeValue
-		opts := roll_manager.RollOptions{
-			Advantage:   core.RollNormal,
-			RollType:    core.DiceRollRecharge,
-			TargetValue: rechargeValue,
-		}
-		res := mai.parent.RollManager.RollRecharge(opts)
-		res.Name = mai.parent.ActionManager.Actions[idx].Name
-		if res.IsSuccess {
-			mai.parent.EntityState.RechargeRechargeAction(idx)
-		}
-
-		events.LogDiceRollEvent(mai.parent, res, mai.parent.GetEventListener())
 	}
 }
 
