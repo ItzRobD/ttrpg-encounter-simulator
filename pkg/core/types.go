@@ -27,55 +27,54 @@ func NewEntityType(s string) (EntityType, error) {
 	}
 }
 
-type DeathSaves map[SaveType]int
-
-type SaveType string
+type DeathSaveEvaluation string
 
 const (
-	SaveSuccess SaveType = "success"
-	SaveFailure SaveType = "failure"
+	DeathSaveSuccess DeathSaveEvaluation = "success"
+	DeathSaveFailure DeathSaveEvaluation = "failure"
+	DeathSaveNone    DeathSaveEvaluation = "none"
 )
 
-func (st SaveType) String() string {
-	return string(st)
+type DeathSaves struct {
+	SaveSuccess int
+	SaveFailure int
 }
 
-func NewSaveType(s string) (SaveType, error) {
-	switch strings.ToLower(s) {
-	case "success":
-		return SaveSuccess, nil
-	case "failure":
-		return SaveFailure, nil
-	default:
-		return SaveSuccess, fmt.Errorf("invalid save type")
-	}
-}
-
-func (ds DeathSaves) GetSave(saveType SaveType) int {
-	return ds[saveType]
-}
-
-func (ds DeathSaves) SetSave(saveType SaveType, value int) {
-	ds[saveType] = value
-}
-
-func (ds DeathSaves) AddSave(saveType SaveType, value int) {
-	ds[saveType] += value
-}
-
-func (ds DeathSaves) SubtractSave(saveType SaveType, value int) {
-	ds[saveType] -= value
-}
-
-func (ds DeathSaves) ResetDeathSaves() {
-	ds = ds.NewDeathSaves()
-}
-
-func (ds DeathSaves) NewDeathSaves() DeathSaves {
+func NewDeathSaves() DeathSaves {
 	return DeathSaves{
 		SaveSuccess: 0,
 		SaveFailure: 0,
 	}
+}
+
+func (ds *DeathSaves) Reset() {
+}
+
+func (ds *DeathSaves) String() string {
+	return fmt.Sprintf("Success: %d, Failure: %d", ds.SaveSuccess, ds.SaveFailure)
+}
+
+func (ds *DeathSaves) AddSuccess() {
+	ds.SaveSuccess++
+}
+
+func (ds *DeathSaves) AddFailure(crit bool) {
+	if crit {
+		ds.SaveFailure += 2
+	} else {
+		ds.SaveFailure++
+	}
+}
+
+func (ds *DeathSaves) Evaluate() DeathSaveEvaluation {
+	if ds.SaveSuccess >= 3 {
+		return DeathSaveSuccess
+	}
+	if ds.SaveFailure >= 3 {
+		return DeathSaveFailure
+	}
+
+	return DeathSaveNone
 }
 
 type HPSetMethod uint8

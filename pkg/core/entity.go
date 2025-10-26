@@ -44,15 +44,17 @@ type Entity interface {
 }
 
 type Combatant struct {
-	Entity     Entity
-	Initiative int
-	CanAct     bool
-	IsLair     bool
+	Entity        Entity
+	Initiative    int
+	CanAct        bool
+	IsUnconscious bool
+	IsDead        bool
+	IsLair        bool
 }
 
 // NewCombatant creates a new Combatant with the specified Entity and initiative, defaulting CanAct to true.
 func NewCombatant(entity Entity, initiative int) *Combatant {
-	return &Combatant{entity, initiative, true}
+	return &Combatant{entity, initiative, true, false, false, false}
 }
 
 func (c *Combatant) GetInitiative() int {

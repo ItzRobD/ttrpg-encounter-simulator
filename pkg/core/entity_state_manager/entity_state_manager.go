@@ -400,5 +400,6 @@ func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*Entit
 		SpellcastingPriority:      config.SpellcastingPriority,
 		InitiativeAdvantage:       config.InitiativeAdvantage,
 		InitiativeBonus:           config.InitiativeBonus,
+		DeathSaves:                core.NewDeathSaves(),
 	}, nil
 }
