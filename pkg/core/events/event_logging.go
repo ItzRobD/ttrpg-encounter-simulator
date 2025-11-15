@@ -206,3 +206,14 @@ func LogTargetChoiceEvent(actor core.Entity, target core.Entity, listener func(e
 		listener(event)
 	}
 }
+
+func LogCombatEventMessage(actor core.Entity, message string, listener func(event interface{})) {
+	event := &CombatEventMessage{
+		Message: message,
+	}
+	event.SetActor(actor.GetName())
+
+	if listener != nil {
+		listener(event)
+	}
+}

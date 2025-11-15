@@ -321,4 +321,6 @@ func (c *Character) UpdateAICombatContext(ctx *core.CombatContext) error {
 	return nil
 }
 
+func (c *Character) CanTakeActions() bool { return c.EntityState.CanTakeActions() }
+
 var _ core.Entity = &Character{}

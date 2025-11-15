@@ -231,7 +231,6 @@ func (ce *CombatEngine) insertLairCombatant() {
 	lairCombatant := core.Combatant{
 		Entity:     nil,
 		Initiative: 20,
-		CanAct:     true,
 		IsLair:     true,
 	}
 	lairID := -1 // Lair will never be targeted
@@ -278,37 +277,38 @@ func (ce *CombatEngine) SimulateRound() error {
 		return fmt.Errorf("failed to execute round start events: %v", err)
 	}
 	for _, combatantID := range ce.CombatTracker {
+		combatError := ce.turnStartEvents(combatantID)
+		if combatError != nil {
+			return fmt.Errorf("failed to execute turn start events for combatant %d: %v", combatantID, combatError)
+		}
 		ce.updateCombatContext(combatantID)
-		combatant := ce.Combatants[combatantID]
-
-		if !combatant.GetCanAct() {
-			continue // Skip unconscious combatants
+		status, aiReq, combatError := ce.executeTurn(combatantID)
+		if combatError != nil {
+			return combatError
 		}
 
-		if combatant.GetEntity().IsMonster() {
-			// Handle Monster Specific Actions
-
-		} else if combatant.GetEntity().IsCharacter() {
-			// Handle Character Specific Actions
-
+		// Handle non-acting statuses
+		if ce.shouldSkipCombatantTurn(status) {
+			continue
 		}
 
-		// Update Combatant's AI Context
-		err := combatant.GetEntity().UpdateAICombatContext(ce.CombatContext)
-		if err != nil {
-			return err
+		// Execute the actions in the turn request
+		combatError = ce.ProcessAIRequest(aiReq)
+		if combatError != nil {
+			return combatError
 		}
 
-		// Choose entity action
-		aiReq, err := combatant.GetEntity().GetAIRequest(combatantID, core.AIReqChooseAction)
-		if err != nil {
-			return err
+		combatError = ce.turnEndEvents(combatantID)
+		if combatError != nil {
+			return fmt.Errorf("failed to execute turn end events for combatant %d: %v", combatantID, combatError)
 		}
+	}
 
-		err = ce.ProcessAIRequest(aiReq)
-		if err != nil {
-			return err
-		}
+	err = ce.roundEndEvents()
+	if err != nil {
+		return fmt.Errorf("failed to execute round end events: %v", err)
+	}
+}
 
 		if len(ce.CombatContext.LegendaryCreatures) > 0 {
 			for _, id := range ce.CombatTracker {
@@ -414,7 +414,6 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 		if entity.IsUnconscious() {
 			// Mark as unable to act but keep in combat for potential revival
 			temp := combatant
-			temp.SetCanAct(false)
 			ce.Combatants[id] = temp
 			ce.CombatContext.AllCombatants[id] = temp
 		}
@@ -499,17 +498,18 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 			return fmt.Errorf("entity is character but type assertion failed")
 		}
 
-		// Death Saves
-		if c.EntityState.GetIsUnconscious() && !c.EntityState.IsStable && !c.EntityState.IsDead {
-			res, err := c.RollManager.RollDeathSavingThrow()
-			if err != nil {
-				return fmt.Errorf("failed to roll death saving throw: %v", err)
-			}
-			err = c.EntityState.ApplyDeathSavingThrowResult(res)
-			if err != nil {
-				return fmt.Errorf("failed to apply death saving throw result: %v", err)
-			}
-		}
+		// THis is being handled in executeTurn > process turn > handle unconscious turn
+		//// Death Saves
+		//if c.EntityState.GetIsUnconscious() && !c.EntityState.IsStable && !c.EntityState.IsDead {
+		//	res, err := c.RollManager.RollDeathSavingThrow()
+		//	if err != nil {
+		//		return fmt.Errorf("failed to roll death saving throw: %v", err)
+		//	}
+		//	err = c.EntityState.ApplyDeathSavingThrowResult(res)
+		//	if err != nil {
+		//		return fmt.Errorf("failed to apply death saving throw result: %v", err)
+		//	}
+		//}
 
 		if !c.EntityState.IsDead && !c.EntityState.GetIsUnconscious() {
 			c.EntityState.RefreshActions()
@@ -517,4 +517,45 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 	}
 
 	return nil
+}
+
+func (ce *CombatEngine) executeTurn(combatantID int) (*core.TurnResult, *core.AIRequest, error) {
+	combatant := ce.Combatants[combatantID]
+	entity := combatant.GetEntity()
+
+	// Update Combatant's AI Context
+	err := entity.UpdateAICombatContext(ce.CombatContext)
+	if err != nil {
+		return err
+	}
+
+	// Tell entity to process its turn
+	// This will determine if it can act. If not, log; if so create ai request
+	// Pass the ai request back to CE for processing
+	// ce should understand why an ai request is empty
+	// return TurnStatus, AIRequest, Error?
+
+	turnResult, aiReq, err := entity.ProcessTurn(combatantID)
+	if err != nil {
+		return err
+	}
+
+	return turnResult, aiReq, nil
+}
+
+func (ce *CombatEngine) shouldSkipCombatantTurn(status *core.TurnResult) bool {
+	if status.TurnStatuses[core.TurnActionReady] || status.TurnStatuses[core.TurnRevived] {
+		return false
+	}
+	return true
+}
+
+func (ce *CombatEngine) turnEndEvents(currentCombatantID int) error {
+	// TODO: End of turn events:
+	//		Legendary Actions - can't occur after its own turn
+	//		Condition duration
+	//		Saving throws for conditions
+	//		Temp HP Expiration?
+	return nil
+
 }

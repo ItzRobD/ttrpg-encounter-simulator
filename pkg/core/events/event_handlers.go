@@ -331,3 +331,9 @@ func (h *UniversalEventHandler) handleSavingThrow(e *SavingThrowEvent) {
 		e.Modifier,
 		e.Success)
 }
+
+func (h *UniversalEventHandler) handleCombatMessage(e *CombatEventMessage) {
+	fmt.Printf("[Round %d] <Combat Message> %s\n",
+		e.GetRound(),
+		e.Message)
+}

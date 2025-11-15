@@ -279,4 +279,6 @@ func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPMo
 	return m.EntityState.ModifyHP(value, isTemp, tempStacking)
 }
 
+func (m *Monster) CanTakeActions() bool { return m.EntityState.CanTakeActions() }
+
 var _ core.Entity = &Monster{}

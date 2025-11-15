@@ -41,18 +41,19 @@ type Entity interface {
 	UpdateAICombatContext(ctx *CombatContext) error
 	ModifyHP(value int, isTemp bool, tempStacking bool) (HPModificationResult, error)
 	RefreshLegendaryActions()
+	CanTakeActions() bool
+	ProcessTurn(actorID int) (*TurnResult, *AIRequest, error)
 }
 
 type Combatant struct {
 	Entity     Entity
 	Initiative int
-	CanAct     bool
 	IsLair     bool
 }
 
 // NewCombatant creates a new Combatant with the specified Entity and initiative, defaulting CanAct to true.
 func NewCombatant(entity Entity, initiative int) *Combatant {
-	return &Combatant{entity, initiative, true, false}
+	return &Combatant{entity, initiative, false}
 }
 
 func (c *Combatant) GetInitiative() int {
@@ -62,9 +63,3 @@ func (c *Combatant) GetInitiative() int {
 func (c *Combatant) GetEntity() Entity {
 	return c.Entity
 }
-
-func (c *Combatant) GetCanAct() bool {
-	return c.CanAct
-}
-
-func (c *Combatant) SetCanAct(b bool) { c.CanAct = b }

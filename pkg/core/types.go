@@ -99,3 +99,22 @@ type Seed struct {
 	Seed1 uint64
 	Seed2 uint64
 }
+
+type TurnResult struct {
+	TurnStatuses map[TurnStatus]bool
+	Conditions   []Condition
+}
+
+type TurnStatus string
+
+const (
+	TurnActionReady           TurnStatus = "ready"
+	TurnIncapacitated         TurnStatus = "inactive"
+	TurnDeathSaveFailed       TurnStatus = "death_save_failed"
+	TurnDeathSaveFailedDouble TurnStatus = "death_save_failed_double"
+	TurnDeathSaveSuccess      TurnStatus = "death_save_success"
+	TurnDeathSaveStabilized   TurnStatus = "death_save_stabilized"
+	TurnDead                  TurnStatus = "dead"
+	TurnUnconscious           TurnStatus = "unconscious"
+	TurnRevived               TurnStatus = "revived"
+)

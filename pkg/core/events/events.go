@@ -24,6 +24,7 @@ const (
 	ETHPModifiedEvent   EventType = "hpmodified"
 	ETSavingThrowEvent  EventType = "savingthrow"
 	ETTargetChoiceEvent EventType = "targetchoice"
+	ECombatEventMessage EventType = "combatmessage"
 )
 
 type CombatEvent interface {
@@ -236,6 +237,12 @@ type TargetChoiceEvent struct {
 }
 
 func (e *TargetChoiceEvent) GetEventType() EventType { return ETTargetChoiceEvent }
+
+type CombatEventMessage struct {
+	BaseEvent
+	Actor   string
+	Message string
+}
 
 type CombatLogger interface {
 	LogEvent(event CombatEvent)

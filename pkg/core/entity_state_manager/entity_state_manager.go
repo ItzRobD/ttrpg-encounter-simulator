@@ -240,6 +240,26 @@ func (esm *EntityStateManager) SetUnconscious(isUnconscious bool) {
 	}
 }
 
+func (esm *EntityStateManager) GetActiveIncapacitatingConditions() []core.Condition {
+	var incapacitating []core.Condition
+
+	incapacitatingList := []core.Condition{
+		core.ConditionIncapacitated,
+		core.ConditionStunned,
+		core.ConditionParalyzed,
+		core.ConditionPetrified,
+		core.ConditionUnconscious,
+	}
+
+	for _, condition := range incapacitatingList {
+		if esm.Conditions.Has(condition) {
+			incapacitating = append(incapacitating, condition)
+		}
+	}
+
+	return incapacitating
+}
+
 // GetIsUnconscious determines if the entity is unconscious based on its conditions or current health points.
 func (esm *EntityStateManager) GetIsUnconscious() bool {
 	return esm.Conditions.Has(core.ConditionUnconscious) || esm.CurrentHP <= 0
