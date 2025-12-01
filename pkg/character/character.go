@@ -149,11 +149,10 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	char.HPConfig.HPAverage = int(math.Round(float64(char.GetHitDie().Int())+float64(char.HPConfig.NumberOfDice)*char.Class.HitDie.Avg()) + float64(int(char.Level)*modifier))
 	char.HPConfig.Modifier = modifier
 
-	// Moving HP Setup to during simulation
-	//err = char.setHP(char.HPConfig)
-	//if err != nil {
-	//	return nil, err
-	//}
+	err = char.setHP(char.HPConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	return &char, nil
 }
@@ -280,6 +279,7 @@ func (c *Character) RefreshLegendaryActions()                   { return }
 func (c *Character) GetEventListener() func(event interface{})  { return c.EventListener }
 func (c *Character) SetEventListener(f func(event interface{})) { c.EventListener = f }
 func (c *Character) IsUnconscious() bool                        { return c.EntityState.GetIsUnconscious() }
+func (c *Character) IsDead() bool                               { return c.EntityState.GetIsDead() }
 func (c *Character) GetHPStatus() core.HPStatus                 { return c.EntityState.GetHPStatus() }
 func (c *Character) GetName() string                            { return c.Name }
 func (c *Character) GetAbilityScores() core.AbilityScores       { return c.AbilityScores }
@@ -322,5 +322,8 @@ func (c *Character) UpdateAICombatContext(ctx *core.CombatContext) error {
 }
 
 func (c *Character) CanTakeActions() bool { return c.EntityState.CanTakeActions() }
+func (c *Character) GetConditions() core.EntityConditions {
+	return c.EntityState.GetConditions()
+}
 
 var _ core.Entity = &Character{}

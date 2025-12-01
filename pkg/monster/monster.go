@@ -113,11 +113,10 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	// AI
 	monster.AI = NewMonsterAI(&monster)
 
-	// Moving hp setup to during simulation
-	//err = monster.setHP(monster.HP)
-	//if err != nil {
-	//	return nil, err
-	//}
+	err = monster.setHP(monster.HP)
+	if err != nil {
+		return nil, err
+	}
 
 	return &monster, nil
 }
@@ -235,32 +234,22 @@ func (m *Monster) SetEventListener(listener func(event interface{})) {
 func (m *Monster) GetState() interface{} {
 	return m.EntityState
 }
-
-func (m *Monster) GetName() string {
-	return m.Name
-}
-
+func (m *Monster) GetName() string { return m.Name }
 func (m *Monster) GetAbilityScores() core.AbilityScores {
 	return m.AbilityScores
 }
-
 func (m *Monster) GetHPStatus() core.HPStatus {
 	return m.EntityState.GetHPStatus()
 }
-
-func (m *Monster) GetHitDie() core.DiceType { return m.EntityState.GetHitDie() }
-
-func (m *Monster) GetAC() int { return m.AC }
-
-func (m *Monster) GetLevel() float64 { return m.CR }
-
+func (m *Monster) GetHitDie() core.DiceType   { return m.EntityState.GetHitDie() }
+func (m *Monster) GetAC() int                 { return m.AC }
+func (m *Monster) GetLevel() float64          { return m.CR }
 func (m *Monster) GetHPConfig() core.HPConfig { return m.HP }
-
 func (m *Monster) SetHP(method core.HPSetMethod, value int) error {
 	return m.setHP(core.HPConfig{HPSetMethod: method, Value: value})
 }
-
 func (m *Monster) IsUnconscious() bool  { return m.EntityState.GetIsUnconscious() }
+func (m *Monster) IsDead() bool         { return m.EntityState.GetIsDead() }
 func (m *Monster) IsCharacter() bool    { return false }
 func (m *Monster) IsMonster() bool      { return true }
 func (m *Monster) GetIsLegendary() bool { return m.MonsterBase.IsLegendary }
@@ -280,5 +269,8 @@ func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPMo
 }
 
 func (m *Monster) CanTakeActions() bool { return m.EntityState.CanTakeActions() }
+func (m *Monster) GetConditions() core.EntityConditions {
+	return m.EntityState.GetConditions()
+}
 
 var _ core.Entity = &Monster{}

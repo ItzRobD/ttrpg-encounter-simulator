@@ -141,6 +141,14 @@ func (esm *EntityStateManager) ReplenishLegendaryActionPoints(value int) {
 	esm.LegendaryActionPoints = max(esm.LegendaryActionPoints+value, esm.LegendaryActionPointsMax)
 }
 
+func (esm *EntityStateManager) GetLegendaryActionPoints() int {
+	return esm.LegendaryActionPoints
+}
+
+func (esm *EntityStateManager) HasLegendaryActionPointsRemaining() bool {
+	return esm.LegendaryActionPoints > 0
+}
+
 func (esm *EntityStateManager) GetNumberOfAttacks() int {
 	return esm.NumberOfAttacks
 }
@@ -204,8 +212,10 @@ func (esm *EntityStateManager) GetInitiativeBonus() int {
 // Conditions functions
 
 func (esm *EntityStateManager) AddCondition(c core.Condition) {
+	// Special handling for unconscious: also add prone condition
 	if c == core.ConditionUnconscious {
-		esm.SetUnconscious(true)
+		esm.Conditions.Add(core.ConditionUnconscious)
+		esm.Conditions.Add(core.ConditionProne)
 	} else {
 		esm.Conditions.Add(c)
 	}
@@ -233,10 +243,11 @@ func (esm *EntityStateManager) ResetConditions() {
 
 func (esm *EntityStateManager) SetUnconscious(isUnconscious bool) {
 	if isUnconscious {
-		esm.AddCondition(core.ConditionUnconscious)
-		esm.AddCondition(core.ConditionProne)
+		// Directly add conditions to avoid circular call
+		esm.Conditions.Add(core.ConditionUnconscious)
+		esm.Conditions.Add(core.ConditionProne)
 	} else {
-		esm.RemoveCondition(core.ConditionUnconscious)
+		esm.Conditions.Remove(core.ConditionUnconscious)
 	}
 }
 
@@ -268,6 +279,8 @@ func (esm *EntityStateManager) GetIsUnconscious() bool {
 func (esm *EntityStateManager) GetIsStable() bool {
 	return esm.IsStable
 }
+
+func (esm *EntityStateManager) GetIsDead() bool { return esm.IsDead }
 
 // HP Functions
 

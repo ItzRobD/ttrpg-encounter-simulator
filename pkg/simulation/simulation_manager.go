@@ -43,6 +43,11 @@ func (s *SimulationManager) SetupEventListeners() {
 	}
 
 	for _, combatant := range s.combatEngine.Combatants {
+		// Skip lair combatants
+		if combatant.IsLair {
+			continue
+		}
+
 		entity := combatant.Entity
 		entity.SetEventListener(eventListener)
 	}
@@ -76,9 +81,13 @@ func (s *SimulationManager) RunSimulation(maxRounds int) error {
 	if err != nil {
 		return err
 	}
-	err = s.combatEngine.RunCombat(maxRounds)
+	victory, err := s.combatEngine.RunCombat(maxRounds)
 	if err != nil {
 		return err
+	}
+
+	if victory != core.VictoryStatusNone {
+		// TODO: Handle victory
 	}
 
 	return nil
@@ -86,6 +95,11 @@ func (s *SimulationManager) RunSimulation(maxRounds int) error {
 
 func (s *SimulationManager) InitializeCombatants() {
 	for _, combatant := range s.combatEngine.Combatants {
+		// Skip lair combatants
+		if combatant.IsLair {
+			continue
+		}
+
 		combatant.GetEntity().InitializeHP()
 	}
 }

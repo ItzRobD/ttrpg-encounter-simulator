@@ -2,14 +2,61 @@ package monster
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
 )
+
+func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnResult, *core.AIRequest, error) {
+	if turnType == core.TurnTypeLegendary {
+		return m.processLegendaryTurn(actorID)
+	}
+
+	result := &core.TurnResult{
+		TurnStatuses: make(map[core.TurnStatus]bool),
+	}
+
+	// Able to act
+	if m.EntityState.CanTakeActions() {
+		aiReq, err := m.GetAIRequest(actorID, core.AIReqNormalAction)
+		if err != nil {
+			return nil, nil, err
+		}
+		result.TurnStatuses[core.TurnActionReady] = true
+		return result, aiReq, nil
+	}
+
+	// Unable to Act
+	if m.EntityState.IsDead {
+		result.TurnStatuses[core.TurnDead] = true
+		return result, nil, nil
+	}
+
+	if m.EntityState.GetIsUnconscious() {
+		ucResult, err := m.handleUnconsciousTurn(result)
+		if ucResult.TurnStatuses[core.TurnRevived] {
+			aiReq, err := m.GetAIRequest(actorID, core.AIReqNormalAction)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error getting AI request: %s", err)
+			}
+			ucResult.TurnStatuses[core.TurnActionReady] = true
+			ucResult.Conditions = nil
+			return ucResult, aiReq, nil
+		}
+		return ucResult, nil, err
+	}
+
+	result.Conditions = m.EntityState.GetActiveIncapacitatingConditions()
+	if len(result.Conditions) > 0 {
+		result.TurnStatuses[core.TurnIncapacitated] = true
+	}
+	return result, nil, nil
+}
 
 func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIRequest, error) {
 	var req *core.AIRequest
 	var err error
 	switch t {
-	case core.AIReqChooseAction:
+	case core.AIReqNormalAction:
 		var actionChoice core.ActionType
 		actionChoice, err = m.AI.chooseMonsterActionType()
 		if err != nil {
@@ -35,7 +82,7 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 		return req, fmt.Errorf("invalid AI request type: %s", t)
 	}
 
-	// TODO: Logging
+	events.LogMonsterActionChoiceEvent(m, req.ActionType, m.EventListener)
 
 	req.ActorID = actorID
 
@@ -115,4 +162,68 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 	default:
 		return nil, fmt.Errorf("monster execute ai req - invalid action type: %s", req.ActionType)
 	}
+}
+
+func (m *Monster) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.TurnResult, error) {
+	// Failsafes if character is already dead and this is called
+	if m.EntityState.IsDead {
+		turnResult.TurnStatuses[core.TurnDead] = true
+		return turnResult, nil
+	}
+
+	if !m.EntityState.GetIsUnconscious() {
+		return nil, fmt.Errorf("character is not unconscious")
+	}
+
+	// Character is not dead but is unconscious
+	if m.EntityState.IsStable {
+		turnResult.TurnStatuses[core.TurnUnconscious] = true
+		return turnResult, nil
+	}
+
+	// Roll death saving throw
+	res, err := m.RollManager.RollDeathSavingThrow()
+	if err != nil {
+		return nil, fmt.Errorf("failed to roll death saving throw: %v", err)
+	}
+
+	// Apply death saving throw turnResult
+	err = m.EntityState.ApplyDeathSavingThrowResult(res)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply death saving throw turnResult: %v", err)
+	}
+
+	// Determine turn status
+	switch {
+	case res.IsCritical:
+		turnResult.TurnStatuses[core.TurnRevived] = true
+	case res.IsNaturalOne:
+		turnResult.TurnStatuses[core.TurnDeathSaveFailedDouble] = true
+	case res.IsSuccess:
+		turnResult.TurnStatuses[core.TurnDeathSaveSuccess] = true
+	default:
+		turnResult.TurnStatuses[core.TurnDeathSaveFailed] = true
+	}
+
+	turnResult.Conditions = m.EntityState.GetActiveIncapacitatingConditions()
+	return turnResult, nil
+}
+
+func (m *Monster) processLegendaryTurn(actorID int) (*core.TurnResult, *core.AIRequest, error) {
+	result := &core.TurnResult{
+		TurnStatuses: make(map[core.TurnStatus]bool),
+	}
+
+	if !m.EntityState.HasLegendaryActionPointsRemaining() {
+		result.TurnStatuses[core.TurnLegendaryUnavailable] = true
+		return result, nil, nil
+	}
+
+	legAIReq, err := m.GetAIRequest(actorID, core.AIReqLegendaryAction)
+	// TODO: There may be legendary points available but not enough for the creature's actions - handle this case
+	if err != nil {
+		return nil, nil, err
+	}
+	result.TurnStatuses[core.TurnLegendaryReady] = true
+	return result, legAIReq, nil
 }

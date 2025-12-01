@@ -14,7 +14,7 @@ const (
 type AIRequestType int
 
 const (
-	AIReqChooseAction AIRequestType = iota
+	AIReqNormalAction AIRequestType = iota
 	AIReqLegendaryAction
 )
 

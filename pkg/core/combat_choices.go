@@ -171,6 +171,7 @@ type ActionType string
 
 const (
 	ATNoAction           ActionType = "no action"
+	ATDamage                        = "damage"
 	ATMelee                         = "melee attack"
 	ATRanged                        = "ranged attack"
 	ATSpell                         = "spell attack"

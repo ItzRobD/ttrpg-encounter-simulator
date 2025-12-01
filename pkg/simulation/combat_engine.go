@@ -7,24 +7,27 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 )
 
 type CombatEngine struct {
-	CurrentRound  int
-	Combatants    map[int]*core.Combatant
-	CombatTracker []int
-	CombatContext *core.CombatContext
-	SimOptions    *core.SimulationOptions
+	CurrentRound     int
+	CurrentTurnIndex int
+	Combatants       map[int]*core.Combatant
+	TurnOrder        []int
+	CombatContext    *core.CombatContext
+	SimOptions       *core.SimulationOptions
 }
 
 func NewCombatEngine(simOptions *core.SimulationOptions) *CombatEngine {
 	return &CombatEngine{
-		CurrentRound:  0,
-		Combatants:    make(map[int]*core.Combatant),
-		CombatTracker: nil,
-		CombatContext: nil,
-		SimOptions:    simOptions,
+		CurrentRound:     0,
+		CurrentTurnIndex: 0,
+		Combatants:       make(map[int]*core.Combatant),
+		TurnOrder:        nil,
+		CombatContext:    nil,
+		SimOptions:       simOptions,
 	}
 }
 
@@ -102,9 +105,9 @@ func (ce *CombatEngine) executeMonsterLegendaryAction(aiReq *core.AIRequest) err
 }
 
 func (ce *CombatEngine) processActionResults(outcome *core.ActionOutcome) error {
-	target, exists := ce.CombatContext.AllCombatants[outcome.TargetID]
+	target, exists := ce.Combatants[outcome.TargetID]
 	if !exists {
-		return fmt.Errorf("target entity not found in combat context")
+		return fmt.Errorf("target entity not found in combat")
 	}
 
 	if len(outcome.Effects) > 0 {
@@ -135,7 +138,11 @@ func (ce *CombatEngine) processActionResults(outcome *core.ActionOutcome) error 
 			}
 		}
 
-		entity := ce.CombatContext.AllCombatants[outcome.ActorID].GetEntity()
+		actor, exists := ce.Combatants[outcome.ActorID]
+		if !exists {
+			return fmt.Errorf("actor entity not found in combat")
+		}
+		entity := actor.GetEntity()
 
 		events.LogHPModifiedEvent(entity, target.GetEntity(), hpModResult, entity.GetEventListener())
 
@@ -163,6 +170,11 @@ func (ce *CombatEngine) SetupCombat() error {
 	}
 
 	for id, c := range ce.Combatants {
+		// Skip lair combatants
+		if c.IsLair {
+			continue
+		}
+
 		entity := c.GetEntity()
 
 		initiative, err := entity.RollInitiative()
@@ -170,8 +182,7 @@ func (ce *CombatEngine) SetupCombat() error {
 			return err
 		}
 
-		updatedCombatant := core.NewCombatant(entity, initiative)
-		ce.Combatants[id] = updatedCombatant
+		ce.Combatants[id].Initiative = initiative
 	}
 
 	return ce.setupCombatTracker()
@@ -179,14 +190,14 @@ func (ce *CombatEngine) SetupCombat() error {
 
 // setupCombatTracker initializes and sorts the combat tracker based on initiative, dexterity, and ID order of combatants.
 func (ce *CombatEngine) setupCombatTracker() error {
-	ce.CombatTracker = make([]int, 0, len(ce.Combatants))
+	ce.TurnOrder = make([]int, 0, len(ce.Combatants))
 	for id := range ce.Combatants {
-		ce.CombatTracker = append(ce.CombatTracker, id)
+		ce.TurnOrder = append(ce.TurnOrder, id)
 	}
 
-	sort.Slice(ce.CombatTracker, func(i, j int) bool {
-		idxI := ce.CombatTracker[i]
-		idxJ := ce.CombatTracker[j]
+	sort.Slice(ce.TurnOrder, func(i, j int) bool {
+		idxI := ce.TurnOrder[i]
+		idxJ := ce.TurnOrder[j]
 
 		initI := ce.Combatants[idxI].GetInitiative()
 		initJ := ce.Combatants[idxJ].GetInitiative()
@@ -220,7 +231,7 @@ func (ce *CombatEngine) setupCombatTracker() error {
 // insertLairCombatant adds a dummy lair combatant with fixed initiative to the combat tracker, maintaining initiative order.
 func (ce *CombatEngine) insertLairCombatant() {
 	insertIdx := 0
-	for i, id := range ce.CombatTracker {
+	for i, id := range ce.TurnOrder {
 		if ce.Combatants[id].GetInitiative() >= 20 {
 			insertIdx = i + 1
 		} else {
@@ -235,7 +246,7 @@ func (ce *CombatEngine) insertLairCombatant() {
 	}
 	lairID := -1 // Lair will never be targeted
 	ce.Combatants[lairID] = &lairCombatant
-	ce.CombatTracker = append(ce.CombatTracker[:insertIdx], append([]int{lairID}, ce.CombatTracker[insertIdx:]...)...)
+	ce.TurnOrder = append(ce.TurnOrder[:insertIdx], append([]int{lairID}, ce.TurnOrder[insertIdx:]...)...)
 }
 
 func (ce *CombatEngine) rollInitiativeForAllCombatants() error {
@@ -254,37 +265,55 @@ func (ce *CombatEngine) rollInitiativeForAllCombatants() error {
 
 // RunCombat executes combat rounds for a maximum of maxRounds and handles the progression of the combat state.
 // Returns an error if any issue occurs during round simulation.
-func (ce *CombatEngine) RunCombat(maxRounds int) error {
+func (ce *CombatEngine) RunCombat(maxRounds int) (core.VictoryStatus, error) {
+	if len(ce.Combatants) == 0 {
+		return core.VictoryStatusNone, fmt.Errorf("no combatants added to combat engine")
+	}
+
+	if len(ce.TurnOrder) == 0 {
+		return core.VictoryStatusNone, fmt.Errorf("no combatants in tracker")
+	}
+
 	ce.initializeCombatContext()
 	for round := ce.CurrentRound; round <= maxRounds; round++ {
-		err := ce.SimulateRound()
+		victory, err := ce.SimulateRound()
 		if err != nil {
-			return err
+			return core.VictoryStatusNone, err
+		}
+
+		if victory != core.VictoryStatusNone {
+			return victory, nil
 		}
 		ce.CurrentRound++
 	}
 
-	return nil
+	return core.VictoryStatusNone, nil
 }
 
 // SimulateRound executes a single round of combat, processing AI decisions and actions for all combatants in the tracker.
 // It also manages legendary actions, ensuring legendary creatures can act within the constraints of the combat rules.
 // Returns an error if any part of the simulation encounters a failure.
-func (ce *CombatEngine) SimulateRound() error {
-	legIDActedThisRound := make(map[int]bool)
+func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 	err := ce.roundStartEvents()
 	if err != nil {
-		return fmt.Errorf("failed to execute round start events: %v", err)
+		return core.VictoryStatusNone, fmt.Errorf("failed to execute round start events: %v", err)
 	}
-	for _, combatantID := range ce.CombatTracker {
+
+	for _, combatantID := range ce.TurnOrder {
+		// Skip lair combatants - they don't take normal turns
+		if ce.Combatants[combatantID].IsLair {
+			// TODO: Handle lair actions here
+			continue
+		}
+
 		combatError := ce.turnStartEvents(combatantID)
 		if combatError != nil {
-			return fmt.Errorf("failed to execute turn start events for combatant %d: %v", combatantID, combatError)
+			return core.VictoryStatusNone, fmt.Errorf("failed to execute turn start events for combatant %d: %v", combatantID, combatError)
 		}
 		ce.updateCombatContext(combatantID)
 		status, aiReq, combatError := ce.executeTurn(combatantID)
 		if combatError != nil {
-			return combatError
+			return core.VictoryStatusNone, combatError
 		}
 
 		// Handle non-acting statuses
@@ -295,44 +324,27 @@ func (ce *CombatEngine) SimulateRound() error {
 		// Execute the actions in the turn request
 		combatError = ce.ProcessAIRequest(aiReq)
 		if combatError != nil {
-			return combatError
+			return core.VictoryStatusNone, combatError
 		}
 
 		combatError = ce.turnEndEvents(combatantID)
 		if combatError != nil {
-			return fmt.Errorf("failed to execute turn end events for combatant %d: %v", combatantID, combatError)
+			return core.VictoryStatusNone, fmt.Errorf("failed to execute turn end events for combatant %d: %v", combatantID, combatError)
 		}
 	}
 
 	err = ce.roundEndEvents()
 	if err != nil {
-		return fmt.Errorf("failed to execute round end events: %v", err)
+		return core.VictoryStatusNone, fmt.Errorf("failed to execute round end events: %v", err)
 	}
-}
 
-		if len(ce.CombatContext.LegendaryCreatures) > 0 {
-			for _, id := range ce.CombatTracker {
-				if ce.isLegendaryCreature(id) && !legIDActedThisRound[id] && id != combatantID {
-					legAIReq, errL := ce.CombatContext.AllCombatants[id].GetEntity().GetAIRequest(id, core.AIReqLegendaryAction)
-					if errL != nil {
-						return errL
-					}
-					errL = ce.ProcessAIRequest(legAIReq)
-					if errL != nil {
-						return errL
-					}
-
-					legIDActedThisRound[id] = true
-
-					if ce.SimOptions.LimitedLegendaryActions {
-						break
-					}
-				}
-			}
-		}
-		// TODO: Multi attack HP modification is only logging one event not for each action
+	// Check victory conditions at the end of each round
+	victory := ce.checkVictoryCondition()
+	if victory != core.VictoryStatusNone {
+		return victory, nil
 	}
-	return nil
+
+	return core.VictoryStatusNone, nil
 }
 
 func (ce *CombatEngine) isLegendaryCreature(id int) bool {
@@ -346,15 +358,24 @@ func (ce *CombatEngine) isLegendaryCreature(id int) bool {
 // Debug function
 func (ce *CombatEngine) PrintCombatTracker() {
 	order := 0
-	for _, index := range ce.CombatTracker {
+	for _, index := range ce.TurnOrder {
 		order++
-		fmt.Printf("Order Index: %d - Initiative: %d - Name: %s\n", order, ce.Combatants[index].GetInitiative(), ce.Combatants[index].GetEntity().GetName())
+		combatant := ce.Combatants[index]
+		if combatant.IsLair {
+			fmt.Printf("Order Index: %d - Initiative: %d - Name: Lair\n", order, combatant.GetInitiative())
+		} else {
+			fmt.Printf("Order Index: %d - Initiative: %d - Name: %s\n", order, combatant.GetInitiative(), combatant.GetEntity().GetName())
+		}
 	}
 }
 
 // Debug function
 func (ce *CombatEngine) PrintCombatants() {
 	for _, c := range ce.Combatants {
+		if c.IsLair {
+			fmt.Println("Name: Lair")
+			continue
+		}
 		fmt.Printf("Name: %s\n", c.GetEntity().GetName())
 	}
 }
@@ -372,69 +393,60 @@ func (ce *CombatEngine) processAttackResults(attackResults []core.AttackResult) 
 // initializeCombatContext initializes the combat context by setting up combatants, rounds, and relevant configuration values.
 func (ce *CombatEngine) initializeCombatContext() {
 	if ce.CombatContext == nil {
-		ce.CombatContext = &core.CombatContext{}
+		ce.CombatContext = core.NewCombatContext(*ce.SimOptions)
 	}
-	if ce.CombatContext.AllCombatants == nil {
-		ce.CombatContext.AllCombatants = make(map[int]*core.Combatant)
-	}
-	if ce.CombatContext.LegendaryCreatures == nil {
-		ce.CombatContext.LegendaryCreatures = make(map[int]uint8)
-	}
-
-	ce.CombatContext.AllCombatants = ce.Combatants
 	ce.CombatContext.CurrentRound = ce.CurrentRound
+	ce.CombatContext.TurnOrder = ce.TurnOrder
 
-	if ce.SimOptions != nil {
-		ce.CombatContext.AllowCharacterHeals = ce.SimOptions.AllowCharacterHeals
-		ce.CombatContext.AllowMonsterHeals = ce.SimOptions.AllowMonsterHeals
-		ce.CombatContext.AOEHitsAllEnemies = ce.SimOptions.AOEHitsAllEnemies
-		ce.CombatContext.CharacterHealThresholdPct = ce.SimOptions.CharacterHealThresholdPct
-		ce.CombatContext.MonsterHealThresholdPct = ce.SimOptions.MonsterHealThresholdPct
-	}
-
+	ce.CombatContext.CombatantInfo = make(map[int]*core.CombatantInfo)
 	for id, combatant := range ce.Combatants {
-		entity := combatant.GetEntity()
-		if entity.IsMonster() && entity.GetIsLegendary() {
-			ce.CombatContext.LegendaryCreatures[id] = 1
+		// Skip lair combatants (they have no entity)
+		if combatant.IsLair {
+			continue
+		}
+
+		ce.CombatContext.CombatantInfo[id] = combatant.Info
+
+		// Track legendary creatures
+		if combatant.Entity.IsMonster() && combatant.Entity.GetIsLegendary() {
+			ce.CombatContext.LegendaryCreatures[id] = true
 		}
 	}
 }
 
 func (ce *CombatEngine) updateCombatContext(actorID int) {
-	ce.CombatContext.AllCombatants = ce.Combatants
 	ce.CombatContext.CurrentRound = ce.CurrentRound
 	ce.CombatContext.ActingEntityID = actorID
 
 	ce.CombatContext.CharactersInNeedOfHealing, ce.CombatContext.MonstersInNeedOfHealing = ce.calculateEntitiesNeedingHealing()
+	ce.CombatContext.DeadCombatants = ce.getDeadCombatantIDs()
 
-	for id, combatant := range ce.Combatants {
-		entity := combatant.GetEntity()
-
-		// Check if combatant is unconscious/defeated
-		if entity.IsUnconscious() {
-			// Mark as unable to act but keep in combat for potential revival
-			temp := combatant
-			ce.Combatants[id] = temp
-			ce.CombatContext.AllCombatants[id] = temp
+	// Update state for all combatants
+	for id, _ := range ce.Combatants {
+		if info, exists := ce.CombatContext.CombatantInfo[id]; exists {
+			info.UpdateState()
 		}
-
 	}
-
 }
 
 func (ce *CombatEngine) calculateEntitiesNeedingHealing() ([]int, []int) {
-	var charNeedHealing []int
-	var monNeedHealing []int
+	charNeedHealing := make([]int, 0)
+	monNeedHealing := make([]int, 0)
 
 	for id, combatant := range ce.Combatants {
+		// Skip lair combatants
+		if combatant.IsLair {
+			continue
+		}
+
 		entity := combatant.GetEntity()
 
 		// Calculate HP percentage
 		var threshold int
 		if entity.IsCharacter() {
-			threshold = ce.CombatContext.CharacterHealThresholdPct
+			threshold = ce.CombatContext.Options.CharacterHealThresholdPct
 		} else {
-			threshold = ce.CombatContext.MonsterHealThresholdPct
+			threshold = ce.CombatContext.Options.MonsterHealThresholdPct
 		}
 
 		// Entity needs healing if below threshold and not unconscious
@@ -451,20 +463,38 @@ func (ce *CombatEngine) calculateEntitiesNeedingHealing() ([]int, []int) {
 	return charNeedHealing, monNeedHealing
 }
 
+func (ce *CombatEngine) getDeadCombatantIDs() []int {
+	deadCombatants := make([]int, 0)
+
+	for id, combatant := range ce.Combatants {
+		// Skip lair combatants
+		if combatant.IsLair {
+			continue
+		}
+
+		entity := combatant.GetEntity()
+
+		if entity.IsDead() {
+			deadCombatants = append(deadCombatants, id)
+		}
+	}
+
+	return deadCombatants
+}
+
 // refreshLegendaryActions resets the legendary action count for all legendary creatures in the combat context.
-func (ce *CombatEngine) refreshLegendaryActions() {
+func (ce *CombatEngine) refreshLegendaryActions(combatantID int) {
 	if len(ce.CombatContext.LegendaryCreatures) == 0 {
 		return
 	}
 
-	for id, _ := range ce.CombatContext.LegendaryCreatures {
-		ce.Combatants[id].GetEntity().RefreshLegendaryActions()
+	if ce.Combatants[combatantID].GetEntity().IsMonster() && ce.Combatants[combatantID].GetEntity().GetIsLegendary() {
+		ce.Combatants[combatantID].GetEntity().RefreshLegendaryActions()
 	}
 }
 
 // roundStartEvents triggers necessary actions or states at the start of a combat round, including updates and ability rolls.
 func (ce *CombatEngine) roundStartEvents() error {
-	ce.refreshLegendaryActions()
 	err := ce.rollRechargeAbilities()
 	if err != nil {
 		return err
@@ -475,6 +505,11 @@ func (ce *CombatEngine) roundStartEvents() error {
 
 func (ce *CombatEngine) rollRechargeAbilities() error {
 	for _, c := range ce.Combatants {
+		// Skip lair combatants
+		if c.IsLair {
+			continue
+		}
+
 		if c.GetEntity().IsMonster() {
 			m, ok := c.GetEntity().(*monster.Monster)
 			if !ok {
@@ -498,22 +533,14 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 			return fmt.Errorf("entity is character but type assertion failed")
 		}
 
-		// THis is being handled in executeTurn > process turn > handle unconscious turn
-		//// Death Saves
-		//if c.EntityState.GetIsUnconscious() && !c.EntityState.IsStable && !c.EntityState.IsDead {
-		//	res, err := c.RollManager.RollDeathSavingThrow()
-		//	if err != nil {
-		//		return fmt.Errorf("failed to roll death saving throw: %v", err)
-		//	}
-		//	err = c.EntityState.ApplyDeathSavingThrowResult(res)
-		//	if err != nil {
-		//		return fmt.Errorf("failed to apply death saving throw result: %v", err)
-		//	}
-		//}
-
 		if !c.EntityState.IsDead && !c.EntityState.GetIsUnconscious() {
 			c.EntityState.RefreshActions()
 		}
+	}
+
+	// Monster Specific Events
+	if entity.IsMonster() {
+		ce.refreshLegendaryActions(combatantID)
 	}
 
 	return nil
@@ -526,7 +553,7 @@ func (ce *CombatEngine) executeTurn(combatantID int) (*core.TurnResult, *core.AI
 	// Update Combatant's AI Context
 	err := entity.UpdateAICombatContext(ce.CombatContext)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// Tell entity to process its turn
@@ -535,16 +562,18 @@ func (ce *CombatEngine) executeTurn(combatantID int) (*core.TurnResult, *core.AI
 	// ce should understand why an ai request is empty
 	// return TurnStatus, AIRequest, Error?
 
-	turnResult, aiReq, err := entity.ProcessTurn(combatantID)
+	turnResult, aiReq, err := entity.ProcessTurn(combatantID, core.TurnTypeNormal)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	return turnResult, aiReq, nil
 }
 
 func (ce *CombatEngine) shouldSkipCombatantTurn(status *core.TurnResult) bool {
-	if status.TurnStatuses[core.TurnActionReady] || status.TurnStatuses[core.TurnRevived] {
+	if status.TurnStatuses[core.TurnActionReady] ||
+		status.TurnStatuses[core.TurnRevived] ||
+		status.TurnStatuses[core.TurnLegendaryReady] {
 		return false
 	}
 	return true
@@ -552,10 +581,130 @@ func (ce *CombatEngine) shouldSkipCombatantTurn(status *core.TurnResult) bool {
 
 func (ce *CombatEngine) turnEndEvents(currentCombatantID int) error {
 	// TODO: End of turn events:
-	//		Legendary Actions - can't occur after its own turn
 	//		Condition duration
 	//		Saving throws for conditions
 	//		Temp HP Expiration?
-	return nil
 
+	err := ce.executeLegendaryAction(currentCombatantID)
+	if err != nil {
+		return fmt.Errorf("error processing turn end events: %v", err)
+	}
+
+	return nil
+}
+
+// TODO: Add an option to execute only one legendary action per turn to not overwhelm
+func (ce *CombatEngine) executeLegendaryAction(actingCombatantID int) error {
+	if len(ce.CombatContext.LegendaryCreatures) == 0 {
+		return nil
+	}
+	// Build sorted list of legendary creatures (by initiative, excluding current actor)
+	legCreatureIDs := make([]int, 0)
+	for id := range ce.CombatContext.LegendaryCreatures {
+		if id != actingCombatantID {
+			legCreatureIDs = append(legCreatureIDs, id)
+		}
+	}
+
+	// Sort by initiative (descending), then by dex, then by ID
+	slices.SortFunc(legCreatureIDs, func(a, b int) int {
+		initA := ce.Combatants[a].GetInitiative()
+		initB := ce.Combatants[b].GetInitiative()
+
+		// Sort by initiative (descending)
+		if initA != initB {
+			return initB - initA
+		}
+
+		// Tie-breaker: dexterity
+		entityA := ce.Combatants[a].GetEntity()
+		entityB := ce.Combatants[b].GetEntity()
+
+		dexA, _ := entityA.GetAbilityScoreModifier(core.AbilityDexterity)
+		dexB, _ := entityB.GetAbilityScoreModifier(core.AbilityDexterity)
+
+		if dexA != dexB {
+			return dexB - dexA
+		}
+
+		// Final tie-breaker: ID
+		return a - b
+	})
+
+	// Iterate through sorted legendary creatures
+	for _, legID := range legCreatureIDs {
+		entity := ce.Combatants[legID].GetEntity()
+
+		// Request legendary action - entity checks if it has points available
+		status, legAIReq, err := entity.ProcessTurn(legID, core.TurnTypeLegendary)
+		if err != nil {
+			return fmt.Errorf("failed to get legendary AI request for combatant %d: %v", legID, err)
+		}
+
+		// TODO: Update to use statuses - we did with character but not monster yet
+		// Check if creature is out of legendary action points
+		// Assuming your AIRequest or a new field indicates this
+		if status.TurnStatuses[core.TurnLegendaryUnavailable] {
+			// Out of points, try the next entity in the list
+			continue
+		}
+		if status.TurnStatuses[core.TurnLegendaryReady] {
+
+			// Process the legendary action
+			err = ce.ProcessAIRequest(legAIReq)
+			if err != nil {
+				return fmt.Errorf("failed to process legendary action for combatant %d: %v", legID, err)
+			}
+
+			// If LimitedLegendaryActions is true, only one creature acts per turn
+			if ce.SimOptions.LimitedLegendaryActions {
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+func (ce *CombatEngine) roundEndEvents() error {
+	// TODO: End of round events:
+	//		Condition duration
+	//		Saving throws for conditions
+	//		Temp HP Expiration?
+	//		Ongoing damage?
+	// 		Regeneration?
+	return nil
+}
+
+func (ce *CombatEngine) checkVictoryCondition() core.VictoryStatus {
+	var aliveCharacters, aliveMonsters bool
+
+	for id := range ce.Combatants {
+		// Skip lair combatants
+		if ce.Combatants[id].IsLair {
+			continue
+		}
+
+		entity := ce.Combatants[id].GetEntity()
+		if entity.IsDead() {
+			continue
+		}
+		if entity.IsCharacter() {
+			aliveCharacters = true
+		} else if entity.IsMonster() {
+			aliveMonsters = true
+		}
+
+		if aliveCharacters && aliveMonsters {
+			return core.VictoryStatusNone
+		}
+	}
+
+	if !aliveCharacters {
+		return core.VictoryStatusMonsters
+	}
+	if !aliveMonsters {
+		return core.VictoryStatusCharacters
+	}
+	return core.VictoryStatusNone
 }

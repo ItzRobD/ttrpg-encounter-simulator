@@ -5,6 +5,14 @@ import (
 	"strings"
 )
 
+type VictoryStatus string
+
+const (
+	VictoryStatusNone       VictoryStatus = "none"
+	VictoryStatusCharacters VictoryStatus = "characters"
+	VictoryStatusMonsters   VictoryStatus = "monsters"
+)
+
 type DamageType string
 
 const (
@@ -409,14 +417,25 @@ func (ao AttackOptions) GetIsImprovedCritical() bool   { return ao.ImprovedCriti
 func (ao AttackOptions) GetTreatOnesAsTwos() bool      { return ao.RerollOnesAndTwos }
 
 type CombatContext struct {
-	AllCombatants             map[int]*Combatant
-	LegendaryCreatures        map[int]uint8
+	CombatantInfo      map[int]*CombatantInfo
+	LegendaryCreatures map[int]bool
+
+	// Lookup lists
 	CharactersInNeedOfHealing []int
 	MonstersInNeedOfHealing   []int
-	CurrentRound              int
-	ActingEntityID            int
+	DeadCombatants            []int
+
+	// Turn Tracking
+	TurnOrder        []int
+	CurrentTurnIndex int
+	CurrentRound     int
+	ActingEntityID   int
 
 	// Combat options
+	Options *CombatOptions
+}
+
+type CombatOptions struct {
 	AllowCharacterHeals       bool
 	AllowMonsterHeals         bool
 	AOEHitsAllEnemies         bool
@@ -424,19 +443,18 @@ type CombatContext struct {
 	MonsterHealThresholdPct   int
 }
 
-type CombatContextConfig struct {
-	AllCombatants  map[int]Combatant
-	NeedHealingIDs []int
-	CurrentRound   int
-	ActingEntityID int
-} // ???
-
-func NewCombatContext(config CombatContextConfig) CombatContext {
-	// TODO: Finish implementation of this
-	return CombatContext{
-		//AllCombatants:  combatants,
-		//NeedHealingIDs: needHealing,
-		//CurrentRound:   round,
+func NewCombatContext(options SimulationOptions) *CombatContext {
+	combatOpts := &CombatOptions{
+		AllowCharacterHeals:       options.AllowCharacterHeals,
+		AllowMonsterHeals:         options.AllowMonsterHeals,
+		AOEHitsAllEnemies:         options.AOEHitsAllEnemies,
+		CharacterHealThresholdPct: options.CharacterHealThresholdPct,
+		MonsterHealThresholdPct:   options.MonsterHealThresholdPct,
+	}
+	return &CombatContext{
+		CombatantInfo:      make(map[int]*CombatantInfo),
+		LegendaryCreatures: make(map[int]bool),
+		Options:            combatOpts,
 	}
 }
 
@@ -463,3 +481,242 @@ const (
 	EffectCondition EffectType = "condition"
 	EffectTempHP    EffectType = "temp_hp"
 )
+
+type CombatantInfo struct {
+	Combatant *Combatant
+
+	// Current state
+	State *CombatantState
+
+	// Historical data
+	Statistics *CombatStatistics
+
+	// Capability/threat info
+	UsedCapabilities *CombatantCapabilities
+}
+
+type CombatantState struct {
+	CurrentHP        int
+	MaxHP            int
+	HealThreshold    int
+	Concentration    *ConcentrationInfo
+	HasActedThisTurn bool
+	Conditions       EntityConditions
+}
+
+type ConcentrationInfo struct {
+	IsConcentrating bool
+	SpellName       *string
+	AffectedTargets []int // All targets affected by the concentration
+	Duration        *int
+	RoundsRemaining *int
+	RoundStarted    *int
+}
+
+type CombatStatistics struct {
+	TotalDamageDealt       int
+	TotalHealingDone       int
+	DamageByRound          []int
+	HealingByRound         []int
+	LastDamageDealt        int
+	LastHealingDone        int
+	AverageDamagePerRound  float64
+	AverageHealingPerRound float64
+
+	// Attack patterns
+	AttacksMade   int
+	AttacksHit    int
+	AttacksMissed int
+	CriticalHits  int
+
+	// Defensive stats
+	TimesDamaged         int
+	TimesHealed          int
+	TotalDamageTaken     int
+	TotalHealingReceived int
+	DeathSaveSuccesses   int
+	DeathSaveFailures    int
+}
+
+type CombatantCapabilities struct {
+	KnownSpells []string
+
+	// Tactical flags
+	HasUsedCounterspell     bool
+	HasUsedHealingSpells    bool
+	HasUsedAOE              bool
+	HasUsedRangedAttack     bool
+	HasUsedMeleeAttack      bool
+	HasUsedLegendaryActions bool
+}
+
+// CombatantInfo methods
+
+func NewCombatantInfo(combatant *Combatant) *CombatantInfo {
+	return &CombatantInfo{
+		Combatant: combatant,
+		State:     &CombatantState{},
+		Statistics: &CombatStatistics{
+			AverageDamagePerRound:  0,
+			AverageHealingPerRound: 0,
+		},
+		UsedCapabilities: &CombatantCapabilities{},
+	}
+}
+
+// UpdateState refreshes the current state from the combatant entity
+func (ci *CombatantInfo) UpdateState() {
+	entity := ci.Combatant.Entity
+	ci.State.CurrentHP = entity.GetHPStatus().GetHP()
+	ci.State.MaxHP = entity.GetHPStatus().GetMaxHP()
+	// Heal Threshold
+	ci.State.Conditions = entity.GetConditions()
+}
+
+// StartConcentration begins concentration on a spell/ability
+func (ci *CombatantInfo) StartConcentration(spellName string, targets []int, duration int, currentRound int) {
+	ci.State.Concentration = &ConcentrationInfo{
+		IsConcentrating: true,
+		SpellName:       &spellName,
+		AffectedTargets: targets,
+		Duration:        &duration,
+		RoundsRemaining: &duration,
+		RoundStarted:    &currentRound,
+	}
+}
+
+// BreakConcentration ends concentration (failed save, new concentration, etc.)
+func (ci *CombatantInfo) BreakConcentration() {
+	if ci.State.Concentration != nil {
+		ci.State.Concentration.IsConcentrating = false
+		ci.State.Concentration.SpellName = nil
+		ci.State.Concentration.AffectedTargets = nil
+		ci.State.Concentration.Duration = nil
+		ci.State.Concentration.RoundsRemaining = nil
+		ci.State.Concentration.RoundStarted = nil
+	}
+}
+
+// DecrementConcentrationRounds decrements rounds remaining
+func (ci *CombatantInfo) DecrementConcentrationRounds() {
+	if ci.State.Concentration != nil && ci.State.Concentration.IsConcentrating {
+		*ci.State.Concentration.RoundsRemaining--
+		if *ci.State.Concentration.RoundsRemaining <= 0 {
+			ci.BreakConcentration()
+		}
+	}
+}
+
+// CombatStatistics methods
+
+// RecordDamageDealt adds damage to statistics
+func (cs *CombatStatistics) RecordDamageDealt(damage int, round int) {
+	cs.TotalDamageDealt += damage
+	cs.LastDamageDealt = damage
+
+	// Ensure slice is large enough
+	for len(cs.DamageByRound) <= round {
+		cs.DamageByRound = append(cs.DamageByRound, 0)
+	}
+	cs.DamageByRound[round] += damage
+
+	// Recalculate average
+	cs.updateAverageDamage()
+}
+
+// RecordHealingDone adds healing to statistics
+func (cs *CombatStatistics) RecordHealingDone(healing int, round int) {
+	cs.TotalHealingDone += healing
+	cs.LastHealingDone = healing
+
+	// Ensure slice is large enough
+	for len(cs.HealingByRound) <= round {
+		cs.HealingByRound = append(cs.HealingByRound, 0)
+	}
+	cs.HealingByRound[round] += healing
+
+	// Recalculate average
+	cs.updateAverageHealing()
+}
+
+// RecordAttack logs an attack attempt
+func (cs *CombatStatistics) RecordAttack(hit bool, critical bool) {
+	cs.AttacksMade++
+	if hit {
+		cs.AttacksHit++
+		if critical {
+			cs.CriticalHits++
+		}
+	} else {
+		cs.AttacksMissed++
+	}
+}
+
+// RecordDamageTaken logs damage received
+func (cs *CombatStatistics) RecordDamageTaken(value int) {
+	cs.TotalDamageTaken += value
+	cs.TimesDamaged++
+}
+
+// RecordHealingReceived logs healing received
+func (cs *CombatStatistics) RecordHealingReceived(value int) {
+	cs.TotalHealingReceived += value
+	cs.TimesHealed++
+}
+
+// RecordDeathSave logs a death saving throw
+func (cs *CombatStatistics) RecordDeathSave(success bool) {
+	if success {
+		cs.DeathSaveSuccesses++
+	} else {
+		cs.DeathSaveFailures++
+	}
+}
+
+func (cs *CombatStatistics) updateAverageDamage() {
+	roundsActive := len(cs.DamageByRound)
+	if roundsActive > 0 {
+		cs.AverageDamagePerRound = float64(cs.TotalDamageDealt) / float64(roundsActive)
+	}
+}
+
+func (cs *CombatStatistics) updateAverageHealing() {
+	roundsActive := len(cs.HealingByRound)
+	if roundsActive > 0 {
+		cs.AverageHealingPerRound = float64(cs.TotalHealingDone) / float64(roundsActive)
+	}
+}
+
+// CombatantCapabilities methods
+
+func (cc *CombatantCapabilities) AddKnownSpell(name string) {
+	if cc.KnownSpells == nil {
+		cc.KnownSpells = make([]string, 0)
+	}
+	cc.KnownSpells = append(cc.KnownSpells, name)
+}
+
+func (cc *CombatantCapabilities) UseCounterspell() {
+	cc.HasUsedCounterspell = true
+}
+
+func (cc *CombatantCapabilities) UseHealingSpell() {
+	cc.HasUsedHealingSpells = true
+}
+
+func (cc *CombatantCapabilities) UseAOE() {
+	cc.HasUsedAOE = true
+}
+
+func (cc *CombatantCapabilities) UseMeleeAttack() {
+	cc.HasUsedMeleeAttack = true
+}
+
+func (cc *CombatantCapabilities) UseRangedAttack() {
+	cc.HasUsedRangedAttack = true
+}
+
+// UseLegendaryAction consumes a legendary action
+func (cc *CombatantCapabilities) UseLegendaryAction() {
+	cc.HasUsedLegendaryActions = true
+}

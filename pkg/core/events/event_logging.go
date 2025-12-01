@@ -16,6 +16,17 @@ func LogCharacterActionChoiceEvent(actor core.Entity, choice core.ActionType, li
 	}
 }
 
+func LogMonsterActionChoiceEvent(actor core.Entity, choice core.ActionType, listener func(event interface{})) {
+	event := &ActionChoiceEvent{
+		ActionChoice: choice,
+	}
+	event.SetActor(actor.GetName())
+
+	if listener != nil {
+		listener(event)
+	}
+}
+
 func LogMeleeAttackEvent(actor core.Entity, attackResult *core.AttackResult, listener func(event interface{})) {
 	event := &MeleeAttackEvent{
 		Target:         attackResult.GetTargetName(),
@@ -65,6 +76,13 @@ func LogSpellChoiceEvent(actor core.Entity, spellChoiceEvent SpellChoiceEvent, l
 }
 
 func LogSpellAttackEvent(actor core.Entity, res core.SpellResult, listener func(event interface{})) {
+	var damageTotal int
+	if res.GetValueResult() != nil {
+		damageTotal = res.GetValueResult().GetTotal()
+	} else {
+		damageTotal = 0
+	}
+
 	event := &SpellAttackEvent{
 		Target:             res.GetTargetName(),
 		SpellName:          res.GetSpellName(),
@@ -74,7 +92,7 @@ func LogSpellAttackEvent(actor core.Entity, res core.SpellResult, listener func(
 		AttackRoll:         res.GetAttackRoll(),
 		Success:            res.GetIsHit(),
 		CriticalHit:        res.GetIsCriticalHit(),
-		DamageTotal:        res.GetValueResult().GetTotal(),
+		DamageTotal:        damageTotal,
 		DamageType:         res.GetDamageType().String(),
 		HasDC:              res.GetHasDC(),
 		DCAbility:          res.GetSpellSaveAbility().String(),

@@ -5,6 +5,7 @@ import (
 )
 
 type Entity interface {
+	IsDead() bool
 	IsUnconscious() bool
 	GetHPStatus() HPStatus
 	GetName() string
@@ -42,18 +43,38 @@ type Entity interface {
 	ModifyHP(value int, isTemp bool, tempStacking bool) (HPModificationResult, error)
 	RefreshLegendaryActions()
 	CanTakeActions() bool
-	ProcessTurn(actorID int) (*TurnResult, *AIRequest, error)
+	ProcessTurn(actorID int, turnType TurnType) (*TurnResult, *AIRequest, error)
+	GetConditions() EntityConditions
 }
 
 type Combatant struct {
 	Entity     Entity
+	Info       *CombatantInfo
 	Initiative int
 	IsLair     bool
 }
 
 // NewCombatant creates a new Combatant with the specified Entity and initiative, defaulting CanAct to true.
-func NewCombatant(entity Entity, initiative int) *Combatant {
-	return &Combatant{entity, initiative, false}
+func NewCombatant(entity Entity, info *CombatantInfo, initiative int) *Combatant {
+	return &Combatant{entity, info, initiative, false}
+}
+
+func NewCombatantWithInfo(entity Entity) *Combatant {
+	// Create combatant with nil info initially (circular dependency)
+	combatant := &Combatant{
+		Entity:     entity,
+		Info:       nil,
+		Initiative: 0,
+		IsLair:     false,
+	}
+
+	// Create and attach CombatantInfo
+	combatant.Info = NewCombatantInfo(combatant)
+
+	// Initialize state from entity
+	combatant.Info.UpdateState()
+
+	return combatant
 }
 
 func (c *Combatant) GetInitiative() int {

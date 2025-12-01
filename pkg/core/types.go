@@ -107,6 +107,13 @@ type TurnResult struct {
 
 type TurnStatus string
 
+type TurnType string
+
+const (
+	TurnTypeNormal    TurnType = "normal"
+	TurnTypeLegendary TurnType = "legendary"
+)
+
 const (
 	TurnActionReady           TurnStatus = "ready"
 	TurnIncapacitated         TurnStatus = "inactive"
@@ -117,4 +124,6 @@ const (
 	TurnDead                  TurnStatus = "dead"
 	TurnUnconscious           TurnStatus = "unconscious"
 	TurnRevived               TurnStatus = "revived"
+	TurnLegendaryReady        TurnStatus = "legendary_ready"
+	TurnLegendaryUnavailable  TurnStatus = "legendary_unavailable"
 )

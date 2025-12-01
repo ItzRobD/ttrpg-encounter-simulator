@@ -10,14 +10,18 @@ import (
 // TODO: Worked on process turn, need to finish in combat engine, handle contexts etc
 // 		Process request as before - account for reactions
 
-func (c *Character) ProcessTurn(actorID int) (*core.TurnResult, *core.AIRequest, error) {
+func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnResult, *core.AIRequest, error) {
+	if turnType == core.TurnTypeLegendary {
+		return nil, nil, fmt.Errorf("invalid turn type for character: %s", turnType)
+	}
+
 	result := &core.TurnResult{
 		TurnStatuses: make(map[core.TurnStatus]bool),
 	}
 
 	// Able to act
 	if c.EntityState.CanTakeActions() {
-		aiReq, err := c.GetAIRequest(actorID, core.AIReqChooseAction)
+		aiReq, err := c.GetAIRequest(actorID, core.AIReqNormalAction)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error getting AI request: %s", err)
 		}
@@ -34,7 +38,7 @@ func (c *Character) ProcessTurn(actorID int) (*core.TurnResult, *core.AIRequest,
 	if c.EntityState.GetIsUnconscious() {
 		ucResult, err := c.handleUnconsciousTurn(result)
 		if ucResult.TurnStatuses[core.TurnRevived] {
-			aiReq, err := c.GetAIRequest(actorID, core.AIReqChooseAction)
+			aiReq, err := c.GetAIRequest(actorID, core.AIReqNormalAction)
 			if err != nil {
 				return nil, nil, fmt.Errorf("error getting AI request: %s", err)
 			}
@@ -56,8 +60,25 @@ func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReq
 	var req *core.AIRequest
 	var err error
 	switch t {
-	case core.AIReqChooseAction:
-		req, err = c.AI.createCharacterActionRequest()
+	case core.AIReqNormalAction:
+		var actionChoice core.ActionType
+		actionChoice, err = c.AI.chooseCharacterActionType()
+		if err != nil {
+			return nil, err
+		}
+
+		switch actionChoice {
+		case core.ATDamage:
+			req, err = c.AI.createCharacterDamageActionRequest()
+			if err != nil {
+				return nil, err
+			}
+		case core.ATHeal:
+			req, err = c.AI.createCharacterHealActionRequest()
+			if err != nil {
+				return nil, err
+			}
+		}
 		if err != nil {
 			return nil, err
 		}

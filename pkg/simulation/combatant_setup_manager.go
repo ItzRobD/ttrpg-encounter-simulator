@@ -71,7 +71,7 @@ func (csm *CombatantSetupManager) createCharacters(configs []character.Character
 			})
 			continue
 		}
-		combatants = append(combatants, core.NewCombatant(char, 0))
+		combatants = append(combatants, core.NewCombatantWithInfo(char))
 	}
 
 	return combatants, errors
@@ -117,7 +117,8 @@ func (csm *CombatantSetupManager) createMonsters(ids []int) ([]*core.Combatant, 
 			continue
 		}
 
-		combatants = append(combatants, core.NewCombatant(monster, 0))
+		combatants = append(combatants, core.NewCombatantWithInfo(monster))
+
 		foundIDs[monster.ID] = true
 	}
 

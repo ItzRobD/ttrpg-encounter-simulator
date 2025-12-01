@@ -116,13 +116,40 @@ func (mai *MonsterAI) chooseLegendaryAction(indexes []int) (int, error) {
 }
 
 func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) {
-	// TODO : Create healing req
+	var req core.AIRequest
+	var choice *core.SpellChoice
+
+	targetID, err := mai.selectTargetID(core.TTHealing)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Will need to account for custom monsters with healing actions, maybe?
+
+	// choose spell
+	if mai.parent.SpellCastingManager.HasHealingSpells() {
+		targetValue := mai.combatCtx.CombatantInfo[targetID].Combatant.Entity.GetHPStatus().GetHPDifference()
+		choice, err = mai.parent.ChooseSpellByHealingEfficiency(targetValue)
+		if err != nil {
+			return nil, err
+		}
+
+		req = core.AIRequest{
+			Actor:       mai.parent,
+			ActorType:   core.EntityMonster,
+			TargetID:    targetID,
+			ActionType:  core.ATSpell,
+			SpellChoice: choice,
+		}
+
+	} else {
+		// Handle healing actions
+	}
+
+	return &req, nil
 }
 
 func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error) {
-	// TODO: Need to implement monster healing
-	// TODO: When characters check for healing, are they including themselves?
-
 	var actionChoiceID int
 	var spellChoice *core.SpellChoice
 	var err error
@@ -159,18 +186,7 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 					return mai.buildAIRequest(actionChoiceID, nil, core.ATMonsterMultiattack)
 				}
 			}
-
-		case MAITactical:
-			if mai.parent.IsSpellcaster() {
-				// choose most effective -> highest damage and aoe vs multiattack choice
-			} else {
-				actionChoiceID, err = mai.chooseMultiattackOption()
-				if err != nil {
-					fmt.Println(err)
-				} else {
-					return mai.buildAIRequest(actionChoiceID, nil, core.ATMonsterMultiattack)
-				}
-			}
+			// The tactical AI is going to be replaced by the more advanced weighted decision process
 		}
 	}
 
@@ -338,7 +354,7 @@ func (mai *MonsterAI) buildAIRequest(actionIndex int, spellChoice *core.SpellCho
 	if err != nil {
 		return nil, err
 	}
-	target := mai.combatCtx.AllCombatants[targetID].GetEntity()
+	target := mai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity()
 
 	req := core.AIRequest{
 		Actor:       mai.parent,
@@ -386,10 +402,10 @@ func (mai *MonsterAI) getEnemyTargets() map[int]*core.Combatant {
 	enemies := make(map[int]*core.Combatant)
 	self := mai.parent
 
-	for id, combatant := range mai.combatCtx.AllCombatants {
-		e := combatant.GetEntity()
+	for id, combatant := range mai.combatCtx.CombatantInfo {
+		e := combatant.Combatant.GetEntity()
 		if !e.IsUnconscious() && (self.IsMonster() != e.IsMonster()) {
-			enemies[id] = combatant
+			enemies[id] = combatant.Combatant
 		}
 	}
 
@@ -400,10 +416,10 @@ func (mai *MonsterAI) getAllyTargets() map[int]*core.Combatant {
 	allies := make(map[int]*core.Combatant)
 	self := mai.parent
 
-	for id, combatant := range mai.combatCtx.AllCombatants {
-		e := combatant.GetEntity()
+	for id, combatant := range mai.combatCtx.CombatantInfo {
+		e := combatant.Combatant.GetEntity()
 		if !e.IsUnconscious() && (self.IsMonster() == e.IsMonster()) {
-			allies[id] = combatant
+			allies[id] = combatant.Combatant
 		}
 	}
 
@@ -423,7 +439,11 @@ func (mai *MonsterAI) getActionIDs() []int {
 }
 
 func (mai *MonsterAI) chooseMonsterActionType() (core.ActionType, error) {
-	if mai.combatCtx.AllowMonsterHeals {
+	if mai.combatCtx == nil {
+		return core.ATNoAction, fmt.Errorf("combat context not set")
+	}
+
+	if mai.combatCtx.Options.AllowMonsterHeals {
 		if (mai.parent.SpellCastingManager.HasHealingSpells() || mai.parent.ActionManager.HasHealingAbilities()) && len(mai.combatCtx.MonstersInNeedOfHealing) > 0 {
 			return core.ATMonsterHeal, nil
 		}

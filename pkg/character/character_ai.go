@@ -23,67 +23,6 @@ func (cai *CharacterAI) UpdateCombatContext(ctx *core.CombatContext) {
 	cai.combatCtx = ctx
 }
 
-func (cai *CharacterAI) createCharacterActionRequest() (*core.AIRequest, error) {
-	if cai.combatCtx == nil {
-		return nil, fmt.Errorf("combat context not set")
-	}
-
-	var req core.AIRequest
-	var choice *core.SpellChoice
-	if cai.combatCtx.AllowCharacterHeals && cai.parent.IsHealer() && len(cai.combatCtx.CharactersInNeedOfHealing) > 0 {
-		// choose target
-		targetID, err := cai.selectTargetID(core.TTHealing)
-		if err != nil {
-			return nil, err
-		}
-		// choose healing spell
-		targetValue := cai.combatCtx.AllCombatants[targetID].GetEntity().GetHPStatus().GetHPDifference()
-		choice, err = cai.parent.ChooseSpellByHealingEfficiency(targetValue)
-		if err != nil {
-			return nil, err
-		}
-		// return the action request
-		req = core.AIRequest{
-			Actor:       cai.parent,
-			ActorType:   core.EntityCharacter,
-			TargetID:    targetID,
-			ActionType:  core.ATHeal,
-			SpellChoice: choice,
-		}
-
-		// TODO: Logging
-
-		return &req, nil
-	}
-	// Choose damage
-	targetID, err := cai.selectTargetID(core.TTDamage)
-	if err != nil {
-		return nil, err
-	}
-	at, err := cai.chooseDamageActionType()
-	if err != nil {
-		return nil, err
-	}
-	if at == core.ATSpell {
-		choice, err = cai.chooseDamageSpell()
-		if err != nil {
-			return nil, err
-		}
-	}
-	req = core.AIRequest{
-		Actor:       cai.parent,
-		ActorType:   core.EntityCharacter,
-		TargetID:    targetID,
-		Target:      cai.combatCtx.AllCombatants[targetID].GetEntity(),
-		ActionType:  at,
-		SpellChoice: choice,
-	}
-
-	// TODO: Logging
-
-	return &req, nil
-}
-
 func (cai *CharacterAI) chooseDamageSpell() (*core.SpellChoice, error) {
 	return cai.parent.SpellCastingManager.ChooseSpellByPriority(core.STDamage, cai.parent.EntityState.SpellcastingPriority)
 }
@@ -166,10 +105,10 @@ func (cai *CharacterAI) getEnemyTargets() map[int]*core.Combatant {
 	enemies := make(map[int]*core.Combatant)
 	self := cai.parent
 
-	for id, combatant := range cai.combatCtx.AllCombatants {
-		e := combatant.GetEntity()
+	for id, combatant := range cai.combatCtx.CombatantInfo {
+		e := combatant.Combatant.GetEntity()
 		if !e.IsUnconscious() && (self.IsCharacter() != e.IsCharacter()) {
-			enemies[id] = combatant
+			enemies[id] = combatant.Combatant
 		}
 	}
 
@@ -180,12 +119,86 @@ func (cai *CharacterAI) getAllyTargets() map[int]*core.Combatant {
 	allies := make(map[int]*core.Combatant)
 	self := cai.parent
 
-	for id, combatant := range cai.combatCtx.AllCombatants {
-		e := combatant.GetEntity()
+	for id, combatant := range cai.combatCtx.CombatantInfo {
+		e := combatant.Combatant.GetEntity()
 		if !e.IsUnconscious() && (self.IsCharacter() == e.IsCharacter()) {
-			allies[id] = combatant
+			allies[id] = combatant.Combatant
 		}
 	}
 
 	return allies
+}
+
+func (cai *CharacterAI) chooseCharacterActionType() (core.ActionType, error) {
+	if cai.combatCtx == nil {
+		return core.ATNoAction, fmt.Errorf("combat context not set")
+	}
+
+	if cai.combatCtx.Options.AllowCharacterHeals {
+		if cai.parent.IsHealer() && len(cai.combatCtx.CharactersInNeedOfHealing) > 0 {
+			return core.ATHeal, nil
+		}
+	}
+
+	return core.ATDamage, nil
+}
+
+func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, error) {
+	var req core.AIRequest
+	var choice *core.SpellChoice
+
+	targetID, err := cai.selectTargetID(core.TTHealing)
+	if err != nil {
+		return nil, err
+	}
+
+	// choose spell
+	targetValue := cai.combatCtx.CombatantInfo[targetID].Combatant.Entity.GetHPStatus().GetHPDifference()
+	choice, err = cai.parent.ChooseSpellByHealingEfficiency(targetValue)
+	if err != nil {
+		return nil, err
+	}
+
+	req = core.AIRequest{
+		Actor:       cai.parent,
+		ActorType:   core.EntityCharacter,
+		TargetID:    targetID,
+		ActionType:  core.ATHeal,
+		SpellChoice: choice,
+	}
+
+	return &req, nil
+}
+
+func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, error) {
+	var req core.AIRequest
+	var choice *core.SpellChoice
+
+	targetID, err := cai.selectTargetID(core.TTDamage)
+	if err != nil {
+		return nil, err
+	}
+
+	at, err := cai.chooseDamageActionType()
+	if err != nil {
+		return nil, err
+	}
+
+	if at == core.ATSpell {
+		choice, err = cai.chooseDamageSpell()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	req = core.AIRequest{
+		Actor:       cai.parent,
+		ActorType:   core.EntityCharacter,
+		TargetID:    targetID,
+		Target:      cai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity(),
+		ActionType:  at,
+		SpellChoice: choice,
+	}
+
+	return &req, nil
 }
