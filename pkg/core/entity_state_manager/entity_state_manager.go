@@ -355,19 +355,18 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 			}
 		}
 	} else {
-		if value < 0 { // We are doing damage
-			// Subtract from temp hp first
+		if value < 0 {
+			dmg := -value // positive magnitude
 			if esm.TempHP > 0 {
-				dmg := value
-				if esm.TempHP > -value { // Arithmatic operators are backwards as value is negative
-					esm.TempHP += value
+				if esm.TempHP >= dmg {
+					esm.TempHP -= dmg // exact or partial absorption
 				} else {
-					diff := dmg + esm.TempHP // Overflow damage
+					overflow := dmg - esm.TempHP
 					esm.TempHP = 0
-					esm.CurrentHP = min(esm.CurrentHP+diff, 0)
+					esm.CurrentHP -= overflow
 				}
 			} else {
-				esm.CurrentHP += value // Direct HP Damage
+				esm.CurrentHP -= dmg
 			}
 		} else { // Healing
 			esm.CurrentHP = min(esm.CurrentHP+value, esm.MaxHP)
@@ -382,9 +381,15 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 	res.IsUnconscious = esm.CurrentHP <= 0
 	res.IsMaxHealth = esm.CurrentHP == esm.MaxHP
 
-	// TODO: Should this be handled within the manager during hp changes?
+	// Handle 0 HP logic
 	if res.IsUnconscious {
-		esm.SetUnconscious(true)
+		// Monsters die instantly at 0 HP (standard D&D 5e rules)
+		// Player characters go unconscious and make death saves
+		if esm.Parent.IsMonster() {
+			esm.Kill()
+		} else {
+			esm.SetUnconscious(true)
+		}
 	}
 
 	return res, nil

@@ -83,7 +83,7 @@ func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReq
 			return nil, err
 		}
 	default:
-		return req, fmt.Errorf("invalid AI request type: %s", t)
+		return req, fmt.Errorf("invalid AI request type: %v", t)
 	}
 
 	events.LogCharacterActionChoiceEvent(c, req.ActionType, c.EventListener)

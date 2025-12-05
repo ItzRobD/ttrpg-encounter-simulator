@@ -58,6 +58,39 @@ func (c ClassID) String() string {
 	}
 }
 
+func MakeClassID(s string) ClassID {
+	switch s {
+	case "Artificer":
+		return Artificer
+	case "Barbarian":
+		return Barbarian
+	case "Bard":
+		return Bard
+	case "Cleric":
+		return Cleric
+	case "Druid":
+		return Druid
+	case "Fighter":
+		return Fighter
+	case "Monk":
+		return Monk
+	case "Paladin":
+		return Paladin
+	case "Ranger":
+		return Ranger
+	case "Rogue":
+		return Rogue
+	case "Sorcerer":
+		return Sorcerer
+	case "Warlock":
+		return Warlock
+	case "Wizard":
+		return Wizard
+	default:
+		return 0
+	}
+}
+
 // Class represents a character class with its attributes like ID, name, hit die, and spellcasting modifier.
 type Class struct {
 	ID                   ClassID

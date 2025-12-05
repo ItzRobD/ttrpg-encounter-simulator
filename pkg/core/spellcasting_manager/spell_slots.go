@@ -52,7 +52,7 @@ func (scm *SpellcastingManager) RecoverSpellSlotToMax(slot int) error {
 }
 
 func (scm *SpellcastingManager) getHighestAvailableSpellSlot() (int, error) {
-	for i := len(scm.currentSlots) - 1; i > 0; i-- {
+	for i := 9; i >= 1; i-- {
 		if scm.currentSlots[i] > 0 {
 			return i, nil
 		}

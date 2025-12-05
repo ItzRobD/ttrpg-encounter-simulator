@@ -97,6 +97,9 @@ func (mam *MonsterActionManager) InitializeActions(config *MAMConfig) {
 	mam.LegendaryActions = config.LegendaryActions
 	mam.SpecialAbilities = config.SpecialAbilities
 
+	if mam.RechargeActions == nil {
+		mam.RechargeActions = make(map[int]uint8)
+	}
 	for _, action := range mam.Actions {
 		if action.RechargeValue > 0 {
 			mam.parent.EntityState.AddRechargeAction(action.ActionID)
@@ -110,22 +113,25 @@ func (mam *MonsterActionManager) InitializeActions(config *MAMConfig) {
 // NewMonsterActionManager initializes and returns a MonsterActionManager with the provided parent, roll manager, and configuration.
 // If the provided config is nil, an empty configuration is used for initialization. Actions must be initialized later.
 func NewMonsterActionManager(parent *Monster, rm *roll_manager.RollManager, config *MAMConfig) *MonsterActionManager {
-	if config == nil {
-		return &MonsterActionManager{
-			parent:      parent,
-			rollManager: rm,
+	mam := &MonsterActionManager{
+		parent:          parent,
+		rollManager:     rm,
+		RechargeActions: make(map[int]uint8), // ensure non-nil
+	}
+	if config != nil {
+		mam.Actions = config.Actions
+		mam.Multiattacks = config.Multiattacks
+		mam.LegendaryActions = config.LegendaryActions
+		mam.SpecialAbilities = config.SpecialAbilities
+		mam.precomputeAttackData()
+
+		for _, a := range mam.Actions {
+			if a.RechargeValue > 0 {
+				mam.RechargeActions[a.ActionID] = 1
+			}
 		}
 	}
-	mam := MonsterActionManager{
-		parent:           parent,
-		rollManager:      rm,
-		Actions:          config.Actions,
-		Multiattacks:     config.Multiattacks,
-		LegendaryActions: config.LegendaryActions,
-		SpecialAbilities: config.SpecialAbilities,
-	}
-	mam.precomputeAttackData()
-	return &mam
+	return mam
 }
 
 func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) ([]core.AttackResult, error) {

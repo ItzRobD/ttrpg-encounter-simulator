@@ -3,12 +3,13 @@ package spells
 import (
 	"context"
 	"database/sql"
-	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
-	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/internal/util"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
+
+	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	. "github.com/go-jet/jet/v2/postgres"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

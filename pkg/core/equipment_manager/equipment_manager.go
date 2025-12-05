@@ -2,6 +2,7 @@ package equipment_manager
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/armor"
+	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"fmt"
@@ -11,9 +12,11 @@ type EquipmentManager struct {
 	parent core.Entity
 
 	// Equipped Items
-	Armor            armor.Armor
-	Weapons          map[core.WeaponSlot]*WeaponSlotData
-	WeaponAttackData map[core.WeaponSlot]WeaponAttackData
+	Armor             armor.Armor
+	Shield            armor.Armor
+	HasShieldEquipped bool
+	Weapons           map[core.WeaponSlot]*WeaponSlotData
+	WeaponAttackData  map[core.WeaponSlot]WeaponAttackData
 }
 
 type WeaponSlotData struct {
@@ -49,9 +52,63 @@ func (em *EquipmentManager) GetArmor() armor.Armor {
 	return em.Armor
 }
 
+// SetShield equips a shield in the EquipmentManager. Secondary weapon, if equipped, cannot be used while a shield is equipped.
+func (em *EquipmentManager) SetShield(s armor.Armor) {
+	em.Shield = s
+	em.HasShieldEquipped = true
+}
+
+func (em *EquipmentManager) GetShield() armor.Armor {
+	return em.Shield
+}
+
+func (em *EquipmentManager) GetHasShieldEquipped() bool {
+	return em.HasShieldEquipped
+}
+
 // GetAC returns the Armor Class (AC) of the equipped armor in the EquipmentManager.
 func (em *EquipmentManager) GetAC() int {
-	return em.Armor.ArmorClass
+	base := 10
+	returnValue := base
+
+	dexMod, err := em.parent.GetAbilityScoreModifier(core.AbilityDexterity)
+	if err != nil {
+		return -1
+	}
+
+	if em.Armor == (armor.Armor{}) {
+		// Unarmored
+		id := em.parent.GetClassID()
+		if classes.ClassID(id) == classes.Monk && !em.HasShieldEquipped { // unarmored defense
+			wisMod, err := em.parent.GetAbilityScoreModifier(core.AbilityWisdom)
+			if err != nil {
+				return -1
+			}
+			returnValue = base + dexMod + wisMod
+		} else {
+			returnValue = base + dexMod
+		}
+	} else {
+		// Armored
+		if em.Armor.DexBonus {
+			if em.Armor.MaxBonus { // medium armor
+				if dexMod > 2 {
+					dexMod = 2
+				}
+				returnValue = em.Armor.ArmorClass + dexMod
+			} else { // light armor
+				returnValue = em.Armor.ArmorClass + dexMod
+			}
+		} else { // heavy armor
+			returnValue = em.Armor.ArmorClass
+		}
+	}
+
+	if em.HasShieldEquipped {
+		returnValue += em.Shield.ArmorClass
+	}
+
+	return returnValue
 }
 
 // SetWeapon equips a weapon in the specified slot and sets proficiency status for the EquipmentManager.

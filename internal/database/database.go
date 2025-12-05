@@ -14,8 +14,17 @@ import (
 
 var pool *pgxpool.Pool
 
-func InitDb() error {
-	err := godotenv.Load()
+type InitOpts struct {
+	EnvPath string
+}
+
+func InitDb(opts *InitOpts) error {
+	var err error
+	if opts == nil {
+		err = godotenv.Load()
+	} else {
+		err = godotenv.Load(opts.EnvPath)
+	}
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}

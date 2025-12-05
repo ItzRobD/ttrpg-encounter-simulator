@@ -31,6 +31,10 @@ func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actio
 	}
 
 	// TODO: Handle these
+	if simulationOptions == nil {
+		// Defensive default to avoid nil dereference; callers should normally pass non-nil
+		simulationOptions = &core.SimulationOptions{}
+	}
 	attackOptions := core.AttackOptions{
 		Advantage:            adv,
 		ShouldApplyDamageMod: true,
@@ -83,7 +87,6 @@ func isValidMonsterActionType(actionType core.ActionType) bool {
 	return actionType == core.ATMonsterAction ||
 		actionType == core.ATLegendaryAction ||
 		actionType == core.ATMonsterSpecial ||
-		actionType == core.ATLegendaryAction ||
 		actionType == core.ATMonsterMultiattack
 }
 

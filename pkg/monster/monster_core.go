@@ -79,7 +79,7 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 			return nil, err
 		}
 	default:
-		return req, fmt.Errorf("invalid AI request type: %s", t)
+		return req, fmt.Errorf("invalid AI request type: %v", t)
 	}
 
 	events.LogMonsterActionChoiceEvent(m, req.ActionType, m.EventListener)

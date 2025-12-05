@@ -5,6 +5,7 @@ import (
 )
 
 type Entity interface {
+	GetClassID() uint8 // Monsters == 0, Characters >= 1
 	IsDead() bool
 	IsUnconscious() bool
 	GetHPStatus() HPStatus

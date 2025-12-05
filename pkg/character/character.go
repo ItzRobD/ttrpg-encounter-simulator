@@ -279,6 +279,7 @@ func (c *Character) RefreshLegendaryActions()                   { return }
 func (c *Character) GetEventListener() func(event interface{})  { return c.EventListener }
 func (c *Character) SetEventListener(f func(event interface{})) { c.EventListener = f }
 func (c *Character) IsUnconscious() bool                        { return c.EntityState.GetIsUnconscious() }
+func (c *Character) GetClassID() uint8                          { return uint8(c.Class.ID) }
 func (c *Character) IsDead() bool                               { return c.EntityState.GetIsDead() }
 func (c *Character) GetHPStatus() core.HPStatus                 { return c.EntityState.GetHPStatus() }
 func (c *Character) GetName() string                            { return c.Name }

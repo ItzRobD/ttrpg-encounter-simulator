@@ -203,12 +203,12 @@ func (m *Monster) setHP(config core.HPConfig) error {
 		return nil
 	case core.HPSetRoll:
 		hpRoll, err := m.RollManager.RollHP(config)
+		if err != nil {
+			return err
+		}
 		if hpRoll.Total <= 0 {
 			hpRoll.Total = 1
 			hpRoll.FinalRollValue = 1
-		}
-		if err != nil {
-			return err
 		}
 		hp := entity_state_manager.HPValues{
 			CurrentHP: hpRoll.Total,
@@ -249,6 +249,7 @@ func (m *Monster) SetHP(method core.HPSetMethod, value int) error {
 	return m.setHP(core.HPConfig{HPSetMethod: method, Value: value})
 }
 func (m *Monster) IsUnconscious() bool  { return m.EntityState.GetIsUnconscious() }
+func (m *Monster) GetClassID() uint8    { return 0 }
 func (m *Monster) IsDead() bool         { return m.EntityState.GetIsDead() }
 func (m *Monster) IsCharacter() bool    { return false }
 func (m *Monster) IsMonster() bool      { return true }

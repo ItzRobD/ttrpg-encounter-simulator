@@ -17,7 +17,7 @@ import (
 //		Would be smart to have an is legendary monster present bool within the simulation
 
 func main() {
-	dbErr := database.InitDb()
+	dbErr := database.InitDb(nil)
 
 	if dbErr != nil {
 		fmt.Println(dbErr)
@@ -36,8 +36,8 @@ func main() {
 	//fmt.Println(s)
 
 	frank := setupFrank()
-	jack := setupJack()
-	testSimulation([]character.CharacterConfig{frank, jack}, []int{280})
+	//jack := setupJack()
+	testSimulation([]character.CharacterConfig{frank}, []int{2})
 }
 
 func setupJack() character.CharacterConfig {
