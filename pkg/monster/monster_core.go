@@ -210,6 +210,10 @@ func (m *Monster) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.Turn
 }
 
 func (m *Monster) processLegendaryTurn(actorID int) (*core.TurnResult, *core.AIRequest, error) {
+	if !m.IsLegendary || len(m.ActionManager.LegendaryActions) == 0 {
+		return nil, nil, fmt.Errorf("monster is not legendary")
+	}
+
 	result := &core.TurnResult{
 		TurnStatuses: make(map[core.TurnStatus]bool),
 	}
@@ -219,8 +223,22 @@ func (m *Monster) processLegendaryTurn(actorID int) (*core.TurnResult, *core.AIR
 		return result, nil, nil
 	}
 
+	var canAffordLegAction bool
+	pointsRemaining := m.EntityState.GetLegendaryActionPoints()
+	for _, action := range m.ActionManager.LegendaryActions {
+		if action.Cost <= pointsRemaining {
+			canAffordLegAction = true
+			break
+		}
+	}
+
+	if !canAffordLegAction {
+		result.TurnStatuses[core.TurnLegendaryUnavailable] = true
+		return result, nil, nil
+	}
+
 	legAIReq, err := m.GetAIRequest(actorID, core.AIReqLegendaryAction)
-	// TODO: There may be legendary points available but not enough for the creature's actions - handle this case
+
 	if err != nil {
 		return nil, nil, err
 	}
