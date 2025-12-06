@@ -4,6 +4,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
+	"fmt"
 )
 
 type MartialAttackManager struct {
@@ -62,8 +63,11 @@ Encounter handle turn
 func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) ([]core.AttackResult, error) {
 	var results []core.AttackResult
 
-	// TODO: Verify using index here - newly added to conform to monster reqs
+	// Index corresponds to the entry in AttackData; characters repeat via NumberOfAttacks, monsters expand AttackData per swing.
 	for idx, ad := range req.AttackData {
+		if req.GetAttackOptions().GetNumberOfAttacks() == 0 {
+			return nil, fmt.Errorf("invalid number of attacks - 0")
+		}
 		for i := 1; i <= req.GetAttackOptions().GetNumberOfAttacks(); i++ {
 			// Attack Roll
 			attackMod := ad.AttackModifier + req.AttackOptions.GetBonusToAttackRoll()
