@@ -432,30 +432,26 @@ type CombatContext struct {
 	ActingEntityID   int
 
 	// Combat options
-	Options *CombatOptions
+	Options *SimulationOptions
 }
 
-type CombatOptions struct {
-	AllowCharacterHeals       bool
-	AllowMonsterHeals         bool
-	AOEHitsAllEnemies         bool
-	CharacterHealThresholdPct int
-	MonsterHealThresholdPct   int
-}
-
-func NewCombatContext(options SimulationOptions) *CombatContext {
-	combatOpts := &CombatOptions{
-		AllowCharacterHeals:       options.AllowCharacterHeals,
-		AllowMonsterHeals:         options.AllowMonsterHeals,
-		AOEHitsAllEnemies:         options.AOEHitsAllEnemies,
-		CharacterHealThresholdPct: options.CharacterHealThresholdPct,
-		MonsterHealThresholdPct:   options.MonsterHealThresholdPct,
-	}
+// NewCombatContext creates a new CombatContext. Pass the shared SimulationOptions pointer
+// so all readers observe the same configuration during combat.
+func NewCombatContext(options *SimulationOptions) *CombatContext {
 	return &CombatContext{
 		CombatantInfo:      make(map[int]*CombatantInfo),
 		LegendaryCreatures: make(map[int]bool),
-		Options:            combatOpts,
+		Options:            options,
 	}
+}
+
+// Opt returns a non-nil SimulationOptions pointer for safe access to combat options.
+// If the context or options are nil, it returns a pointer to a zero-value SimulationOptions.
+func (cc *CombatContext) Opt() *SimulationOptions {
+	if cc == nil || cc.Options == nil {
+		return &SimulationOptions{}
+	}
+	return cc.Options
 }
 
 type ActionOutcome struct {

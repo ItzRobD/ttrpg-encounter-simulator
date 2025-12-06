@@ -184,9 +184,8 @@ func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcas
 
 	spellModValue, err := c.GetSpellBonus(true)
 
-	// TODO: Sim options can be passed via context for simplification
-	canUpcast := ctx.Value("CanUpcast").(bool)
-	sm := spellcasting_manager.NewSpellcastingManager(c, c.RollManager, core.CasterCharacter, int(c.Level), slots, slots, canUpcast, spellModValue)
+	// Upcast decision is deferred to combat-time via CombatContext options
+	sm := spellcasting_manager.NewSpellcastingManager(c, c.RollManager, core.CasterCharacter, int(c.Level), slots, slots, spellModValue)
 	if err != nil {
 		return nil, err
 	}
@@ -319,6 +318,9 @@ func (c *Character) GetDamageSpellCount() int {
 
 func (c *Character) UpdateAICombatContext(ctx *core.CombatContext) error {
 	c.AI.UpdateCombatContext(ctx)
+	if c.SpellCastingManager != nil {
+		c.SpellCastingManager.SetSimulationOptions(ctx.Opt())
+	}
 	return nil
 }
 

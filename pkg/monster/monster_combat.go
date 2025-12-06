@@ -111,5 +111,8 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int) (core.R
 
 func (m *Monster) UpdateAICombatContext(ctx *core.CombatContext) error {
 	m.AI.UpdateCombatContext(ctx)
+	if m.SpellCastingManager != nil {
+		m.SpellCastingManager.SetSimulationOptions(ctx.Opt())
+	}
 	return nil
 }

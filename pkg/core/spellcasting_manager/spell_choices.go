@@ -352,7 +352,7 @@ func (scm *SpellcastingManager) GetBestFormulaForSpell(spell spells.Spell, p cor
 					if err != nil {
 						return nil, err
 					}
-				} else if scm.canUpcast && castLevel < 9 {
+				} else if scm.canUpcastNow() && castLevel < 9 {
 					castLevel++
 				} else {
 					break
@@ -510,7 +510,8 @@ func (scm *SpellcastingManager) getBestCastOptionForSpell(spell *spells.Spell) (
 		return -1, nil, 0
 	}
 
-	if scm.canUpcast {
+	// Decide if upcasting is allowed at this moment based on SimulationOptions
+	if scm.canUpcastNow() {
 		for level := 9; level >= spell.Level; level-- {
 			formula, err := spell.GetClosestFormulaToLevel(level)
 			if err != nil {
@@ -537,6 +538,21 @@ func (scm *SpellcastingManager) getBestCastOptionForSpell(spell *spells.Spell) (
 	}
 
 	return -1, nil, 0
+}
+
+// canUpcastNow checks SimulationOptions and parent type to decide if the caster
+// should attempt to upcast spells when selecting a cast level.
+func (scm *SpellcastingManager) canUpcastNow() bool {
+	if scm.simOptions == nil || scm.parent == nil {
+		return false
+	}
+	if scm.parent.IsCharacter() {
+		return scm.simOptions.CharactersAlwaysUpcast
+	}
+	if scm.parent.IsMonster() {
+		return scm.simOptions.MonstersAlwaysUpcast
+	}
+	return false
 }
 
 func (scm *SpellcastingManager) getHighestAverageCantrip(t core.SpellType) (*core.SpellChoice, error) {

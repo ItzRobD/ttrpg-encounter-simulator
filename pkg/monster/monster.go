@@ -131,13 +131,12 @@ func initalizeEntityStateManager(m *Monster, config entity_state_manager.EntityS
 }
 
 func initializeSpellcastingManager(ctx context.Context, m *Monster, config MonsterSpellcastingConfig) (*spellcasting_manager.SpellcastingManager, error) {
-	// TODO: Sim options can be passed via context for simplification
-	canUpcast := ctx.Value("CanUpcast").(bool)
 	casterType := core.CasterMonsterTrueCaster
 	if m.IsInnateSpellcaster {
 		casterType = core.CasterMonsterInnate
 	}
-	sm := spellcasting_manager.NewSpellcastingManager(m, m.RollManager, casterType, config.CastingLevel, config.SpellSlots, config.SpellSlots, canUpcast, config.AttackModifier)
+	// Upcast decision is deferred to combat-time via CombatContext options
+	sm := spellcasting_manager.NewSpellcastingManager(m, m.RollManager, casterType, config.CastingLevel, config.SpellSlots, config.SpellSlots, config.AttackModifier)
 	sm.SetAbility(config.Ability)
 	sm.SetSaveDC(config.SaveDC)
 

@@ -397,7 +397,7 @@ func (ce *CombatEngine) processAttackResults(attackResults []core.AttackResult) 
 // initializeCombatContext initializes the combat context by setting up combatants, rounds, and relevant configuration values.
 func (ce *CombatEngine) initializeCombatContext() {
 	if ce.CombatContext == nil {
-		ce.CombatContext = core.NewCombatContext(*ce.SimOptions)
+		ce.CombatContext = core.NewCombatContext(ce.SimOptions)
 	}
 	ce.CombatContext.CurrentRound = ce.CurrentRound
 	ce.CombatContext.TurnOrder = ce.TurnOrder

@@ -30,15 +30,17 @@ type SpellcastingManager struct {
 	damageSpellsInnate     map[int][]*spells.InnateSpell
 	damageSpellCount       int
 	healingSpellCount      int
-	canUpcast              bool
 	spellcastModifierValue int
+
+	// Runtime options (set by CombatContext at combat time)
+	simOptions *core.SimulationOptions
 
 	// Monsters only
 	ability core.Ability
 	saveDC  int
 }
 
-func NewSpellcastingManager(parent core.Entity, rm *roll_manager.RollManager, casterType core.CasterType, casterLevel int, currentSlots spells.SpellSlots, maxSlots spells.SpellSlots, canUpcast bool, spellcastModValue int) *SpellcastingManager {
+func NewSpellcastingManager(parent core.Entity, rm *roll_manager.RollManager, casterType core.CasterType, casterLevel int, currentSlots spells.SpellSlots, maxSlots spells.SpellSlots, spellcastModValue int) *SpellcastingManager {
 	return &SpellcastingManager{
 		parent:                 parent,
 		rollManager:            rm,
@@ -46,11 +48,15 @@ func NewSpellcastingManager(parent core.Entity, rm *roll_manager.RollManager, ca
 		casterLevel:            casterLevel,
 		currentSlots:           currentSlots,
 		maxSlots:               maxSlots,
-		canUpcast:              canUpcast,
 		spellcastModifierValue: spellcastModValue,
 		healingSpells:          map[int][]*spells.Spell{}, // Key is spell level
 		damageSpells:           map[int][]*spells.Spell{}, // Key is spell level
 	}
+}
+
+// SetSimulationOptions sets the runtime simulation options for this manager.
+func (scm *SpellcastingManager) SetSimulationOptions(opts *core.SimulationOptions) {
+	scm.simOptions = opts
 }
 
 func (scm *SpellcastingManager) SetAbility(ability core.Ability) {
