@@ -71,17 +71,30 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 		return nil, err
 	}
 
-	// TODO: This will have to be handled internally by other functions to get the values of each of these
-	//		Will have to account for character feats
+	// Determine ranged vs melee for condition rules
+	isRanged := false
+	if w, wErr := c.EquipmentManager.GetWeaponFromSlot(slot); wErr == nil {
+		isRanged = w.IsRanged
+	}
+
+	// Build advantage from attacker/target conditions (minimal set). Respect incoming adv as baseline.
+	computedAdv := c.computeAttackAdvantage(target, isRanged, adv)
+
+	// Build attack options (minimal; feat-driven bonuses deferred to PF section)
+	improvedCrit := false
+	if simulationOptions != nil && simulationOptions.UseImprovedCriticals {
+		improvedCrit = true
+	}
+
 	attackOptions := core.AttackOptions{
 		NumberOfAttacks:      c.EntityState.GetNumberOfAttacks(),
 		BonusToAttackRoll:    0,
 		BonusToDamageRoll:    0,
 		ShouldApplyDamageMod: true,
 		PowerAttack:          false,
-		ImprovedCritical:     simulationOptions.UseImprovedCriticals,
+		ImprovedCritical:     improvedCrit,
 		RerollOnesAndTwos:    false,
-		Advantage:            adv,
+		Advantage:            computedAdv,
 	}
 
 	return &core.AttackRequest{
@@ -90,6 +103,58 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 		SimulationOptions: simulationOptions,
 		Target:            target,
 	}, nil
+}
+
+// computeAttackAdvantage derives advantage/disadvantage from basic conditions.
+// It respects the passed-in adv as a baseline and then applies condition-based modifiers:
+// - Attacker blinded or poisoned: disadvantage
+// - Target prone: melee attacks advantage, ranged attacks disadvantage
+// - Target restrained/paralyzed/unconscious: advantage
+// If both advantage and disadvantage are present, result is Normal.
+func (c *Character) computeAttackAdvantage(target core.Entity, isRanged bool, base core.AdvantageType) core.AdvantageType {
+	hasAdv := false
+	hasDis := false
+
+	// Baseline from caller
+	switch base {
+	case core.RollAdvantage:
+		hasAdv = true
+	case core.RollDisadvantage:
+		hasDis = true
+	}
+
+	attackerConds := c.GetConditions()
+	targetConds := target.GetConditions()
+
+	// Attacker conditions
+	if attackerConds.Has(core.ConditionBlinded) {
+		hasDis = true
+	}
+	if attackerConds.Has(core.ConditionPoisoned) {
+		hasDis = true
+	}
+
+	// Target conditions
+	if targetConds.Has(core.ConditionProne) {
+		if isRanged {
+			hasDis = true
+		} else {
+			hasAdv = true
+		}
+	}
+	if targetConds.Has(core.ConditionRestrained) || targetConds.Has(core.ConditionParalyzed) || targetConds.Has(core.ConditionUnconscious) {
+		hasAdv = true
+	}
+
+	// Resolve
+	if hasAdv && hasDis {
+		return core.RollNormal
+	} else if hasAdv {
+		return core.RollAdvantage
+	} else if hasDis {
+		return core.RollDisadvantage
+	}
+	return core.RollNormal
 }
 
 // MakeSavingThrow calculates a saving throw roll using the specified ability and returns the result, rolls, and an error if any.

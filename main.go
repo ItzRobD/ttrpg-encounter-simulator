@@ -10,11 +10,7 @@ import (
 	"fmt"
 )
 
-// TODO: I completed the ai targeting for characters
-// 		Still need to handle turn logic for characters, relatively simple
-// 		Need to figure out what to do for monster ai with action selections etc
-//		Need to also account for legendary actions, this would be a call every turn
-//		Would be smart to have an is legendary monster present bool within the simulation
+// Legacy note: Main is used for local/manual runs. Core TODOs are tracked in todo-triage.md.
 
 func main() {
 	dbErr := database.InitDb(nil)
@@ -25,8 +21,8 @@ func main() {
 	}
 	defer database.CloseDb()
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "CanUpcast", true)
+	// Sample playground for manual queries; keep commented to avoid unused variables
+	// ctx := context.Background()
 	//params := spells.SpellQueryParams{Name: []string{"Fireball", "Acid Splash"}}
 	//s, err := spells.QuerySpellData(ctx, params)
 	//if err != nil {
@@ -41,8 +37,6 @@ func main() {
 }
 
 func setupJack() character.CharacterConfig {
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "CanUpcast", true)
 	charConfig := character.CharacterConfig{
 		Name:    "Jack",
 		ClassID: classes.Wizard,
@@ -84,8 +78,6 @@ func setupJack() character.CharacterConfig {
 }
 
 func setupFrank() character.CharacterConfig {
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "CanUpcast", true)
 	charConfig := character.CharacterConfig{
 		Name:    "Frank",
 		ClassID: classes.Fighter,
@@ -164,7 +156,6 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 	sim := simulation.NewSimulationManager(config, core.Seed{})
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, "CanUpcast", true)
 	sim.SetupCombatantsFromAPI(ctx,
 		charCfgs,
 		monsterIds)

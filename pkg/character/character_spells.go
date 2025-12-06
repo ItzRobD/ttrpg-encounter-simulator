@@ -100,14 +100,14 @@ func (c *Character) CreateSpellCastRequest(target core.Entity, spellChoice core.
 		return nil, err
 	}
 
-	// TODO: Handle the creation of these options dynamically
+	// Build spell options dynamically (minimal — feats/features handled later)
 	options := spellcasting_manager.SpellOptions{
 		Advantage:            adv,
 		BonusToAttackRoll:    0,
 		BonusToDamageRoll:    0,
-		ShouldApplyDamageMod: false,
-		ImprovedCritical:     false,
-		TreatOnesAsTwos:      false,
+		ShouldApplyDamageMod: false, // RollSpellValue handles spell modifiers when applicable
+		ImprovedCritical:     (spellChoice.Spell.GetSpellType() == core.STDamage) && (simOptions != nil && simOptions.UseImprovedCriticals),
+		TreatOnesAsTwos:      false, // Elemental Adept and similar will be wired via features later
 	}
 
 	return &spellcasting_manager.SpellCastRequest{
