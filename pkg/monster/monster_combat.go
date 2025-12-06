@@ -30,7 +30,6 @@ func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actio
 		return nil, fmt.Errorf("invalid action type for monster attack request")
 	}
 
-	// TODO: Handle these
 	if simulationOptions == nil {
 		// Defensive default to avoid nil dereference; callers should normally pass non-nil
 		simulationOptions = &core.SimulationOptions{}
@@ -99,7 +98,7 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int) (core.R
 	}
 
 	opts := roll_manager.NewRollOptions()
-	// TODO: Will monsters ever have advantage? Features apply this
+	opts.Advantage = m.EntityState.GetSavingThrowAdvantage()
 	opts.Modifier = mod
 	opts.RollType = core.DiceRollSavingThrow
 	opts.TargetValue = targetValue

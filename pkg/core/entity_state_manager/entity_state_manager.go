@@ -78,9 +78,10 @@ type EntityStateManager struct {
 	SpellcastingPriority      core.SpellPriority
 
 	// Bonuses
-	InitiativeAdvantage core.AdvantageType
-	InitiativeBonus     int
-	Resistances         core.DamageResistances
+	InitiativeAdvantage  core.AdvantageType
+	InitiativeBonus      int
+	Resistances          core.DamageResistances
+	SavingThrowAdvantage core.AdvantageType
 }
 
 func (esm *EntityStateManager) ExpendAction() {
@@ -525,6 +526,14 @@ func (esm *EntityStateManager) Kill() {
 	esm.IsDead = true
 	esm.IsStable = false
 	esm.Conditions.Clear()
+}
+
+func (esm *EntityStateManager) GetSavingThrowAdvantage() core.AdvantageType {
+	return esm.SavingThrowAdvantage
+}
+
+func (esm *EntityStateManager) SetHasSavingThrowAdvantage(adv core.AdvantageType) {
+	esm.SavingThrowAdvantage = adv
 }
 
 // NewEntityStateManager initializes and returns a new EntityStateManager based on the provided parent entity and configuration.
