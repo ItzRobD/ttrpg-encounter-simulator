@@ -15,6 +15,7 @@ type SimulationManager struct {
 	dispatcher   *events.EventDispatcher
 	combatEngine *CombatEngine
 	simLog       []events.CombatEvent
+	finalResult  core.VictoryStatus
 }
 
 func NewSimulationManager(options core.SimulationOptions, seed core.Seed) *SimulationManager {
@@ -87,7 +88,17 @@ func (s *SimulationManager) RunSimulation(maxRounds int) error {
 	}
 
 	if victory != core.VictoryStatusNone {
-		// TODO: Handle victory
+		// Record the final result and emit a simple console message.
+		s.finalResult = victory
+		// Note: Structured event emission would require an actor; for now, print.
+		switch victory {
+		case core.VictoryStatusCharacters:
+			fmt.Println("Victory: Characters win")
+		case core.VictoryStatusMonsters:
+			fmt.Println("Victory: Monsters win")
+		default:
+			fmt.Println("Victory: Resolved with status", victory)
+		}
 	}
 
 	return nil
@@ -120,3 +131,6 @@ func (s *SimulationManager) SetupCombatantsFromAPI(ctx context.Context, characte
 
 	return result, nil
 }
+
+// GetFinalResult returns the last recorded victory status for the simulation run.
+func (s *SimulationManager) GetFinalResult() core.VictoryStatus { return s.finalResult }

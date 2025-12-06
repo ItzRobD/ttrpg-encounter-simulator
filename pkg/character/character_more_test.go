@@ -17,7 +17,7 @@ func TestExecuteAIRequest_MultiAttackCountEffects(t *testing.T) {
 		t.Fatalf("SetWeapon: %v", err)
 	}
 
-	tgt := targetZeroAC{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{})}
+	tgt := targetZeroAC{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}, nil)}
 	req := &core.AIRequest{ActionType: core.ATMelee, WeaponSlot: core.WSPrimary, Advantage: core.RollNormal, UseVersatile: false, SimOptions: &core.SimulationOptions{}, Target: tgt}
 	out, err := ch.ExecuteAIRequest(req)
 	if err != nil {
@@ -34,7 +34,7 @@ func TestExecuteAIRequest_RangedProducesDamage(t *testing.T) {
 	if err := ch.EquipmentManager.SetWeapon(core.WSRanged, bow, true); err != nil {
 		t.Fatalf("SetWeapon ranged: %v", err)
 	}
-	tgt := targetZeroAC{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{})}
+	tgt := targetZeroAC{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}, nil)}
 	req := &core.AIRequest{ActionType: core.ATRanged, WeaponSlot: core.WSRanged, Advantage: core.RollNormal, UseVersatile: false, SimOptions: &core.SimulationOptions{}, Target: tgt}
 	out, err := ch.ExecuteAIRequest(req)
 	if err != nil {

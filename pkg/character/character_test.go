@@ -123,7 +123,7 @@ func TestExecuteAIRequest_MeleeProducesDamage(t *testing.T) {
 		t.Fatalf("SetWeapon: %v", err)
 	}
 
-	tgt := targetZeroAC{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{})}
+	tgt := targetZeroAC{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}, nil)}
 	req := &core.AIRequest{
 		ActionType:   core.ATMelee,
 		WeaponSlot:   core.WSPrimary,
@@ -163,7 +163,7 @@ func TestCreateAttackRequest_PropagatesOptions(t *testing.T) {
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, rapier, true); err != nil {
 		t.Fatalf("SetWeapon: %v", err)
 	}
-	tgt := targetZeroAC{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{})}
+	tgt := targetZeroAC{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}, nil)}
 
 	req, err := ch.CreateAttackRequest(tgt, core.WSPrimary, core.RollAdvantage, false, &core.SimulationOptions{UseImprovedCriticals: true})
 	if err != nil {

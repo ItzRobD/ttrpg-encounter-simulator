@@ -16,4 +16,7 @@ type SimulationOptions struct {
 	CharacterHealThresholdPct int
 	MonsterHealThresholdPct   int
 	LimitedLegendaryActions   bool
+	// AllowLairActions gates executing a lair action at initiative 20 each round.
+	// Currently used only as a stub hook (logs/placeholder) until data-driven lair actions are modeled.
+	AllowLairActions bool
 }
