@@ -64,14 +64,13 @@ func (m *Monster) createSpellCastRequest(target core.Entity, spellchoice core.Sp
 		return nil, err
 	}
 
-	// TODO: Handle the creation of these options dynamically
 	options := spellcasting_manager.SpellOptions{
 		Advantage:            adv,
-		BonusToAttackRoll:    0,
-		BonusToDamageRoll:    0,
-		ShouldApplyDamageMod: false,
-		ImprovedCritical:     false,
-		TreatOnesAsTwos:      false,
+		BonusToAttackRoll:    0,     // future: features/auras
+		BonusToDamageRoll:    0,     // future: features/auras
+		ShouldApplyDamageMod: false, // RollSpellValue already handles spell modifiers
+		ImprovedCritical:     spellcastData.SpellChoice.Spell.GetSpellType() == core.STDamage && (simOptions != nil && simOptions.UseImprovedCriticals),
+		TreatOnesAsTwos:      false, // future: features
 	}
 
 	return &spellcasting_manager.SpellCastRequest{
