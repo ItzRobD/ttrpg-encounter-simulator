@@ -226,6 +226,7 @@ func (mam *MonsterActionManager) precomputeAttackData() {
 	for optionIndex, multiattacks := range mam.Multiattacks {
 		var maData MultiattackData
 		var totalAverage int
+		var totalNumberOfAttacks int
 		var attackDataSlice []core.AttackData
 
 		for _, ma := range multiattacks {
@@ -233,11 +234,16 @@ func (mam *MonsterActionManager) precomputeAttackData() {
 			for i := 0; i < ma.Count; i++ {
 				attackDataSlice = append(attackDataSlice, attackActionData)
 				totalAverage += attackActionData.Average
+				totalNumberOfAttacks += 1
 			}
 		}
 
 		maData.TotalAverage = totalAverage
-		maData.AveragePerAttack = totalAverage / len(multiattacks)
+		if totalNumberOfAttacks > 0 {
+			maData.AveragePerAttack = totalAverage / totalNumberOfAttacks
+		} else {
+			maData.AveragePerAttack = 0
+		}
 		maData.AttackDataBlocks = attackDataSlice
 		mam.MultiAttackData[optionIndex] = maData
 	}

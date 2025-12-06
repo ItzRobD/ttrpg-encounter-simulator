@@ -102,6 +102,11 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			return nil, err
 		}
 
+		// Recharge action
+		if m.ActionManager.Actions[req.ActionIndex].RechargeValue > 0 {
+			m.EntityState.ExpendRechargeAction(req.ActionIndex)
+		}
+
 		// Legendary actions
 		if req.ActionType == core.ATLegendaryAction {
 			cost := m.ActionManager.LegendaryActions[req.ActionIndex].Cost

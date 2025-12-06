@@ -11,11 +11,6 @@ import (
 	"math/rand/v2"
 )
 
-// TODO: Action manager should be complete
-//	Next is to clean up monster spellcasting -> SpellCastingManager
-//	Configure entity state -> db queries fore resistances, we didn't add any resistatnace
-//	functionaility for characters. That also needs to be completed
-
 type Monster struct {
 	MonsterBase
 	EntityState         *entity_state_manager.EntityStateManager

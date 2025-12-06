@@ -143,7 +143,7 @@ func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) 
 		}
 
 	} else {
-		// Handle healing actions
+		// TODO: Handle healing actions
 	}
 
 	return &req, nil
