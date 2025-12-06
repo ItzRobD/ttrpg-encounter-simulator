@@ -76,6 +76,7 @@ const (
 	PrioritizeLowestLevel
 	PrioritizeHighestMaxHP
 	PrioritizeLowestMaxHP
+	PrioritizeUnconscious
 )
 
 func (p TargetPriority) String() string {

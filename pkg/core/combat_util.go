@@ -81,6 +81,16 @@ func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriorit
 		if len(targets) > 0 {
 			return SelectTargetFromMap(targets, PrioritizeMostDamaged, rng)
 		}
+	case PrioritizeUnconscious:
+		var targets map[int]*Combatant = make(map[int]*Combatant)
+		for id, c := range validTargets {
+			if c.GetEntity().IsUnconscious() {
+				targets[id] = c
+			}
+		}
+		if len(targets) > 0 {
+			return SelectTargetFromMap(targets, PrioritizeHighestMaxHP, rng)
+		}
 	default:
 		return targetID, fmt.Errorf("unknown target prioritization strategy")
 	}

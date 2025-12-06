@@ -38,6 +38,7 @@ func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
 		return ce.executeWeaponAttack(req)
 	case core.ATSpell:
 		return ce.executeSpellCast(req)
+		// TODO: Complete these two paths - note, need to account for unconsious healing and removing of applicable conditions
 	//case core.ATHeal:
 	//	return ce.executeHeal(req)
 	//case core.ATUnarmed:
@@ -432,6 +433,9 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 	}
 }
 
+// calculateEntitiesNeedingHealing identifies entities needing healing and returns their IDs grouped as characters and monsters.
+// It evaluates thresholds based on entity type and excludes lair combatants and unconscious entities from consideration.
+// Returns a slice of character IDs and a slice of monster IDs.
 func (ce *CombatEngine) calculateEntitiesNeedingHealing() ([]int, []int) {
 	charNeedHealing := make([]int, 0)
 	monNeedHealing := make([]int, 0)
@@ -452,9 +456,8 @@ func (ce *CombatEngine) calculateEntitiesNeedingHealing() ([]int, []int) {
 			threshold = ce.CombatContext.Options.MonsterHealThresholdPct
 		}
 
-		// Entity needs healing if below threshold and not unconscious
-		// TODO: Unconscious can get healed to no longer be unconscious
-		if entity.GetHPStatus().GetHPPct() <= threshold && !entity.IsUnconscious() {
+		// Entity needs healing if below threshold and not dead
+		if entity.GetHPStatus().GetHPPct() <= threshold && !entity.IsDead() {
 			if entity.IsCharacter() {
 				charNeedHealing = append(charNeedHealing, id)
 			} else {
