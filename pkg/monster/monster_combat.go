@@ -50,11 +50,10 @@ func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actio
 
 func (m *Monster) createSpellAttackData(spellChoice core.SpellChoice) (spellcasting_manager.SpellCastData, error) {
 	spellBonus := m.SpellCastingManager.GetSpellcastModifierValue()
-
 	return spellcasting_manager.SpellCastData{
 		SpellChoice:          spellChoice,
 		AttackModifier:       spellBonus,
-		SpellcastingModifier: 0, // TODO: Will this ever be used for anything?
+		SpellcastingModifier: m.SpellCastingManager.GetSpellcastModifierValue(),
 	}, nil
 }
 
