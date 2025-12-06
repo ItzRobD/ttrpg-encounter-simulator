@@ -59,8 +59,11 @@ func (ce *CombatEngine) attachOptionsToAIRequest(aiReq *core.AIRequest) {
 }
 
 func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
-	// TODO: Choose weapons slot | versatile
-	aiReq.WeaponSlot = core.WSPrimary
+	// If weapon slot is not specified, use primary slot
+	if aiReq.WeaponSlot == "" {
+		aiReq.WeaponSlot = core.WSPrimary
+	}
+
 	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
 	if err != nil {
 		return err

@@ -173,6 +173,8 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, error) {
 	var req core.AIRequest
 	var choice *core.SpellChoice
+	var useVersatile bool
+	var slot core.WeaponSlot
 
 	targetID, err := cai.selectTargetID(core.TTDamage)
 	if err != nil {
@@ -184,20 +186,70 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 		return nil, err
 	}
 
-	if at == core.ATSpell {
+	switch at {
+	case core.ATSpell:
 		choice, err = cai.chooseDamageSpell()
 		if err != nil {
 			return nil, err
 		}
+	case core.ATMelee:
+		slot = core.WSPrimary
+		switch cai.parent.EntityState.GetVersatileWeaponPreference() {
+		case core.VWPPreferNonVersatile:
+			useVersatile = false
+			break
+		case core.VWPNoPreference:
+			if cai.rng.IntN(2) == 0 {
+				useVersatile = false
+				break
+			}
+			fallthrough
+		case core.VWPPreferVersatile:
+			if !cai.parent.EquipmentManager.HasShieldEquipped {
+				w, wErr := cai.parent.EquipmentManager.GetWeaponFromSlot(core.WSPrimary)
+				if wErr != nil {
+					return nil, wErr
+				}
+				useVersatile = w.IsVersatile
+			}
+		}
+	case core.ATRanged:
+		slot = core.WSPrimary
+		if w, wErr := cai.parent.EquipmentManager.GetWeaponFromSlot(core.WSRanged); wErr == nil {
+			if w.IsRanged {
+				slot = core.WSRanged
+			} else {
+				// explicit fallback to primary; check capability if you want to enforce it
+				slot = core.WSPrimary
+			}
+		} else {
+			// Ranged slot missing: try primary (and optionally secondary) as fallbacks
+			if pw, pwErr := cai.parent.EquipmentManager.GetWeaponFromSlot(core.WSPrimary); pwErr == nil {
+				if pw.IsRanged {
+					slot = core.WSPrimary
+				} else {
+					// Optional: try secondary for thrown/ranged; otherwise, surface a clear error
+					if sw, swErr := cai.parent.EquipmentManager.GetWeaponFromSlot(core.WSSecondary); swErr == nil && sw.IsRanged {
+						slot = core.WSSecondary
+					} else {
+						return nil, fmt.Errorf("no valid ranged weapon available in ranged/primary/secondary slots")
+					}
+				}
+			} else {
+				return nil, fmt.Errorf("no valid ranged weapon available (ranged slot missing; primary lookup failed: %v)", pwErr)
+			}
+		}
 	}
 
 	req = core.AIRequest{
-		Actor:       cai.parent,
-		ActorType:   core.EntityCharacter,
-		TargetID:    targetID,
-		Target:      cai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity(),
-		ActionType:  at,
-		SpellChoice: choice,
+		Actor:        cai.parent,
+		ActorType:    core.EntityCharacter,
+		TargetID:     targetID,
+		Target:       cai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity(),
+		ActionType:   at,
+		WeaponSlot:   slot,
+		UseVersatile: useVersatile,
+		SpellChoice:  choice,
 	}
 
 	return &req, nil

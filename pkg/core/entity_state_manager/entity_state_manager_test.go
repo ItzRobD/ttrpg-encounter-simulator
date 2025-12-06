@@ -237,14 +237,14 @@ func TestPreferencesAndInitiativeRoundTrip(t *testing.T) {
 
 	// Preferences
 	esm.SetActionPreference(core.APPreferMelee)
-	esm.SetVersatileWeaponPreference(core.MPPreferVersatile)
+	esm.SetVersatileWeaponPreference(core.VWPPreferVersatile)
 	esm.SetTargetPrioritization(core.PrioritizeLowestHealth)
 	esm.SetSpellcastingPriority(core.SPHighestLevel)
 
 	if esm.GetActionPreference() != core.APPreferMelee {
 		t.Errorf("action pref mismatch")
 	}
-	if esm.GetVersatileWeaponPreference() != core.MPPreferVersatile {
+	if esm.GetVersatileWeaponPreference() != core.VWPPreferVersatile {
 		t.Errorf("versatile pref mismatch")
 	}
 	if esm.GetTargetPrioritization() != core.PrioritizeLowestHealth {

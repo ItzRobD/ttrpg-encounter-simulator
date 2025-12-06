@@ -7,9 +7,6 @@ import (
 	"fmt"
 )
 
-// TODO: Worked on process turn, need to finish in combat engine, handle contexts etc
-// 		Process request as before - account for reactions
-
 func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnResult, *core.AIRequest, error) {
 	if turnType == core.TurnTypeLegendary {
 		return nil, nil, fmt.Errorf("invalid turn type for character: %s", turnType)

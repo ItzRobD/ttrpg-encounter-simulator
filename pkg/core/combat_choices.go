@@ -211,18 +211,18 @@ func NewActionType(s string) ActionType {
 type VersatileWeaponPreference int
 
 const (
-	MPNoPreference VersatileWeaponPreference = iota
-	MPPreferVersatile
-	MPPreferNonVersatile
+	VWPNoPreference VersatileWeaponPreference = iota
+	VWPPreferVersatile
+	VWPPreferNonVersatile
 )
 
 func (p VersatileWeaponPreference) String() string {
 	switch p {
-	case MPNoPreference:
+	case VWPNoPreference:
 		return "no preference"
-	case MPPreferVersatile:
+	case VWPPreferVersatile:
 		return "prefer versatile"
-	case MPPreferNonVersatile:
+	case VWPPreferNonVersatile:
 		return "prefer non-versatile"
 	default:
 		return "unknown melee preference"
@@ -232,13 +232,13 @@ func (p VersatileWeaponPreference) String() string {
 func NewMeleePreference(s string) VersatileWeaponPreference {
 	switch strings.ToLower(s) {
 	case "no preference":
-		return MPNoPreference
+		return VWPNoPreference
 	case "prefer versatile":
-		return MPPreferVersatile
+		return VWPPreferVersatile
 	case "prefer non-versatile":
-		return MPPreferNonVersatile
+		return VWPPreferNonVersatile
 	default:
-		return MPNoPreference
+		return VWPNoPreference
 	}
 }
 
