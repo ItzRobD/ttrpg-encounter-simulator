@@ -40,7 +40,11 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 				return nil, nil, fmt.Errorf("error getting AI request: %s", err)
 			}
 			ucResult.TurnStatuses[core.TurnActionReady] = true
-			ucResult.Conditions = nil // TODO: If revived does a character have any conditions other than prone?
+			// On revive: clear Unconscious, set Prone to true so ranged/melee modifiers apply correctly
+			c.EntityState.SetUnconscious(false)
+			c.EntityState.AddCondition(core.ConditionProne)
+			ucResult.Conditions = []core.Condition{core.ConditionProne}
+			events.LogCombatEventMessage(c, "Revived from 0 HP: now Prone", c.EventListener)
 			return ucResult, aiReq, nil
 		}
 		return ucResult, nil, err

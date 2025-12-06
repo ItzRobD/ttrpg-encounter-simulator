@@ -71,14 +71,32 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			return &spellResult, nil
 		}
 
-		// Damage Roll
-		rollOpts := roll_manager.NewRollOptions()
-		rollOpts.TreatOnesAsTwos = req.SpellOptions.TreatOnesAsTwos
-		rollOpts.RollType = core.DiceRollDamage
+		// Damage handling
+		// Special-case: Guardian of Faith — fixed 20 radiant damage, half on successful save, no roll.
+		var dmgRollResult *roll_manager.RollResult
+		if req.SpellCastData.SpellChoice.Spell.GetName() == "Guardian of Faith" {
+			tmp := roll_manager.RollResult{
+				DiceRollType:   core.DiceRollDamage,
+				NumberOfDice:   0,
+				Die:            core.D0,
+				FinalRollValue: 0,
+				FinalRolls:     []int{},
+				Modifier:       0,
+				Total:          20,
+				Advantage:      core.RollNormal,
+			}
+			dmgRollResult = &tmp
+		} else {
+			// Standard damage roll
+			rollOpts := roll_manager.NewRollOptions()
+			rollOpts.TreatOnesAsTwos = req.SpellOptions.TreatOnesAsTwos
+			rollOpts.RollType = core.DiceRollDamage
 
-		dmgRollResult, err := scm.rollManager.RollSpellValue(req, false, rollOpts)
-		if err != nil {
-			return nil, err
+			dmg, err2 := scm.rollManager.RollSpellValue(req, false, rollOpts)
+			if err2 != nil {
+				return nil, err2
+			}
+			dmgRollResult = dmg
 		}
 
 		spellResult := SpellResult{

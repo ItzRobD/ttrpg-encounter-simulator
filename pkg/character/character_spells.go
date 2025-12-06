@@ -76,7 +76,6 @@ func (c *Character) GetSpellSaveDC(ability *core.Ability) (int, error) {
 // It takes a SpellChoice as input and computes the necessary modifiers for the attack.
 // Returns a SpellCastData struct and an error if any calculation fails.
 func (c *Character) CreateSpellAttackData(spellChoice core.SpellChoice) (spellcasting_manager.SpellCastData, error) {
-	// TODO: We always add proficiency, determine if we need to account for different armor/scrolls - unlikely
 	spellBonus, err := c.GetSpellBonus(true)
 	if err != nil {
 		return spellcasting_manager.SpellCastData{}, err

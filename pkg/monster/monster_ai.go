@@ -2,6 +2,7 @@ package monster
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
 	"math/rand/v2"
 )
@@ -366,7 +367,9 @@ func (mai *MonsterAI) buildAIRequest(actionIndex int, spellChoice *core.SpellCho
 		SpellChoice: spellChoice,
 	}
 
-	// TODO: Logging
+	// Structured logging: chosen action and target
+	events.LogMonsterActionChoiceEvent(mai.parent, actionType, mai.parent.GetEventListener())
+	events.LogTargetChoiceEvent(mai.parent, target, mai.parent.GetEventListener())
 
 	return &req, nil
 }

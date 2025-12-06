@@ -2,6 +2,7 @@ package character
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
 	"math/rand/v2"
 )
@@ -59,7 +60,8 @@ func (cai *CharacterAI) chooseDamageActionType() (core.ActionType, error) {
 		return core.ATNoAction, fmt.Errorf("unknown action preference %s", actionPref)
 	}
 
-	//TODO: Logging
+	// Structured logging: chosen damage action type
+	events.LogCharacterActionChoiceEvent(cai.parent, actionType, cai.parent.GetEventListener())
 	return actionType, nil
 }
 
@@ -97,6 +99,10 @@ func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (int, error) 
 	target, err := core.SelectTargetFromMap(validTargets, cai.parent.EntityState.TargetPrioritization, cai.rng)
 	if err != nil {
 		return -1, err
+	}
+	// Structured logging: chosen target
+	if combatant, ok := validTargets[target]; ok && combatant != nil {
+		events.LogTargetChoiceEvent(cai.parent, combatant.GetEntity(), cai.parent.GetEventListener())
 	}
 	return target, nil
 }
