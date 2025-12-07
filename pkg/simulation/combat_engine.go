@@ -4,7 +4,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
-	"dnd5e-encounter-simulator-backend/pkg/lair"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
 	"math"
@@ -19,6 +18,7 @@ type CombatEngine struct {
 	TurnOrder        []int
 	CombatContext    *core.CombatContext
 	SimOptions       *core.SimulationOptions
+	tieBreakRolls    map[int]int
 }
 
 func NewCombatEngine(simOptions *core.SimulationOptions) *CombatEngine {
@@ -182,12 +182,16 @@ func (ce *CombatEngine) SetupCombat() error {
 		return fmt.Errorf("combatants list is empty")
 	}
 
-	for id, c := range ce.Combatants {
-		// Skip lair combatants
-		if c.IsLair {
-			continue
+	// Pre-allocate tie-break storage
+	if ce.tieBreakRolls == nil {
+		ce.tieBreakRolls = make(map[int]int)
+	} else {
+		for k := range ce.tieBreakRolls {
+			delete(ce.tieBreakRolls, k)
 		}
+	}
 
+	for id, c := range ce.Combatants {
 		entity := c.GetEntity()
 
 		initiative, err := entity.RollInitiative()
@@ -196,6 +200,15 @@ func (ce *CombatEngine) SetupCombat() error {
 		}
 
 		ce.Combatants[id].Initiative = initiative
+
+		// Precompute tie-break roll: 1d20; lair auto-loses ties (store 0)
+		if c.IsLair {
+			ce.tieBreakRolls[id] = 0
+		} else if rng := entity.GetRNG(); rng != nil {
+			ce.tieBreakRolls[id] = rng.IntN(20) + 1
+		} else {
+			ce.tieBreakRolls[id] = 10 // neutral default
+		}
 	}
 
 	return ce.setupCombatTracker()
@@ -219,6 +232,12 @@ func (ce *CombatEngine) setupCombatTracker() error {
 			return initI > initJ
 		}
 
+		// Lair loses ties at equal initiative
+		if ce.Combatants[idxI].IsLair != ce.Combatants[idxJ].IsLair {
+			// Non-lair wins tie
+			return !ce.Combatants[idxI].IsLair
+		}
+
 		// If initiative is the same, sort by dexterity modifier
 		dexI, err := ce.Combatants[idxI].GetEntity().GetAbilityScoreModifier(core.AbilityDexterity)
 		if err != nil {
@@ -233,49 +252,18 @@ func (ce *CombatEngine) setupCombatTracker() error {
 			return dexI > dexJ
 		}
 
-		// If dexterity is the same, sort by ID
+		// If dexterity is the same, roll a tie-breaker (precomputed d20)
+		tbI := ce.tieBreakRolls[idxI]
+		tbJ := ce.tieBreakRolls[idxJ]
+		if tbI != tbJ {
+			return tbI > tbJ
+		}
+
+		// Final tie-breaker: ID
 		return idxI < idxJ
 	})
 
-	ce.insertLairCombatant()
 	return nil
-}
-
-// insertLairCombatant adds a dummy lair combatant with fixed initiative to the combat tracker, maintaining initiative order.
-func (ce *CombatEngine) insertLairCombatant() {
-	insertIdx := 0
-	for i, id := range ce.TurnOrder {
-		if ce.Combatants[id].GetInitiative() >= 20 {
-			insertIdx = i + 1
-		} else {
-			break
-		}
-	}
-
-	// Create a minimal lair entity with its own RNG
-	l := lair.NewLair("Lair", nil)
-	lairCombatant := core.Combatant{
-		Entity:     l,
-		Initiative: 20,
-		IsLair:     true,
-	}
-	lairID := -1 // Lair will never be targeted
-	ce.Combatants[lairID] = &lairCombatant
-	ce.TurnOrder = append(ce.TurnOrder[:insertIdx], append([]int{lairID}, ce.TurnOrder[insertIdx:]...)...)
-
-	// Seed a simple default lair action so the lair can act immediately.
-	// Example: "Rumbling Tremor" — +5 to hit, 2d8 bludgeoning, no extra damage mod.
-	ad := core.AttackData{
-		Name:              "Rumbling Tremor",
-		NumberOfDice:      2,
-		Die:               core.D8,
-		AttackModifier:    5,
-		DamageModifier:    0,
-		DamageType:        core.DamageBludgeoning,
-		IsVersatileAttack: false,
-		Average:           9, // approx avg for 2d8
-	}
-	l.GetActionManager().AddAction(0, ad)
 }
 
 func (ce *CombatEngine) rollInitiativeForAllCombatants() error {
@@ -553,8 +541,15 @@ func (ce *CombatEngine) roundStartEvents() error {
 
 func (ce *CombatEngine) rollRechargeAbilities() error {
 	for _, c := range ce.Combatants {
-		// Skip lair combatants
 		if c.IsLair {
+			// Let lair roll recharge for its actions (if any)
+			// Type assert to known lair type without importing lair here; use interface probing
+			if lr, ok := c.GetEntity().(interface{ GetActionManager() interface{} }); ok {
+				// Best effort: reflect expected type methods
+				if lam, ok2 := lr.GetActionManager().(interface{ RollRechargeActions() }); ok2 {
+					lam.RollRechargeActions()
+				}
+			}
 			continue
 		}
 

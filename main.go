@@ -6,6 +6,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/lair"
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"fmt"
 )
@@ -157,9 +158,46 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 	sim := simulation.NewSimulationManager(config, core.Seed{})
 
 	ctx := context.Background()
-	sim.SetupCombatantsFromAPI(ctx,
+	// Example lair configuration for local runs (simulates what the API will pass later)
+	lc := &lair.LairConfig{
+		Enabled:    true,
+		Name:       "Goblin Warrens",
+		Initiative: 20, // lair always acts at 20; ties auto-loss handled in engine
+		Actions: []lair.LairActionInput{
+			{
+				Name:         "Falling Rubble",
+				Mode:         lair.LAMAttack,
+				TargetSide:   lair.TargetCharacters,
+				TargetPolicy: "lowest max hp",
+				IsAOE:        false,
+				Recharge:     0,
+				AttackBonus:  5,
+				NumberOfDice: 2,
+				Die:          core.D8,
+				AmountToAdd:  0,
+				DamageType:   core.DamageBludgeoning,
+			},
+			{
+				Name:         "Scalding Steam",
+				Mode:         lair.LAMDC,
+				TargetSide:   lair.TargetCharacters,
+				TargetPolicy: "lowest max hp",
+				IsAOE:        true,
+				Recharge:     5, // recharges on 5-6
+				DCAbility:    core.AbilityDexterity,
+				DCValue:      12,
+				OnSuccess:    core.DCOnSuccessHalf,
+				NumberOfDice: 2,
+				Die:          core.D6,
+				AmountToAdd:  0,
+				DamageType:   core.DamageFire,
+			},
+		},
+	}
+	sim.SetupCombatantsFromAPIWithLair(ctx,
 		charCfgs,
-		monsterIds)
+		monsterIds,
+		lc)
 	// Event listeners will also be attached inside RunSimulation after
 	// SetupCombat so the lair (inserted at init 20) gets a listener too.
 	sim.SetupEventListeners()

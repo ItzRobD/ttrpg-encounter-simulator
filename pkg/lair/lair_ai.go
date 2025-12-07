@@ -15,7 +15,8 @@ func NewLairAI(l *Lair) *LairAI { return &LairAI{parent: l} }
 
 func (lai *LairAI) UpdateCombatContext(ctx *core.CombatContext) { lai.combatCtx = ctx }
 
-// BuildLairActionRequest picks the first configured action and targets a character.
+// BuildLairActionRequest chooses the first available action (respecting recharge)
+// and selects a target according to that action's TargetSide/TargetPolicy.
 func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 	if lai.combatCtx == nil {
 		return nil, fmt.Errorf("combat context not set for lair")
@@ -24,36 +25,44 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 		return nil, fmt.Errorf("no lair actions configured")
 	}
 
-	// Select first action index deterministically
+	// Pick first available action
 	var actionIndex int = -1
-	for idx := range lai.parent.actionManager.Actions {
-		actionIndex = idx
-		break
+	var action LairAction
+	for idx, a := range lai.parent.actionManager.Actions {
+		if lai.parent.actionManager.IsActionAvailable(idx) {
+			actionIndex = idx
+			action = a
+			break
+		}
 	}
 	if actionIndex == -1 {
 		return nil, fmt.Errorf("no lair actions available")
 	}
 
-	// Build target map of enemies: choose any character (treat lair as hostile to characters)
-	enemies := make(map[int]*core.Combatant)
+	// Build target map according to action's TargetSide
+	candidates := make(map[int]*core.Combatant)
 	for id, ci := range lai.combatCtx.CombatantInfo {
 		if ci == nil || ci.Combatant == nil || ci.Combatant.IsLair {
 			continue
 		}
 		e := ci.Combatant.GetEntity()
-		if e.IsCharacter() && !e.IsUnconscious() && !e.IsDead() {
-			enemies[id] = ci.Combatant
+		if action.TargetSide == TargetCharacters && e.IsCharacter() && !e.IsUnconscious() && !e.IsDead() {
+			candidates[id] = ci.Combatant
+		} else if action.TargetSide == TargetMonsters && e.IsMonster() && !e.IsUnconscious() && !e.IsDead() {
+			candidates[id] = ci.Combatant
 		}
 	}
-	if len(enemies) == 0 {
+	if len(candidates) == 0 {
 		return nil, fmt.Errorf("no valid lair targets")
 	}
 
-	targetID, err := core.SelectTargetFromMap(enemies, core.PrioritizeLowestMaxHP, lai.parent.GetRNG())
+	// Select representative target for logging/UI; AOE effects will apply to all candidates later
+	priority := action.TargetPolicy
+	targetID, err := core.SelectTargetFromMap(candidates, priority, lai.parent.GetRNG())
 	if err != nil {
 		return nil, err
 	}
-	target := enemies[targetID].GetEntity()
+	target := candidates[targetID].GetEntity()
 
 	req := &core.AIRequest{
 		Actor:       lai.parent,
@@ -67,7 +76,7 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 	}
 
 	// Structured logging: chosen action and target
-	events.LogCombatEventMessage(lai.parent, "Lair chooses lair action", lai.parent.GetEventListener())
+	events.LogCombatEventMessage(lai.parent, fmt.Sprintf("Lair chooses lair action: %s", action.Name), lai.parent.GetEventListener())
 	events.LogTargetChoiceEvent(lai.parent, target, lai.parent.GetEventListener())
 
 	return req, nil
