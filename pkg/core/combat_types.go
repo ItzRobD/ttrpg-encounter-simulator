@@ -5,6 +5,14 @@ import (
 	"strings"
 )
 
+type DamageModificationResult struct {
+	OriginalValue    int
+	FinalValue       int
+	WasModified      bool
+	ResistanceType   ResistanceType // None, Resistant, Vulnerable, Immune
+	ResistanceBroken bool
+}
+
 type VictoryStatus string
 
 const (
@@ -203,6 +211,7 @@ type DamageResistance struct {
 func NewEmptyDamageResistance() DamageResistance {
 	return DamageResistance{
 		Resistance: ResistanceNone,
+		Breakers:   make([]ResistBreaker, 0),
 	}
 }
 
@@ -266,10 +275,22 @@ func (dr DamageResistances) GetResistanceType(dt DamageType) ResistanceType {
 	return ResistanceNone
 }
 
+func (dr DamageResistances) GetResistance(dt DamageType) DamageResistance {
+	return dr[dt]
+}
+
+func (dr DamageResistances) SetResistance(d DamageType, rt ResistanceType, rb []ResistBreaker) {
+	dr[d] = NewDamageResistance(rt, rb)
+}
+
 func (dr DamageResistances) SetResistanceType(dt DamageType, rt ResistanceType) {
 	res := dr[dt]
 	res.Resistance = rt
 	dr[dt] = res
+}
+
+func (dr DamageResistances) ResetResistance(dt DamageType) {
+	dr[dt] = NewEmptyDamageResistance()
 }
 
 func (dr DamageResistances) SetPhysicalResistance(rt ResistanceType) {
@@ -305,6 +326,38 @@ func (dr DamageResistances) GetBreakers(dt DamageType) []ResistBreaker {
 		return res.Breakers
 	}
 	return nil
+}
+
+func (dr DamageResistances) DamageTypeContainsBreaker(dt DamageType, rb ResistBreaker) bool {
+	if res, ok := dr[dt]; ok {
+		for _, br := range res.Breakers {
+			if br == rb {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (dr DamageResistances) DamageTypeContainsAllBreakers(dt DamageType, rb []ResistBreaker) bool {
+	res, ok := dr[dt]
+	if !ok {
+		return false
+	}
+
+	for _, br := range rb {
+		found := false
+		for _, existingBreaker := range res.Breakers {
+			if existingBreaker == br {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 type ResistBreaker string
@@ -345,17 +398,20 @@ type AttackData struct {
 	AttackModifier    int // Added to attack roll. Character: Proficiency + Ability Mod; Monster: To Hit Bonus
 	DamageModifier    int
 	DamageType        DamageType
+	ResistBreakers    []ResistBreaker
 	IsVersatileAttack bool
 	Average           int
 }
 
-func (ad AttackData) GetAttackName() string      { return ad.Name }
-func (ad AttackData) GetNumberOfDice() int       { return ad.NumberOfDice }
-func (ad AttackData) GetDie() DiceType           { return ad.Die }
-func (ad AttackData) GetAttackModifier() int     { return ad.AttackModifier }
-func (ad AttackData) GetDamageModifier() int     { return ad.DamageModifier }
-func (ad AttackData) GetDamageType() string      { return ad.DamageType.String() }
-func (ad AttackData) GetIsVersatileAttack() bool { return ad.IsVersatileAttack }
+func (ad AttackData) GetAttackName() string              { return ad.Name }
+func (ad AttackData) GetNumberOfDice() int               { return ad.NumberOfDice }
+func (ad AttackData) GetDie() DiceType                   { return ad.Die }
+func (ad AttackData) GetAttackModifier() int             { return ad.AttackModifier }
+func (ad AttackData) GetDamageModifier() int             { return ad.DamageModifier }
+func (ad AttackData) GetDamageType() string              { return ad.DamageType.String() }
+func (ad AttackData) GetIsVersatileAttack() bool         { return ad.IsVersatileAttack }
+func (ad AttackData) GetResistBreakers() []ResistBreaker { return ad.ResistBreakers }
+func (ad AttackData) GetAverage() int                    { return ad.Average }
 
 type AttackRequest struct {
 	AttackData        []AttackData
@@ -370,17 +426,18 @@ func (ar *AttackRequest) GetSimulationOptions() *SimulationOptions { return ar.S
 func (ar *AttackRequest) GetTarget() Entity                        { return ar.Target }
 
 type AttackResult struct {
-	ActorName     string
-	TargetName    string
-	AttackName    string
-	AttackCount   int
-	TargetValue   int
-	IsHit         bool
-	IsCriticalHit bool
-	AttackTotal   int
-	AttackRoll    int
-	DamageRoll    RollResult
-	DamageType    DamageType
+	ActorName      string
+	TargetName     string
+	AttackName     string
+	AttackCount    int
+	TargetValue    int
+	IsHit          bool
+	IsCriticalHit  bool
+	AttackTotal    int
+	AttackRoll     int
+	DamageRoll     RollResult
+	DamageType     DamageType
+	ResistBreakers []ResistBreaker
 }
 
 func (r AttackResult) GetActorName() string        { return r.ActorName }
@@ -463,10 +520,11 @@ type ActionOutcome struct {
 }
 
 type Effect struct {
-	Type       EffectType
-	Value      int
-	DamageType DamageType
-	Condition  *Condition
+	Type           EffectType
+	Value          int
+	DamageType     DamageType
+	ResistBreakers []ResistBreaker
+	Condition      *Condition
 }
 
 type EffectType string

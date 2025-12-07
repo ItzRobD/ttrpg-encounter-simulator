@@ -9,22 +9,23 @@ import (
 type EventType string
 
 const (
-	ETAttackEvent       EventType = "attack"
-	ETSpellAttackEvent  EventType = "spellattack"
-	ETSpellDCEvent      EventType = "spelldc"
-	ETHealEvent         EventType = "heal"
-	ETDamageEvent       EventType = "damage"
-	ETDeathEvent        EventType = "death"
-	ETUnconsciousEvent  EventType = "unconscious"
-	ETRollEvent         EventType = "roll"
-	ETHPRollEvent       EventType = "hproll"
-	ETActionChoiceEvent EventType = "actionchoice"
-	ETSpellChoiceEvent  EventType = "spellchoice"
-	ETSpellSlotsEvent   EventType = "spellslots"
-	ETHPModifiedEvent   EventType = "hpmodified"
-	ETSavingThrowEvent  EventType = "savingthrow"
-	ETTargetChoiceEvent EventType = "targetchoice"
-	ECombatEventMessage EventType = "combatmessage"
+	ETAttackEvent         EventType = "attack"
+	ETSpellAttackEvent    EventType = "spellattack"
+	ETSpellDCEvent        EventType = "spelldc"
+	ETHealEvent           EventType = "heal"
+	ETDamageEvent         EventType = "damage"
+	ETDeathEvent          EventType = "death"
+	ETUnconsciousEvent    EventType = "unconscious"
+	ETRollEvent           EventType = "roll"
+	ETHPRollEvent         EventType = "hproll"
+	ETActionChoiceEvent   EventType = "actionchoice"
+	ETSpellChoiceEvent    EventType = "spellchoice"
+	ETSpellSlotsEvent     EventType = "spellslots"
+	ETHPModifiedEvent     EventType = "hpmodified"
+	ETSavingThrowEvent    EventType = "savingthrow"
+	ETTargetChoiceEvent   EventType = "targetchoice"
+	ECombatEventMessage   EventType = "combatmessage"
+	ETDamageModifiedEvent EventType = "damagedmodified"
 )
 
 type CombatEvent interface {
@@ -166,6 +167,18 @@ type UnconsciousEvent struct {
 }
 
 func (e *UnconsciousEvent) GetEventType() EventType { return ETUnconsciousEvent }
+
+type DamageModifiedEvent struct {
+	BaseEvent
+	SubjectName      string
+	OriginalValue    int
+	FinalValue       int
+	WasModified      bool
+	ResistanceType   core.ResistanceType
+	ResistanceBroken bool
+}
+
+func (e *DamageModifiedEvent) GetEventType() EventType { return ETDamageModifiedEvent }
 
 type HPModifiedEvent struct {
 	BaseEvent

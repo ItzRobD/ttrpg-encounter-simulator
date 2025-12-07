@@ -111,9 +111,10 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		for _, res := range results {
 			if res.GetIsHit() {
 				effects = append(effects, core.Effect{
-					Type:       core.EffectDamage,
-					Value:      res.GetDamageResult().GetTotal(),
-					DamageType: res.GetDamageType(),
+					Type:           core.EffectDamage,
+					Value:          res.GetDamageResult().GetTotal(),
+					DamageType:     res.GetDamageType(),
+					ResistBreakers: res.ResistBreakers,
 				})
 			}
 		}

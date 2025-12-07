@@ -99,18 +99,22 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) (
 				return nil, err
 			}
 
+			resistBreakers := make([]core.ResistBreaker, 0)
+			resistBreakers = append(resistBreakers, ad.ResistBreakers...)
+
 			attackResult := core.AttackResult{
-				ActorName:     mam.parent.GetName(),
-				TargetName:    req.Target.GetName(),
-				AttackName:    ad.Name,
-				AttackCount:   i,
-				TargetValue:   attackRollResult.TargetValue,
-				IsHit:         attackRollResult.IsSuccess,
-				IsCriticalHit: attackRollResult.IsCritical,
-				AttackTotal:   attackRollResult.Total,
-				AttackRoll:    attackRollResult.FinalRollValue,
-				DamageRoll:    dmgRollResult,
-				DamageType:    ad.DamageType,
+				ActorName:      mam.parent.GetName(),
+				TargetName:     req.Target.GetName(),
+				AttackName:     ad.Name,
+				AttackCount:    i,
+				TargetValue:    attackRollResult.TargetValue,
+				IsHit:          attackRollResult.IsSuccess,
+				IsCriticalHit:  attackRollResult.IsCritical,
+				AttackTotal:    attackRollResult.Total,
+				AttackRoll:     attackRollResult.FinalRollValue,
+				DamageRoll:     dmgRollResult,
+				DamageType:     ad.DamageType,
+				ResistBreakers: resistBreakers,
 			}
 
 			events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())

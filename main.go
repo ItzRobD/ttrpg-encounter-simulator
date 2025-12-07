@@ -107,6 +107,7 @@ func setupFrank() character.CharacterConfig {
 			Seed1: 0,
 			Seed2: 0,
 		},
+		Resistances: core.NewDamageResistances(),
 	}
 
 	charConfig.Equipment = character.EquipmentConfig{
@@ -115,6 +116,8 @@ func setupFrank() character.CharacterConfig {
 		SecondarySlot: nil,
 		RangedSlot:    nil,
 	}
+
+	charConfig.Resistances.SetResistance(core.DamageBludgeoning, core.ResistanceResistant, nil)
 
 	return charConfig
 }

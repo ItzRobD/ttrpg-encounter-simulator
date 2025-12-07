@@ -38,14 +38,15 @@ type Character struct {
 }
 
 type CharacterConfig struct {
-	Name      string
-	ClassID   classes.ClassID
-	Level     uint8
-	AsConfig  core.AbilityScoresConfig
-	HPMethod  core.HPSetMethod
-	HPValue   int
-	Seed      core.Seed
-	Equipment EquipmentConfig
+	Name        string
+	ClassID     classes.ClassID
+	Level       uint8
+	AsConfig    core.AbilityScoresConfig
+	HPMethod    core.HPSetMethod
+	HPValue     int
+	Seed        core.Seed
+	Equipment   EquipmentConfig
+	Resistances core.DamageResistances
 }
 
 type EquipmentConfig struct {

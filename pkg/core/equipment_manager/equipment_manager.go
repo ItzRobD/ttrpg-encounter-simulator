@@ -22,6 +22,19 @@ type EquipmentManager struct {
 type WeaponSlotData struct {
 	Weapon       *weapon.Weapon
 	IsProficient bool
+	Breakers     []core.ResistBreaker // magic/silvered/adamantine/cold forged iron
+}
+
+func (wsd *WeaponSlotData) SetBreakers(rb []core.ResistBreaker) {
+	wsd.Breakers = rb
+}
+
+func (wsd *WeaponSlotData) GetBreakers() []core.ResistBreaker {
+	return wsd.Breakers
+}
+
+func (wsd *WeaponSlotData) AddBreaker(rb core.ResistBreaker) {
+	wsd.Breakers = append(wsd.Breakers, rb)
 }
 
 type WeaponAttackData struct {
@@ -152,6 +165,7 @@ func (em *EquipmentManager) SetWeaponProficiencyBySlot(slot core.WeaponSlot, isP
 	em.Weapons[slot] = ws
 }
 
+// HasMeleeWeapon checks if a melee weapon is equipped in any weapon slot of the EquipmentManager.
 func (em *EquipmentManager) HasMeleeWeapon() bool {
 	if em.Weapons == nil {
 		return false
@@ -231,6 +245,9 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 		return err
 	}
 
+	resistBreakers := make([]core.ResistBreaker, 0)
+	resistBreakers = append(resistBreakers, w.GetBreakers()...)
+
 	normal := core.AttackData{
 		Name:              w.Weapon.Name,
 		NumberOfDice:      w.Weapon.NumberOfDice,
@@ -238,6 +255,7 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 		AttackModifier:    attackMod,
 		DamageModifier:    damageMod,
 		DamageType:        w.Weapon.DamageType,
+		ResistBreakers:    resistBreakers,
 		IsVersatileAttack: false,
 	}
 	weaponData := WeaponAttackData{Normal: normal}
@@ -250,6 +268,7 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 			AttackModifier:    attackMod,
 			DamageModifier:    damageMod,
 			DamageType:        w.Weapon.DamageType,
+			ResistBreakers:    resistBreakers,
 			IsVersatileAttack: true,
 		}
 		weaponData.Versatile = &versatile

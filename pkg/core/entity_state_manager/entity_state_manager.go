@@ -43,6 +43,7 @@ type EntityStateConfig struct {
 	TargetPrioritization core.TargetPriority
 	SpellcastingPriority core.SpellPriority
 	InitiativeAdvantage  core.AdvantageType
+	Resistances          core.DamageResistances
 	InitiativeBonus      int
 }
 
@@ -536,6 +537,37 @@ func (esm *EntityStateManager) SetHasSavingThrowAdvantage(adv core.AdvantageType
 	esm.SavingThrowAdvantage = adv
 }
 
+// Resistances
+
+func (esm *EntityStateManager) AddResistance(dt core.DamageType, rt core.ResistanceType, rb []core.ResistBreaker) {
+	// Fallback if resistances is not initialized
+	if esm.Resistances == nil {
+		esm.Resistances = core.NewDamageResistances()
+	}
+
+	esm.Resistances.SetResistance(dt, rt, rb)
+}
+
+func (esm *EntityStateManager) RemoveResistance(dt core.DamageType) error {
+	if esm.Resistances == nil {
+		return fmt.Errorf("resistances not initialized")
+	}
+
+	esm.Resistances.ResetResistance(dt)
+	return nil
+}
+
+func (esm *EntityStateManager) GetResistances() core.DamageResistances {
+	return esm.Resistances
+}
+
+func (esm *EntityStateManager) GetResistance(dt core.DamageType) (core.DamageResistance, error) {
+	if esm.Resistances == nil {
+		return core.DamageResistance{}, fmt.Errorf("resistances not initialized for parent: %v", esm.Parent.GetName())
+	}
+	return esm.Resistances.GetResistance(dt), nil
+}
+
 // NewEntityStateManager initializes and returns a new EntityStateManager based on the provided parent entity and configuration.
 // Returns an error if the configuration contains invalid values.
 func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*EntityStateManager, error) {
@@ -561,6 +593,9 @@ func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*Entit
 	if config.Conditions == nil {
 		config.Conditions = core.NewEntityConditions()
 	}
+	if config.Resistances == nil {
+		config.Resistances = core.NewDamageResistances()
+	}
 
 	return &EntityStateManager{
 		Parent:                    parent,
@@ -573,6 +608,7 @@ func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*Entit
 		LegendaryActionPointsMax:  config.MaxLegendaryActions,
 		NumberOfAttacks:           config.AttackCount,
 		Conditions:                config.Conditions,
+		Resistances:               config.Resistances,
 		ActionPreference:          config.ActionPreference,
 		VersatileWeaponPreference: config.VersatilePreference,
 		TargetPrioritization:      config.TargetPrioritization,

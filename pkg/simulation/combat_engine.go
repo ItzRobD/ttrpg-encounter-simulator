@@ -3,6 +3,7 @@ package simulation
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
@@ -53,11 +54,11 @@ func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
 	case core.ATLairAction:
 		// Lair actions are executed by the Lair entity but follow the same
 		// generic "actor executes request, engine processes effects" path.
-		results, err := req.Actor.ExecuteAIRequest(req)
+		outcome, err := req.Actor.ExecuteAIRequest(req)
 		if err != nil {
 			return err
 		}
-		return ce.processActionResults(results)
+		return ce.processActionResults(req.Actor, outcome)
 	default:
 		return fmt.Errorf("unknown action type: %v", req.ActionType)
 	}
@@ -74,50 +75,50 @@ func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
 		aiReq.WeaponSlot = core.WSPrimary
 	}
 
-	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
 	if err != nil {
 		return err
 	}
 
-	return ce.processActionResults(results)
+	return ce.processActionResults(aiReq.Actor, outcome)
 }
 
 func (ce *CombatEngine) executeSpellCast(aiReq *core.AIRequest) error {
-	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
 	if err != nil {
 		return err
 	}
-	return ce.processActionResults(results)
+	return ce.processActionResults(aiReq.Actor, outcome)
 }
 
 func (ce *CombatEngine) executeMonsterAction(aiReq *core.AIRequest) error {
-	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
 	if err != nil {
 		return err
 	}
 
-	return ce.processActionResults(results)
+	return ce.processActionResults(aiReq.Actor, outcome)
 }
 
 func (ce *CombatEngine) executeMonsterMultiattack(aiReq *core.AIRequest) error {
-	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
 	if err != nil {
 		return err
 	}
 
-	return ce.processActionResults(results)
+	return ce.processActionResults(aiReq.Actor, outcome)
 }
 
 func (ce *CombatEngine) executeMonsterLegendaryAction(aiReq *core.AIRequest) error {
-	results, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
 	if err != nil {
 		return err
 	}
 
-	return ce.processActionResults(results)
+	return ce.processActionResults(aiReq.Actor, outcome)
 }
 
-func (ce *CombatEngine) processActionResults(outcome *core.ActionOutcome) error {
+func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.ActionOutcome) error {
 	target, exists := ce.Combatants[outcome.TargetID]
 	if !exists {
 		return fmt.Errorf("target entity not found in combat")
@@ -129,8 +130,16 @@ func (ce *CombatEngine) processActionResults(outcome *core.ActionOutcome) error 
 		for _, effect := range outcome.Effects {
 			switch effect.Type {
 			case core.EffectDamage:
-				v := -effect.Value
-				hpModResult, err = target.GetEntity().ModifyHP(v, false, false)
+				res, rErr := ce.computeDamageValueAfterResistances(
+					target.GetEntity(),
+					effect.DamageType,
+					effect.ResistBreakers,
+					-effect.Value)
+				if rErr != nil {
+					return rErr
+				}
+				events.LogDamageModifiedEvent(actor, target.GetEntity(), res, actor.GetEventListener())
+				hpModResult, err = target.GetEntity().ModifyHP(res.FinalValue, false, false)
 				if err != nil {
 					return fmt.Errorf("failed to modify target entity HP: %v", err)
 				}
@@ -750,4 +759,55 @@ func (ce *CombatEngine) checkVictoryCondition() core.VictoryStatus {
 		return core.VictoryStatusCharacters
 	}
 	return core.VictoryStatusNone
+}
+
+func (ce *CombatEngine) computeDamageValueAfterResistances(target core.Entity, dt core.DamageType, b []core.ResistBreaker, value int) (core.DamageModificationResult, error) {
+	if target == nil {
+		return core.DamageModificationResult{}, fmt.Errorf("target is nil")
+	}
+
+	targetESM, ok := target.GetState().(*entity_state_manager.EntityStateManager)
+	if !ok || targetESM == nil {
+		return core.DamageModificationResult{}, fmt.Errorf("target state manager is nil or wrong type")
+	}
+
+	targetResistances := targetESM.GetResistances()
+	resistance := targetResistances.GetResistance(dt).Resistance
+
+	result := core.DamageModificationResult{
+		OriginalValue:  value,
+		FinalValue:     value,
+		ResistanceType: resistance,
+	}
+
+	if targetResistances == nil {
+		return result, fmt.Errorf("target resistances are nil")
+	}
+
+	brokenRes := len(targetResistances.GetBreakers(dt)) > 0 && targetResistances.DamageTypeContainsAllBreakers(dt, b)
+	result.ResistanceBroken = brokenRes
+	result.ResistanceType = resistance
+
+	switch resistance {
+	case core.ResistanceNone:
+		break
+	case core.ResistanceVulnerable:
+		if !brokenRes {
+			result.FinalValue *= 2
+		}
+	case core.ResistanceResistant:
+		if !brokenRes {
+			result.FinalValue /= 2
+		}
+	case core.ResistanceImmune:
+		if !brokenRes {
+			result.FinalValue = 0
+		}
+	default:
+		return core.DamageModificationResult{}, fmt.Errorf("unknown resistance type: %v", targetResistances.GetResistance(dt).Resistance)
+	}
+
+	result.WasModified = result.FinalValue != value
+
+	return result, nil
 }

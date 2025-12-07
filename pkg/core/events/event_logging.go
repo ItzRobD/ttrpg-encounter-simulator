@@ -139,6 +139,23 @@ func LogSpellHealEvent(actor core.Entity, res core.SpellResult, listener func(ev
 	}
 }
 
+func LogDamageModifiedEvent(actor core.Entity, subject core.Entity, res core.DamageModificationResult, listener func(event interface{})) {
+	event := &DamageModifiedEvent{
+		BaseEvent:        BaseEvent{},
+		SubjectName:      subject.GetName(),
+		OriginalValue:    res.OriginalValue,
+		FinalValue:       res.FinalValue,
+		WasModified:      res.WasModified,
+		ResistanceType:   res.ResistanceType,
+		ResistanceBroken: res.ResistanceBroken,
+	}
+	event.SetActor(actor.GetName())
+
+	if listener != nil {
+		listener(event)
+	}
+}
+
 func LogHPModifiedEvent(actor core.Entity, subject core.Entity, res core.HPModificationResult, listener func(event interface{})) {
 	event := &HPModifiedEvent{
 		BaseEvent:         BaseEvent{},
