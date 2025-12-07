@@ -5,6 +5,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/lair"
 	"fmt"
 	"math/rand/v2"
 )
@@ -127,6 +128,29 @@ func (s *SimulationManager) SetupCombatantsFromAPI(ctx context.Context, characte
 	}
 
 	return result, nil
+}
+
+// SetupCombatantsFromAPIWithLair allows providing an optional lair configuration.
+// When s.options.AllowLairActions is true and lairCfg.Enabled is true, a lair combatant
+// is constructed and added with initiative 20.
+func (s *SimulationManager) SetupCombatantsFromAPIWithLair(ctx context.Context, characterConfigs []character.CharacterConfig, monsterIDs []int, lairCfg *lair.LairConfig) (*SetupResult, error) {
+	res, err := s.SetupCombatantsFromAPI(ctx, characterConfigs, monsterIDs)
+	if err != nil {
+		return res, err
+	}
+
+	if s.options.AllowLairActions && lairCfg != nil && lairCfg.Enabled {
+		// Lair always acts on initiative 20 (auto-loses ties handled by engine sort)
+		lr, err2 := lair.NewLairFromConfig(lairCfg, s.rng)
+		if err2 != nil {
+			return res, err2
+		}
+		cb := core.NewCombatantWithInfo(lr)
+		cb.Initiative = 20
+		cb.IsLair = true
+		s.combatEngine.AddCombatant(cb)
+	}
+	return res, nil
 }
 
 // GetFinalResult returns the last recorded victory status for the simulation run.

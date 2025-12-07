@@ -123,24 +123,11 @@ func (l *Lair) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, error
 	if req.ActionType != core.ATLairAction {
 		return nil, fmt.Errorf("lair only executes lair actions")
 	}
-	// Build a simple attack request using lair manager data
-	ar := &core.AttackRequest{
-		AttackData:        l.actionManager.GetAttackDataFromIndex(req.ActionIndex),
-		AttackOptions:     core.AttackOptions{Advantage: core.RollNormal, ShouldApplyDamageMod: true, ImprovedCritical: false},
-		SimulationOptions: req.SimOptions,
-		Target:            req.Target,
-	}
-
-	results, err := l.actionManager.ProcessAttackRequest(ar)
+	// Advanced execution supports attack/DC modes and AOE; the manager will apply
+	// recharge logic and compute effects across all affected targets.
+	_, effects, err := l.actionManager.ExecuteAdvanced(req.ActionIndex, req.Target)
 	if err != nil {
 		return nil, err
-	}
-
-	var effects []core.Effect
-	for _, res := range results {
-		if res.GetIsHit() {
-			effects = append(effects, core.Effect{Type: core.EffectDamage, Value: res.GetDamageResult().GetTotal(), DamageType: res.GetDamageType()})
-		}
 	}
 
 	return &core.ActionOutcome{
