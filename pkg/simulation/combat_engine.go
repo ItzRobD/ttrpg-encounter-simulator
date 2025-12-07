@@ -160,13 +160,13 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 			}
 		}
 
-		actor, exists := ce.Combatants[outcome.ActorID]
-		if !exists {
-			return fmt.Errorf("actor entity not found in combat")
-		}
-		entity := actor.GetEntity()
+		//actor, exists := ce.Combatants[outcome.ActorID]
+		//if !exists {
+		//	return fmt.Errorf("actor entity not found in combat")
+		//}
+		//entity := actor.GetEntity()
 
-		events.LogHPModifiedEvent(entity, target.GetEntity(), hpModResult, entity.GetEventListener())
+		events.LogHPModifiedEvent(actor, target.GetEntity(), hpModResult, actor.GetEventListener())
 
 		ce.Combatants[outcome.TargetID] = target
 	}
