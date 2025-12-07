@@ -4,6 +4,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/lair"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
 	"math"
@@ -39,16 +40,24 @@ func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
 	case core.ATSpell:
 		return ce.executeSpellCast(req)
 		// TODO: Complete these two paths - note, need to account for unconsious healing and removing of applicable conditions
-	//case core.ATHeal:
-	//	return ce.executeHeal(req)
-	//case core.ATUnarmed:
-	//	return ce.executeUnarmedAttack(req)
+		//case core.ATHeal:
+		//	return ce.executeHeal(req)
+		//case core.ATUnarmed:
+		//	return ce.executeUnarmedAttack(req)
 	case core.ATMonsterAction:
 		return ce.executeMonsterAction(req)
 	case core.ATMonsterMultiattack:
 		return ce.executeMonsterMultiattack(req)
 	case core.ATLegendaryAction:
 		return ce.executeMonsterLegendaryAction(req)
+	case core.ATLairAction:
+		// Lair actions are executed by the Lair entity but follow the same
+		// generic "actor executes request, engine processes effects" path.
+		results, err := req.Actor.ExecuteAIRequest(req)
+		if err != nil {
+			return err
+		}
+		return ce.processActionResults(results)
 	default:
 		return fmt.Errorf("unknown action type: %v", req.ActionType)
 	}
@@ -243,14 +252,30 @@ func (ce *CombatEngine) insertLairCombatant() {
 		}
 	}
 
+	// Create a minimal lair entity with its own RNG
+	l := lair.NewLair("Lair", nil)
 	lairCombatant := core.Combatant{
-		Entity:     nil,
+		Entity:     l,
 		Initiative: 20,
 		IsLair:     true,
 	}
 	lairID := -1 // Lair will never be targeted
 	ce.Combatants[lairID] = &lairCombatant
 	ce.TurnOrder = append(ce.TurnOrder[:insertIdx], append([]int{lairID}, ce.TurnOrder[insertIdx:]...)...)
+
+	// Seed a simple default lair action so the lair can act immediately.
+	// Example: "Rumbling Tremor" — +5 to hit, 2d8 bludgeoning, no extra damage mod.
+	ad := core.AttackData{
+		Name:              "Rumbling Tremor",
+		NumberOfDice:      2,
+		Die:               core.D8,
+		AttackModifier:    5,
+		DamageModifier:    0,
+		DamageType:        core.DamageBludgeoning,
+		IsVersatileAttack: false,
+		Average:           9, // approx avg for 2d8
+	}
+	l.GetActionManager().AddAction(0, ad)
 }
 
 func (ce *CombatEngine) rollInitiativeForAllCombatants() error {
@@ -279,7 +304,10 @@ func (ce *CombatEngine) RunCombat(maxRounds int) (core.VictoryStatus, error) {
 	}
 
 	ce.initializeCombatContext()
-	for round := ce.CurrentRound; round <= maxRounds; round++ {
+	// Actions should occur starting at Round 1.
+	// Round 0 is reserved for setup logs like initiative and HP initialization.
+	for round := 1; round <= maxRounds; round++ {
+		ce.CurrentRound = round
 		victory, err := ce.SimulateRound()
 		if err != nil {
 			return core.VictoryStatusNone, err
@@ -288,7 +316,6 @@ func (ce *CombatEngine) RunCombat(maxRounds int) (core.VictoryStatus, error) {
 		if victory != core.VictoryStatusNone {
 			return victory, nil
 		}
-		ce.CurrentRound++
 	}
 
 	return core.VictoryStatusNone, nil
@@ -304,9 +331,24 @@ func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 	}
 
 	for _, combatantID := range ce.TurnOrder {
-		// Skip lair combatants - they don't take normal turns
+		// Lair takes a special turn at initiative 20 when enabled
 		if ce.Combatants[combatantID].IsLair {
-			// TODO: Handle lair actions here
+			if ce.SimOptions != nil && ce.SimOptions.AllowLairActions {
+				// Update context for lair and execute its turn like any other
+				ce.updateCombatContext(combatantID)
+				// Ensure the lair entity receives the fresh combat context before acting
+				_ = ce.Combatants[combatantID].GetEntity().UpdateAICombatContext(ce.CombatContext)
+				status, aiReq, combatErr := ce.Combatants[combatantID].GetEntity().ProcessTurn(combatantID, core.TurnTypeNormal)
+				if combatErr != nil {
+					return core.VictoryStatusNone, combatErr
+				}
+				if ce.shouldSkipCombatantTurn(status) {
+					continue
+				}
+				if err2 := ce.ProcessAIRequest(aiReq); err2 != nil {
+					return core.VictoryStatusNone, err2
+				}
+			}
 			continue
 		}
 

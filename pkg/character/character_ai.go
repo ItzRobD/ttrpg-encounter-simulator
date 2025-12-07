@@ -112,6 +112,10 @@ func (cai *CharacterAI) getEnemyTargets() map[int]*core.Combatant {
 	self := cai.parent
 
 	for id, combatant := range cai.combatCtx.CombatantInfo {
+		// Skip lair combatant entries
+		if combatant.Combatant.IsLair {
+			continue
+		}
 		e := combatant.Combatant.GetEntity()
 		if !e.IsUnconscious() && (self.IsCharacter() != e.IsCharacter()) {
 			enemies[id] = combatant.Combatant

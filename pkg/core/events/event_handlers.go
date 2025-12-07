@@ -41,6 +41,8 @@ func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 		h.handleTargetChoice(e)
 	case *SavingThrowEvent:
 		h.handleSavingThrow(e)
+	case *CombatEventMessage:
+		h.handleCombatMessage(e)
 	default:
 		fmt.Printf("Unknown event type: %T\n", e)
 	}

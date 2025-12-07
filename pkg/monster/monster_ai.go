@@ -406,6 +406,10 @@ func (mai *MonsterAI) getEnemyTargets() map[int]*core.Combatant {
 	self := mai.parent
 
 	for id, combatant := range mai.combatCtx.CombatantInfo {
+		// Skip lair combatant entries; lair is not a valid target
+		if combatant.Combatant.IsLair {
+			continue
+		}
 		e := combatant.Combatant.GetEntity()
 		if !e.IsUnconscious() && (self.IsMonster() != e.IsMonster()) {
 			enemies[id] = combatant.Combatant
@@ -420,6 +424,10 @@ func (mai *MonsterAI) getAllyTargets() map[int]*core.Combatant {
 	self := mai.parent
 
 	for id, combatant := range mai.combatCtx.CombatantInfo {
+		// Skip lair combatant entries
+		if combatant.Combatant.IsLair {
+			continue
+		}
 		e := combatant.Combatant.GetEntity()
 		if !e.IsUnconscious() && (self.IsMonster() == e.IsMonster()) {
 			allies[id] = combatant.Combatant

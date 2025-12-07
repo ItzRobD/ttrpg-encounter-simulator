@@ -184,6 +184,7 @@ const (
 	ATMonsterMultiattack            = "monster multiattack"
 	ATLegendaryAction               = "legendary action"
 	ATMonsterSpecial                = "monster special ability"
+	ATLairAction                    = "lair action"
 )
 
 func (a ActionType) String() string {
@@ -204,6 +205,8 @@ func NewActionType(s string) ActionType {
 		return ATHeal
 	case "unarmed attack":
 		return ATUnarmed
+	case "lair action":
+		return ATLairAction
 	default:
 		return ATNoAction
 	}

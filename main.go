@@ -151,6 +151,7 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 		AOEHitsAllEnemies:         false,
 		CharacterHealThresholdPct: 0,
 		MonsterHealThresholdPct:   0,
+		AllowLairActions:          true,
 	}
 
 	sim := simulation.NewSimulationManager(config, core.Seed{})
@@ -159,6 +160,8 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 	sim.SetupCombatantsFromAPI(ctx,
 		charCfgs,
 		monsterIds)
+	// Event listeners will also be attached inside RunSimulation after
+	// SetupCombat so the lair (inserted at init 20) gets a listener too.
 	sim.SetupEventListeners()
 	//sim.InitializeCombatants()
 	err := sim.RunSimulation(24)

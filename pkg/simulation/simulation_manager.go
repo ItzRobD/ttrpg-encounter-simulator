@@ -44,13 +44,8 @@ func (s *SimulationManager) SetupEventListeners() {
 	}
 
 	for _, combatant := range s.combatEngine.Combatants {
-		// Skip lair combatants
-		if combatant.IsLair {
-			continue
-		}
-
-		entity := combatant.Entity
-		entity.SetEventListener(eventListener)
+		// Attach listener to all combatants, including lair, so events can be logged uniformly
+		combatant.Entity.SetEventListener(eventListener)
 	}
 }
 
@@ -82,6 +77,8 @@ func (s *SimulationManager) RunSimulation(maxRounds int) error {
 	if err != nil {
 		return err
 	}
+	// Attach event listeners after combatants (including lair) are fully set up
+	s.SetupEventListeners()
 	victory, err := s.combatEngine.RunCombat(maxRounds)
 	if err != nil {
 		return err
