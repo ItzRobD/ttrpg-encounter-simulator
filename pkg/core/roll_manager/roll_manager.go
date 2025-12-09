@@ -253,9 +253,13 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 	// Calculate the appropriate damage modifier from the attack request
 	dmgMod := req.GetAttackData()[adIndex].GetDamageModifier()
 	if !req.GetAttackOptions().GetShouldApplyDamageMod() {
+		// Do not apply base damage modifier when this flag is false
 		dmgMod = 0
+	} else {
+		// Apply any flat bonuses that modify damage (not attack) rolls
+		dmgMod += req.GetAttackOptions().GetBonusToDamageRoll()
 	}
-	dmgMod += req.GetAttackOptions().GetBonusToAttackRoll()
+	// Power attack style features add flat damage regardless of ability mod flag
 	if req.GetAttackOptions().GetIsPowerAttack() {
 		dmgMod += 10
 	}
@@ -290,6 +294,7 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 	res.FinalRollValue = dmgRollTotal
 	res.FinalRolls = dmgRolls
 	res.Modifier = dmgMod
+	// Set initial total (will be finalized after reroll adjustments below)
 	res.Total = dmgRollTotal
 	res.Advantage = opts.Advantage
 	res.OriginalRolls = dmgRolls
@@ -305,6 +310,9 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 			res.FinalRollValue = sum(res.FinalRolls)
 		}
 	}
+
+	// Finalize total to include modifier after any rerolls/adjustments
+	res.Total = res.FinalRollValue + res.Modifier
 
 	// logging takes place in the calling function
 
@@ -353,6 +361,7 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 	res.FinalRollValue = valRollTotal
 	res.FinalRolls = valRolls
 	res.Modifier = valueMod
+	// Set initial total (will be finalized after any rerolls/adjustments below)
 	res.Total = valRollTotal
 	res.Advantage = opts.Advantage
 	res.OriginalRolls = valRolls
@@ -368,6 +377,9 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 			res.FinalRollValue = sum(res.FinalRolls)
 		}
 	}
+
+	// Finalize total to include modifier after any rerolls/adjustments
+	res.Total = res.FinalRollValue + res.Modifier
 
 	// log rolls
 	events.LogDiceRollEvent(rm.parent, &res, rm.parent.GetEventListener())

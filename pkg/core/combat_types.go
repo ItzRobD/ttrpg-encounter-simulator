@@ -276,7 +276,11 @@ func (dr DamageResistances) GetResistanceType(dt DamageType) ResistanceType {
 }
 
 func (dr DamageResistances) GetResistance(dt DamageType) DamageResistance {
-	return dr[dt]
+	if res, ok := dr[dt]; ok {
+		return res
+	}
+	// Return a safe default instead of zero-value so callers never see empty ResistanceType
+	return NewEmptyDamageResistance()
 }
 
 func (dr DamageResistances) SetResistance(d DamageType, rt ResistanceType, rb []ResistBreaker) {

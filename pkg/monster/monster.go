@@ -83,7 +83,12 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	if err != nil {
 		return nil, err
 	}
-	monster.EntityState.Resistances = config.Resistances
+	// Only override the initialized resistances if the config provides a non-nil map.
+	// This avoids clobbering the default NewDamageResistances() with nil when a monster
+	// has no DB-defined resistances or a query returns no rows for that monster.
+	if config.Resistances != nil {
+		monster.EntityState.Resistances = config.Resistances
+	}
 
 	// Spellcasting Manager
 	if monster.MonsterBase.IsSpellcaster {
@@ -147,7 +152,10 @@ func NewMonsterWithRNG(ctx context.Context, config MonsterConfig, rng *rand.Rand
 	if err != nil {
 		return nil, err
 	}
-	monster.EntityState.Resistances = config.Resistances
+	// Only override initialized resistances if a non-nil map is provided
+	if config.Resistances != nil {
+		monster.EntityState.Resistances = config.Resistances
+	}
 
 	// Spellcasting Manager
 	if monster.MonsterBase.IsSpellcaster {

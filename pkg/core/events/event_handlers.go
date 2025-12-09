@@ -33,6 +33,8 @@ func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 		h.handleHPModified(e)
 	case *UnconsciousEvent:
 		h.handleUnconscious(e)
+	case *DamageModifiedEvent:
+		h.handleDamageModified(e)
 	case *DiceRollEvent:
 		h.handleDiceRoll(e)
 	case *HPRollEvent:
@@ -186,6 +188,18 @@ func (h *UniversalEventHandler) handleHPModified(e *HPModifiedEvent) {
 		e.IsUnconscious)
 }
 
+func (h *UniversalEventHandler) handleDamageModified(e *DamageModifiedEvent) {
+	fmt.Printf("[Round %d] <Damage Modified> %s on %s. Original: %d, Final: %d, Modified: %t, Resistance: %s, Broken: %t\n",
+		e.GetRound(),
+		e.GetActor(),
+		e.SubjectName,
+		e.OriginalValue,
+		e.FinalValue,
+		e.WasModified,
+		e.ResistanceType,
+		e.ResistanceBroken)
+}
+
 func (h *UniversalEventHandler) handleUnconscious(e *UnconsciousEvent) {
 	fmt.Printf("[Round %d] <Unconscious> %s is unconscious.\n",
 		e.GetRound(),
@@ -280,15 +294,17 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.TargetValue,
 			e.IsSuccess)
 	case core.DiceRollDamage:
-		s = fmt.Sprintf("[Round %d] <Damage Roll> %s rolls for %s. Dice: %dd%s, Total: %d, Final Rolls: %v, Modifier: %d",
+		// Clarify that Total includes the modifier; show dice subtotal separately
+		s = fmt.Sprintf("[Round %d] <Damage Roll> %s rolls for %s. Dice: %dd%s, DiceTotal: %d, Final Rolls: %v, Modifier: %d, Total: %d",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
-			e.Total,
+			e.FinalRollValue,
 			e.FinalRolls,
-			e.Modifier)
+			e.Modifier,
+			e.Total)
 	case core.DiceRollRecharge:
 		s = fmt.Sprintf("[Round %d] <Recharge roll> %s rolls to recharge ability: %s. Total: %d. Succcess: %t",
 			e.GetRound(),

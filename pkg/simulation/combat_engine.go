@@ -772,19 +772,24 @@ func (ce *CombatEngine) computeDamageValueAfterResistances(target core.Entity, d
 	}
 
 	targetResistances := targetESM.GetResistances()
-	resistance := targetResistances.GetResistance(dt).Resistance
 
 	result := core.DamageModificationResult{
 		OriginalValue:  value,
 		FinalValue:     value,
-		ResistanceType: resistance,
+		ResistanceType: core.ResistanceNone,
 	}
 
 	if targetResistances == nil {
 		return result, fmt.Errorf("target resistances are nil")
 	}
 
-	brokenRes := len(targetResistances.GetBreakers(dt)) > 0 && targetResistances.DamageTypeContainsAllBreakers(dt, b)
+	// Safe lookup: default to ResistanceNone when key is missing
+	resistance := targetResistances.GetResistanceType(dt)
+	result.ResistanceType = resistance
+
+	// Resistance can only be broken if the attacker actually provides at least one breaker
+	// and those breakers satisfy the target's breaker requirements for this damage type.
+	brokenRes := len(b) > 0 && targetResistances.DamageTypeContainsAllBreakers(dt, b)
 	result.ResistanceBroken = brokenRes
 	result.ResistanceType = resistance
 
@@ -804,7 +809,11 @@ func (ce *CombatEngine) computeDamageValueAfterResistances(target core.Entity, d
 			result.FinalValue = 0
 		}
 	default:
-		return core.DamageModificationResult{}, fmt.Errorf("unknown resistance type: %v", targetResistances.GetResistance(dt).Resistance)
+		// Provide richer diagnostics to help identify unexpected values
+		return core.DamageModificationResult{}, fmt.Errorf(
+			"unknown resistance type for %s: damageType=%s, rawType=%q",
+			target.GetName(), dt.String(), resistance,
+		)
 	}
 
 	result.WasModified = result.FinalValue != value

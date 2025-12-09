@@ -3,14 +3,16 @@ package monster
 import (
 	"context"
 	"database/sql"
-	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
-	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/internal/util"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	. "github.com/go-jet/jet/v2/postgres"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -294,6 +296,11 @@ func getMonsterActionsByID(ctx context.Context, ids []int) (map[int]map[int]Acti
 			return mActionsMap, fmt.Errorf("failed to scan monster actions by monsterID (%d): %w", monsterID, err)
 		}
 
+		// Normalize damage type from DB (may be capitalized) to canonical core.DamageType
+		if dt, err := core.MakeDamageType(action.DamageType.String()); err == nil {
+			action.DamageType = dt
+		}
+
 		monster, exists := mActionsMap[monsterID]
 		if exists {
 			monster[action.ActionID] = action
@@ -443,6 +450,11 @@ func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int]map[
 			return nil, fmt.Errorf("failed to scan monster legendary actions by monsterID: %w", err)
 		}
 
+		// Normalize damage type for legendary action as well
+		if dt, err := core.MakeDamageType(la.Action.DamageType.String()); err == nil {
+			la.Action.DamageType = dt
+		}
+
 		monster, exists := mLAMap[monsterID]
 		if exists {
 			monster[la.Action.ActionID] = la
@@ -536,41 +548,68 @@ func getMonsterResistancesByID(ctx context.Context, id []int) (map[int]core.Dama
 		if !dmgType.Valid {
 			return nil, fmt.Errorf("damage type cannot be null")
 		}
-		damageType, err := core.MakeDamageType(dmgType.String)
+		dtStr := strings.ToLower(strings.TrimSpace(dmgType.String))
+
+		// Ensure the monster's resistance map exists and is pre-populated
+		if mResistanceMap[monsterID] == nil {
+			mResistanceMap[monsterID] = core.NewDamageResistances()
+		}
+
+		// Helper to append breaker if not already present
+		appendBreaker := func(dr *core.DamageResistance, rb core.ResistBreaker) {
+			for _, existing := range dr.Breakers {
+				if existing == rb {
+					return
+				}
+			}
+			dr.Breakers = append(dr.Breakers, rb)
+		}
+
+		// Parse resistance type (defaults to none if null)
+		var parsedResType core.ResistanceType = core.ResistanceNone
+		if rType.Valid {
+			rtParsed, err := core.MakeResistanceType(rType.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to make resistance type: %w", err)
+			}
+			parsedResType = rtParsed
+		}
+
+		// Parse breaker type if present
+		var parsedBreaker *core.ResistBreaker
+		if bType.Valid {
+			br, err := core.MakeResistBreaker(bType.String)
+			if err != nil {
+				return nil, fmt.Errorf("failed to make resist breaker: %w", err)
+			}
+			parsedBreaker = &br
+		}
+
+		// Expand grouped physical types if present
+		if dtStr == "physical" {
+			for _, pdt := range []core.DamageType{core.DamageBludgeoning, core.DamagePiercing, core.DamageSlashing} {
+				res := mResistanceMap[monsterID][pdt]
+				res.Resistance = parsedResType
+				if parsedBreaker != nil {
+					appendBreaker(&res, *parsedBreaker)
+				}
+				mResistanceMap[monsterID][pdt] = res
+			}
+			continue
+		}
+
+		// Normal single damage type entry
+		damageType, err := core.MakeDamageType(dtStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to make damage type: %w", err)
 		}
 
-		// Initialize monster's resistance map if needed (but keep it empty initially)
-		if mResistanceMap[monsterID] == nil {
-			mResistanceMap[monsterID] = make(core.DamageResistances)
+		res := mResistanceMap[monsterID][damageType]
+		res.Resistance = parsedResType
+		if parsedBreaker != nil {
+			appendBreaker(&res, *parsedBreaker)
 		}
-
-		// Get existing resistance or create new one
-		resistance := mResistanceMap[monsterID][damageType]
-
-		// Set resistance type (should be same across rows for same monster+damageType)
-		if rType.Valid {
-			resistanceType, err := core.MakeResistanceType(rType.String)
-			if err != nil {
-				return nil, fmt.Errorf("failed to make resistance type: %w", err)
-			}
-			resistance.Resistance = resistanceType
-		} else {
-			resistance.Resistance = core.ResistanceNone
-		}
-
-		// Add breaker if present
-		if bType.Valid {
-			breakerType, err := core.MakeResistBreaker(bType.String)
-			if err != nil {
-				return nil, fmt.Errorf("failed to make resist breaker: %w", err)
-			}
-			resistance.Breakers = append(resistance.Breakers, breakerType)
-		}
-
-		// Put the updated resistance back
-		mResistanceMap[monsterID][damageType] = resistance
+		mResistanceMap[monsterID][damageType] = res
 
 	}
 

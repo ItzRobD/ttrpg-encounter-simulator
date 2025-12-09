@@ -4,6 +4,7 @@ import (
 	"context"
 	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
+	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
 	. "github.com/go-jet/jet/v2/postgres"
 )
@@ -56,6 +57,11 @@ func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 		&weaponResult.Die, &weaponResult.DamageType)
 	if err != nil {
 		return weaponResult, fmt.Errorf("error scanning weaponResult by id: %w", err)
+	}
+
+	// Normalize damage type to canonical core.DamageType constants (DB may contain capitalized strings)
+	if dt, err := core.MakeDamageType(weaponResult.DamageType.String()); err == nil {
+		weaponResult.DamageType = dt
 	}
 
 	return weaponResult, nil

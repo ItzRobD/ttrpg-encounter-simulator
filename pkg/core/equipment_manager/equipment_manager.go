@@ -248,26 +248,37 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 	resistBreakers := make([]core.ResistBreaker, 0)
 	resistBreakers = append(resistBreakers, w.GetBreakers()...)
 
+	// Normalize damage type to the canonical core.DamageType constants to ensure
+	// downstream lookups (e.g., resistances) use consistent keys.
+	normDT := w.Weapon.DamageType
+	if dt, err := core.MakeDamageType(normDT.String()); err == nil {
+		normDT = dt
+	}
+
 	normal := core.AttackData{
 		Name:              w.Weapon.Name,
 		NumberOfDice:      w.Weapon.NumberOfDice,
 		Die:               w.Weapon.Die,
 		AttackModifier:    attackMod,
 		DamageModifier:    damageMod,
-		DamageType:        w.Weapon.DamageType,
+		DamageType:        normDT,
 		ResistBreakers:    resistBreakers,
 		IsVersatileAttack: false,
 	}
 	weaponData := WeaponAttackData{Normal: normal}
 
 	if w.Weapon.IsVersatile {
+		vNormDT := w.Weapon.DamageType
+		if dt, err := core.MakeDamageType(vNormDT.String()); err == nil {
+			vNormDT = dt
+		}
 		versatile := core.AttackData{
 			Name:              w.Weapon.Name,
 			NumberOfDice:      w.Weapon.NumberOfDice,
 			Die:               w.Weapon.Die + 2,
 			AttackModifier:    attackMod,
 			DamageModifier:    damageMod,
-			DamageType:        w.Weapon.DamageType,
+			DamageType:        vNormDT,
 			ResistBreakers:    resistBreakers,
 			IsVersatileAttack: true,
 		}
