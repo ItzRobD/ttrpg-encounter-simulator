@@ -81,9 +81,9 @@ func (cai *CharacterAI) chooseFallbackAction(exclude core.ActionType) core.Actio
 	return core.ATUnarmed
 }
 
-func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (int, error) {
+func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (core.TargetStatus, int, error) {
 	if cai.combatCtx == nil {
-		return -1, fmt.Errorf("combat context not set")
+		return core.TargetInvalidType, -1, fmt.Errorf("combat context not set")
 	}
 
 	var validTargets map[int]*core.Combatant
@@ -93,18 +93,18 @@ func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (int, error) 
 	case core.TTHealing:
 		validTargets = cai.getAllyTargets()
 	default:
-		return -1, fmt.Errorf("unknown target type")
+		return core.TargetInvalidType, -1, fmt.Errorf("unknown target type")
 	}
 
-	target, err := core.SelectTargetFromMap(validTargets, cai.parent.EntityState.TargetPrioritization, cai.rng)
-	if err != nil {
-		return -1, err
+	status, target, err := core.SelectTargetFromMap(validTargets, cai.parent.EntityState.TargetPrioritization, cai.rng)
+	if err != nil || status != core.TargetOK {
+		return status, -1, err
 	}
 	// Structured logging: chosen target
 	if combatant, ok := validTargets[target]; ok && combatant != nil {
 		events.LogTargetChoiceEvent(cai.parent, combatant.GetEntity(), cai.parent.GetEventListener())
 	}
-	return target, nil
+	return core.TargetOK, target, nil
 }
 
 func (cai *CharacterAI) getEnemyTargets() map[int]*core.Combatant {
@@ -157,9 +157,13 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 	var req core.AIRequest
 	var choice *core.SpellChoice
 
-	targetID, err := cai.selectTargetID(core.TTHealing)
+	tStatus, targetID, err := cai.selectTargetID(core.TTHealing)
 	if err != nil {
 		return nil, err
+	}
+	if tStatus == core.TargetNone {
+		events.LogCombatEventMessage(cai.parent, "No valid healing targets", cai.parent.GetEventListener())
+		return nil, nil
 	}
 
 	// choose spell
@@ -186,9 +190,13 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 	var useVersatile bool
 	var slot core.WeaponSlot
 
-	targetID, err := cai.selectTargetID(core.TTDamage)
+	tStatus, targetID, err := cai.selectTargetID(core.TTDamage)
 	if err != nil {
 		return nil, err
+	}
+	if tStatus == core.TargetNone {
+		events.LogCombatEventMessage(cai.parent, "No valid targets", cai.parent.GetEventListener())
+		return nil, nil
 	}
 
 	at, err := cai.chooseDamageActionType()

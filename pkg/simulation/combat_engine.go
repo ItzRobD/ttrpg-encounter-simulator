@@ -158,6 +158,24 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 			case core.EffectCondition:
 				return fmt.Errorf("effects of type %v are not supported", core.EffectCondition)
 			}
+
+			// Log after each effect's HP modification for clarity
+			events.LogHPModifiedEvent(actor, target.GetEntity(), hpModResult, actor.GetEventListener())
+			// Persist any state changes immediately
+			ce.Combatants[outcome.TargetID] = target
+
+			// If target is down or dead, check victory then stop processing remaining effects
+			if target.GetEntity().IsDead() || target.GetEntity().IsUnconscious() {
+				if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+					return nil
+				}
+				break
+			}
+
+			// Early victory check after each effect
+			if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+				return nil
+			}
 		}
 
 		//actor, exists := ce.Combatants[outcome.ActorID]
@@ -166,8 +184,7 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 		//}
 		//entity := actor.GetEntity()
 
-		events.LogHPModifiedEvent(actor, target.GetEntity(), hpModResult, actor.GetEventListener())
-
+		// Final state persist (already persisted per-effect) left for safety
 		ce.Combatants[outcome.TargetID] = target
 	}
 
@@ -340,10 +357,18 @@ func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 					return core.VictoryStatusNone, combatErr
 				}
 				if ce.shouldSkipCombatantTurn(status) {
+					// Even when skipping, check if victory has already occurred (e.g., everyone else is down)
+					if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+						return v, nil
+					}
 					continue
 				}
 				if err2 := ce.ProcessAIRequest(aiReq); err2 != nil {
 					return core.VictoryStatusNone, err2
+				}
+				// Immediately check victory after lair action
+				if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+					return v, nil
 				}
 			}
 			continue
@@ -354,13 +379,21 @@ func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 			return core.VictoryStatusNone, fmt.Errorf("failed to execute turn start events for combatant %d: %v", combatantID, combatError)
 		}
 		ce.updateCombatContext(combatantID)
+		// Start-of-turn victory check (e.g., all enemies fell earlier in round)
+		if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+			return v, nil
+		}
 		status, aiReq, combatError := ce.executeTurn(combatantID)
 		if combatError != nil {
 			return core.VictoryStatusNone, combatError
 		}
 
-		// Handle non-acting statuses
-		if ce.shouldSkipCombatantTurn(status) {
+		// Handle non-acting statuses or nil action request
+		if ce.shouldSkipCombatantTurn(status) || aiReq == nil {
+			// If no action is taken (e.g., no valid targets), check victory now to avoid spinning
+			if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+				return v, nil
+			}
 			continue
 		}
 
@@ -368,6 +401,11 @@ func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 		combatError = ce.ProcessAIRequest(aiReq)
 		if combatError != nil {
 			return core.VictoryStatusNone, combatError
+		}
+
+		// Immediately check victory after each action
+		if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+			return v, nil
 		}
 
 		combatError = ce.turnEndEvents(combatantID)
@@ -708,6 +746,11 @@ func (ce *CombatEngine) executeLegendaryAction(actingCombatantID int) error {
 				return fmt.Errorf("failed to process legendary action for combatant %d: %v", legID, err)
 			}
 
+			// Victory may occur due to this legendary action; short-circuit further legendary actions
+			if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+				return nil
+			}
+
 			// If LimitedLegendaryActions is true, only one creature acts per turn
 			if ce.SimOptions.LimitedLegendaryActions {
 				break
@@ -738,7 +781,8 @@ func (ce *CombatEngine) checkVictoryCondition() core.VictoryStatus {
 		}
 
 		entity := ce.Combatants[id].GetEntity()
-		if entity.IsDead() {
+		// Treat unconscious as not alive for victory purposes
+		if entity.IsDead() || entity.IsUnconscious() {
 			continue
 		}
 		if entity.IsCharacter() {

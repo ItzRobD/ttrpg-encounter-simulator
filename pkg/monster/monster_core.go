@@ -21,7 +21,9 @@ func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnRe
 		if err != nil {
 			return nil, nil, err
 		}
-		result.TurnStatuses[core.TurnActionReady] = true
+		if aiReq != nil {
+			result.TurnStatuses[core.TurnActionReady] = true
+		}
 		return result, aiReq, nil
 	}
 
@@ -82,10 +84,11 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 		return req, fmt.Errorf("invalid AI request type: %v", t)
 	}
 
+	if req == nil {
+		return nil, nil
+	}
 	events.LogMonsterActionChoiceEvent(m, req.ActionType, m.EventListener)
-
 	req.ActorID = actorID
-
 	return req, nil
 }
 

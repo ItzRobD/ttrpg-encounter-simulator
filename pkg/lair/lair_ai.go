@@ -53,14 +53,19 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 		}
 	}
 	if len(candidates) == 0 {
-		return nil, fmt.Errorf("no valid lair targets")
+		events.LogCombatEventMessage(lai.parent, "No valid lair targets", lai.parent.GetEventListener())
+		return nil, nil
 	}
 
 	// Select representative target for logging/UI; AOE effects will apply to all candidates later
 	priority := action.TargetPolicy
-	targetID, err := core.SelectTargetFromMap(candidates, priority, lai.parent.GetRNG())
+	tStatus, targetID, err := core.SelectTargetFromMap(candidates, priority, lai.parent.GetRNG())
 	if err != nil {
 		return nil, err
+	}
+	if tStatus == core.TargetNone {
+		events.LogCombatEventMessage(lai.parent, "No valid lair targets", lai.parent.GetEventListener())
+		return nil, nil
 	}
 	target := candidates[targetID].GetEntity()
 

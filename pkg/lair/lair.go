@@ -113,6 +113,9 @@ func (l *Lair) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIRequest,
 		if err != nil {
 			return nil, err
 		}
+		if req == nil {
+			return nil, nil
+		}
 		req.ActorID = actorID
 		return req, nil
 	default:
@@ -156,7 +159,9 @@ func (l *Lair) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnResul
 	if err != nil {
 		return nil, nil, err
 	}
-	res.TurnStatuses[core.TurnActionReady] = true
+	if aiReq != nil {
+		res.TurnStatuses[core.TurnActionReady] = true
+	}
 	return res, aiReq, nil
 }
 

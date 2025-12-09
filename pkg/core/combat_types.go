@@ -21,6 +21,18 @@ const (
 	VictoryStatusMonsters   VictoryStatus = "monsters"
 )
 
+// TargetStatus indicates the result of a target selection attempt.
+// TargetOK: a valid target ID was chosen
+// TargetNone: there were no valid targets to choose from
+// TargetInvalidType: the selection strategy or inputs were invalid
+type TargetStatus int
+
+const (
+	TargetOK TargetStatus = iota
+	TargetNone
+	TargetInvalidType
+)
+
 type DamageType string
 
 const (

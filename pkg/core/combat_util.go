@@ -5,9 +5,11 @@ import (
 	"math/rand/v2"
 )
 
-func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriority, rng *rand.Rand) (int, error) {
+// SelectTargetFromMap chooses a target based on the given priority.
+// It returns a TargetStatus to distinguish "no targets" from actual errors.
+func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriority, rng *rand.Rand) (TargetStatus, int, error) {
 	if len(validTargets) == 0 {
-		return -1, fmt.Errorf("no valid targets found")
+		return TargetNone, -1, nil
 	}
 	targetID := -1
 	switch priority {
@@ -60,19 +62,17 @@ func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriorit
 			}
 		}
 	case PrioritizeHealer:
-		var targets map[int]*Combatant = make(map[int]*Combatant)
+		targets := make(map[int]*Combatant)
 		for id, c := range validTargets {
-			if c.GetEntity().IsSpellcaster() {
-				if c.GetEntity().IsHealer() {
-					targets[id] = c
-				}
+			if c.GetEntity().IsSpellcaster() && c.GetEntity().IsHealer() {
+				targets[id] = c
 			}
 		}
 		if len(targets) > 0 {
 			return SelectTargetFromMap(targets, PrioritizeMostDamaged, rng)
 		}
 	case PrioritizeSpellcaster:
-		var targets map[int]*Combatant = make(map[int]*Combatant)
+		targets := make(map[int]*Combatant)
 		for id, c := range validTargets {
 			if c.GetEntity().IsSpellcaster() {
 				targets[id] = c
@@ -82,7 +82,7 @@ func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriorit
 			return SelectTargetFromMap(targets, PrioritizeMostDamaged, rng)
 		}
 	case PrioritizeUnconscious:
-		var targets map[int]*Combatant = make(map[int]*Combatant)
+		targets := make(map[int]*Combatant)
 		for id, c := range validTargets {
 			if c.GetEntity().IsUnconscious() {
 				targets[id] = c
@@ -92,10 +92,10 @@ func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriorit
 			return SelectTargetFromMap(targets, PrioritizeHighestMaxHP, rng)
 		}
 	default:
-		return targetID, fmt.Errorf("unknown target prioritization strategy")
+		return TargetInvalidType, -1, fmt.Errorf("unknown target prioritization strategy")
 	}
 	if targetID == -1 {
-		return targetID, fmt.Errorf("no valid target found")
+		return TargetNone, -1, nil
 	}
-	return targetID, nil
+	return TargetOK, targetID, nil
 }

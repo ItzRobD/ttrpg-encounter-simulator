@@ -22,7 +22,9 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 		if err != nil {
 			return nil, nil, fmt.Errorf("error getting AI request: %s", err)
 		}
-		result.TurnStatuses[core.TurnActionReady] = true
+		if aiReq != nil {
+			result.TurnStatuses[core.TurnActionReady] = true
+		}
 		return result, aiReq, nil
 	}
 
@@ -87,10 +89,11 @@ func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReq
 		return req, fmt.Errorf("invalid AI request type: %v", t)
 	}
 
+	if req == nil {
+		return nil, nil
+	}
 	events.LogCharacterActionChoiceEvent(c, req.ActionType, c.EventListener)
-
 	req.ActorID = actorID
-
 	return req, nil
 }
 

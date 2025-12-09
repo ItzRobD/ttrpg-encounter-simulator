@@ -120,9 +120,13 @@ func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) 
 	var req core.AIRequest
 	var choice *core.SpellChoice
 
-	targetID, err := mai.selectTargetID(core.TTHealing)
+	tStatus, targetID, err := mai.selectTargetID(core.TTHealing)
 	if err != nil {
 		return nil, err
+	}
+	if tStatus == core.TargetNone {
+		events.LogCombatEventMessage(mai.parent, "No valid healing targets", mai.parent.GetEventListener())
+		return nil, nil
 	}
 
 	// TODO: Will need to account for custom monsters with healing actions, maybe?
@@ -351,9 +355,13 @@ func (mai *MonsterAI) buildAIRequest(actionIndex int, spellChoice *core.SpellCho
 		return nil, fmt.Errorf("action index not set")
 	}
 
-	targetID, err := mai.selectTargetID(core.TTDamage)
+	tStatus, targetID, err := mai.selectTargetID(core.TTDamage)
 	if err != nil {
 		return nil, err
+	}
+	if tStatus == core.TargetNone {
+		events.LogCombatEventMessage(mai.parent, "No valid targets", mai.parent.GetEventListener())
+		return nil, nil
 	}
 	target := mai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity()
 
@@ -374,9 +382,9 @@ func (mai *MonsterAI) buildAIRequest(actionIndex int, spellChoice *core.SpellCho
 	return &req, nil
 }
 
-func (mai *MonsterAI) selectTargetID(targetType core.TargetType) (int, error) {
+func (mai *MonsterAI) selectTargetID(targetType core.TargetType) (core.TargetStatus, int, error) {
 	if mai.combatCtx == nil {
-		return -1, fmt.Errorf("combat context not set")
+		return core.TargetInvalidType, -1, fmt.Errorf("combat context not set")
 	}
 
 	var validTargets map[int]*core.Combatant
@@ -386,15 +394,15 @@ func (mai *MonsterAI) selectTargetID(targetType core.TargetType) (int, error) {
 	case core.TTHealing:
 		validTargets = mai.getAllyTargets()
 	default:
-		return -1, fmt.Errorf("invalid target type")
+		return core.TargetInvalidType, -1, fmt.Errorf("invalid target type")
 	}
 
-	target, err := core.SelectTargetFromMap(validTargets, mai.parent.EntityState.TargetPrioritization, mai.rng)
-	if err != nil {
-		return -1, err
+	status, target, err := core.SelectTargetFromMap(validTargets, mai.parent.EntityState.TargetPrioritization, mai.rng)
+	if err != nil || status != core.TargetOK {
+		return status, -1, err
 	}
 
-	return target, nil
+	return core.TargetOK, target, nil
 }
 
 func (mai *MonsterAI) getEnemyTargets() map[int]*core.Combatant {
