@@ -6,12 +6,14 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
+	"math/rand/v2"
 )
 
 type CombatantSetupManager struct {
 	ctx                    context.Context
 	useHPAverageMonsters   bool
 	useHPAverageCharacters bool
+	rng                    *rand.Rand
 }
 
 type SetupResult struct {
@@ -25,11 +27,12 @@ type SetupError struct {
 	Message string `json:"message"`
 }
 
-func NewCombatantSetupManager(ctx context.Context, useHPAverageCharacters bool, useHPAverageMonsters bool) *CombatantSetupManager {
+func NewCombatantSetupManager(ctx context.Context, useHPAverageCharacters bool, useHPAverageMonsters bool, rng *rand.Rand) *CombatantSetupManager {
 	return &CombatantSetupManager{
 		ctx:                    ctx,
 		useHPAverageCharacters: useHPAverageCharacters,
 		useHPAverageMonsters:   useHPAverageMonsters,
+		rng:                    rng,
 	}
 }
 
@@ -62,7 +65,7 @@ func (csm *CombatantSetupManager) createCharacters(configs []character.Character
 	var errors []SetupError
 
 	for _, config := range configs {
-		char, err := character.NewCharacter(csm.ctx, config)
+		char, err := character.NewCharacterWithRNG(csm.ctx, config, csm.rng)
 		if err != nil {
 			errors = append(errors, SetupError{
 				Type:    "character",
@@ -107,19 +110,19 @@ func (csm *CombatantSetupManager) createMonsters(ids []int) ([]*core.Combatant, 
 		} else {
 			monsterConfig.HPSetMethod = core.HPSetRoll
 		}
-		monster, err := monster.NewMonster(csm.ctx, monsterConfig)
+		m, err := monster.NewMonsterWithRNG(csm.ctx, monsterConfig, csm.rng)
 		if err != nil {
 			errors = append(errors, SetupError{
 				Type:    "monster",
-				ID:      fmt.Sprintf("%d", monster.ID),
+				ID:      fmt.Sprintf("%d", monsterConfig.Base.ID),
 				Message: fmt.Sprintf("Failed to create monster: %v", err),
 			})
 			continue
 		}
 
-		combatants = append(combatants, core.NewCombatantWithInfo(monster))
+		combatants = append(combatants, core.NewCombatantWithInfo(m))
 
-		foundIDs[monster.ID] = true
+		foundIDs[m.ID] = true
 	}
 
 	// Add errors for any requested IDs that weren't found

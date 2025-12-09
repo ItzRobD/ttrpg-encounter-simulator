@@ -4,7 +4,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"errors"
-	"math/rand/v2"
 )
 
 func (scm *SpellcastingManager) GetMostEfficientHealingSpell(targetValue int) (*core.SpellChoice, error) {
@@ -419,8 +418,7 @@ func (scm *SpellcastingManager) getRandomCantripChoice(t core.SpellType) (*core.
 		return nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_FOUND)
 	}
 
-	rand.NewPCG(rand.Uint64(), rand.Uint64())
-	i := rand.IntN(len(castableChoices))
+	i := scm.parent.GetRNG().IntN(len(castableChoices))
 	return castableChoices[i], nil
 }
 
@@ -453,8 +451,7 @@ func (scm *SpellcastingManager) getRandomSpellChoice(t core.SpellType, excludeCa
 		return nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_FOUND)
 	}
 
-	rand.NewPCG(rand.Uint64(), rand.Uint64())
-	i := rand.IntN(len(castableChoices))
+	i := scm.parent.GetRNG().IntN(len(castableChoices))
 	return castableChoices[i], nil
 }
 

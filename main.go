@@ -34,7 +34,7 @@ func main() {
 
 	frank := setupFrank()
 	//jack := setupJack()
-	testSimulation([]character.CharacterConfig{frank}, []int{2})
+	testSimulation([]character.CharacterConfig{frank}, []int{153})
 }
 
 func setupJack() character.CharacterConfig {
@@ -140,8 +140,9 @@ func setupFrank() character.CharacterConfig {
 //}
 
 func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
+	seed := core.Seed{Seed1: 11, Seed2: 22}
 	config := core.SimulationOptions{
-		Seed:                      0,
+		Seed:                      seed,
 		UseHPAverageCharacter:     false,
 		UseHPAverageMonster:       false,
 		CanMonstersCrit:           false,
@@ -155,10 +156,10 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 		AOEHitsAllEnemies:         false,
 		CharacterHealThresholdPct: 0,
 		MonsterHealThresholdPct:   0,
-		AllowLairActions:          true,
+		AllowLairActions:          false,
 	}
 
-	sim := simulation.NewSimulationManager(config, core.Seed{})
+	sim := simulation.NewSimulationManager(config, seed)
 
 	ctx := context.Background()
 	// Example lair configuration for local runs (simulates what the API will pass later)

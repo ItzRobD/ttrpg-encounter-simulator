@@ -1,7 +1,7 @@
 package core
 
 type SimulationOptions struct {
-	Seed                      int
+	Seed                      Seed
 	UseHPAverageMonster       bool
 	UseHPAverageCharacter     bool
 	CanMonstersCrit           bool

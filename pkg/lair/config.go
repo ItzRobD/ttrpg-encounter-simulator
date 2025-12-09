@@ -91,6 +91,9 @@ func NewLairFromConfig(cfg *LairConfig, rng *rand.Rand) (*Lair, error) {
 	if cfg == nil || !cfg.Enabled {
 		return nil, fmt.Errorf("lair config not enabled")
 	}
+	if rng == nil {
+		return nil, fmt.Errorf("lair RNG must be provided by SimulationManager; got nil")
+	}
 	l := NewLair(cfg.Name, rng)
 	if cfg.Initiative <= 0 {
 		// The engine will use the provided initiative on the combatant, not this value.

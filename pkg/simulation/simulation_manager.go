@@ -21,13 +21,16 @@ type SimulationManager struct {
 
 func NewSimulationManager(options core.SimulationOptions, seed core.Seed) *SimulationManager {
 	var s SimulationManager
-	if seed.Seed1 == 0 {
-		seed.Seed1 = rand.Uint64()
+	// Determine the master seed: prefer explicit seed param, else options.Seed, else fixed default
+	master := seed
+	if master.Seed1 == 0 && master.Seed2 == 0 {
+		master = options.Seed
 	}
-	if seed.Seed2 == 0 {
-		seed.Seed2 = rand.Uint64()
+	if master.Seed1 == 0 && master.Seed2 == 0 {
+		// Fixed default for reproducibility if caller provides no seed
+		master = core.Seed{Seed1: 0xC0FFEE, Seed2: 0xBEEF}
 	}
-	s.rng = rand.New(rand.NewPCG(seed.Seed1, seed.Seed2))
+	s.rng = rand.New(rand.NewPCG(master.Seed1, master.Seed2))
 
 	dispatcher := events.NewEventDispatcher()
 	dispatcher.RegisterHandler(&events.UniversalEventHandler{})
@@ -114,7 +117,7 @@ func (s *SimulationManager) InitializeCombatants() {
 }
 
 func (s *SimulationManager) SetupCombatantsFromAPI(ctx context.Context, characterConfigs []character.CharacterConfig, monsterIDs []int) (*SetupResult, error) {
-	setupManager := NewCombatantSetupManager(ctx, s.options.UseHPAverageCharacter, s.options.UseHPAverageMonster)
+	setupManager := NewCombatantSetupManager(ctx, s.options.UseHPAverageCharacter, s.options.UseHPAverageMonster, s.rng)
 
 	result, err := setupManager.SetupCombatants(characterConfigs, monsterIDs)
 	if err != nil {

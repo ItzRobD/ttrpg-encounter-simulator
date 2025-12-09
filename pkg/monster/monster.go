@@ -116,6 +116,70 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	return &monster, nil
 }
 
+// NewMonsterWithRNG initializes a Monster using the provided RNG without creating a new PCG.
+func NewMonsterWithRNG(ctx context.Context, config MonsterConfig, rng *rand.Rand) (*Monster, error) {
+	monster := Monster{
+		MonsterBase:         config.Base,
+		EntityState:         &entity_state_manager.EntityStateManager{},
+		SpellCastingManager: &spellcasting_manager.SpellcastingManager{},
+		RollManager:         &roll_manager.RollManager{},
+		AI:                  &MonsterAI{},
+		ActionManager:       &MonsterActionManager{},
+		Seed:                config.Seed,
+		RNG:                 rng,
+	}
+
+	// Initialize managers
+	var err error
+	// Roll manager
+	monster.RollManager = initializeRollManager(&monster)
+
+	// ESM
+	esmConfig := entity_state_manager.EntityStateConfig{
+		AttackCount: 1,
+		Conditions:  core.NewEntityConditions(),
+	}
+	if monster.IsLegendary {
+		esmConfig.MaxLegendaryActions = 3
+	}
+
+	monster.EntityState, err = initalizeEntityStateManager(&monster, esmConfig)
+	if err != nil {
+		return nil, err
+	}
+	monster.EntityState.Resistances = config.Resistances
+
+	// Spellcasting Manager
+	if monster.MonsterBase.IsSpellcaster {
+		monster.SpellCastingManager, err = initializeSpellcastingManager(ctx, &monster, config.spellcastingConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Action manager
+	mamConfig := &MAMConfig{
+		Actions:          config.Actions,
+		Multiattacks:     config.Multiattacks,
+		LegendaryActions: config.LegendaryActions,
+		SpecialAbilities: config.SpecialAbilities,
+	}
+	monster.ActionManager = initializeActionManager(&monster, mamConfig)
+
+	// Set up HP SimOptions and monster hp
+	monster.HP.HPSetMethod = config.HPSetMethod
+
+	// AI
+	monster.AI = NewMonsterAI(&monster)
+
+	err = monster.setHP(monster.HP)
+	if err != nil {
+		return nil, err
+	}
+
+	return &monster, nil
+}
+
 func initializeRollManager(m *Monster) *roll_manager.RollManager {
 	rm := roll_manager.NewRollManager(m, roll_manager.RerollAbilities{})
 	return rm

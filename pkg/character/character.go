@@ -76,14 +76,6 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		return nil, err
 	}
 
-	var seed core.Seed
-	if charConfig.Seed.Seed1 == 0 {
-		seed.Seed1 = rand.Uint64()
-	}
-	if charConfig.Seed.Seed2 == 0 {
-		seed.Seed2 = rand.Uint64()
-	}
-
 	// Set initial values for character
 	char := Character{
 		Name:                 charConfig.Name,
@@ -99,8 +91,8 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		AI:                   &CharacterAI{},
 		Configuration:        entity_configuration.EntityConfiguration{}, // TODO: this isn't being set up
 		HPConfig:             core.HPConfig{HPSetMethod: charConfig.HPMethod, Value: charConfig.HPValue},
-		Seed:                 seed,
-		RNG:                  rand.New(rand.NewPCG(seed.Seed1, seed.Seed2)),
+		Seed:                 charConfig.Seed,
+		RNG:                  nil,
 	}
 
 	// Initialize managers
@@ -152,6 +144,92 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 
 	err = char.setHP(char.HPConfig)
 	if err != nil {
+		return nil, err
+	}
+
+	return &char, nil
+}
+
+// NewCharacterWithRNG initializes a Character using a provided RNG. This avoids creating a new PCG instance
+// and ensures all randomness derives from the simulation manager's RNG.
+func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *rand.Rand) (*Character, error) {
+	if charConfig.ClassID < 0 || charConfig.ClassID > 13 {
+		return nil, fmt.Errorf("invalid classData id during character initialization: %d", charConfig.ClassID)
+	}
+	if charConfig.Level < 0 || charConfig.Level > 20 {
+		return nil, fmt.Errorf("invalid level during character initialization, must be in range 1-20: %d", charConfig.Level)
+	}
+	if charConfig.Name == "" {
+		charConfig.Name = "Unnamed Character"
+	}
+
+	var params classes.ClassQueryParams
+	params.ID = charConfig.ClassID
+	params.Level = charConfig.Level
+	classData, err := classes.QueryClassData(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize character with provided RNG
+	char := Character{
+		Name:                 charConfig.Name,
+		Class:                classData,
+		Level:                charConfig.Level,
+		AbilityScores:        charConfig.AsConfig.AbilityScores,
+		AbilityScoreProf:     charConfig.AsConfig.Proficiencies,
+		EntityState:          &entity_state_manager.EntityStateManager{},
+		EquipmentManager:     &equipment_manager.EquipmentManager{},
+		SpellCastingManager:  &spellcasting_manager.SpellcastingManager{},
+		MartialAttackManager: &martial_attack_manager.MartialAttackManager{},
+		RollManager:          &roll_manager.RollManager{},
+		AI:                   &CharacterAI{},
+		Configuration:        entity_configuration.EntityConfiguration{},
+		HPConfig:             core.HPConfig{HPSetMethod: charConfig.HPMethod, Value: charConfig.HPValue},
+		Seed:                 charConfig.Seed,
+		RNG:                  rng,
+	}
+
+	// Managers that depend on RNG
+	char.RollManager = initializeRollManager(&char, &char.Configuration)
+	char.AI = NewCharacterAI(&char)
+
+	// Entity State Manager
+	esmConfig := entity_state_manager.EntityStateConfig{
+		AttackCount: classData.AttackCount,
+		Conditions:  core.NewEntityConditions(),
+	}
+	esm, err := initializeEntityStateManager(&char, &esmConfig)
+	if err != nil {
+		return nil, err
+	}
+	char.EntityState = esm
+
+	// Equipment Manager
+	char.EquipmentManager, err = equipment_manager.NewEquipmentManager(&char)
+	if err != nil {
+		return nil, err
+	}
+	if err = char.setupEquipmentFromConfig(ctx, charConfig.Equipment); err != nil {
+		return nil, err
+	}
+
+	// Spellcasting Manager
+	char.SpellCastingManager, err = initializeSpellcastingManager(ctx, &char)
+	if err != nil {
+		return nil, err
+	}
+
+	// Martial Attack Manager
+	char.MartialAttackManager = martial_attack_manager.NewMartialAttackManager(&char, char.RollManager)
+
+	// HP configuration
+	char.HPConfig.HitDie = char.GetHitDie()
+	char.HPConfig.NumberOfDice = int(char.Level - 1)
+	modifier, _ := char.getAbilityScoreModifier(core.AbilityConstitution)
+	char.HPConfig.HPAverage = int(math.Round(float64(char.GetHitDie().Int())+float64(char.HPConfig.NumberOfDice)*char.Class.HitDie.Avg()) + float64(int(char.Level)*modifier))
+	char.HPConfig.Modifier = modifier
+	if err = char.setHP(char.HPConfig); err != nil {
 		return nil, err
 	}
 

@@ -23,8 +23,9 @@ func NewLair(name string, rng *rand.Rand) *Lair {
 	if name == "" {
 		name = "Lair"
 	}
+	// RNG must be provided by the simulation manager; lair no longer creates its own RNG.
 	if rng == nil {
-		rng = rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
+		panic("lair.NewLair requires a non-nil RNG provided by the SimulationManager")
 	}
 	l := &Lair{name: name, rng: rng}
 	l.rollManager = roll_manager.NewRollManager(l, roll_manager.RerollAbilities{})
