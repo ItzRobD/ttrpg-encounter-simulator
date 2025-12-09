@@ -129,6 +129,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			TargetID:   req.TargetID,
 			ActorID:    req.ActorID,
 			Effects:    effects,
+			Success:    len(effects) > 0,
 		}, nil
 
 	case core.ATSpell:
@@ -163,6 +164,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			TargetID:   req.TargetID,
 			ActorID:    req.ActorID,
 			Effects:    effects,
+			Success:    len(effects) > 0,
 		}, nil
 	default:
 		return nil, fmt.Errorf("monster execute ai req - invalid action type: %s", req.ActionType)

@@ -136,6 +136,7 @@ func (l *Lair) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, error
 		TargetID:   req.TargetID,
 		ActorID:    req.ActorID,
 		Effects:    effects,
+		Success:    len(effects) > 0,
 	}, nil
 }
 

@@ -124,6 +124,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			TargetID:   req.TargetID,
 			ActorID:    req.ActorID,
 			Effects:    effects,
+			Success:    len(effects) > 0,
 		}, nil
 	case core.ATSpell:
 		scReq, err := c.CreateSpellCastRequest(req.Target, *req.SpellChoice, req.Advantage, req.SimOptions)
@@ -157,6 +158,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			TargetID:   req.TargetID,
 			ActorID:    req.ActorID,
 			Effects:    effects,
+			Success:    len(effects) > 0,
 		}, nil
 	case core.ATHeal:
 		return nil, errors.New("not implemented")
