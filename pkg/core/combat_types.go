@@ -196,6 +196,65 @@ func NewCondition(s string) (Condition, error) {
 	}
 }
 
+type ConditionEffect struct {
+	AutoFailStrDexSave  bool
+	OutgoingAttackRoll  AdvantageType
+	IncomingAttackRoll  AdvantageType
+	SavingThrow         map[Ability]AdvantageType
+	HasTempResistances  bool
+	TemporaryResistance DamageResistances
+}
+
+func GetConditionEffects(c Condition) ConditionEffect {
+	var e ConditionEffect
+	e.TemporaryResistance = NewDamageResistances()
+	switch c {
+	case ConditionBlinded:
+		e.OutgoingAttackRoll = RollNormal
+		e.IncomingAttackRoll = RollDisadvantage
+	case ConditionCharmed:
+		break
+	case ConditionDeafened:
+		break
+	case ConditionFrightened:
+		e.OutgoingAttackRoll = RollDisadvantage
+	case ConditionGrappled:
+		break
+	case ConditionIncapacitated:
+		break
+	case ConditionInvisible:
+		e.OutgoingAttackRoll = RollAdvantage
+		e.IncomingAttackRoll = RollDisadvantage
+	case ConditionParalyzed:
+		e.AutoFailStrDexSave = true
+		e.IncomingAttackRoll = RollAdvantage
+	case ConditionPetrified:
+		e.AutoFailStrDexSave = true
+		e.IncomingAttackRoll = RollAdvantage
+		e.HasTempResistances = true
+		e.TemporaryResistance = NewDamageResistancesAll(ResistanceResistant)
+	case ConditionPoisoned:
+		e.OutgoingAttackRoll = RollDisadvantage
+	case ConditionProne:
+		e.OutgoingAttackRoll = RollDisadvantage
+		e.IncomingAttackRoll = RollAdvantage
+	case ConditionRestrained:
+		e.OutgoingAttackRoll = RollDisadvantage
+		e.IncomingAttackRoll = RollAdvantage
+		e.SavingThrow[AbilityDexterity] = RollDisadvantage
+	case ConditionStunned:
+		e.AutoFailStrDexSave = true
+		e.IncomingAttackRoll = RollAdvantage
+	case ConditionUnconscious:
+		e.AutoFailStrDexSave = true
+		e.IncomingAttackRoll = RollAdvantage
+	default:
+		return ConditionEffect{}
+	}
+
+	return e
+}
+
 type ExhaustionLevel int
 
 func MakeExhaustionLevel(i int) (ExhaustionLevel, error) {
@@ -277,6 +336,24 @@ func NewDamageResistances() DamageResistances {
 		DamageSlashing:    NewEmptyDamageResistance(),
 		DamageBludgeoning: NewEmptyDamageResistance(),
 		DamagePiercing:    NewEmptyDamageResistance(),
+	}
+}
+
+func NewDamageResistancesAll(rt ResistanceType) DamageResistances {
+	return map[DamageType]DamageResistance{
+		DamageAcid:        NewDamageResistance(rt, nil),
+		DamageCold:        NewDamageResistance(rt, nil),
+		DamageFire:        NewDamageResistance(rt, nil),
+		DamageForce:       NewDamageResistance(rt, nil),
+		DamageLightning:   NewDamageResistance(rt, nil),
+		DamageNecrotic:    NewDamageResistance(rt, nil),
+		DamagePoison:      NewDamageResistance(rt, nil),
+		DamagePsychic:     NewDamageResistance(rt, nil),
+		DamageRadiant:     NewDamageResistance(rt, nil),
+		DamageThunder:     NewDamageResistance(rt, nil),
+		DamageSlashing:    NewDamageResistance(rt, nil),
+		DamageBludgeoning: NewDamageResistance(rt, nil),
+		DamagePiercing:    NewDamageResistance(rt, nil),
 	}
 }
 

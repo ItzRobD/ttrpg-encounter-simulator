@@ -4,6 +4,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
+	"log"
 )
 
 func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnResult, *core.AIRequest, error) {
@@ -89,13 +90,19 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 	}
 	events.LogMonsterActionChoiceEvent(m, req.ActionType, m.EventListener)
 	req.ActorID = actorID
+	req.Actor = m
 	return req, nil
 }
 
 func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, error) {
+	if req.Actor == nil {
+		req.Actor = m
+		log.Printf("warning: monster execute ai req - actor is nil")
+	}
+	adv := core.DetermineAttackAdvantageFromConditions(req.Actor.GetConditions(), req.Target.GetConditions())
 	switch req.ActionType {
 	case core.ATMonsterAction, core.ATMonsterMultiattack, core.ATMonsterSpecial, core.ATLegendaryAction:
-		attackReq, err := m.createAttackRequest(req.Target, req.ActionIndex, req.ActionType, req.Advantage, req.SimOptions)
+		attackReq, err := m.createAttackRequest(req.Target, req.ActionIndex, req.ActionType, adv, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +143,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}, nil
 
 	case core.ATSpell:
-		scReq, err := m.createSpellCastRequest(req.Target, *req.SpellChoice, req.Advantage, req.SimOptions)
+		scReq, err := m.createSpellCastRequest(req.Target, *req.SpellChoice, adv, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}

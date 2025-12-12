@@ -64,9 +64,9 @@ func (dt DiceType) IsValid() bool {
 type AdvantageType int
 
 const (
-	RollNormal AdvantageType = iota
-	RollAdvantage
-	RollDisadvantage
+	RollNormal       AdvantageType = 0
+	RollAdvantage    AdvantageType = 1
+	RollDisadvantage AdvantageType = -1
 )
 
 func (at AdvantageType) String() string {

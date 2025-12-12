@@ -38,7 +38,7 @@ func InitDb(opts *InitOpts) error {
 	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", user, password, host, port, dbname)
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
-		return fmt.Errorf("unable to parse database URL: %w, err")
+		return fmt.Errorf("unable to parse database URL: %w", err)
 	}
 
 	pool, err = pgxpool.NewWithConfig(context.Background(), config)

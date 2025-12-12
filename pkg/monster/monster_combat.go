@@ -2,6 +2,7 @@ package monster
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"fmt"
@@ -89,14 +90,44 @@ func isValidMonsterActionType(actionType core.ActionType) bool {
 
 // MakeSavingThrow calculates a saving throw for the given ability and returns the total roll result or an error.
 func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int) (core.RollResult, error) {
-	// roll dice, add save
+	activeConditions := m.GetConditions().GetActive()
+	isStrDexSave := ability == core.AbilityStrength || ability == core.AbilityDexterity
+
+	autoFailResult := func() core.RollResult {
+		result := roll_manager.RollResult{
+			DiceRollType:   core.DiceRollSavingThrow,
+			NumberOfDice:   0,
+			Die:            0,
+			FinalRollValue: 0,
+			FinalRolls:     []int{0},
+			Modifier:       0,
+			Total:          0,
+			Advantage:      core.RollNormal,
+			IsSuccess:      false,
+			TargetValue:    targetValue,
+		}
+		events.LogDiceRollEvent(m, &result, m.EventListener)
+		return result
+	}
+
+	if isStrDexSave && len(activeConditions) > 0 {
+		for _, cond := range activeConditions {
+			effect := core.GetConditionEffects(cond)
+			if effect.AutoFailStrDexSave {
+				return autoFailResult(), nil
+			}
+		}
+	}
+
 	mod, err := m.GetSavingThrowBonus(ability)
 	if err != nil {
 		return nil, err
 	}
 
 	opts := roll_manager.NewRollOptions()
-	opts.Advantage = m.EntityState.GetSavingThrowAdvantage()
+	baseAdv := m.EntityState.GetSavingThrowAdvantage(ability) // This should get the default advantage of the character
+	condAdv := core.DetermineSaveAdvantageFromConditions(m.GetConditions(), ability)
+	opts.Advantage = core.GetFinalAdvantageType([]core.AdvantageType{baseAdv, condAdv})
 	opts.Modifier = mod
 	opts.RollType = core.DiceRollSavingThrow
 	opts.TargetValue = targetValue

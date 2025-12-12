@@ -232,7 +232,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.Advantage,
 			e.Modifier)
 	case core.DiceRollSavingThrow:
-		s = fmt.Sprintf("[Round %d] <Saving Throw> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, DC: %d, Success: %t",
+		s = fmt.Sprintf("[Round %d] <Saving Throw> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, DC: %d, Success: %t.",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,
@@ -244,8 +244,11 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.Modifier,
 			e.TargetValue,
 			e.IsSuccess)
+		if e.FinalRolls[0] == 0 {
+			s += ", AutoFailure: True."
+		}
 	case core.DiceRollAbilityCheck:
-		s = fmt.Sprintf("[Round %d] <Ability Check> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t",
+		s = fmt.Sprintf("[Round %d] <Ability Check> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t.",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,
@@ -281,7 +284,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.GetActor(),
 			e.Total)
 	case core.DiceRollAttack:
-		s = fmt.Sprintf("[Round %d] <Attack Roll> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t",
+		s = fmt.Sprintf("[Round %d] <Attack Roll> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t.",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,
@@ -295,7 +298,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.IsSuccess)
 	case core.DiceRollDamage:
 		// Clarify that Total includes the modifier; show dice subtotal separately
-		s = fmt.Sprintf("[Round %d] <Damage Roll> %s rolls for %s. Dice: %dd%s, DiceTotal: %d, Final Rolls: %v, Modifier: %d, Total: %d",
+		s = fmt.Sprintf("[Round %d] <Damage Roll> %s rolls for %s. Dice: %dd%s, DiceTotal: %d, Final Rolls: %v, Modifier: %d, Total: %d.",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,
@@ -306,7 +309,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.Modifier,
 			e.Total)
 	case core.DiceRollRecharge:
-		s = fmt.Sprintf("[Round %d] <Recharge roll> %s rolls to recharge ability: %s. Total: %d. Succcess: %t",
+		s = fmt.Sprintf("[Round %d] <Recharge roll> %s rolls to recharge ability: %s. Total: %d. Succcess: %t.",
 			e.GetRound(),
 			e.GetActor(),
 			e.Name,
@@ -315,7 +318,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	}
 
 	if e.WasRerolled {
-		s += fmt.Sprintf("Dice were rerolled, original rolls: %v \n",
+		s += fmt.Sprintf(" Dice were rerolled, original rolls: %v \n",
 			e.OriginalRolls)
 	} else {
 		s += fmt.Sprintf("\n")

@@ -816,6 +816,10 @@ func (ce *CombatEngine) computeDamageValueAfterResistances(target core.Entity, d
 	}
 
 	targetResistances := targetESM.GetResistances()
+	isPetrified := targetESM.GetConditions().Has(core.ConditionPetrified)
+	if isPetrified {
+		targetResistances = core.GetConditionEffects(core.ConditionPetrified).TemporaryResistance
+	}
 
 	result := core.DamageModificationResult{
 		OriginalValue:  value,

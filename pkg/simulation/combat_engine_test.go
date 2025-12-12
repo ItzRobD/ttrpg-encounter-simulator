@@ -143,9 +143,9 @@ func TestCombatEngine_SetupCombat_RollsAndSortsInitiative(t *testing.T) {
 	if err := ce.SetupCombat(); err != nil {
 		t.Fatalf("SetupCombat: %v", err)
 	}
-	// Lair combatant is auto-inserted, so expect 3 entries: two actors + lair (-1)
-	if len(ce.TurnOrder) != 3 {
-		t.Fatalf("TurnOrder len=%d want 3 (includes lair)", len(ce.TurnOrder))
+	// Expect only the two combatants added
+	if len(ce.TurnOrder) != 2 {
+		t.Fatalf("TurnOrder len=%d want 2", len(ce.TurnOrder))
 	}
 	// Verify initiatives are assigned for non-lair entries and ordering for those two is descending
 	// Find non-lair indices
@@ -177,7 +177,7 @@ func TestCombatEngine_ProcessActionResults_AppliesDamageAndHealing(t *testing.T)
 	dmg := 5
 	start := b.GetHPStatus().GetHP()
 	out := &core.ActionOutcome{ActionType: core.ATDamage, ActorID: 0, TargetID: 1, Effects: []core.Effect{{Type: core.EffectDamage, Value: dmg}}}
-	if err := ce.processActionResults(out); err != nil {
+	if err := ce.processActionResults(a, out); err != nil {
 		t.Fatalf("processActionResults damage: %v", err)
 	}
 	if b.GetHPStatus().GetHP() != start-dmg {
@@ -186,7 +186,7 @@ func TestCombatEngine_ProcessActionResults_AppliesDamageAndHealing(t *testing.T)
 
 	// Now heal 3
 	out = &core.ActionOutcome{ActionType: core.ATHeal, ActorID: 0, TargetID: 1, Effects: []core.Effect{{Type: core.EffectHealing, Value: 3}}}
-	if err := ce.processActionResults(out); err != nil {
+	if err := ce.processActionResults(a, out); err != nil {
 		t.Fatalf("processActionResults heal: %v", err)
 	}
 	if b.GetHPStatus().GetHP() != start-dmg+3 {

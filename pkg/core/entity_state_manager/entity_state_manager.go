@@ -82,7 +82,7 @@ type EntityStateManager struct {
 	InitiativeAdvantage  core.AdvantageType
 	InitiativeBonus      int
 	Resistances          core.DamageResistances
-	SavingThrowAdvantage core.AdvantageType
+	SavingThrowAdvantage map[core.Ability]core.AdvantageType
 }
 
 func (esm *EntityStateManager) ExpendAction() {
@@ -529,12 +529,12 @@ func (esm *EntityStateManager) Kill() {
 	esm.Conditions.Clear()
 }
 
-func (esm *EntityStateManager) GetSavingThrowAdvantage() core.AdvantageType {
-	return esm.SavingThrowAdvantage
+func (esm *EntityStateManager) GetSavingThrowAdvantage(ability core.Ability) core.AdvantageType {
+	return esm.SavingThrowAdvantage[ability]
 }
 
-func (esm *EntityStateManager) SetHasSavingThrowAdvantage(adv core.AdvantageType) {
-	esm.SavingThrowAdvantage = adv
+func (esm *EntityStateManager) SetHasSavingThrowAdvantage(ability core.Ability, adv core.AdvantageType) {
+	esm.SavingThrowAdvantage[ability] = adv
 }
 
 // Resistances

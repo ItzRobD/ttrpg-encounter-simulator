@@ -2,6 +2,7 @@ package character
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 )
 
@@ -159,13 +160,44 @@ func (c *Character) computeAttackAdvantage(target core.Entity, isRanged bool, ba
 
 // MakeSavingThrow calculates a saving throw roll using the specified ability and returns the result, rolls, and an error if any.
 func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int) (core.RollResult, error) {
+	activeConditions := c.GetConditions().GetActive()
+	isStrDexSave := ability == core.AbilityStrength || ability == core.AbilityDexterity
+
+	autoFailResult := func() core.RollResult {
+		result := roll_manager.RollResult{
+			DiceRollType:   core.DiceRollSavingThrow,
+			NumberOfDice:   0,
+			Die:            0,
+			FinalRollValue: 0,
+			FinalRolls:     []int{0},
+			Modifier:       0,
+			Total:          0,
+			Advantage:      core.RollNormal,
+			IsSuccess:      false,
+			TargetValue:    targetValue,
+		}
+		events.LogDiceRollEvent(c, &result, c.EventListener)
+		return result
+	}
+
+	if isStrDexSave && len(activeConditions) > 0 {
+		for _, cond := range activeConditions {
+			effect := core.GetConditionEffects(cond)
+			if effect.AutoFailStrDexSave {
+				return autoFailResult(), nil
+			}
+		}
+	}
+
 	mod, err := c.getSavingThrowBonus(ability)
 	if err != nil {
 		return nil, err
 	}
 
 	opts := roll_manager.NewRollOptions()
-	// TODO: Determining advantage needs to be handled ie racial traits
+	baseAdv := c.EntityState.GetSavingThrowAdvantage(ability) // This should get the default advantage of the character
+	condAdv := core.DetermineSaveAdvantageFromConditions(c.GetConditions(), ability)
+	opts.Advantage = core.GetFinalAdvantageType([]core.AdvantageType{baseAdv, condAdv})
 	opts.Modifier = mod
 	opts.RollType = core.DiceRollSavingThrow
 	opts.TargetValue = targetValue

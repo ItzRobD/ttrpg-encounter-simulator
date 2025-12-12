@@ -102,7 +102,6 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	// AI
 	char.AI = NewCharacterAI(&char)
 	// Entity State Manager
-	// TODO: Implement resistances for characters
 	esmConfig := entity_state_manager.EntityStateConfig{
 		AttackCount: classData.AttackCount,
 		Conditions:  core.NewEntityConditions(),

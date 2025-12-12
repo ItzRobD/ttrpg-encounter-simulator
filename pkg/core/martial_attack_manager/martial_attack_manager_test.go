@@ -30,8 +30,8 @@ func newDeterministicParents() (core.Entity, core.Entity) {
 	rng1 := rand.New(rand.NewPCG(1, 2))
 	rng2 := rand.New(rand.NewPCG(1, 2)) // identical sequence to compare option effects
 	as := core.AbilityScores{Strength: 16, Dexterity: 14}
-	p1 := emEntityRNG{EmEntity: testhelpers.NewEmEntity(5, as), rng: rng1}
-	p2 := emEntityRNG{EmEntity: testhelpers.NewEmEntity(5, as), rng: rng2}
+	p1 := emEntityRNG{EmEntity: testhelpers.NewEmEntity(5, as, nil), rng: rng1}
+	p2 := emEntityRNG{EmEntity: testhelpers.NewEmEntity(5, as, nil), rng: rng2}
 	return p1, p2
 }
 
@@ -49,7 +49,7 @@ func TestProcessAttackRequest_CountAndHitMiss(t *testing.T) {
 	opts := core.AttackOptions{Advantage: core.RollAdvantage, NumberOfAttacks: 2}
 
 	// Miss path: AC very high
-	missReq := &core.AttackRequest{AttackData: ad, AttackOptions: opts, Target: targetStub{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}), ac: 30}}
+	missReq := &core.AttackRequest{AttackData: ad, AttackOptions: opts, Target: targetStub{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), ac: 30}}
 	results, err := mam.ProcessAttackRequest(missReq)
 	if err != nil {
 		t.Fatalf("miss path error: %v", err)
@@ -66,7 +66,7 @@ func TestProcessAttackRequest_CountAndHitMiss(t *testing.T) {
 	}
 
 	// Hit path: AC = 0
-	hitReq := &core.AttackRequest{AttackData: ad, AttackOptions: opts, Target: targetStub{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}), ac: 0}}
+	hitReq := &core.AttackRequest{AttackData: ad, AttackOptions: opts, Target: targetStub{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), ac: 0}}
 	results, err = mam.ProcessAttackRequest(hitReq)
 	if err != nil {
 		t.Fatalf("hit path error: %v", err)
@@ -92,7 +92,7 @@ func TestProcessAttackRequest_OptionBonusAffectsTotal(t *testing.T) {
 	ad := []core.AttackData{{Name: "Slash", NumberOfDice: 1, Die: core.D8, AttackModifier: 3, DamageModifier: 0, DamageType: core.DamageSlashing}}
 	base := core.AttackOptions{NumberOfAttacks: 1}
 	withBonus := core.AttackOptions{NumberOfAttacks: 1, BonusToAttackRoll: 5}
-	tgt := targetStub{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}), ac: 10}
+	tgt := targetStub{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), ac: 10}
 
 	resA, err := mamA.ProcessAttackRequest(&core.AttackRequest{AttackData: ad, AttackOptions: base, Target: tgt})
 	if err != nil || len(resA) != 1 {

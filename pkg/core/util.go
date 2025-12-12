@@ -153,3 +153,94 @@ func GetNormalizedAbility(ability string) (Ability, error) {
 		return AbilityNone, fmt.Errorf("invalid ability")
 	}
 }
+
+// DetermineAttackAdvantageFromConditions calculates attack roll advantage or disadvantage based on actor and target conditions.
+// It evaluates each condition's effect on outgoing and incoming attack rolls and returns the final AdvantageType.
+func DetermineAttackAdvantageFromConditions(actorConditions EntityConditions, targetConditions EntityConditions) AdvantageType {
+	advCount := 0
+	if actorConditions == nil && targetConditions == nil {
+		return RollNormal
+	}
+
+	if actorConditions != nil {
+		for c, _ := range actorConditions {
+			if actorConditions[c] {
+				e := GetConditionEffects(c)
+				if e.OutgoingAttackRoll == RollAdvantage {
+					advCount++
+				}
+				if e.OutgoingAttackRoll == RollDisadvantage {
+					advCount--
+				}
+			}
+		}
+	}
+
+	if targetConditions != nil {
+		for c, _ := range targetConditions {
+			if targetConditions[c] {
+				e := GetConditionEffects(c)
+				if e.IncomingAttackRoll == RollAdvantage {
+					advCount++
+				}
+				if e.IncomingAttackRoll == RollDisadvantage {
+					advCount--
+				}
+			}
+		}
+	}
+
+	if advCount > 0 {
+		return RollAdvantage
+	} else if advCount < 0 {
+		return RollDisadvantage
+	}
+
+	return RollNormal
+}
+
+// DetermineSaveAdvantageFromConditions evaluates the effective saving throw advantage or disadvantage based on current conditions.
+func DetermineSaveAdvantageFromConditions(actorConditions EntityConditions, ability Ability) AdvantageType {
+	advCount := 0
+	if actorConditions == nil {
+		return RollNormal
+	}
+
+	for c, _ := range actorConditions {
+		if actorConditions[c] {
+			e := GetConditionEffects(c)
+			if e.SavingThrow[ability] == RollAdvantage {
+				advCount++
+			} else if e.SavingThrow[ability] == RollDisadvantage {
+				advCount--
+			}
+		}
+	}
+
+	if advCount > 0 {
+		return RollAdvantage
+	} else if advCount < 0 {
+		return RollDisadvantage
+	}
+
+	return RollNormal
+}
+
+func GetFinalAdvantageType(advs []AdvantageType) AdvantageType {
+	advCount := 0
+	for _, a := range advs {
+		if a == RollAdvantage {
+			advCount++
+		} else if a == RollDisadvantage {
+			advCount--
+		}
+	}
+
+	if advCount > 0 {
+		return RollAdvantage
+	} else if advCount < 0 {
+		return RollDisadvantage
+	}
+
+	return RollNormal
+}

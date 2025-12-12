@@ -30,7 +30,7 @@ func (r dsRoll) GetIsSuccess() bool                        { return r.success }
 func (r dsRoll) GetTargetValue() int                       { return 10 }
 
 func TestNewEntityStateManager_ClampsAndDefaults(t *testing.T) {
-	parent := testhelpers.NewEmEntity(5, core.AbilityScores{})
+	parent := testhelpers.NewEmEntity(5, core.AbilityScores{}, nil)
 
 	// Negative MaxHP should error per implementation
 	_, err := NewEntityStateManager(parent, EntityStateConfig{MaxHP: -10})
@@ -73,7 +73,7 @@ func TestNewEntityStateManager_ClampsAndDefaults(t *testing.T) {
 
 func TestActionEconomyAndRefresh(t *testing.T) {
 	// Use 0 legendary so expending all actions makes CanTakeActions false
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}), EntityStateConfig{MaxLegendaryActions: 0})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}, nil), EntityStateConfig{MaxLegendaryActions: 0})
 	if !esm.CanTakeActions() {
 		t.Errorf("expected can take actions at start")
 	}
@@ -93,7 +93,7 @@ func TestActionEconomyAndRefresh(t *testing.T) {
 }
 
 func TestLegendaryActionPoints(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}), EntityStateConfig{MaxLegendaryActions: 3})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}, nil), EntityStateConfig{MaxLegendaryActions: 3})
 	if err := esm.ExpendLegendaryActionPoints(2); err != nil {
 		t.Fatalf("expend LAP: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestLegendaryActionPoints(t *testing.T) {
 }
 
 func TestConditions_UnconsciousAddsProne(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{})
 	esm.AddCondition(core.ConditionUnconscious)
 	if !esm.HasCondition(core.ConditionUnconscious) {
 		t.Errorf("expected unconscious condition")
@@ -118,14 +118,14 @@ func TestConditions_UnconsciousAddsProne(t *testing.T) {
 }
 
 func TestUnconsciousFromHP(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
 	if !esm.GetIsUnconscious() {
 		t.Errorf("expected unconscious at 0 HP")
 	}
 }
 
 func TestHP_Modify_TempAndHealing(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 10, CurrentHP: 10, TempHP: 5})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 10, TempHP: 5})
 	// Damage that consumes only temp
 	res, err := esm.ModifyHP(-3, false, false)
 	if err != nil {
@@ -164,7 +164,7 @@ func TestHP_Modify_TempAndHealing(t *testing.T) {
 }
 
 func TestCheckMassiveDamage(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 12, CurrentHP: 0})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 12, CurrentHP: 0})
 	// Constructor clamps CurrentHP to >= 0; set negative explicitly to simulate state after outside change
 	esm.CurrentHP = -12
 	if !esm.CheckMassiveDamage() {
@@ -173,7 +173,7 @@ func TestCheckMassiveDamage(t *testing.T) {
 }
 
 func TestRechargeActions(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{})
 	esm.AddRechargeAction(0)
 	esm.AddRechargeAction(1)
 	if !esm.GetRechargeActionStatusAtIndex(0) || !esm.GetRechargeActionStatusAtIndex(1) {
@@ -195,7 +195,7 @@ func TestRechargeActions(t *testing.T) {
 }
 
 func TestDeathSaves_CriticalRevive(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
 	if err := esm.ApplyDeathSavingThrowResult(dsRoll{crit: true}); err != nil {
 		t.Fatalf("ApplyDeathSavingThrowResult: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestModifyHP_KillsMonsterAtZero(t *testing.T) {
 }
 
 func TestPreferencesAndInitiativeRoundTrip(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}), EntityStateConfig{})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}, nil), EntityStateConfig{})
 
 	// Initiative and bonuses
 	esm.SetInitiative(12)
@@ -256,7 +256,7 @@ func TestPreferencesAndInitiativeRoundTrip(t *testing.T) {
 }
 
 func TestConditionsHelpersAndIncapacitation(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{})
 
 	// Add and remove conditions
 	esm.AddCondition(core.ConditionPoisoned)
@@ -307,7 +307,7 @@ func TestConditionsHelpersAndIncapacitation(t *testing.T) {
 }
 
 func TestHPHelpersAndStatus(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 20, CurrentHP: 5, TempHP: 3})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 20, CurrentHP: 5, TempHP: 3})
 
 	// Hit die set/get
 	esm.SetHitDie(core.D10)
@@ -352,7 +352,7 @@ func TestHPHelpersAndStatus(t *testing.T) {
 
 func TestModifyHP_Edges_TempStackingAndOverflow(t *testing.T) {
 	// Start with some temp and HP
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 10, CurrentHP: 10, TempHP: 3})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 10, TempHP: 3})
 
 	// Temp stacking true: adds
 	if _, err := esm.ModifyHP(5, true, true); err != nil {
@@ -384,7 +384,7 @@ func TestModifyHP_Edges_TempStackingAndOverflow(t *testing.T) {
 
 func TestDeathSaves_Progressions(t *testing.T) {
 	// Three successes -> stable
-	esm1, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
+	esm1, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
 	for i := 0; i < 3; i++ {
 		if err := esm1.ApplyDeathSavingThrowResult(dsRoll{success: true}); err != nil {
 			t.Fatalf("apply success: %v", err)
@@ -395,7 +395,7 @@ func TestDeathSaves_Progressions(t *testing.T) {
 	}
 
 	// Natural one (double failure) + one more failure -> death
-	esm2, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
+	esm2, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
 	if err := esm2.ApplyDeathSavingThrowResult(dsRoll{nat1: true}); err != nil {
 		t.Fatalf("apply nat1: %v", err)
 	}
@@ -408,7 +408,7 @@ func TestDeathSaves_Progressions(t *testing.T) {
 }
 
 func TestTakeDamageWhileUnconscious_Progression(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 0})
 	// two non-crit failures then one more should kill
 	esm.TakeDamageWhileUnconscious(false)
 	esm.TakeDamageWhileUnconscious(false)
@@ -422,14 +422,14 @@ func TestTakeDamageWhileUnconscious_Progression(t *testing.T) {
 }
 
 func TestRevive_ErrorWhenAlive(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}), EntityStateConfig{MaxHP: 10, CurrentHP: 5})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 5})
 	if err := esm.Revive(1); err == nil {
 		t.Errorf("expected error when reviving an alive entity")
 	}
 }
 
 func TestLegendaryPoints_ErrorAndRemaining(t *testing.T) {
-	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}), EntityStateConfig{MaxLegendaryActions: 1})
+	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}, nil), EntityStateConfig{MaxLegendaryActions: 1})
 	if !esm.HasLegendaryActionPointsRemaining() {
 		t.Fatalf("expected to have points")
 	}
