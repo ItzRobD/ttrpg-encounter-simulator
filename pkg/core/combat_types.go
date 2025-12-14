@@ -49,6 +49,7 @@ const (
 	DamageSlashing    DamageType = "slashing"
 	DamageBludgeoning DamageType = "bludgeoning"
 	DamagePiercing    DamageType = "piercing"
+	DamageNone        DamageType = "none"
 )
 
 func (dt DamageType) String() string {

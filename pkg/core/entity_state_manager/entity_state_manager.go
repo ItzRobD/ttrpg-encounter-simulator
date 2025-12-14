@@ -63,6 +63,7 @@ type EntityStateManager struct {
 	LegendaryActionPointsMax int
 	NumberOfAttacks          int
 	RechargeActionStatus     map[int]bool // Key: Action index; Value: IsAvailable
+	DBBreathWeaponUsed       bool         // TODO: Account for this during turn execution, add option to simoptions
 
 	// Conditions
 	Conditions core.EntityConditions

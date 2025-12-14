@@ -11,6 +11,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/entity_configuration"
+	"dnd5e-encounter-simulator-backend/pkg/races"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"math"
@@ -20,6 +21,7 @@ import (
 // Character represents a player or NPC with attributes like name, class, level, and various managers for gameplay systems.
 type Character struct {
 	Name                 string
+	Race                 races.Race
 	Class                classes.Class
 	Level                uint8
 	AbilityScores        core.AbilityScores
@@ -38,15 +40,17 @@ type Character struct {
 }
 
 type CharacterConfig struct {
-	Name        string
-	ClassID     classes.ClassID
-	Level       uint8
-	AsConfig    core.AbilityScoresConfig
-	HPMethod    core.HPSetMethod
-	HPValue     int
-	Seed        core.Seed
-	Equipment   EquipmentConfig
-	Resistances core.DamageResistances
+	Name            string
+	RaceID          races.RaceID
+	DragonbornColor *races.DragonbornColor
+	ClassID         classes.ClassID
+	Level           uint8
+	AsConfig        core.AbilityScoresConfig
+	HPMethod        core.HPSetMethod
+	HPValue         int
+	Seed            core.Seed
+	Equipment       EquipmentConfig
+	Resistances     core.DamageResistances
 }
 
 type EquipmentConfig struct {
@@ -60,6 +64,9 @@ type EquipmentConfig struct {
 func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, error) {
 	if charConfig.ClassID < 0 || charConfig.ClassID > 13 {
 		return nil, fmt.Errorf("invalid classData id during character initialization: %d", charConfig.ClassID)
+	}
+	if charConfig.RaceID < 0 || charConfig.RaceID > 9 {
+		return nil, fmt.Errorf("invalid raceData id during character initialization: %d", charConfig.RaceID)
 	}
 	if charConfig.Level < 0 || charConfig.Level > 20 {
 		return nil, fmt.Errorf("invalid level during character initialization, must be in range 1-20: %d", charConfig.Level)
@@ -75,11 +82,20 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	if err != nil {
 		return nil, err
 	}
+	raceData, err := races.QueryRaceData(ctx,
+		races.RaceQueryParams{
+			ID:              charConfig.RaceID,
+			Level:           charConfig.Level,
+			DragonbornColor: charConfig.DragonbornColor})
+	if err != nil {
+		return nil, err
+	}
 
 	// Set initial values for character
 	char := Character{
 		Name:                 charConfig.Name,
 		Class:                classData,
+		Race:                 raceData,
 		Level:                charConfig.Level,
 		AbilityScores:        charConfig.AsConfig.AbilityScores,
 		AbilityScoreProf:     charConfig.AsConfig.Proficiencies,
@@ -98,7 +114,9 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	// Initialize managers
 	// Roll Manager
 	char.RollManager = initializeRollManager(&char, &char.Configuration)
-
+	if char.Race.ID == races.Halfling {
+		char.RollManager.RerollAbilities.HasHalflingLucky = true
+	}
 	// AI
 	char.AI = NewCharacterAI(&char)
 	// Entity State Manager
@@ -155,6 +173,9 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 	if charConfig.ClassID < 0 || charConfig.ClassID > 13 {
 		return nil, fmt.Errorf("invalid classData id during character initialization: %d", charConfig.ClassID)
 	}
+	if charConfig.RaceID < 0 || charConfig.RaceID > 9 {
+		return nil, fmt.Errorf("invalid raceData id during character initialization: %d", charConfig.RaceID)
+	}
 	if charConfig.Level < 0 || charConfig.Level > 20 {
 		return nil, fmt.Errorf("invalid level during character initialization, must be in range 1-20: %d", charConfig.Level)
 	}
@@ -169,11 +190,20 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 	if err != nil {
 		return nil, err
 	}
+	raceData, err := races.QueryRaceData(ctx,
+		races.RaceQueryParams{
+			ID:              charConfig.RaceID,
+			Level:           charConfig.Level,
+			DragonbornColor: charConfig.DragonbornColor})
+	if err != nil {
+		return nil, err
+	}
 
 	// Initialize character with provided RNG
 	char := Character{
 		Name:                 charConfig.Name,
 		Class:                classData,
+		Race:                 raceData,
 		Level:                charConfig.Level,
 		AbilityScores:        charConfig.AsConfig.AbilityScores,
 		AbilityScoreProf:     charConfig.AsConfig.Proficiencies,
@@ -191,6 +221,9 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 
 	// Managers that depend on RNG
 	char.RollManager = initializeRollManager(&char, &char.Configuration)
+	if char.Race.ID == races.Halfling {
+		char.RollManager.RerollAbilities.HasHalflingLucky = true
+	}
 	char.AI = NewCharacterAI(&char)
 
 	// Entity State Manager

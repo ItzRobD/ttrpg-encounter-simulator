@@ -2,6 +2,7 @@ package classes
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"strings"
 )
 
 type ClassID uint8
@@ -59,32 +60,32 @@ func (c ClassID) String() string {
 }
 
 func MakeClassID(s string) ClassID {
-	switch s {
-	case "Artificer":
+	switch strings.ToLower(s) {
+	case "artificer":
 		return Artificer
-	case "Barbarian":
+	case "barbarian":
 		return Barbarian
-	case "Bard":
+	case "bard":
 		return Bard
-	case "Cleric":
+	case "cleric":
 		return Cleric
-	case "Druid":
+	case "druid":
 		return Druid
-	case "Fighter":
+	case "fighter":
 		return Fighter
-	case "Monk":
+	case "monk":
 		return Monk
-	case "Paladin":
+	case "paladin":
 		return Paladin
-	case "Ranger":
+	case "ranger":
 		return Ranger
-	case "Rogue":
+	case "rogue":
 		return Rogue
-	case "Sorcerer":
+	case "sorcerer":
 		return Sorcerer
-	case "Warlock":
+	case "warlock":
 		return Warlock
-	case "Wizard":
+	case "wizard":
 		return Wizard
 	default:
 		return 0
