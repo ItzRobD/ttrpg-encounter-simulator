@@ -13,7 +13,6 @@ func (c *Character) RollInitiative() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	// TODO: Handle chaaracter feats such as Alert for +5
 
 	res, err := c.RollManager.RollInitiative(opts)
 	if err != nil {

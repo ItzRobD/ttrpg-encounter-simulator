@@ -53,7 +53,6 @@ func NewRollOptions() RollOptions {
 
 type RerollAbilities struct {
 	HasHalflingLucky       bool
-	HasLuckyFeat           bool
 	HasElvenAccuracy       bool
 	HasGreatWeaponFighting bool
 	HasElementalAdept      bool
@@ -207,7 +206,6 @@ func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) 
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Handle alert's +5 modifier -> characters with the feat should add bonus to opts
 
 	options.Modifier += mod
 	options.RollType = core.DiceRollInitiative

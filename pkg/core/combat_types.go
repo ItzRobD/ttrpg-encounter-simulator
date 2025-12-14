@@ -551,10 +551,9 @@ type AttackOptions struct {
 	BonusToAttackRoll    int  // Flat bonus, ie magic weapons
 	BonusToDamageRoll    int  // Flat bonus, ie magic weapons, rage, hexblade curse
 	ShouldApplyDamageMod bool // Off hand attacks, TWF
-	PowerAttack          bool // GWM / Sharpshooter (-5 attack, +10 damage) // TODO: Implement logic for this choice
+	PowerAttack          bool // GWM / Sharpshooter (-5 attack, +10 damage)
 	ImprovedCritical     bool // Crits on 19 and 20, Hexblade, Champion
 	RerollOnesAndTwos    bool // GWF
-	// TODO: GWF Creates an extra attack
 }
 
 func (ao AttackOptions) GetAdvantage() AdvantageType   { return ao.Advantage }
