@@ -112,7 +112,7 @@ func setupFrank() character.CharacterConfig {
 		// Mocked Fighting Styles as if sent by a front-end request
 		FightingStyles: []classes.FightingStyle{
 			// Enable/disable as needed for local testing
-			//classes.StyleDueling,
+			classes.StyleDueling,
 			// classes.StyleGWF,
 			//classes.StyleArchery,
 			// Common test: allow offhand to add ability mod to damage
