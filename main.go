@@ -116,7 +116,7 @@ func setupFrank() character.CharacterConfig {
 			// classes.StyleGWF,
 			//classes.StyleArchery,
 			// Common test: allow offhand to add ability mod to damage
-			//classes.StyleTWF,
+			classes.StyleTWF,
 		},
 	}
 
