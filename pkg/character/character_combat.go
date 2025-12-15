@@ -1,6 +1,7 @@
 package character
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
@@ -73,18 +74,16 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 
 	// Determine ranged vs melee for condition rules
 	isRanged := false
+	isVersatile := false
+	isTwoHanded := false
 	if w, wErr := c.EquipmentManager.GetWeaponFromSlot(slot); wErr == nil {
 		isRanged = w.IsRanged
+		isVersatile = w.IsVersatile
+		isTwoHanded = w.IsTwoHanded
 	}
 
 	// Build advantage from attacker/target conditions (minimal set). Respect incoming adv as baseline.
 	computedAdv := c.computeAttackAdvantage(target, isRanged, adv)
-
-	// Build attack options (minimal; feat-driven bonuses deferred to PF section)
-	improvedCrit := false
-	if simulationOptions != nil && simulationOptions.UseImprovedCriticals {
-		improvedCrit = true
-	}
 
 	attackOptions := core.AttackOptions{
 		NumberOfAttacks:      c.EntityState.GetNumberOfAttacks(),
@@ -92,10 +91,12 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 		BonusToDamageRoll:    0,
 		ShouldApplyDamageMod: true,
 		PowerAttack:          false,
-		ImprovedCritical:     improvedCrit,
+		ImprovedCritical:     simulationOptions != nil && simulationOptions.UseImprovedCriticals,
 		RerollOnesAndTwos:    false,
 		Advantage:            computedAdv,
 	}
+
+	c.applyFightingStyles(&attackData, &attackOptions, isRanged, isVersatile, isTwoHanded, slot)
 
 	return &core.AttackRequest{
 		AttackData:        []core.AttackData{attackData},
@@ -103,6 +104,70 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 		SimulationOptions: simulationOptions,
 		Target:            target,
 	}, nil
+}
+
+// CreateOffhandAttackRequest generates an attack request for the character's offhand weapon against a specified target.
+func (c *Character) CreateOffhandAttackRequest(target core.Entity, adv core.AdvantageType, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
+	ad, err := c.EquipmentManager.GetWeaponAttackData(core.WSSecondary, false)
+	if err != nil {
+		return nil, err
+	}
+
+	w, _ := c.EquipmentManager.GetWeaponFromSlot(core.WSSecondary)
+	computedAdv := c.computeAttackAdvantage(target, w.IsRanged, adv)
+
+	opts := core.AttackOptions{
+		NumberOfAttacks:      1,
+		BonusToAttackRoll:    0,
+		BonusToDamageRoll:    0,
+		ShouldApplyDamageMod: false, // Standard is false
+		PowerAttack:          false,
+		ImprovedCritical:     simulationOptions != nil && simulationOptions.UseImprovedCriticals,
+		RerollOnesAndTwos:    false,
+		Advantage:            computedAdv,
+	}
+
+	c.applyFightingStyles(&ad, &opts, w.IsRanged, false, false, core.WSSecondary)
+
+	return &core.AttackRequest{
+		AttackData:        []core.AttackData{ad},
+		AttackOptions:     opts,
+		SimulationOptions: simulationOptions,
+		Target:            target,
+	}, nil
+}
+
+// applyFightingStyles modifies attack data and options based on the character's equipped fighting styles and conditions.
+func (c *Character) applyFightingStyles(ad *core.AttackData, opts *core.AttackOptions, isRanged bool,
+	isVersatile bool, isTwoHanded bool, slot core.WeaponSlot) {
+	if c.Class.FightingStyles == nil {
+		return
+	}
+
+	for _, style := range c.Class.FightingStyles {
+		switch style {
+		case classes.StyleArchery:
+			if isRanged && ad.IsRangedWeapon {
+				ad.AttackModifier += 2
+			}
+		case classes.StyleDueling:
+			// This requires that the character is only holding one weapon
+			// Check for shield - cannot apply if present
+			// Check for versatile - must be used with one hand
+			if c.EquipmentManager.HasShieldEquipped || ad.IsVersatileAttack {
+				break
+			}
+			ad.DamageModifier += 2
+		case classes.StyleGWF:
+			if isTwoHanded || isVersatile {
+				opts.RerollOnesAndTwos = true
+			}
+		case classes.StyleTWF:
+			if slot == core.WSSecondary {
+				opts.ShouldApplyDamageMod = true
+			}
+		}
+	}
 }
 
 // computeAttackAdvantage derives advantage/disadvantage from basic conditions.

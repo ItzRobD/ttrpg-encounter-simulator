@@ -2,10 +2,11 @@ package weapon
 
 import (
 	"context"
-	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
+
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	. "github.com/go-jet/jet/v2/postgres"
 )
 
@@ -38,6 +39,12 @@ func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 		EquipmentWeapons.Name,
 		EquipmentWeapons.IsVersatile,
 		EquipmentWeapons.IsFinesse,
+		EquipmentWeapons.IsTwoHanded,
+		EquipmentWeapons.IsHeavy,
+		EquipmentWeapons.IsLight,
+		EquipmentWeapons.IsThrown,
+		EquipmentWeapons.IsRanged,
+		EquipmentWeapons.IsOnlyRanged,
 		EquipmentWeaponsDamageBlocks.NumberOfDice,
 		EquipmentWeaponsDamageBlocks.Die,
 		EquipmentWeaponsDamageBlocks.DmgType,
@@ -53,8 +60,9 @@ func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 	if err != nil {
 		return weaponResult, fmt.Errorf("error getting weaponResult by id: %w", err)
 	}
-	err = row.Scan(&weaponResult.Name, &weaponResult.IsVersatile, &weaponResult.IsFinesse, &weaponResult.NumberOfDice,
-		&weaponResult.Die, &weaponResult.DamageType)
+	err = row.Scan(&weaponResult.Name, &weaponResult.IsVersatile, &weaponResult.IsFinesse, &weaponResult.IsTwoHanded,
+		&weaponResult.IsHeavy, &weaponResult.IsLight, &weaponResult.IsThrown, &weaponResult.IsRanged, &weaponResult.IsOnlyRanged,
+		&weaponResult.NumberOfDice, &weaponResult.Die, &weaponResult.DamageType)
 	if err != nil {
 		return weaponResult, fmt.Errorf("error scanning weaponResult by id: %w", err)
 	}
@@ -75,14 +83,10 @@ func QueryWeaponData(ctx context.Context, params WeaponQueryParams) (Weapon, err
 
 	if params.ID != 0 {
 		weaponResult, err = getWeaponByID(ctx, params.ID)
-		weaponResult.IsRanged = isRangedWeapon(params.ID)
-		weaponResult.IsMelee = isMeleeWeapon(params.ID)
 	} else if params.Name != "" {
 		var id int
 		id, err = getWeaponIDByName(ctx, params.Name)
 		weaponResult, err = getWeaponByID(ctx, id)
-		weaponResult.IsRanged = isRangedWeapon(id)
-		weaponResult.IsMelee = isMeleeWeapon(id)
 	} else {
 		err = fmt.Errorf("no name or id provided for weapon query")
 	}

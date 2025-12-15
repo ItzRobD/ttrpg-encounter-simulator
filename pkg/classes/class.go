@@ -2,6 +2,7 @@ package classes
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"slices"
 	"strings"
 )
 
@@ -100,6 +101,8 @@ type Class struct {
 	SpellcastingMod      core.Ability
 	SneakAttackDiceCount int
 	AttackCount          int
+	FightingStyles       []FightingStyle
+	AvailableStyles      []FightingStyle
 }
 
 // ClassQueryParams defines parameters for querying a class, including its name and ID.
@@ -107,4 +110,19 @@ type ClassQueryParams struct {
 	Name  string
 	ID    ClassID
 	Level uint8
+}
+
+func (cl *Class) AddFightingStyle(style FightingStyle) {
+	if cl.FightingStyles == nil {
+		cl.FightingStyles = make([]FightingStyle, 0)
+	}
+
+	if !slices.Contains(cl.AvailableStyles, style) {
+		return
+	}
+
+	if slices.Contains(cl.FightingStyles, style) {
+		return
+	}
+	cl.FightingStyles = append(cl.FightingStyles, style)
 }

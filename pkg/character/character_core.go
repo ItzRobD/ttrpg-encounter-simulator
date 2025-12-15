@@ -37,6 +37,9 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 
 	if c.EntityState.GetIsUnconscious() {
 		ucResult, err := c.handleUnconsciousTurn(result)
+		if err != nil {
+			return ucResult, nil, err
+		}
 		if ucResult.TurnStatuses[core.TurnRevived] {
 			aiReq, err := c.GetAIRequest(actorID, core.AIReqNormalAction)
 			if err != nil {
@@ -83,9 +86,8 @@ func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReq
 				return nil, err
 			}
 		}
-		if err != nil {
-			return nil, err
-		}
+	case core.AIReqOffhandAttack:
+		return c.AI.createCharacterOffhandActionRequest()
 	default:
 		return req, fmt.Errorf("invalid AI request type: %v", t)
 	}
@@ -108,6 +110,37 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 	switch req.ActionType {
 	case core.ATMelee, core.ATRanged:
 		attackReq, err := c.CreateAttackRequest(req.Target, req.WeaponSlot, adv, req.UseVersatile, req.SimOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		results, err := c.MartialAttackManager.ProcessAttackRequest(attackReq)
+		if err != nil {
+			return nil, err
+		}
+
+		var effects []core.Effect
+		for _, res := range results {
+			if res.GetIsHit() {
+				effects = append(effects, core.Effect{
+					Type:           core.EffectDamage,
+					Value:          res.GetDamageResult().GetTotal(),
+					DamageType:     res.GetDamageType(),
+					ResistBreakers: res.ResistBreakers,
+				})
+			}
+		}
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			TargetID:   req.TargetID,
+			ActorID:    req.ActorID,
+			Effects:    effects,
+			Success:    len(effects) > 0,
+		}, nil
+	case core.ATOffhand:
+		// Offhand attacks should not apply ability modifier to damage unless Two-Weapon Fighting style is present.
+		attackReq, err := c.CreateOffhandAttackRequest(req.Target, adv, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}

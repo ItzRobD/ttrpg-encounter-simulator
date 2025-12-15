@@ -116,7 +116,6 @@ func TestExecuteAIRequest_MeleeProducesDamage(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsMelee:      true,
 		IsRanged:     false,
 	}
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, longsword, true); err != nil {
@@ -157,7 +156,7 @@ func TestCreateAttackRequest_PropagatesOptions(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamagePiercing,
-		IsMelee:      true,
+		IsRanged:     false,
 		IsFinesse:    true,
 	}
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, rapier, true); err != nil {
@@ -186,7 +185,7 @@ func TestCreateWeaponAttackData_Modifiers(t *testing.T) {
 	ch := newTestCharacter(t, core.AbilityScores{Strength: 16, Dexterity: 14}, 5)
 
 	// Non-finesse melee should use STR
-	mace := &weapon.Weapon{Name: "Mace", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageBludgeoning, IsMelee: true}
+	mace := &weapon.Weapon{Name: "Mace", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageBludgeoning, IsRanged: false}
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, mace, true); err != nil {
 		t.Fatalf("SetWeapon: %v", err)
 	}
@@ -202,7 +201,7 @@ func TestCreateWeaponAttackData_Modifiers(t *testing.T) {
 	}
 
 	// Finesse melee should use DEX if higher
-	rapier := &weapon.Weapon{Name: "Rapier", NumberOfDice: 1, Die: core.D8, DamageType: core.DamagePiercing, IsMelee: true, IsFinesse: true}
+	rapier := &weapon.Weapon{Name: "Rapier", NumberOfDice: 1, Die: core.D8, DamageType: core.DamagePiercing, IsRanged: false, IsFinesse: true}
 	if err := ch.EquipmentManager.SetWeapon(core.WSSecondary, rapier, true); err != nil {
 		t.Fatalf("SetWeapon secondary: %v", err)
 	}
@@ -210,11 +209,11 @@ func TestCreateWeaponAttackData_Modifiers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateWeaponAttackData finesse: %v", err)
 	}
-	if ad2.AttackModifier != 5 { // 2 DEX + 3 prof
-		t.Errorf("finesse attack mod=%d want 5", ad2.AttackModifier)
+	if ad2.AttackModifier != 6 { // best of STR(+3) or DEX(+2) + prof(+3)
+		t.Errorf("finesse attack mod=%d want 6", ad2.AttackModifier)
 	}
-	if ad2.DamageModifier != 2 {
-		t.Errorf("finesse damage mod=%d want 2", ad2.DamageModifier)
+	if ad2.DamageModifier != 3 { // best of STR(+3) or DEX(+2)
+		t.Errorf("finesse damage mod=%d want 3", ad2.DamageModifier)
 	}
 }
 

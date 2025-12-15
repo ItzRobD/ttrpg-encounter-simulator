@@ -3,18 +3,7 @@ package weapon
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
-)
-
-var (
-	rangedWeaponIDs = map[int]bool{
-		2: true, 4: true, 5: true, 6: true, 10: true,
-		12: true, 14: true, 29: true, 33: true, 34: true, 35: true,
-	}
-
-	dedicatedRangedIDs = map[int]bool{
-		11: true, 12: true, 13: true, 14: true,
-		33: true, 34: true, 35: true,
-	}
+	"math"
 )
 
 // Weapon represents a weapon with properties such as name, damage type, and special attributes.
@@ -33,7 +22,11 @@ type Weapon struct {
 	Die          core.DiceType
 	DamageType   core.DamageType
 	IsRanged     bool
-	IsMelee      bool
+	IsHeavy      bool
+	IsTwoHanded  bool
+	IsLight      bool
+	IsThrown     bool
+	IsOnlyRanged bool
 }
 
 // WeaponQueryParams defines the parameters for querying weapon data, including weapon name and ID.
@@ -43,7 +36,9 @@ type WeaponQueryParams struct {
 }
 
 // New creates a new weapon with specified attributes, validating inputs and returning an error for invalid configurations.
-func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die core.DiceType, damageType core.DamageType, isRanged bool, isMelee bool) (Weapon, error) {
+func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die core.DiceType,
+	damageType core.DamageType, isRanged bool, isHeavy bool, isTwoHanded bool,
+	isLight bool, isThrown bool, isOnlyRanged bool) (Weapon, error) {
 	if name == "" {
 		name = "Unnamed weapon"
 	}
@@ -58,19 +53,12 @@ func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die co
 		Die:          die,
 		DamageType:   damageType,
 		IsRanged:     isRanged,
-		IsMelee:      isMelee,
+		IsHeavy:      isHeavy,
+		IsTwoHanded:  isTwoHanded,
+		IsLight:      isLight,
+		IsThrown:     isThrown,
+		IsOnlyRanged: isOnlyRanged,
 	}, nil
-}
-
-// isRangedWeapon determines if the given weapon ID corresponds to a ranged weapon and returns true if it does.
-func isRangedWeapon(id int) bool {
-	return rangedWeaponIDs[id]
-
-}
-
-// isMeleeWeapon checks if the given weapon ID corresponds to a melee weapon by excluding certain ranged weapon IDs.
-func isMeleeWeapon(id int) bool {
-	return !dedicatedRangedIDs[id]
 }
 
 // GetAttackModifier calculates the attack modifier for a weapon based on ability scores, character level, and proficiency status.
@@ -98,17 +86,28 @@ func (w *Weapon) GetAttackModifier(as *core.AbilityScores, clvl uint8, isProfici
 func (w *Weapon) GetWeaponModifier(as *core.AbilityScores) (int, error) {
 	var mod int
 	var err error
-	if w.IsRanged || w.IsFinesse {
+	if w.IsRanged {
 		mod, err = core.GetAbilityScoreModifier(as.Dexterity)
 		if err != nil {
 			return 0, err
 		}
 		return mod, nil
-	} else {
+	} else if w.IsFinesse {
 		mod, err = core.GetAbilityScoreModifier(as.Strength)
 		if err != nil {
 			return 0, err
 		}
+		dexMod, dexErr := core.GetAbilityScoreModifier(as.Dexterity)
+		if dexErr != nil {
+			return 0, dexErr
+		}
+		mod = int(math.Max(float64(mod), float64(dexMod)))
 		return mod, nil
 	}
+
+	mod, err = core.GetAbilityScoreModifier(as.Strength)
+	if err != nil {
+		return 0, err
+	}
+	return mod, nil
 }

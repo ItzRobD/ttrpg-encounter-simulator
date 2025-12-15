@@ -80,7 +80,36 @@ func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
 		return err
 	}
 
-	return ce.processActionResults(aiReq.Actor, outcome)
+	actionErr := ce.processActionResults(aiReq.Actor, outcome)
+	if actionErr != nil {
+		return actionErr
+	}
+
+	// get actor state manager
+	actorESM, ok := aiReq.Actor.GetState().(*entity_state_manager.EntityStateManager)
+	if !ok || actorESM == nil {
+		return fmt.Errorf("actor state manager is nil or wrong type")
+	}
+
+	if !actorESM.HasUsedBonusAction {
+		offhandReq, ohErr := aiReq.Actor.GetAIRequest(aiReq.ActorID, core.AIReqOffhandAttack)
+		if ohErr != nil {
+			return ohErr
+		}
+
+		if offhandReq != nil {
+			ohOutcome, ohOutcomeErr := aiReq.Actor.ExecuteAIRequest(offhandReq)
+			if ohOutcomeErr != nil {
+				return ohOutcomeErr
+			}
+			if ohResError := ce.processActionResults(aiReq.Actor, ohOutcome); ohResError != nil {
+				return ohResError
+			}
+			actorESM.ExpendBonusAction()
+		}
+	}
+
+	return nil
 }
 
 func (ce *CombatEngine) executeSpellCast(aiReq *core.AIRequest) error {
@@ -503,7 +532,7 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 	ce.CombatContext.DeadCombatants = ce.getDeadCombatantIDs()
 
 	// Update state for all combatants
-	for id, _ := range ce.Combatants {
+	for id := range ce.Combatants {
 		if info, exists := ce.CombatContext.CombatantInfo[id]; exists {
 			info.UpdateState()
 		}

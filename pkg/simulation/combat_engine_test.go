@@ -56,7 +56,7 @@ func buildTestCharacter(t *testing.T, as core.AbilityScores, lvl uint8) *charact
 // equip a simple melee weapon in the desired slot
 func equipSword(t *testing.T, ch *character.Character, slot core.WeaponSlot) {
 	t.Helper()
-	sword := &weapon.Weapon{Name: "Sword", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageSlashing, IsMelee: true}
+	sword := &weapon.Weapon{Name: "Sword", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageSlashing, IsRanged: false}
 	if err := ch.EquipmentManager.SetWeapon(slot, sword, true); err != nil {
 		t.Fatalf("SetWeapon: %v", err)
 	}
@@ -105,11 +105,30 @@ func TestCombatEngine_ProcessAIRequest_MeleeProducesDamage(t *testing.T) {
 	// attacker with STR 16 for reasonable modifiers
 	attacker := buildTestCharacter(t, core.AbilityScores{Strength: 16, Dexterity: 14}, 5)
 	equipSword(t, attacker, core.WSPrimary)
+	// Equip offhand to avoid nil secondary lookups during bonus action attempt
+	equipSword(t, attacker, core.WSSecondary)
 	target := buildTestMonster(t, 0) // AC=0 guarantees hits
 
 	cAtt, cTgt := buildCombatants(attacker, target)
 	ce.AddCombatant(cAtt) // id 0
 	ce.AddCombatant(cTgt) // id 1
+
+	// Initialize combat tracker before processing
+	if err := ce.SetupCombat(); err != nil {
+		t.Fatalf("SetupCombat: %v", err)
+	}
+
+	// Manually provide a minimal combat context for direct ProcessAIRequest path
+	ctx := core.NewCombatContext(&core.SimulationOptions{})
+	ctx.TurnOrder = ce.TurnOrder
+	ctx.CurrentRound = 1
+	ctx.CombatantInfo = map[int]*core.CombatantInfo{
+		0: core.NewCombatantInfo(cAtt),
+		1: core.NewCombatantInfo(cTgt),
+	}
+	ce.CombatContext = ctx
+	// Ensure the acting entity has the context
+	_ = attacker.UpdateAICombatContext(ctx)
 
 	req := &core.AIRequest{
 		Actor:      attacker,

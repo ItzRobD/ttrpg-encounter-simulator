@@ -494,6 +494,7 @@ type AttackData struct {
 	DamageType        DamageType
 	ResistBreakers    []ResistBreaker
 	IsVersatileAttack bool
+	IsRangedWeapon    bool
 	Average           int
 }
 

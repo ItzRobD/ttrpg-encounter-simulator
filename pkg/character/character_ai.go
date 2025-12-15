@@ -212,24 +212,25 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 		}
 	case core.ATMelee:
 		slot = core.WSPrimary
+		em := cai.parent.EquipmentManager
+		hasShield := em.HasShieldEquipped
+
+		preferVersatile := false
 		switch cai.parent.EntityState.GetVersatileWeaponPreference() {
-		case core.VWPPreferNonVersatile:
-			useVersatile = false
-			break
-		case core.VWPNoPreference:
-			if cai.rng.IntN(2) == 0 {
-				useVersatile = false
-				break
-			}
-			fallthrough
 		case core.VWPPreferVersatile:
-			if !cai.parent.EquipmentManager.HasShieldEquipped {
-				w, wErr := cai.parent.EquipmentManager.GetWeaponFromSlot(core.WSPrimary)
-				if wErr != nil {
-					return nil, wErr
-				}
-				useVersatile = w.IsVersatile
+			preferVersatile = true
+		case core.VWPNoPreference:
+			preferVersatile = cai.rng.IntN(2) == 1
+		case core.VWPPreferNonVersatile:
+			preferVersatile = false
+		}
+
+		if preferVersatile && !hasShield {
+			primaryWeapon, wErr := em.GetWeaponFromSlot(core.WSPrimary)
+			if wErr != nil {
+				return nil, wErr
 			}
+			useVersatile = primaryWeapon.IsVersatile
 		}
 	case core.ATRanged:
 		slot = core.WSPrimary
@@ -271,4 +272,39 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 	}
 
 	return &req, nil
+}
+
+func (cai *CharacterAI) createCharacterOffhandActionRequest() (*core.AIRequest, error) {
+	if cai.combatCtx == nil {
+		return nil, fmt.Errorf("combat context not set")
+	}
+
+	em := cai.parent.EquipmentManager
+
+	// Check conditions, quietly fail
+	if cai.parent.EntityState.HasUsedBonusAction {
+		return nil, nil // No bonus action available
+	}
+	if em.HasShieldEquipped {
+		return nil, nil // Shield blocks offhand attacks
+	}
+	if _, err := em.GetWeaponFromSlot(core.WSSecondary); err != nil {
+		return nil, nil // No offhand
+	}
+
+	tStatus, targetID, err := cai.selectTargetID(core.TTDamage)
+	if err != nil || tStatus != core.TargetOK {
+		return nil, nil
+	}
+
+	req := &core.AIRequest{
+		Actor:      cai.parent,
+		ActorType:  core.EntityCharacter,
+		TargetID:   targetID,
+		Target:     cai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity(),
+		ActionType: core.ATOffhand,
+		WeaponSlot: core.WSSecondary,
+	}
+
+	return req, nil
 }

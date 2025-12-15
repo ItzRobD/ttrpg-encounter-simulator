@@ -17,6 +17,7 @@ type EquipmentManager struct {
 	HasShieldEquipped bool
 	Weapons           map[core.WeaponSlot]*WeaponSlotData
 	WeaponAttackData  map[core.WeaponSlot]WeaponAttackData
+	HasDefenseStyle   bool
 }
 
 type WeaponSlotData struct {
@@ -79,6 +80,14 @@ func (em *EquipmentManager) GetHasShieldEquipped() bool {
 	return em.HasShieldEquipped
 }
 
+func (em *EquipmentManager) SetHasDefenseStyle(val bool) {
+	em.HasDefenseStyle = val
+}
+
+func (em *EquipmentManager) GetHasDefenseStyle() bool {
+	return em.HasDefenseStyle
+}
+
 // GetAC returns the Armor Class (AC) of the equipped armor in the EquipmentManager.
 func (em *EquipmentManager) GetAC() int {
 	base := 10
@@ -115,6 +124,10 @@ func (em *EquipmentManager) GetAC() int {
 		} else { // heavy armor
 			returnValue = em.Armor.ArmorClass
 		}
+
+		if em.HasDefenseStyle {
+			returnValue += 1
+		}
 	}
 
 	if em.HasShieldEquipped {
@@ -147,20 +160,37 @@ func (em *EquipmentManager) SetWeapon(slot core.WeaponSlot, w *weapon.Weapon, is
 // GetWeaponFromSlot retrieves the weapon equipped in the specified slot.
 // Returns the weapon and nil if equipped, or nil and an error if no weapon is found in the slot.
 func (em *EquipmentManager) GetWeaponFromSlot(slot core.WeaponSlot) (*weapon.Weapon, error) {
-	if em.Weapons[slot].Weapon == nil {
+	if em.Weapons == nil {
 		return nil, fmt.Errorf("weapon not equipped in slot %s", slot)
 	}
-	return em.Weapons[slot].Weapon, nil
+	ws, ok := em.Weapons[slot]
+	if !ok || ws == nil || ws.Weapon == nil {
+		return nil, fmt.Errorf("weapon not equipped in slot %s", slot)
+	}
+	return ws.Weapon, nil
 }
 
 // GetIsProficientWithSlot checks if the character is proficient with the weapon equipped in the specified weapon slot.
 func (em *EquipmentManager) GetIsProficientWithSlot(slot core.WeaponSlot) bool {
-	return em.Weapons[slot].IsProficient
+	if em.Weapons == nil {
+		return false
+	}
+	ws, ok := em.Weapons[slot]
+	if !ok || ws == nil {
+		return false
+	}
+	return ws.IsProficient
 }
 
 // SetWeaponProficiencyBySlot sets the proficiency status for the weapon in the specified slot.
 func (em *EquipmentManager) SetWeaponProficiencyBySlot(slot core.WeaponSlot, isProficient bool) {
+	if em.Weapons == nil {
+		em.Weapons = make(map[core.WeaponSlot]*WeaponSlotData)
+	}
 	ws := em.Weapons[slot]
+	if ws == nil {
+		ws = &WeaponSlotData{}
+	}
 	ws.IsProficient = isProficient
 	em.Weapons[slot] = ws
 }
@@ -172,7 +202,7 @@ func (em *EquipmentManager) HasMeleeWeapon() bool {
 	}
 
 	for _, weaponSlot := range em.Weapons {
-		if weaponSlot != nil && weaponSlot.Weapon != nil && weaponSlot.Weapon.IsMelee {
+		if weaponSlot != nil && weaponSlot.Weapon != nil && !weaponSlot.Weapon.IsOnlyRanged {
 			return true
 		}
 	}
@@ -264,6 +294,7 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 		DamageType:        normDT,
 		ResistBreakers:    resistBreakers,
 		IsVersatileAttack: false,
+		IsRangedWeapon:    w.Weapon.IsRanged,
 	}
 	weaponData := WeaponAttackData{Normal: normal}
 

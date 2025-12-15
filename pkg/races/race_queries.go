@@ -3,12 +3,12 @@ package races
 import (
 	"context"
 	"database/sql"
-	. "dnd5e-encounter-simulator-backend/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"errors"
 	"fmt"
 
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	. "github.com/go-jet/jet/v2/postgres"
 )
 
@@ -78,6 +78,9 @@ func QueryRaceData(ctx context.Context, params RaceQueryParams) (Race, error) {
 			return raceResult, err
 		}
 		raceResult, err = getRaceByID(ctx, id)
+		if err != nil {
+			return raceResult, err
+		}
 	} else {
 		return raceResult, fmt.Errorf("no race id or name provided")
 	}
@@ -109,7 +112,8 @@ func QueryRaceData(ctx context.Context, params RaceQueryParams) (Race, error) {
 }
 
 func getSavingThrowAdvantagesByRace(ctx context.Context, id RaceID) (RacialSavingThrowAdvantage, error) {
-	var rst RacialSavingThrowAdvantage
+	// Initialize with default maps so setters won't panic on nil maps
+	rst := NewRacialSavingThrowAdvantage()
 	var err error
 
 	stmt := SELECT(
@@ -198,7 +202,7 @@ func getResistancesByRace(ctx context.Context, id RaceID, color *DragonbornColor
 		case -1:
 			resistances.SetResistance(dt, core.ResistanceVulnerable, nil)
 		default:
-			return resistances, fmt.Errorf("invalid resistance value: %f", resistance)
+			return resistances, fmt.Errorf("invalid resistance value: %d", resistance)
 		}
 	}
 
@@ -242,7 +246,7 @@ func getDragonbornFeatures(ctx context.Context, params RaceQueryParams) (*Dragon
 
 func getDragonbornDamageByColor(ctx context.Context, color *DragonbornColor) (core.DamageType, error) {
 	if color == nil {
-		return core.DamageType(0), fmt.Errorf("no dragonborn color provided")
+		return "", fmt.Errorf("no dragonborn color provided")
 	}
 
 	var dt string

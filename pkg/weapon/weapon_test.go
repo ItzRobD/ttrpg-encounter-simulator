@@ -16,7 +16,7 @@ func TestGetAttackModifier_Logic(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsMelee:      true,
+		IsRanged:     false,
 	}
 
 	tests := []struct {

@@ -51,8 +51,12 @@ type CharacterConfig struct {
 	Seed            core.Seed
 	Equipment       EquipmentConfig
 	Resistances     core.DamageResistances
+	// FightingStyles allows the (mocked) frontend/API to specify styles to apply at creation
+	FightingStyles []classes.FightingStyle
 }
 
+// EquipmentConfig defines configuration for a character's equipment including armor and weapon slot mapping.
+// Weapons slots are of map[weaponID]isProficient
 type EquipmentConfig struct {
 	ArmorID       int
 	PrimarySlot   map[int]bool
@@ -81,6 +85,12 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	classData, err := classes.QueryClassData(ctx, params)
 	if err != nil {
 		return nil, err
+	}
+	// Apply Fighting Styles via class API to ensure they are registered properly
+	if len(charConfig.FightingStyles) > 0 {
+		for _, fs := range charConfig.FightingStyles {
+			classData.AddFightingStyle(fs)
+		}
 	}
 	raceData, err := races.QueryRaceData(ctx,
 		races.RaceQueryParams{
@@ -189,6 +199,12 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 	classData, err := classes.QueryClassData(ctx, params)
 	if err != nil {
 		return nil, err
+	}
+	// Apply Fighting Styles via class API to ensure they are registered properly
+	if len(charConfig.FightingStyles) > 0 {
+		for _, fs := range charConfig.FightingStyles {
+			classData.AddFightingStyle(fs)
+		}
 	}
 	raceData, err := races.QueryRaceData(ctx,
 		races.RaceQueryParams{

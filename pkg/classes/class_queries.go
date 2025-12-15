@@ -3,12 +3,13 @@ package classes
 import (
 	"context"
 	"database/sql"
-	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	"dnd5e-encounter-simulator-backend/internal/database"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"errors"
 	"fmt"
+
+	. "dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/table"
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -139,22 +140,55 @@ func QueryClassData(ctx context.Context, params ClassQueryParams) (Class, error)
 
 	classResult.SpellcastingMod, err = getSpellModByClassID(ctx, classResult.ID.Int())
 	if err != nil {
-		return Class{}, err
+		return classResult, err
 	}
 
 	if classResult.ID == Rogue {
 		classResult.SneakAttackDiceCount, err = GetNumberOfSneakAttackDiceFromLevel(ctx, params.Level)
 		if err != nil {
-			return Class{}, err
+			return classResult, err
 		}
 	}
 
 	classResult.AttackCount, err = GetNumberOfAttacksFromLevelAndClass(ctx, params.Level, classResult.ID.Int())
 	if err != nil {
-		return Class{}, err
+		return classResult, err
+	}
+
+	classResult.AvailableStyles, err = GetAvailableFightingStylesFromClass(ctx, classResult.ID.Int())
+	if err != nil {
+		return classResult, err
 	}
 
 	return classResult, err
+}
+
+func GetAvailableFightingStylesFromClass(ctx context.Context, classID uint8) ([]FightingStyle, error) {
+	if classID <= 0 || classID > 13 {
+		return nil, fmt.Errorf("invalid class id provided: %d", classID)
+	}
+
+	stmt := SELECT(ClassesFightingStyles.FightingStyleID).
+		FROM(ClassesFightingStyles).
+		WHERE(ClassesFightingStyles.ClassID.EQ(Int(int64(classID))))
+
+	query, args := stmt.Sql()
+	rows, err := database.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query fighting styles by class id: %w", err)
+	}
+	defer rows.Close()
+	var styles []FightingStyle
+	for rows.Next() {
+		var fightingStyleID int
+		err = rows.Scan(&fightingStyleID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan fighting styles by class id: %w", err)
+		}
+		styles = append(styles, FightingStyle(fightingStyleID))
+	}
+
+	return styles, nil
 }
 
 // GetNumberOfAttacksFromLevelAndClass determines the number of attacks a character has based on class and level inputs.

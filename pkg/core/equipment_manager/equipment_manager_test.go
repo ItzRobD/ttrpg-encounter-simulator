@@ -19,8 +19,8 @@ func TestGetWeaponAttackData_ModifiersAndVersatile(t *testing.T) {
 		t.Fatalf("NewEquipmentManager: %v", err)
 	}
 
-	longsword := &weapon.Weapon{Name: "Longsword", NumberOfDice: 1, Die: core.D8, DamageType: core.DamageSlashing, IsMelee: true, IsVersatile: true}
-	rapier := &weapon.Weapon{Name: "Rapier", NumberOfDice: 1, Die: core.D8, DamageType: core.DamagePiercing, IsMelee: true, IsFinesse: true}
+	longsword := &weapon.Weapon{Name: "Longsword", NumberOfDice: 1, Die: core.D8, DamageType: core.DamageSlashing, IsRanged: false, IsVersatile: true}
+	rapier := &weapon.Weapon{Name: "Rapier", NumberOfDice: 1, Die: core.D8, DamageType: core.DamagePiercing, IsRanged: false, IsFinesse: true}
 
 	tests := []struct {
 		name      string
@@ -32,7 +32,7 @@ func TestGetWeaponAttackData_ModifiersAndVersatile(t *testing.T) {
 	}{
 		{"longsword proficient", longsword, true, 7, 4, false}, // +4 STR +3 prof (lvl 5)
 		{"longsword versatile", longsword, true, 7, 4, true},   // same mods, bigger die
-		{"rapier proficient (DEX)", rapier, true, 5, 2, false}, // +2 DEX +3 prof
+		{"rapier proficient (finesse uses best of STR/DEX)", rapier, true, 7, 4, false},
 		{"longsword not proficient", longsword, false, 4, 4, false},
 	}
 
@@ -198,7 +198,6 @@ func TestHasMeleeWeapon(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsMelee:      true,
 		IsRanged:     false,
 	}
 
@@ -207,8 +206,8 @@ func TestHasMeleeWeapon(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamagePiercing,
-		IsMelee:      false,
 		IsRanged:     true,
+		IsOnlyRanged: true,
 	}
 
 	tests := []struct {
@@ -261,7 +260,6 @@ func TestHasRangedWeapon(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsMelee:      true,
 		IsRanged:     false,
 	}
 
@@ -270,8 +268,8 @@ func TestHasRangedWeapon(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamagePiercing,
-		IsMelee:      false,
 		IsRanged:     true,
+		IsOnlyRanged: true,
 	}
 
 	tests := []struct {
@@ -324,7 +322,7 @@ func TestCanUseVersatile(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsMelee:      true,
+		IsRanged:     false,
 		IsVersatile:  true,
 	}
 
@@ -333,7 +331,7 @@ func TestCanUseVersatile(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D4,
 		DamageType:   core.DamagePiercing,
-		IsMelee:      true,
+		IsRanged:     false,
 		IsVersatile:  false,
 	}
 
@@ -379,7 +377,7 @@ func TestGetWeaponAttackData_Versatile(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8, // 1d8 normal
 		DamageType:   core.DamageSlashing,
-		IsMelee:      true,
+		IsRanged:     false,
 		IsVersatile:  true, // 1d10 versatile (d8 + 2)
 	}
 
@@ -422,7 +420,7 @@ func TestGetAvailableWeaponSlots(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsMelee:      true,
+		IsRanged:     false,
 	}
 
 	tests := []struct {
@@ -475,7 +473,7 @@ func TestSetWeaponProficiencyBySlot(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsMelee:      true,
+		IsRanged:     false,
 	}
 
 	// Equip weapon as not proficient
@@ -503,7 +501,7 @@ func TestComputeAttackDataForSlot(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsMelee:      true,
+		IsRanged:     false,
 		IsFinesse:    false,
 		IsVersatile:  false,
 	}
@@ -513,7 +511,7 @@ func TestComputeAttackDataForSlot(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamagePiercing,
-		IsMelee:      true,
+		IsRanged:     false,
 		IsFinesse:    true, // Can use DEX
 		IsVersatile:  false,
 	}
@@ -540,11 +538,11 @@ func TestComputeAttackDataForSlot(t *testing.T) {
 			wantDamageMod: 4, // +4 STR
 		},
 		{
-			name:          "rapier proficient (finesse uses DEX)",
+			name:          "rapier proficient (finesse uses best of STR/DEX)",
 			weapon:        rapier,
 			isProficient:  true,
-			wantAttackMod: 5, // +2 DEX + +3 prof (lvl 5)
-			wantDamageMod: 2, // +2 DEX
+			wantAttackMod: 7, // best of STR(+4) or DEX(+2) + prof(+3)
+			wantDamageMod: 4, // best of STR(+4) or DEX(+2)
 		},
 	}
 

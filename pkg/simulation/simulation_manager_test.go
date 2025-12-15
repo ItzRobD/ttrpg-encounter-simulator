@@ -16,6 +16,8 @@ func TestSimulationManager_RunSimulation_Smoke(t *testing.T) {
 	// Attacker: character with a sword
 	ch := buildTestCharacter(t, core.AbilityScores{Strength: 16, Dexterity: 14}, 5)
 	equipSword(t, ch, core.WSPrimary)
+	// Equip a secondary weapon to satisfy offhand path if triggered
+	equipSword(t, ch, core.WSSecondary)
 	// Target: AC=0 to guarantee hits
 	mon := buildTestMonster(t, 0)
 

@@ -185,6 +185,7 @@ const (
 	ATLegendaryAction               = "legendary action"
 	ATMonsterSpecial                = "monster special ability"
 	ATLairAction                    = "lair action"
+	ATOffhand                       = "offhand attack"
 )
 
 func (a ActionType) String() string {

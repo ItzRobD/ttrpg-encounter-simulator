@@ -83,6 +83,7 @@ func setupFrank() character.CharacterConfig {
 		Name:    "Frank",
 		ClassID: classes.Fighter,
 		Level:   4,
+		RaceID:  1,
 		AsConfig: core.AbilityScoresConfig{
 			AbilityScores: core.AbilityScores{
 				Strength:     18,
@@ -108,12 +109,21 @@ func setupFrank() character.CharacterConfig {
 			Seed2: 0,
 		},
 		Resistances: core.NewDamageResistances(),
+		// Mocked Fighting Styles as if sent by a front-end request
+		FightingStyles: []classes.FightingStyle{
+			// Enable/disable as needed for local testing
+			//classes.StyleDueling,
+			// classes.StyleGWF,
+			//classes.StyleArchery,
+			// Common test: allow offhand to add ability mod to damage
+			//classes.StyleTWF,
+		},
 	}
 
 	charConfig.Equipment = character.EquipmentConfig{
 		ArmorID:       5,
 		PrimarySlot:   map[int]bool{22: true},
-		SecondarySlot: nil,
+		SecondarySlot: map[int]bool{2: false},
 		RangedSlot:    nil,
 	}
 

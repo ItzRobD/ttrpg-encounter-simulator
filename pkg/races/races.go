@@ -143,7 +143,10 @@ func NewRacialSavingThrowAdvantage() RacialSavingThrowAdvantage {
 	}
 }
 
-func (rst RacialSavingThrowAdvantage) SetAdvantageAbility(ability core.Ability, advantageType core.AdvantageType) {
+func (rst *RacialSavingThrowAdvantage) SetAdvantageAbility(ability core.Ability, advantageType core.AdvantageType) {
+	if rst.Abilities == nil {
+		rst.Abilities = map[core.Ability]core.AdvantageType{}
+	}
 	rst.Abilities[ability] = advantageType
 }
 
@@ -151,7 +154,10 @@ func (rst RacialSavingThrowAdvantage) GetAdvantageAbility(ability core.Ability) 
 	return rst.Abilities[ability]
 }
 
-func (rst RacialSavingThrowAdvantage) SetAdvantageDamageType(dt core.DamageType, advantageType core.AdvantageType) {
+func (rst *RacialSavingThrowAdvantage) SetAdvantageDamageType(dt core.DamageType, advantageType core.AdvantageType) {
+	if rst.DamageTypes == nil {
+		rst.DamageTypes = map[core.DamageType]core.AdvantageType{}
+	}
 	rst.DamageTypes[dt] = advantageType
 }
 
@@ -159,6 +165,6 @@ func (rst RacialSavingThrowAdvantage) GetAdvantageDamageType(dt core.DamageType)
 	return rst.DamageTypes[dt]
 }
 
-func (rst RacialSavingThrowAdvantage) SetAdvantageOnlyAgainstSpells(advantage bool) {
+func (rst *RacialSavingThrowAdvantage) SetAdvantageOnlyAgainstSpells(advantage bool) {
 	rst.AdvantageOnlyAgainstSpells = advantage
 }
