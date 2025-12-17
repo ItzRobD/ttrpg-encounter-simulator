@@ -58,45 +58,46 @@ func TestRollDice(t *testing.T) {
 	}
 }
 
+// Function deprecated
 // Test critical hits double dice
-func TestRollDoubleDice(t *testing.T) {
-	rm := &RollManager{
-		rng: rand.New(rand.NewPCG(54321, 0)),
-	}
-
-	tests := []struct {
-		name           string
-		numDice        int
-		die            core.DiceType
-		wantDiceRolled int
-	}{
-		{"1d6 crit becomes 2d6", 1, core.D6, 2},
-		{"2d6 crit becomes 4d6", 2, core.D6, 4},
-		{"1d8 crit becomes 2d8", 1, core.D8, 2},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			total, rolls := rm.rollDoubleDice(tt.numDice, tt.die)
-
-			if len(rolls) != tt.wantDiceRolled {
-				t.Errorf("rollDoubleDice() rolled %d dice, want %d", len(rolls), tt.wantDiceRolled)
-			}
-
-			// Verify all dice in valid range
-			for i, roll := range rolls {
-				if roll < 1 || roll > tt.die.Int() {
-					t.Errorf("die[%d] = %d, want 1-%d", i, roll, tt.die.Int())
-				}
-			}
-
-			// Verify total matches sum
-			if total != sum(rolls) {
-				t.Errorf("total = %d, want %d", total, sum(rolls))
-			}
-		})
-	}
-}
+//func TestRollDoubleDice(t *testing.T) {
+//	rm := &RollManager{
+//		rng: rand.New(rand.NewPCG(54321, 0)),
+//	}
+//
+//	tests := []struct {
+//		name           string
+//		numDice        int
+//		die            core.DiceType
+//		wantDiceRolled int
+//	}{
+//		{"1d6 crit becomes 2d6", 1, core.D6, 2},
+//		{"2d6 crit becomes 4d6", 2, core.D6, 4},
+//		{"1d8 crit becomes 2d8", 1, core.D8, 2},
+//	}
+//
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			total, rolls := rm.rollDoubleDice(tt.numDice, tt.die)
+//
+//			if len(rolls) != tt.wantDiceRolled {
+//				t.Errorf("rollDoubleDice() rolled %d dice, want %d", len(rolls), tt.wantDiceRolled)
+//			}
+//
+//			// Verify all dice in valid range
+//			for i, roll := range rolls {
+//				if roll < 1 || roll > tt.die.Int() {
+//					t.Errorf("die[%d] = %d, want 1-%d", i, roll, tt.die.Int())
+//				}
+//			}
+//
+//			// Verify total matches sum
+//			if total != sum(rolls) {
+//				t.Errorf("total = %d, want %d", total, sum(rolls))
+//			}
+//		})
+//	}
+//}
 
 // Test improved criticals (roll normal + max dice)
 func TestRollExtraMaxDice(t *testing.T) {

@@ -109,6 +109,8 @@ const (
 	ConditionRestrained    Condition = "restrained"
 	ConditionStunned       Condition = "stunned"
 	ConditionUnconscious   Condition = "unconscious"
+	// Applied when a Barbarian (or similar feature) uses Reckless Attack; everyone has advantage to hit them
+	ConditionRecklessExposed Condition = "reckless_exposed"
 )
 
 func (c Condition) String() string {
@@ -117,20 +119,21 @@ func (c Condition) String() string {
 
 func NewEntityConditions() EntityConditions {
 	return map[Condition]bool{
-		ConditionBlinded:       false,
-		ConditionCharmed:       false,
-		ConditionDeafened:      false,
-		ConditionFrightened:    false,
-		ConditionGrappled:      false,
-		ConditionIncapacitated: false,
-		ConditionInvisible:     false,
-		ConditionParalyzed:     false,
-		ConditionPetrified:     false,
-		ConditionPoisoned:      false,
-		ConditionProne:         false,
-		ConditionRestrained:    false,
-		ConditionStunned:       false,
-		ConditionUnconscious:   false,
+		ConditionBlinded:         false,
+		ConditionCharmed:         false,
+		ConditionDeafened:        false,
+		ConditionFrightened:      false,
+		ConditionGrappled:        false,
+		ConditionIncapacitated:   false,
+		ConditionInvisible:       false,
+		ConditionParalyzed:       false,
+		ConditionPetrified:       false,
+		ConditionPoisoned:        false,
+		ConditionProne:           false,
+		ConditionRestrained:      false,
+		ConditionStunned:         false,
+		ConditionUnconscious:     false,
+		ConditionRecklessExposed: false,
 	}
 }
 
@@ -192,6 +195,8 @@ func NewCondition(s string) (Condition, error) {
 		return ConditionStunned, nil
 	case "unconscious":
 		return ConditionUnconscious, nil
+	case "reckless_exposed":
+		return ConditionRecklessExposed, nil
 	default:
 		return ConditionNone, fmt.Errorf("invalid condition")
 	}
@@ -209,6 +214,8 @@ type ConditionEffect struct {
 func GetConditionEffects(c Condition) ConditionEffect {
 	var e ConditionEffect
 	e.TemporaryResistance = NewDamageResistances()
+	// initialize map fields that might be assigned into
+	e.SavingThrow = make(map[Ability]AdvantageType)
 	switch c {
 	case ConditionBlinded:
 		e.OutgoingAttackRoll = RollNormal
@@ -248,6 +255,9 @@ func GetConditionEffects(c Condition) ConditionEffect {
 		e.IncomingAttackRoll = RollAdvantage
 	case ConditionUnconscious:
 		e.AutoFailStrDexSave = true
+		e.IncomingAttackRoll = RollAdvantage
+	case ConditionRecklessExposed:
+		// All incoming attack rolls have advantage against this creature
 		e.IncomingAttackRoll = RollAdvantage
 	default:
 		return ConditionEffect{}
@@ -489,12 +499,19 @@ type AttackData struct {
 	Name              string
 	NumberOfDice      int
 	Die               DiceType
-	AttackModifier    int // Added to attack roll. Character: Proficiency + Ability Mod; Monster: To Hit Bonus
+	AttackModifier    int     // Added to attack roll. Character: Proficiency + AbilityUsed Mod; Monster: To Hit Bonus
+	AbilityUsed       Ability // AbilityUsed used to determine damage ie finesse weapons
 	DamageModifier    int
 	DamageType        DamageType
 	ResistBreakers    []ResistBreaker
 	IsVersatileAttack bool
 	IsRangedWeapon    bool
+	IsTwoHandedWeapon bool
+	IsFinesseWeapon   bool
+	IsLightWeapon     bool
+	IsThrownWeapon    bool
+	IsOnlyRanged      bool
+	IsHeavyWeapon     bool
 	Average           int
 }
 
@@ -556,6 +573,7 @@ type AttackOptions struct {
 	PowerAttack          bool // GWM / Sharpshooter (-5 attack, +10 damage)
 	ImprovedCritical     bool // Crits on 19 and 20, Hexblade, Champion
 	RerollOnesAndTwos    bool // GWF
+	ExtraCritDice        int  // Additional weapon dice on critical hits (e.g., Barbarian Brutal Critical)
 }
 
 func (ao AttackOptions) GetAdvantage() AdvantageType   { return ao.Advantage }

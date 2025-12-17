@@ -652,8 +652,8 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 			return fmt.Errorf("entity is character but type assertion failed")
 		}
 
-		if !c.EntityState.IsDead && !c.EntityState.GetIsUnconscious() {
-			c.EntityState.RefreshActions()
+		if !c.EntityStateManager.IsDead && !c.EntityStateManager.GetIsUnconscious() {
+			c.EntityStateManager.RefreshActions()
 		}
 	}
 

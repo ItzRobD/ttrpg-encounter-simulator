@@ -276,7 +276,7 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 		return err
 	}
 
-	damageMod, err := w.Weapon.GetWeaponModifier(&as)
+	damageMod, ability, err := w.Weapon.GetWeaponModifier(&as)
 	if err != nil {
 		return err
 	}
@@ -296,11 +296,18 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 		NumberOfDice:      w.Weapon.NumberOfDice,
 		Die:               w.Weapon.Die,
 		AttackModifier:    attackMod,
+		AbilityUsed:       ability,
 		DamageModifier:    damageMod,
 		DamageType:        normDT,
 		ResistBreakers:    resistBreakers,
 		IsVersatileAttack: false,
 		IsRangedWeapon:    w.Weapon.IsRanged,
+		IsTwoHandedWeapon: w.Weapon.IsTwoHanded,
+		IsFinesseWeapon:   w.Weapon.IsFinesse,
+		IsOnlyRanged:      w.Weapon.IsOnlyRanged,
+		IsLightWeapon:     w.Weapon.IsLight,
+		IsThrownWeapon:    w.Weapon.IsThrown,
+		IsHeavyWeapon:     w.Weapon.IsHeavy,
 	}
 	weaponData := WeaponAttackData{Normal: normal}
 

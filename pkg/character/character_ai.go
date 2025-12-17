@@ -25,11 +25,11 @@ func (cai *CharacterAI) UpdateCombatContext(ctx *core.CombatContext) {
 }
 
 func (cai *CharacterAI) chooseDamageSpell() (*core.SpellChoice, error) {
-	return cai.parent.SpellCastingManager.ChooseSpellByPriority(core.STDamage, cai.parent.EntityState.SpellcastingPriority)
+	return cai.parent.SpellCastingManager.ChooseSpellByPriority(core.STDamage, cai.parent.EntityStateManager.SpellcastingPriority)
 }
 
 func (cai *CharacterAI) chooseDamageActionType() (core.ActionType, error) {
-	actionPref := cai.parent.EntityState.ActionPreference
+	actionPref := cai.parent.EntityStateManager.ActionPreference
 	actionType := core.ATNoAction
 	switch actionPref {
 	case core.APPreferMelee:
@@ -96,7 +96,7 @@ func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (core.TargetS
 		return core.TargetInvalidType, -1, fmt.Errorf("unknown target type")
 	}
 
-	status, target, err := core.SelectTargetFromMap(validTargets, cai.parent.EntityState.TargetPrioritization, cai.rng)
+	status, target, err := core.SelectTargetFromMap(validTargets, cai.parent.EntityStateManager.TargetPrioritization, cai.rng)
 	if err != nil || status != core.TargetOK {
 		return status, -1, err
 	}
@@ -216,7 +216,7 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 		hasShield := em.HasShieldEquipped
 
 		preferVersatile := false
-		switch cai.parent.EntityState.GetVersatileWeaponPreference() {
+		switch cai.parent.EntityStateManager.GetVersatileWeaponPreference() {
 		case core.VWPPreferVersatile:
 			preferVersatile = true
 		case core.VWPNoPreference:
@@ -282,7 +282,7 @@ func (cai *CharacterAI) createCharacterOffhandActionRequest() (*core.AIRequest, 
 	em := cai.parent.EquipmentManager
 
 	// Check conditions, quietly fail
-	if cai.parent.EntityState.HasUsedBonusAction {
+	if cai.parent.EntityStateManager.HasUsedBonusAction {
 		return nil, nil // No bonus action available
 	}
 	if em.HasShieldEquipped {

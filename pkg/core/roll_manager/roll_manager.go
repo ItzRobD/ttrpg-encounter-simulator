@@ -262,6 +262,9 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 		dmgMod += 10
 	}
 
+	// Extra critical dice and flat damage bonuses are supplied by the caller via AttackOptions
+	extraCritDice := req.GetAttackOptions().ExtraCritDice
+
 	// Calculate the appropriate amount of damage
 	var dmgRollTotal int
 	var dmgRolls []int
@@ -278,8 +281,14 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 	if crit {
 		if req.GetSimulationOptions().UseImprovedCriticals {
 			dmgRollTotal, dmgRolls = rm.rollExtraMaxDice(numDice, die)
+
 		} else {
-			dmgRollTotal, dmgRolls = rm.rollDoubleDice(numDice, die)
+			dmgRollTotal, dmgRolls = rm.rollDice(numDice*2, die)
+		}
+		if extraCritDice > 0 {
+			extraRollTotal, extraRoll := rm.rollDice(extraCritDice, die)
+			dmgRollTotal += extraRollTotal
+			dmgRolls = append(dmgRolls, extraRoll...)
 		}
 	} else {
 		dmgRollTotal, dmgRolls = rm.rollDice(numDice, die)
@@ -346,7 +355,7 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 		if req.GetSimulationOptions().UseImprovedCriticals {
 			valRollTotal, valRolls = rm.rollExtraMaxDice(numDice, die)
 		} else {
-			valRollTotal, valRolls = rm.rollDoubleDice(numDice, die)
+			valRollTotal, valRolls = rm.rollDice(numDice*2, die)
 		}
 	} else {
 		valRollTotal, valRolls = rm.rollDice(numDice, die)
@@ -657,16 +666,6 @@ func (rm *RollManager) calculateSuccess(res *RollResult, options RollOptions) {
 func (rm *RollManager) rollDice(numberOfDice int, die core.DiceType) (int, []int) {
 	rolls := make([]int, numberOfDice)
 	for i := 0; i < numberOfDice; i++ {
-		rolls[i] = rm.rng.IntN(die.Int()) + 1
-	}
-
-	return sum(rolls), rolls
-}
-
-// rollDoubleDice rolls double the number of dice specified and returns the total sum and individual roll results.
-func (rm *RollManager) rollDoubleDice(numberOfDice int, die core.DiceType) (int, []int) {
-	rolls := make([]int, numberOfDice*2)
-	for i := 0; i < numberOfDice*2; i++ {
 		rolls[i] = rm.rng.IntN(die.Int()) + 1
 	}
 

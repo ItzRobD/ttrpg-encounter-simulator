@@ -46,8 +46,8 @@ func TestExecuteAIRequest_MultiattackAndLegendary(t *testing.T) {
 	m.ActionManager = NewMonsterActionManager(m, m.RollManager, &cfg)
 
 	// Seed some legendary points
-	m.EntityState.LegendaryActionPointsMax = 3
-	m.EntityState.LegendaryActionPoints = 3
+	m.EntityStateManager.LegendaryActionPointsMax = 3
+	m.EntityStateManager.LegendaryActionPoints = 3
 
 	tgt := targetStub{Entity: m}
 
@@ -68,7 +68,7 @@ func TestExecuteAIRequest_MultiattackAndLegendary(t *testing.T) {
 	}
 
 	// Legendary action (cost 1 in basicConfig)
-	before := m.EntityState.LegendaryActionPoints
+	before := m.EntityStateManager.LegendaryActionPoints
 	lreq := &core.AIRequest{
 		ActionType:  core.ATLegendaryAction,
 		ActionIndex: 100,
@@ -83,8 +83,8 @@ func TestExecuteAIRequest_MultiattackAndLegendary(t *testing.T) {
 	if len(lout.Effects) != 1 {
 		t.Fatalf("expected 1 damage effect for legendary, got %d", len(lout.Effects))
 	}
-	if m.EntityState.LegendaryActionPoints != before-1 {
-		t.Errorf("legendary points not decremented: before=%d after=%d", before, m.EntityState.LegendaryActionPoints)
+	if m.EntityStateManager.LegendaryActionPoints != before-1 {
+		t.Errorf("legendary points not decremented: before=%d after=%d", before, m.EntityStateManager.LegendaryActionPoints)
 	}
 }
 
@@ -111,8 +111,8 @@ func TestSetHP_Variants_ValueAverageRoll(t *testing.T) {
 	if err := m.InitializeHP(); err != nil {
 		t.Fatalf("InitializeHP value: %v", err)
 	}
-	if m.EntityState.GetCurrentHP() != 15 || m.EntityState.GetMaxHP() != 15 {
-		t.Errorf("SetHP value failed: hp=%d max=%d", m.EntityState.GetCurrentHP(), m.EntityState.GetMaxHP())
+	if m.EntityStateManager.GetCurrentHP() != 15 || m.EntityStateManager.GetMaxHP() != 15 {
+		t.Errorf("SetHP value failed: hp=%d max=%d", m.EntityStateManager.GetCurrentHP(), m.EntityStateManager.GetMaxHP())
 	}
 
 	// Average
@@ -120,8 +120,8 @@ func TestSetHP_Variants_ValueAverageRoll(t *testing.T) {
 	if err := m.InitializeHP(); err != nil {
 		t.Fatalf("InitializeHP average: %v", err)
 	}
-	if m.EntityState.GetCurrentHP() != 12 || m.EntityState.GetMaxHP() != 12 {
-		t.Errorf("SetHP average failed: hp=%d max=%d", m.EntityState.GetCurrentHP(), m.EntityState.GetMaxHP())
+	if m.EntityStateManager.GetCurrentHP() != 12 || m.EntityStateManager.GetMaxHP() != 12 {
+		t.Errorf("SetHP average failed: hp=%d max=%d", m.EntityStateManager.GetCurrentHP(), m.EntityStateManager.GetMaxHP())
 	}
 
 	// Roll (deterministic due to RNG seed) - use a valid dice config
@@ -129,8 +129,8 @@ func TestSetHP_Variants_ValueAverageRoll(t *testing.T) {
 	if err := m.InitializeHP(); err != nil {
 		t.Fatalf("InitializeHP roll: %v", err)
 	}
-	if m.EntityState.GetCurrentHP() <= 0 || m.EntityState.GetMaxHP() <= 0 {
-		t.Errorf("SetHP roll failed, non-positive HP: hp=%d max=%d", m.EntityState.GetCurrentHP(), m.EntityState.GetMaxHP())
+	if m.EntityStateManager.GetCurrentHP() <= 0 || m.EntityStateManager.GetMaxHP() <= 0 {
+		t.Errorf("SetHP roll failed, non-positive HP: hp=%d max=%d", m.EntityStateManager.GetCurrentHP(), m.EntityStateManager.GetMaxHP())
 	}
 
 	if eventsSeen == 0 {
@@ -142,7 +142,7 @@ func TestSetHP_Variants_ValueAverageRoll(t *testing.T) {
 func TestModifyHP_KillsMonsterAtZeroOrBelow(t *testing.T) {
 	m := newTestMonster(t)
 	// Ensure non-zero HP
-	m.EntityState.ResetHP()
+	m.EntityStateManager.ResetHP()
 	if _, err := m.ModifyHP(-999, false, false); err != nil {
 		t.Fatalf("ModifyHP error: %v", err)
 	}

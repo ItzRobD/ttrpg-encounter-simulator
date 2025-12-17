@@ -20,7 +20,7 @@ func (c *Character) RollInitiative() (int, error) {
 		return 0, err
 	}
 
-	c.EntityState.SetInitiative(res.Total)
+	c.EntityStateManager.SetInitiative(res.Total)
 
 	return res.Total, nil
 }
@@ -42,7 +42,7 @@ func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bo
 		return core.AttackData{}, err
 	}
 
-	damageMod, err := w.GetWeaponModifier(&c.AbilityScores)
+	damageMod, _, err := w.GetWeaponModifier(&c.AbilityScores)
 	if err != nil {
 		return core.AttackData{}, err
 	}
@@ -65,35 +65,56 @@ func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bo
 	}, nil
 }
 
-// CreateAttackRequest generates an attack request with specific weapon data, modifiers, advantage type, and attack count.
-func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, adv core.AdvantageType, useVersatile bool, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
+// CreateAttackRequest generates an attack request with specific weapon data, modifiers, and attack count.
+// Advantage is computed internally using core.DetermineAttackAdvantageForEntities, with a baseline derived from
+// Reckless Attack (if enabled via SimulationOptions and currently active) and weapon/context.
+func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, useVersatile bool, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
 	attackData, err := c.EquipmentManager.GetWeaponAttackData(slot, useVersatile)
 	if err != nil {
 		return nil, err
 	}
 
-	// Determine ranged vs melee for condition rules
-	isRanged := false
-	isVersatile := false
-	isTwoHanded := false
-	if w, wErr := c.EquipmentManager.GetWeaponFromSlot(slot); wErr == nil {
-		isRanged = w.IsRanged
-		isVersatile = w.IsVersatile
-		isTwoHanded = w.IsTwoHanded
+	// Determine ranged vs melee for condition rules (prefer precomputed attack data)
+	isRanged := attackData.IsRangedWeapon
+	// For style interactions we still need to know usage context
+	isVersatile := attackData.IsVersatileAttack
+	isTwoHanded := attackData.IsTwoHandedWeapon
+
+	// Derive baseline advantage from Reckless Attack if applicable
+	base := core.RollNormal
+	if simulationOptions != nil && simulationOptions.EnableClassFeatures {
+		if c.EntityStateManager.GetIsRecklesslyAttacking() {
+			if !isRanged && attackData.AbilityUsed == core.AbilityStrength {
+				base = core.RollAdvantage
+			}
+		}
 	}
 
-	// Build advantage from attacker/target conditions (minimal set). Respect incoming adv as baseline.
-	computedAdv := c.computeAttackAdvantage(target, isRanged, adv)
+	// Compute final advantage using unified core helper
+	computedAdv := core.DetermineAttackAdvantageForEntities(c, target, isRanged, base)
+
+	// Feature-driven damage mods (Rage, Brutal Critical)
+	extraCritDice := 0
+	bonusDmg := 0
+	if simulationOptions != nil && simulationOptions.EnableClassFeatures {
+		if c.Class.ID == classes.Barbarian {
+			extraCritDice = c.Class.ClassFeatures.BarbarianFeatures.NumberOfBrutalCritDice
+			if c.EntityStateManager.BarbarianIsRaging {
+				bonusDmg += c.Class.ClassFeatures.BarbarianFeatures.RageDamage
+			}
+		}
+	}
 
 	attackOptions := core.AttackOptions{
-		NumberOfAttacks:      c.EntityState.GetNumberOfAttacks(),
+		NumberOfAttacks:      c.EntityStateManager.GetNumberOfAttacks(),
 		BonusToAttackRoll:    0,
-		BonusToDamageRoll:    0,
+		BonusToDamageRoll:    bonusDmg,
 		ShouldApplyDamageMod: true,
 		PowerAttack:          false,
 		ImprovedCritical:     simulationOptions != nil && simulationOptions.UseImprovedCriticals,
 		RerollOnesAndTwos:    false,
 		Advantage:            computedAdv,
+		ExtraCritDice:        extraCritDice,
 	}
 
 	c.applyFightingStyles(&attackData, &attackOptions, isRanged, isVersatile, isTwoHanded, slot)
@@ -107,27 +128,49 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 }
 
 // CreateOffhandAttackRequest generates an attack request for the character's offhand weapon against a specified target.
-func (c *Character) CreateOffhandAttackRequest(target core.Entity, adv core.AdvantageType, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
+// Advantage derived internally similar to CreateAttackRequest.
+func (c *Character) CreateOffhandAttackRequest(target core.Entity, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
 	ad, err := c.EquipmentManager.GetWeaponAttackData(core.WSSecondary, false)
 	if err != nil {
 		return nil, err
 	}
 
-	w, _ := c.EquipmentManager.GetWeaponFromSlot(core.WSSecondary)
-	computedAdv := c.computeAttackAdvantage(target, w.IsRanged, adv)
+	// Derive baseline advantage from Reckless Attack if applicable (offhand melee, STR-based)
+	base := core.RollNormal
+	if simulationOptions != nil && simulationOptions.EnableClassFeatures {
+		if c.EntityStateManager.GetIsRecklesslyAttacking() {
+			if !ad.IsRangedWeapon && ad.AbilityUsed == core.AbilityStrength {
+				base = core.RollAdvantage
+			}
+		}
+	}
+	computedAdv := core.DetermineAttackAdvantageForEntities(c, target, ad.IsRangedWeapon, base)
+
+	// Feature-driven damage tweaks (Rage applies to melee weapon damage rolls, including offhand)
+	extraCritDice := 0
+	bonusDmg := 0
+	if simulationOptions != nil && simulationOptions.EnableClassFeatures {
+		if c.Class.ID == classes.Barbarian {
+			extraCritDice = c.Class.ClassFeatures.BarbarianFeatures.NumberOfBrutalCritDice
+			if c.EntityStateManager.BarbarianIsRaging {
+				bonusDmg += c.Class.ClassFeatures.BarbarianFeatures.RageDamage
+			}
+		}
+	}
 
 	opts := core.AttackOptions{
 		NumberOfAttacks:      1,
 		BonusToAttackRoll:    0,
-		BonusToDamageRoll:    0,
+		BonusToDamageRoll:    bonusDmg,
 		ShouldApplyDamageMod: false, // Standard is false
 		PowerAttack:          false,
 		ImprovedCritical:     simulationOptions != nil && simulationOptions.UseImprovedCriticals,
 		RerollOnesAndTwos:    false,
 		Advantage:            computedAdv,
+		ExtraCritDice:        extraCritDice,
 	}
 
-	c.applyFightingStyles(&ad, &opts, w.IsRanged, false, false, core.WSSecondary)
+	c.applyFightingStyles(&ad, &opts, ad.IsRangedWeapon, ad.IsVersatileAttack, false, core.WSSecondary)
 
 	return &core.AttackRequest{
 		AttackData:        []core.AttackData{ad},
@@ -176,51 +219,7 @@ func (c *Character) applyFightingStyles(ad *core.AttackData, opts *core.AttackOp
 // - Target prone: melee attacks advantage, ranged attacks disadvantage
 // - Target restrained/paralyzed/unconscious: advantage
 // If both advantage and disadvantage are present, result is Normal.
-func (c *Character) computeAttackAdvantage(target core.Entity, isRanged bool, base core.AdvantageType) core.AdvantageType {
-	hasAdv := false
-	hasDis := false
-
-	// Baseline from caller
-	switch base {
-	case core.RollAdvantage:
-		hasAdv = true
-	case core.RollDisadvantage:
-		hasDis = true
-	}
-
-	attackerConds := c.GetConditions()
-	targetConds := target.GetConditions()
-
-	// Attacker conditions
-	if attackerConds.Has(core.ConditionBlinded) {
-		hasDis = true
-	}
-	if attackerConds.Has(core.ConditionPoisoned) {
-		hasDis = true
-	}
-
-	// Target conditions
-	if targetConds.Has(core.ConditionProne) {
-		if isRanged {
-			hasDis = true
-		} else {
-			hasAdv = true
-		}
-	}
-	if targetConds.Has(core.ConditionRestrained) || targetConds.Has(core.ConditionParalyzed) || targetConds.Has(core.ConditionUnconscious) {
-		hasAdv = true
-	}
-
-	// Resolve
-	if hasAdv && hasDis {
-		return core.RollNormal
-	} else if hasAdv {
-		return core.RollAdvantage
-	} else if hasDis {
-		return core.RollDisadvantage
-	}
-	return core.RollNormal
-}
+// Deprecated: computeAttackAdvantage has been replaced by core.DetermineAttackAdvantageForEntities
 
 // MakeSavingThrow calculates a saving throw roll using the specified ability and returns the result, rolls, and an error if any.
 func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int) (core.RollResult, error) {
@@ -259,7 +258,7 @@ func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int) (core
 	}
 
 	opts := roll_manager.NewRollOptions()
-	baseAdv := c.EntityState.GetSavingThrowAdvantage(ability) // This should get the default advantage of the character
+	baseAdv := c.EntityStateManager.GetSavingThrowAdvantage(ability) // This should get the default advantage of the character
 	condAdv := core.DetermineSaveAdvantageFromConditions(c.GetConditions(), ability)
 	opts.Advantage = core.GetFinalAdvantageType([]core.AdvantageType{baseAdv, condAdv})
 	opts.Modifier = mod

@@ -37,7 +37,7 @@ func buildTestCharacter(t *testing.T, as core.AbilityScores, lvl uint8) *charact
 	if err != nil {
 		t.Fatalf("NewEntityStateManager: %v", err)
 	}
-	ch.EntityState = esm
+	ch.EntityStateManager = esm
 	// Equipment manager
 	em, err := equipment_manager.NewEquipmentManager(ch)
 	if err != nil {
@@ -82,7 +82,7 @@ func buildTestMonster(t *testing.T, ac int) *monster.Monster {
 	if err != nil {
 		t.Fatalf("NewEntityStateManager(m): %v", err)
 	}
-	m.EntityState = esm
+	m.EntityStateManager = esm
 	// Ensure InitializeHP sets a positive value during simulations
 	m.HP = core.HPConfig{HPSetMethod: core.HPSetValue, Value: 15, HitDie: core.D8}
 	// Initialize action manager with a simple melee action so monster AI can act

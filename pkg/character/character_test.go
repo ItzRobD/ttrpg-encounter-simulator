@@ -42,7 +42,7 @@ func newTestCharacter(t *testing.T, as core.AbilityScores, lvl uint8) *Character
 	if err != nil {
 		t.Fatalf("NewEntityStateManager: %v", err)
 	}
-	ch.EntityState = esm
+	ch.EntityStateManager = esm
 
 	// Equipment manager
 	em, err := equipment_manager.NewEquipmentManager(ch)
@@ -63,8 +63,8 @@ func TestRollInitiative_WritesState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RollInitiative error: %v", err)
 	}
-	if total != ch.EntityState.GetInitiative() {
-		t.Errorf("initiative mismatch: got=%d state=%d", total, ch.EntityState.GetInitiative())
+	if total != ch.EntityStateManager.GetInitiative() {
+		t.Errorf("initiative mismatch: got=%d state=%d", total, ch.EntityStateManager.GetInitiative())
 	}
 }
 
@@ -80,8 +80,8 @@ func TestInitializeHP_Variants_ValueAverageRoll(t *testing.T) {
 	if err := ch.InitializeHP(); err != nil {
 		t.Fatalf("InitializeHP value: %v", err)
 	}
-	if ch.EntityState.GetCurrentHP() != 15 || ch.EntityState.GetMaxHP() != 15 {
-		t.Errorf("value HP failed: hp=%d max=%d", ch.EntityState.GetCurrentHP(), ch.EntityState.GetMaxHP())
+	if ch.EntityStateManager.GetCurrentHP() != 15 || ch.EntityStateManager.GetMaxHP() != 15 {
+		t.Errorf("value HP failed: hp=%d max=%d", ch.EntityStateManager.GetCurrentHP(), ch.EntityStateManager.GetMaxHP())
 	}
 
 	// Average
@@ -89,8 +89,8 @@ func TestInitializeHP_Variants_ValueAverageRoll(t *testing.T) {
 	if err := ch.InitializeHP(); err != nil {
 		t.Fatalf("InitializeHP average: %v", err)
 	}
-	if ch.EntityState.GetCurrentHP() != 12 || ch.EntityState.GetMaxHP() != 12 {
-		t.Errorf("average HP failed: hp=%d max=%d", ch.EntityState.GetCurrentHP(), ch.EntityState.GetMaxHP())
+	if ch.EntityStateManager.GetCurrentHP() != 12 || ch.EntityStateManager.GetMaxHP() != 12 {
+		t.Errorf("average HP failed: hp=%d max=%d", ch.EntityStateManager.GetCurrentHP(), ch.EntityStateManager.GetMaxHP())
 	}
 
 	// Roll path (characters use level to determine dice; RollHP requires NumberOfDice > 0 for validation)
@@ -98,8 +98,8 @@ func TestInitializeHP_Variants_ValueAverageRoll(t *testing.T) {
 	if err := ch.InitializeHP(); err != nil {
 		t.Fatalf("InitializeHP roll: %v", err)
 	}
-	if ch.EntityState.GetCurrentHP() <= 0 || ch.EntityState.GetMaxHP() <= 0 {
-		t.Errorf("roll HP failed: hp=%d max=%d", ch.EntityState.GetCurrentHP(), ch.EntityState.GetMaxHP())
+	if ch.EntityStateManager.GetCurrentHP() <= 0 || ch.EntityStateManager.GetMaxHP() <= 0 {
+		t.Errorf("roll HP failed: hp=%d max=%d", ch.EntityStateManager.GetCurrentHP(), ch.EntityStateManager.GetMaxHP())
 	}
 
 	if eventsSeen == 0 {
@@ -164,14 +164,11 @@ func TestCreateAttackRequest_PropagatesOptions(t *testing.T) {
 	}
 	tgt := targetZeroAC{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}, nil)}
 
-	req, err := ch.CreateAttackRequest(tgt, core.WSPrimary, core.RollAdvantage, false, &core.SimulationOptions{UseImprovedCriticals: true})
+	req, err := ch.CreateAttackRequest(tgt, core.WSPrimary, false, &core.SimulationOptions{UseImprovedCriticals: true})
 	if err != nil {
 		t.Fatalf("CreateAttackRequest: %v", err)
 	}
 
-	if req.AttackOptions.Advantage != core.RollAdvantage {
-		t.Errorf("advantage not propagated")
-	}
 	if !req.AttackOptions.ImprovedCritical {
 		t.Errorf("improved critical not propagated")
 	}

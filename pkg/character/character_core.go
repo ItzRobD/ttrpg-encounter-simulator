@@ -17,8 +17,17 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 		TurnStatuses: make(map[core.TurnStatus]bool),
 	}
 
+	// Start-of-turn cleanup for Reckless Attack lifecycle
+	// Clear last turn's exposure and reset attacking flag; it will be re-enabled by AI/ExecuteAIRequest if chosen again
+	if c.EntityStateManager.HasCondition(core.ConditionRecklessExposed) {
+		c.EntityStateManager.RemoveCondition(core.ConditionRecklessExposed)
+	}
+	if c.EntityStateManager.GetIsRecklesslyAttacking() {
+		c.EntityStateManager.SetIsRecklesslyAttacking(false)
+	}
+
 	// Able to act
-	if c.EntityState.CanTakeActions() {
+	if c.EntityStateManager.CanTakeActions() {
 		aiReq, err := c.GetAIRequest(actorID, core.AIReqNormalAction)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error getting AI request: %s", err)
@@ -30,12 +39,12 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 	}
 
 	// Unable to Act
-	if c.EntityState.IsDead {
+	if c.EntityStateManager.IsDead {
 		result.TurnStatuses[core.TurnDead] = true
 		return result, nil, nil
 	}
 
-	if c.EntityState.GetIsUnconscious() {
+	if c.EntityStateManager.GetIsUnconscious() {
 		ucResult, err := c.handleUnconsciousTurn(result)
 		if err != nil {
 			return ucResult, nil, err
@@ -47,8 +56,8 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 			}
 			ucResult.TurnStatuses[core.TurnActionReady] = true
 			// On revive: clear Unconscious, set Prone to true so ranged/melee modifiers apply correctly
-			c.EntityState.SetUnconscious(false)
-			c.EntityState.AddCondition(core.ConditionProne)
+			c.EntityStateManager.SetUnconscious(false)
+			c.EntityStateManager.AddCondition(core.ConditionProne)
 			ucResult.Conditions = []core.Condition{core.ConditionProne}
 			events.LogCombatEventMessage(c, "Revived from 0 HP: now Prone", c.EventListener)
 			return ucResult, aiReq, nil
@@ -56,7 +65,7 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 		return ucResult, nil, err
 	}
 
-	result.Conditions = c.EntityState.GetActiveIncapacitatingConditions()
+	result.Conditions = c.EntityStateManager.GetActiveIncapacitatingConditions()
 	if len(result.Conditions) > 0 {
 		result.TurnStatuses[core.TurnIncapacitated] = true
 	}
@@ -106,10 +115,23 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		req.Actor = c
 		log.Printf("warning: monster execute ai req - actor is nil")
 	}
+	// Note: Advantage for weapon attacks is computed inside CreateAttackRequest using unified helper.
+	// For spells, we still compute condition-based advantage below when needed.
 	adv := core.DetermineAttackAdvantageFromConditions(req.Actor.GetConditions(), req.Target.GetConditions())
+
 	switch req.ActionType {
 	case core.ATMelee, core.ATRanged:
-		attackReq, err := c.CreateAttackRequest(req.Target, req.WeaponSlot, adv, req.UseVersatile, req.SimOptions)
+		// If class features are enabled, decide whether to use Reckless Attack this turn (simple rule or override)
+		if req.SimOptions != nil && req.SimOptions.EnableClassFeatures {
+			// Basic policy: if config forces recklessness, enable; otherwise leave for future AI heuristics
+			if req.SimOptions.BarbarianAlwaysRecklessAttack {
+				c.EntityStateManager.SetIsRecklesslyAttacking(true)
+				// Make the character exposed to incoming attacks until next turn
+				c.EntityStateManager.AddCondition(core.ConditionRecklessExposed)
+			}
+		}
+
+		attackReq, err := c.CreateAttackRequest(req.Target, req.WeaponSlot, req.UseVersatile, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -140,7 +162,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		}, nil
 	case core.ATOffhand:
 		// Offhand attacks should not apply ability modifier to damage unless Two-Weapon Fighting style is present.
-		attackReq, err := c.CreateOffhandAttackRequest(req.Target, adv, req.SimOptions)
+		attackReq, err := c.CreateOffhandAttackRequest(req.Target, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -211,17 +233,17 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 
 func (c *Character) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.TurnResult, error) {
 	// Failsafes if character is already dead and this is called
-	if c.EntityState.IsDead {
+	if c.EntityStateManager.IsDead {
 		turnResult.TurnStatuses[core.TurnDead] = true
 		return turnResult, nil
 	}
 
-	if !c.EntityState.GetIsUnconscious() {
+	if !c.EntityStateManager.GetIsUnconscious() {
 		return nil, fmt.Errorf("character is not unconscious")
 	}
 
 	// Character is not dead but is unconscious
-	if c.EntityState.IsStable {
+	if c.EntityStateManager.IsStable {
 		turnResult.TurnStatuses[core.TurnUnconscious] = true
 		return turnResult, nil
 	}
@@ -233,7 +255,7 @@ func (c *Character) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.Tu
 	}
 
 	// Apply death saving throw turnResult
-	err = c.EntityState.ApplyDeathSavingThrowResult(res)
+	err = c.EntityStateManager.ApplyDeathSavingThrowResult(res)
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply death saving throw turnResult: %v", err)
 	}
@@ -250,6 +272,6 @@ func (c *Character) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.Tu
 		turnResult.TurnStatuses[core.TurnDeathSaveFailed] = true
 	}
 
-	turnResult.Conditions = c.EntityState.GetActiveIncapacitatingConditions()
+	turnResult.Conditions = c.EntityStateManager.GetActiveIncapacitatingConditions()
 	return turnResult, nil
 }

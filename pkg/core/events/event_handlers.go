@@ -248,7 +248,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			s += ", AutoFailure: True."
 		}
 	case core.DiceRollAbilityCheck:
-		s = fmt.Sprintf("[Round %d] <Ability Check> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t.",
+		s = fmt.Sprintf("[Round %d] <AbilityUsed Check> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t.",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,

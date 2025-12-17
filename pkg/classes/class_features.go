@@ -30,19 +30,19 @@ type ClassFeatures struct {
 }
 
 type BarbarianFeatures struct {
-	HasRage                bool
-	HasRecklessAttack      bool
+	HasRage                bool // Adv on str saves, apply extra damage, apply physical resistance
+	HasRecklessAttack      bool // Outgoing advantage, incoming advantage
 	HasDangerSense         bool // Adv on dex saves
 	HasFeralInstinct       bool // Adv on initiative
-	HasBrutalCritical      bool // extra damage die on crit
+	HasBrutalCritical      bool // extra damage dice on crit
 	HasRelentlessRage      bool // When dropping to 0hp, DC (10 * times used) con save -> 1 hp, +5 dc each time
 	RageDamage             int
 	NumberOfBrutalCritDice int
 }
 
 type FighterFeatures struct {
-	HasSecondWind   bool
-	HasIndomitable  bool
+	HasSecondWind   bool // regain 1d10 + level hp
+	HasIndomitable  bool // Reroll {uses} number of saves
 	IndomitableUses int
 }
 
@@ -59,7 +59,7 @@ type PaladinFeatures struct {
 
 // RogueFeatures defines features specific to a rogue character, including sneak attack and assassinate capabilities.
 type RogueFeatures struct {
-	HasSneakAttack       bool
+	HasSneakAttack       bool // Apply extra damage if advantage or (no disadvantage && ally within 5ft)
 	NumOfSneakAttackDice int
 	HasUncannyDodge      bool // reaction to halve damage
 	HasBlindsense        bool // aware of invisible/hidden

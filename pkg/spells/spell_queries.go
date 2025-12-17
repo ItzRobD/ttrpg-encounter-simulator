@@ -208,7 +208,7 @@ func getSpellsByID(ctx context.Context, ids []int) (map[int]Spell, error) {
 			s.LevelType = ""
 		}
 
-		// DC Ability
+		// DC AbilityUsed
 		if dcAbility.Valid {
 			s.SpellDC.Ability = core.MakeAbility(dcAbility.String)
 		} else {

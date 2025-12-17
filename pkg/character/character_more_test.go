@@ -10,7 +10,7 @@ import (
 func TestExecuteAIRequest_MultiAttackCountEffects(t *testing.T) {
 	ch := newTestCharacter(t, core.AbilityScores{Strength: 16}, 5)
 	// Two attacks per action
-	ch.EntityState.SetNumberOfExtraAttacks(2)
+	ch.EntityStateManager.SetNumberOfExtraAttacks(2)
 
 	sword := &weapon.Weapon{Name: "Sword", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageSlashing, IsRanged: false}
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, sword, true); err != nil {

@@ -17,7 +17,7 @@ func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnRe
 	}
 
 	// Able to act
-	if m.EntityState.CanTakeActions() {
+	if m.EntityStateManager.CanTakeActions() {
 		aiReq, err := m.GetAIRequest(actorID, core.AIReqNormalAction)
 		if err != nil {
 			return nil, nil, err
@@ -29,12 +29,12 @@ func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnRe
 	}
 
 	// Unable to Act
-	if m.EntityState.IsDead {
+	if m.EntityStateManager.IsDead {
 		result.TurnStatuses[core.TurnDead] = true
 		return result, nil, nil
 	}
 
-	if m.EntityState.GetIsUnconscious() {
+	if m.EntityStateManager.GetIsUnconscious() {
 		ucResult, err := m.handleUnconsciousTurn(result)
 		if ucResult.TurnStatuses[core.TurnRevived] {
 			aiReq, err := m.GetAIRequest(actorID, core.AIReqNormalAction)
@@ -48,7 +48,7 @@ func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnRe
 		return ucResult, nil, err
 	}
 
-	result.Conditions = m.EntityState.GetActiveIncapacitatingConditions()
+	result.Conditions = m.EntityStateManager.GetActiveIncapacitatingConditions()
 	if len(result.Conditions) > 0 {
 		result.TurnStatuses[core.TurnIncapacitated] = true
 	}
@@ -114,13 +114,13 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 
 		// Recharge action
 		if m.ActionManager.Actions[req.ActionIndex].RechargeValue > 0 {
-			m.EntityState.ExpendRechargeAction(req.ActionIndex)
+			m.EntityStateManager.ExpendRechargeAction(req.ActionIndex)
 		}
 
 		// Legendary actions
 		if req.ActionType == core.ATLegendaryAction {
 			cost := m.ActionManager.LegendaryActions[req.ActionIndex].Cost
-			m.EntityState.ExpendLegendaryActionPoints(cost)
+			m.EntityStateManager.ExpendLegendaryActionPoints(cost)
 		}
 
 		var effects []core.Effect
@@ -183,17 +183,17 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 
 func (m *Monster) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.TurnResult, error) {
 	// Failsafes if character is already dead and this is called
-	if m.EntityState.IsDead {
+	if m.EntityStateManager.IsDead {
 		turnResult.TurnStatuses[core.TurnDead] = true
 		return turnResult, nil
 	}
 
-	if !m.EntityState.GetIsUnconscious() {
+	if !m.EntityStateManager.GetIsUnconscious() {
 		return nil, fmt.Errorf("character is not unconscious")
 	}
 
 	// Character is not dead but is unconscious
-	if m.EntityState.IsStable {
+	if m.EntityStateManager.IsStable {
 		turnResult.TurnStatuses[core.TurnUnconscious] = true
 		return turnResult, nil
 	}
@@ -205,7 +205,7 @@ func (m *Monster) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.Turn
 	}
 
 	// Apply death saving throw turnResult
-	err = m.EntityState.ApplyDeathSavingThrowResult(res)
+	err = m.EntityStateManager.ApplyDeathSavingThrowResult(res)
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply death saving throw turnResult: %v", err)
 	}
@@ -222,7 +222,7 @@ func (m *Monster) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.Turn
 		turnResult.TurnStatuses[core.TurnDeathSaveFailed] = true
 	}
 
-	turnResult.Conditions = m.EntityState.GetActiveIncapacitatingConditions()
+	turnResult.Conditions = m.EntityStateManager.GetActiveIncapacitatingConditions()
 	return turnResult, nil
 }
 
@@ -235,13 +235,13 @@ func (m *Monster) processLegendaryTurn(actorID int) (*core.TurnResult, *core.AIR
 		TurnStatuses: make(map[core.TurnStatus]bool),
 	}
 
-	if !m.EntityState.HasLegendaryActionPointsRemaining() {
+	if !m.EntityStateManager.HasLegendaryActionPointsRemaining() {
 		result.TurnStatuses[core.TurnLegendaryUnavailable] = true
 		return result, nil, nil
 	}
 
 	var canAffordLegAction bool
-	pointsRemaining := m.EntityState.GetLegendaryActionPoints()
+	pointsRemaining := m.EntityStateManager.GetLegendaryActionPoints()
 	for _, action := range m.ActionManager.LegendaryActions {
 		if action.Cost <= pointsRemaining {
 			canAffordLegAction = true

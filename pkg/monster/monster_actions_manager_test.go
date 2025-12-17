@@ -36,7 +36,7 @@ func newTestMonster(t *testing.T) *Monster {
 	if err != nil {
 		t.Fatalf("NewEntityStateManager: %v", err)
 	}
-	m.EntityState = esm
+	m.EntityStateManager = esm
 	return m
 }
 

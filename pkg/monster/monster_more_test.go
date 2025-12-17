@@ -35,7 +35,7 @@ func newSeededMonster(t *testing.T) *Monster {
 	if err != nil {
 		t.Fatalf("NewEntityStateManager: %v", err)
 	}
-	m.EntityState = esm
+	m.EntityStateManager = esm
 	return m
 }
 
@@ -45,8 +45,8 @@ func TestRollInitiative_WritesState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RollInitiative error: %v", err)
 	}
-	if total != m.EntityState.GetInitiative() {
-		t.Errorf("initiative state mismatch: got=%d state=%d", total, m.EntityState.GetInitiative())
+	if total != m.EntityStateManager.GetInitiative() {
+		t.Errorf("initiative state mismatch: got=%d state=%d", total, m.EntityStateManager.GetInitiative())
 	}
 }
 
@@ -58,8 +58,8 @@ func TestLegendaryAction_NoPoints_RemainsZero(t *testing.T) {
 	m.ActionManager = NewMonsterActionManager(m, m.RollManager, &cfg)
 
 	// Set LAP to 0 and execute a legendary action
-	m.EntityState.LegendaryActionPointsMax = 0
-	m.EntityState.LegendaryActionPoints = 0
+	m.EntityStateManager.LegendaryActionPointsMax = 0
+	m.EntityStateManager.LegendaryActionPoints = 0
 
 	tgt := targetZeroAC{Entity: m}
 	req := &core.AIRequest{ActionType: core.ATLegendaryAction, ActionIndex: 100, Target: tgt, ActorID: 1}
@@ -68,8 +68,8 @@ func TestLegendaryAction_NoPoints_RemainsZero(t *testing.T) {
 		// ExecuteAIRequest does not currently surface LAP spend errors; ensure it still does not crash
 		t.Fatalf("ExecuteAIRequest legendary error: %v", err)
 	}
-	if m.EntityState.LegendaryActionPoints != 0 {
-		t.Errorf("legendary points should remain 0, got %d", m.EntityState.LegendaryActionPoints)
+	if m.EntityStateManager.LegendaryActionPoints != 0 {
+		t.Errorf("legendary points should remain 0, got %d", m.EntityStateManager.LegendaryActionPoints)
 	}
 }
 

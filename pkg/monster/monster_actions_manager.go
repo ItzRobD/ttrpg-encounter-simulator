@@ -39,19 +39,19 @@ func (mam *MonsterActionManager) GetLegendaryActions() map[int]LegendaryAction {
 }
 
 func (mam *MonsterActionManager) GetRechargeActionStatus() map[int]bool {
-	return mam.parent.EntityState.RechargeActionStatus
+	return mam.parent.EntityStateManager.RechargeActionStatus
 }
 
 func (mam *MonsterActionManager) ExpendRechargeAction(actionID int) {
-	mam.parent.EntityState.ExpendRechargeAction(actionID)
+	mam.parent.EntityStateManager.ExpendRechargeAction(actionID)
 }
 
 func (mam *MonsterActionManager) RechargeAction(actionID int) {
-	mam.parent.EntityState.RechargeRechargeAction(actionID)
+	mam.parent.EntityStateManager.RechargeRechargeAction(actionID)
 }
 
 func (mam *MonsterActionManager) RollRechargeActions() {
-	idxs := mam.parent.EntityState.GetExpendedRechargeActionsIndex()
+	idxs := mam.parent.EntityStateManager.GetExpendedRechargeActionsIndex()
 	if len(idxs) == 0 {
 		return
 	}
@@ -66,7 +66,7 @@ func (mam *MonsterActionManager) RollRechargeActions() {
 		res.Name = action.Name
 
 		if res.IsSuccess {
-			mam.parent.EntityState.RechargeRechargeAction(idx)
+			mam.parent.EntityStateManager.RechargeRechargeAction(idx)
 		}
 
 		events.LogDiceRollEvent(mam.parent, res, mam.parent.GetEventListener())
@@ -102,7 +102,7 @@ func (mam *MonsterActionManager) InitializeActions(config *MAMConfig) {
 	}
 	for _, action := range mam.Actions {
 		if action.RechargeValue > 0 {
-			mam.parent.EntityState.AddRechargeAction(action.ActionID)
+			mam.parent.EntityStateManager.AddRechargeAction(action.ActionID)
 			mam.RechargeActions[action.ActionID] = 1
 		}
 	}

@@ -13,7 +13,7 @@ import (
 
 type Monster struct {
 	MonsterBase
-	EntityState         *entity_state_manager.EntityStateManager
+	EntityStateManager  *entity_state_manager.EntityStateManager
 	SpellCastingManager *spellcasting_manager.SpellcastingManager
 	RollManager         *roll_manager.RollManager
 	AI                  *MonsterAI
@@ -56,7 +56,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 
 	monster := Monster{
 		MonsterBase:         config.Base,
-		EntityState:         &entity_state_manager.EntityStateManager{},
+		EntityStateManager:  &entity_state_manager.EntityStateManager{},
 		SpellCastingManager: &spellcasting_manager.SpellcastingManager{},
 		RollManager:         &roll_manager.RollManager{},
 		AI:                  &MonsterAI{},
@@ -79,7 +79,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 		esmConfig.MaxLegendaryActions = 3
 	}
 
-	monster.EntityState, err = initalizeEntityStateManager(&monster, esmConfig)
+	monster.EntityStateManager, err = initalizeEntityStateManager(&monster, esmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	// This avoids clobbering the default NewDamageResistances() with nil when a monster
 	// has no DB-defined resistances or a query returns no rows for that monster.
 	if config.Resistances != nil {
-		monster.EntityState.Resistances = config.Resistances
+		monster.EntityStateManager.Resistances = config.Resistances
 	}
 
 	// Spellcasting Manager
@@ -125,7 +125,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 func NewMonsterWithRNG(ctx context.Context, config MonsterConfig, rng *rand.Rand) (*Monster, error) {
 	monster := Monster{
 		MonsterBase:         config.Base,
-		EntityState:         &entity_state_manager.EntityStateManager{},
+		EntityStateManager:  &entity_state_manager.EntityStateManager{},
 		SpellCastingManager: &spellcasting_manager.SpellcastingManager{},
 		RollManager:         &roll_manager.RollManager{},
 		AI:                  &MonsterAI{},
@@ -148,13 +148,13 @@ func NewMonsterWithRNG(ctx context.Context, config MonsterConfig, rng *rand.Rand
 		esmConfig.MaxLegendaryActions = 3
 	}
 
-	monster.EntityState, err = initalizeEntityStateManager(&monster, esmConfig)
+	monster.EntityStateManager, err = initalizeEntityStateManager(&monster, esmConfig)
 	if err != nil {
 		return nil, err
 	}
 	// Only override initialized resistances if a non-nil map is provided
 	if config.Resistances != nil {
-		monster.EntityState.Resistances = config.Resistances
+		monster.EntityStateManager.Resistances = config.Resistances
 	}
 
 	// Spellcasting Manager
@@ -247,7 +247,7 @@ func (m *Monster) setHP(config core.HPConfig) error {
 			Total:          config.Value,
 		}
 		events.LogDiceRollEvent(m, &hpRoll, m.EventListener)
-		m.EntityState.SetHPValues(hp)
+		m.EntityStateManager.SetHPValues(hp)
 
 		return nil
 	case core.HPSetAverage:
@@ -264,7 +264,7 @@ func (m *Monster) setHP(config core.HPConfig) error {
 			Total:          config.HPAverage,
 		}
 		events.LogDiceRollEvent(m, &hpRoll, m.EventListener)
-		m.EntityState.SetHPValues(hp)
+		m.EntityStateManager.SetHPValues(hp)
 
 		return nil
 	case core.HPSetRoll:
@@ -282,7 +282,7 @@ func (m *Monster) setHP(config core.HPConfig) error {
 			TempHP:    0,
 			HitDie:    hpRoll.Die,
 		}
-		m.EntityState.SetHPValues(hp)
+		m.EntityStateManager.SetHPValues(hp)
 		return nil
 	default:
 		return fmt.Errorf("invalid HP set method: %v", config.HPSetMethod)
@@ -298,25 +298,25 @@ func (m *Monster) SetEventListener(listener func(event interface{})) {
 }
 
 func (m *Monster) GetState() interface{} {
-	return m.EntityState
+	return m.EntityStateManager
 }
 func (m *Monster) GetName() string { return m.Name }
 func (m *Monster) GetAbilityScores() core.AbilityScores {
 	return m.AbilityScores
 }
 func (m *Monster) GetHPStatus() core.HPStatus {
-	return m.EntityState.GetHPStatus()
+	return m.EntityStateManager.GetHPStatus()
 }
-func (m *Monster) GetHitDie() core.DiceType   { return m.EntityState.GetHitDie() }
+func (m *Monster) GetHitDie() core.DiceType   { return m.EntityStateManager.GetHitDie() }
 func (m *Monster) GetAC() int                 { return m.AC }
 func (m *Monster) GetLevel() float64          { return m.CR }
 func (m *Monster) GetHPConfig() core.HPConfig { return m.HP }
 func (m *Monster) SetHP(method core.HPSetMethod, value int) error {
 	return m.setHP(core.HPConfig{HPSetMethod: method, Value: value})
 }
-func (m *Monster) IsUnconscious() bool  { return m.EntityState.GetIsUnconscious() }
+func (m *Monster) IsUnconscious() bool  { return m.EntityStateManager.GetIsUnconscious() }
 func (m *Monster) GetClassID() uint8    { return 0 }
-func (m *Monster) IsDead() bool         { return m.EntityState.GetIsDead() }
+func (m *Monster) IsDead() bool         { return m.EntityStateManager.GetIsDead() }
 func (m *Monster) IsCharacter() bool    { return false }
 func (m *Monster) IsMonster() bool      { return true }
 func (m *Monster) GetIsLegendary() bool { return m.MonsterBase.IsLegendary }
@@ -326,18 +326,18 @@ func (m *Monster) InitializeHP() error  { return m.setHP(m.HP) }
 func (m *Monster) IsSpellcaster() bool  { return m.MonsterBase.IsSpellcaster }
 func (m *Monster) IsHealer() bool       { return m.SpellCastingManager.HasHealingSpells() }
 func (m *Monster) GetTargetPriority() core.TargetPriority {
-	return m.EntityState.TargetPrioritization
+	return m.EntityStateManager.TargetPrioritization
 }
 func (m *Monster) SetTargetPriority(priority core.TargetPriority) {
-	m.EntityState.TargetPrioritization = priority
+	m.EntityStateManager.TargetPrioritization = priority
 }
 func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPModificationResult, error) {
-	return m.EntityState.ModifyHP(value, isTemp, tempStacking)
+	return m.EntityStateManager.ModifyHP(value, isTemp, tempStacking)
 }
 
-func (m *Monster) CanTakeActions() bool { return m.EntityState.CanTakeActions() }
+func (m *Monster) CanTakeActions() bool { return m.EntityStateManager.CanTakeActions() }
 func (m *Monster) GetConditions() core.EntityConditions {
-	return m.EntityState.GetConditions()
+	return m.EntityStateManager.GetConditions()
 }
 
 var _ core.Entity = &Monster{}

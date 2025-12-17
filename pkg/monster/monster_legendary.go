@@ -1,5 +1,5 @@
 package monster
 
 func (m *Monster) RefreshLegendaryActions() {
-	m.EntityState.ReplenishLegendaryActionPoints(m.EntityState.LegendaryActionPointsMax)
+	m.EntityStateManager.ReplenishLegendaryActionPoints(m.EntityStateManager.LegendaryActionPointsMax)
 }

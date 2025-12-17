@@ -26,7 +26,7 @@ type Character struct {
 	Level                uint8
 	AbilityScores        core.AbilityScores
 	AbilityScoreProf     core.AbilityScoresProficiencies
-	EntityState          *entity_state_manager.EntityStateManager
+	EntityStateManager   *entity_state_manager.EntityStateManager
 	EquipmentManager     *equipment_manager.EquipmentManager
 	SpellCastingManager  *spellcasting_manager.SpellcastingManager
 	MartialAttackManager *martial_attack_manager.MartialAttackManager
@@ -112,7 +112,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		Level:                charConfig.Level,
 		AbilityScores:        charConfig.AsConfig.AbilityScores,
 		AbilityScoreProf:     charConfig.AsConfig.Proficiencies,
-		EntityState:          &entity_state_manager.EntityStateManager{},
+		EntityStateManager:   &entity_state_manager.EntityStateManager{},
 		EquipmentManager:     &equipment_manager.EquipmentManager{},
 		SpellCastingManager:  &spellcasting_manager.SpellcastingManager{},
 		MartialAttackManager: &martial_attack_manager.MartialAttackManager{},
@@ -149,11 +149,33 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		break
 	}
 
-	esm, err := initializeEntityStateManager(&char, &esmConfig)
+	char.EntityStateManager, err = initializeEntityStateManager(&char, &esmConfig)
 	if err != nil {
 		return nil, err
 	}
-	char.EntityState = esm
+
+	// Apply class features to esm
+	switch classData.ID {
+	case classes.Barbarian:
+		features := char.Class.ClassFeatures.BarbarianFeatures
+		if features.HasDangerSense {
+			char.EntityStateManager.SetHasSavingThrowAdvantage(core.AbilityDexterity, core.RollAdvantage)
+		}
+		if features.HasFeralInstinct {
+			char.EntityStateManager.SetInitiativeAdvantage(core.RollAdvantage)
+		}
+		if char.EntityStateManager.BarbarianIsRaging {
+			char.EntityStateManager.SetHasSavingThrowAdvantage(core.AbilityStrength, core.RollAdvantage)
+			char.EntityStateManager.AddResistance(core.DamageSlashing, core.ResistanceResistant, nil)
+			char.EntityStateManager.AddResistance(core.DamagePiercing, core.ResistanceResistant, nil)
+			char.EntityStateManager.AddResistance(core.DamageBludgeoning, core.ResistanceResistant, nil)
+		}
+	case classes.Rogue:
+		features := char.Class.ClassFeatures.RogueFeatures
+		if features.HasSlipperyMind {
+			char.EntityStateManager.SetHasSavingThrowAdvantage(core.AbilityWisdom, core.RollAdvantage)
+		}
+	}
 
 	// Equipment Manager
 	char.EquipmentManager, err = equipment_manager.NewEquipmentManager(&char)
@@ -241,7 +263,7 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 		Level:                charConfig.Level,
 		AbilityScores:        charConfig.AsConfig.AbilityScores,
 		AbilityScoreProf:     charConfig.AsConfig.Proficiencies,
-		EntityState:          &entity_state_manager.EntityStateManager{},
+		EntityStateManager:   &entity_state_manager.EntityStateManager{},
 		EquipmentManager:     &equipment_manager.EquipmentManager{},
 		SpellCastingManager:  &spellcasting_manager.SpellcastingManager{},
 		MartialAttackManager: &martial_attack_manager.MartialAttackManager{},
@@ -277,11 +299,33 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 		break
 	}
 
-	esm, err := initializeEntityStateManager(&char, &esmConfig)
+	char.EntityStateManager, err = initializeEntityStateManager(&char, &esmConfig)
 	if err != nil {
 		return nil, err
 	}
-	char.EntityState = esm
+
+	// Apply class features to esm
+	switch classData.ID {
+	case classes.Barbarian:
+		features := char.Class.ClassFeatures.BarbarianFeatures
+		if features.HasDangerSense {
+			char.EntityStateManager.SetHasSavingThrowAdvantage(core.AbilityDexterity, core.RollAdvantage)
+		}
+		if features.HasFeralInstinct {
+			char.EntityStateManager.SetInitiativeAdvantage(core.RollAdvantage)
+		}
+		if char.EntityStateManager.BarbarianIsRaging {
+			char.EntityStateManager.SetHasSavingThrowAdvantage(core.AbilityStrength, core.RollAdvantage)
+			char.EntityStateManager.AddResistance(core.DamageSlashing, core.ResistanceResistant, nil)
+			char.EntityStateManager.AddResistance(core.DamagePiercing, core.ResistanceResistant, nil)
+			char.EntityStateManager.AddResistance(core.DamageBludgeoning, core.ResistanceResistant, nil)
+		}
+	case classes.Rogue:
+		features := char.Class.ClassFeatures.RogueFeatures
+		if features.HasSlipperyMind {
+			char.EntityStateManager.SetHasSavingThrowAdvantage(core.AbilityWisdom, core.RollAdvantage)
+		}
+	}
 
 	// Equipment Manager
 	char.EquipmentManager, err = equipment_manager.NewEquipmentManager(&char)
@@ -387,7 +431,7 @@ func (c *Character) setHP(config core.HPConfig) error {
 			Total:          config.Value,
 		}
 		events.LogDiceRollEvent(c, &hpRoll, c.EventListener)
-		c.EntityState.SetHPValues(hp)
+		c.EntityStateManager.SetHPValues(hp)
 
 		return nil
 	case core.HPSetAverage:
@@ -406,7 +450,7 @@ func (c *Character) setHP(config core.HPConfig) error {
 			Total:          config.HPAverage,
 		}
 		events.LogDiceRollEvent(c, &hpRoll, c.EventListener)
-		c.EntityState.SetHPValues(hp)
+		c.EntityStateManager.SetHPValues(hp)
 
 		return nil
 	case core.HPSetRoll:
@@ -420,7 +464,7 @@ func (c *Character) setHP(config core.HPConfig) error {
 			TempHP:    0,
 			HitDie:    hpRoll.Die,
 		}
-		c.EntityState.SetHPValues(hp)
+		c.EntityStateManager.SetHPValues(hp)
 		return nil
 	default:
 		return fmt.Errorf("invalid HP set method: %v", config.HPSetMethod)
@@ -434,10 +478,10 @@ func (c *Character) GetIsLegendary() bool                       { return false }
 func (c *Character) RefreshLegendaryActions()                   { return }
 func (c *Character) GetEventListener() func(event interface{})  { return c.EventListener }
 func (c *Character) SetEventListener(f func(event interface{})) { c.EventListener = f }
-func (c *Character) IsUnconscious() bool                        { return c.EntityState.GetIsUnconscious() }
+func (c *Character) IsUnconscious() bool                        { return c.EntityStateManager.GetIsUnconscious() }
 func (c *Character) GetClassID() uint8                          { return uint8(c.Class.ID) }
-func (c *Character) IsDead() bool                               { return c.EntityState.GetIsDead() }
-func (c *Character) GetHPStatus() core.HPStatus                 { return c.EntityState.GetHPStatus() }
+func (c *Character) IsDead() bool                               { return c.EntityStateManager.GetIsDead() }
+func (c *Character) GetHPStatus() core.HPStatus                 { return c.EntityStateManager.GetHPStatus() }
 func (c *Character) GetName() string                            { return c.Name }
 func (c *Character) GetAbilityScores() core.AbilityScores       { return c.AbilityScores }
 func (c *Character) GetLevel() float64                          { return float64(c.Level) }
@@ -450,19 +494,19 @@ func (c *Character) GetAbilityScoreModifier(a core.Ability) (int, error) {
 }
 func (c *Character) GetSavingThrowBonus(a core.Ability) (int, error) { return c.getSavingThrowBonus(a) }
 func (c *Character) GetHitDie() core.DiceType                        { return c.Class.HitDie }
-func (c *Character) GetState() interface{}                           { return c.EntityState }
+func (c *Character) GetState() interface{}                           { return c.EntityStateManager }
 func (c *Character) InitializeHP() error                             { return c.setHP(c.HPConfig) }
 func (c *Character) IsSpellcaster() bool                             { return c.SpellCastingManager.HasAnyKnownSpells() }
 func (c *Character) IsHealer() bool                                  { return c.SpellCastingManager.HasHealingSpells() }
 func (c *Character) GetRNG() *rand.Rand                              { return c.RNG }
 func (c *Character) GetTargetPriority() core.TargetPriority {
-	return c.EntityState.GetTargetPrioritization()
+	return c.EntityStateManager.GetTargetPrioritization()
 }
 func (c *Character) SetTargetPriority(p core.TargetPriority) {
-	c.EntityState.SetTargetPrioritization(p)
+	c.EntityStateManager.SetTargetPrioritization(p)
 }
 func (c *Character) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPModificationResult, error) {
-	return c.EntityState.ModifyHP(value, isTemp, tempStacking)
+	return c.EntityStateManager.ModifyHP(value, isTemp, tempStacking)
 }
 
 func (c *Character) GetHealingSpellCount() int {
@@ -481,9 +525,9 @@ func (c *Character) UpdateAICombatContext(ctx *core.CombatContext) error {
 	return nil
 }
 
-func (c *Character) CanTakeActions() bool { return c.EntityState.CanTakeActions() }
+func (c *Character) CanTakeActions() bool { return c.EntityStateManager.CanTakeActions() }
 func (c *Character) GetConditions() core.EntityConditions {
-	return c.EntityState.GetConditions()
+	return c.EntityStateManager.GetConditions()
 }
 
 var _ core.Entity = &Character{}

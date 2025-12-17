@@ -244,3 +244,86 @@ func GetFinalAdvantageType(advs []AdvantageType) AdvantageType {
 
 	return RollNormal
 }
+
+// DetermineAttackAdvantage is a unified helper to compute the final attack-roll advantage.
+// It combines:
+// - a provided base advantage (from features like Reckless Attack or caller context),
+// - generic condition-driven effects (outgoing/incoming attack roll modifiers), and
+// - context-sensitive condition rules that depend on attack properties (e.g., ranged vs melee).
+// Parameters:
+//
+//	actorConditions  - conditions on the attacker (may be nil)
+//	targetConditions - conditions on the target (may be nil)
+//	isRangedAttack   - whether the attack is ranged (affects how Prone applies)
+//	base             - baseline advantage to respect and combine with
+//
+// Returns the resolved AdvantageType after collapsing opposing modifiers.
+func DetermineAttackAdvantage(actorConditions EntityConditions, targetConditions EntityConditions, isRangedAttack bool, base AdvantageType) AdvantageType {
+	parts := make([]AdvantageType, 0, 3)
+	// 1) Baseline
+	parts = append(parts, base)
+
+	// 2) Generic per-condition aggregation
+	generic := DetermineAttackAdvantageFromConditions(actorConditions, targetConditions)
+	parts = append(parts, generic)
+
+	// 3) Context-sensitive rules
+	// Attacker-based disadvantages
+	ctxAdv := RollNormal
+	if actorConditions != nil {
+		if actorConditions.Has(ConditionBlinded) {
+			ctxAdv = combineAdv(ctxAdv, RollDisadvantage)
+		}
+		if actorConditions.Has(ConditionPoisoned) {
+			ctxAdv = combineAdv(ctxAdv, RollDisadvantage)
+		}
+	}
+
+	// Target-based modifiers
+	if targetConditions != nil {
+		if targetConditions.Has(ConditionProne) {
+			if isRangedAttack {
+				ctxAdv = combineAdv(ctxAdv, RollDisadvantage)
+			} else {
+				ctxAdv = combineAdv(ctxAdv, RollAdvantage)
+			}
+		}
+		if targetConditions.Has(ConditionRestrained) || targetConditions.Has(ConditionParalyzed) || targetConditions.Has(ConditionUnconscious) {
+			ctxAdv = combineAdv(ctxAdv, RollAdvantage)
+		}
+	}
+
+	parts = append(parts, ctxAdv)
+
+	// Resolve final
+	return GetFinalAdvantageType(parts)
+}
+
+// DetermineAttackAdvantageForEntities is a convenience wrapper that accepts Entity interfaces
+// and forwards their conditions to DetermineAttackAdvantage.
+func DetermineAttackAdvantageForEntities(attacker Entity, target Entity, isRangedAttack bool, base AdvantageType) AdvantageType {
+	var attackerConds, targetConds EntityConditions
+	if attacker != nil {
+		attackerConds = attacker.GetConditions()
+	}
+	if target != nil {
+		targetConds = target.GetConditions()
+	}
+	return DetermineAttackAdvantage(attackerConds, targetConds, isRangedAttack, base)
+}
+
+// combineAdv combines two AdvantageType modifiers into one without losing opposing info.
+// It is a small helper used to build a context-sensitive partial before final collapse.
+func combineAdv(a, b AdvantageType) AdvantageType {
+	if a == RollNormal {
+		return b
+	}
+	if b == RollNormal {
+		return a
+	}
+	if a == b {
+		return a
+	}
+	// opposing -> normal
+	return RollNormal
+}

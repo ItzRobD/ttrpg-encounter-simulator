@@ -21,7 +21,7 @@ func (m *Monster) RollInitiative() (int, error) {
 		return 0, err
 	}
 
-	m.EntityState.SetInitiative(res.Total)
+	m.EntityStateManager.SetInitiative(res.Total)
 
 	return res.Total, nil
 }
@@ -35,8 +35,18 @@ func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actio
 		// Defensive default to avoid nil dereference; callers should normally pass non-nil
 		simulationOptions = &core.SimulationOptions{}
 	}
+
+	// Determine ranged vs melee for condition rules from the first attack data
+	adList := m.ActionManager.GetAttackDataFromIndex(actionIndex, actionType)
+	isRanged := false
+	if len(adList) > 0 {
+		isRanged = adList[0].IsRangedWeapon
+	}
+	// Compute final advantage using unified core helper
+	computedAdv := core.DetermineAttackAdvantageForEntities(m, target, isRanged, adv)
+
 	attackOptions := core.AttackOptions{
-		Advantage:            adv,
+		Advantage:            computedAdv,
 		ShouldApplyDamageMod: true,
 		ImprovedCritical:     simulationOptions.UseImprovedCriticals,
 	}
@@ -125,7 +135,7 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int) (core.R
 	}
 
 	opts := roll_manager.NewRollOptions()
-	baseAdv := m.EntityState.GetSavingThrowAdvantage(ability) // This should get the default advantage of the character
+	baseAdv := m.EntityStateManager.GetSavingThrowAdvantage(ability) // This should get the default advantage of the character
 	condAdv := core.DetermineSaveAdvantageFromConditions(m.GetConditions(), ability)
 	opts.Advantage = core.GetFinalAdvantageType([]core.AdvantageType{baseAdv, condAdv})
 	opts.Modifier = mod

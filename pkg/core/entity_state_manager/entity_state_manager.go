@@ -47,6 +47,7 @@ type EntityStateConfig struct {
 	InitiativeBonus      int
 	// Class specifics variables
 	BarbarianRelentlessUses  int
+	BarbarianIsRaging        bool
 	FighterIndomitableUses   int
 	PaladinLayingOnHandsPool int
 }
@@ -70,10 +71,11 @@ type EntityStateManager struct {
 	DBBreathWeaponUsed       bool         // TODO: Account for this during turn execution, add option to simoptions
 
 	// Conditions
-	Conditions core.EntityConditions
-	DeathSaves core.DeathSaves
-	IsStable   bool
-	IsDead     bool
+	Conditions            core.EntityConditions
+	DeathSaves            core.DeathSaves
+	IsStable              bool
+	IsDead                bool
+	IsRecklesslyAttacking bool
 
 	Initiative int
 
@@ -91,6 +93,7 @@ type EntityStateManager struct {
 
 	// Class specific variables
 	BarbarianRelentlessUses  int
+	BarbarianIsRaging        bool
 	FighterIndomitableUses   int
 	PaladinLayingOnHandsPool int
 }
@@ -587,6 +590,18 @@ func (esm *EntityStateManager) GetBarbarianRelentlessUses() int {
 	return esm.BarbarianRelentlessUses
 }
 
+func (esm *EntityStateManager) SetBarbarianIsRaging(val bool) { esm.BarbarianIsRaging = val }
+
+func (esm *EntityStateManager) GetBarbarianIsRaging() bool { return esm.BarbarianIsRaging }
+
+func (esm *EntityStateManager) SetIsRecklesslyAttacking(val bool) {
+	esm.IsRecklesslyAttacking = val
+}
+
+func (esm *EntityStateManager) GetIsRecklesslyAttacking() bool {
+	return esm.IsRecklesslyAttacking
+}
+
 func (esm *EntityStateManager) IncrementBarbarianRelentlessUses() {
 	esm.BarbarianRelentlessUses++
 }
@@ -663,6 +678,7 @@ func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*Entit
 		DeathSaves:                core.NewDeathSaves(),
 		PaladinLayingOnHandsPool:  config.PaladinLayingOnHandsPool,
 		BarbarianRelentlessUses:   config.BarbarianRelentlessUses,
+		BarbarianIsRaging:         config.BarbarianIsRaging,
 		FighterIndomitableUses:    config.FighterIndomitableUses,
 	}, nil
 }

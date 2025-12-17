@@ -83,8 +83,8 @@ func setupJack() character.CharacterConfig {
 func setupFrank() character.CharacterConfig {
 	charConfig := character.CharacterConfig{
 		Name:    "Frank",
-		ClassID: classes.Rogue,
-		Level:   4,
+		ClassID: classes.Fighter,
+		Level:   20,
 		RaceID:  1,
 		AsConfig: core.AbilityScoresConfig{
 			AbilityScores: core.AbilityScores{

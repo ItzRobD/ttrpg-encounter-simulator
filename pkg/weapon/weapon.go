@@ -3,7 +3,6 @@ package weapon
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"fmt"
-	"math"
 )
 
 // Weapon represents a weapon with properties such as name, damage type, and special attributes.
@@ -64,7 +63,7 @@ func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die co
 // GetAttackModifier calculates the attack modifier for a weapon based on ability scores, character level, and proficiency status.
 // Returns the attack modifier or an error if any calculation fails.
 func (w *Weapon) GetAttackModifier(as *core.AbilityScores, clvl uint8, isProficient bool) (int, error) {
-	mod, err := w.GetWeaponModifier(as)
+	mod, _, err := w.GetWeaponModifier(as)
 	if err != nil {
 		return 0, err
 	}
@@ -83,31 +82,37 @@ func (w *Weapon) GetAttackModifier(as *core.AbilityScores, clvl uint8, isProfici
 
 // GetWeaponModifier determines the modifier to use for a weapon based on its type and the ability scores provided.
 // Returns the calculated modifier or an error if the ability score calculation fails.
-func (w *Weapon) GetWeaponModifier(as *core.AbilityScores) (int, error) {
+func (w *Weapon) GetWeaponModifier(as *core.AbilityScores) (int, core.Ability, error) {
 	var mod int
 	var err error
+	ability := core.AbilityNone
 	if w.IsRanged {
 		mod, err = core.GetAbilityScoreModifier(as.Dexterity)
 		if err != nil {
-			return 0, err
+			return 0, ability, err
 		}
-		return mod, nil
+		return mod, core.AbilityDexterity, nil
 	} else if w.IsFinesse {
 		mod, err = core.GetAbilityScoreModifier(as.Strength)
 		if err != nil {
-			return 0, err
+			return 0, ability, err
 		}
 		dexMod, dexErr := core.GetAbilityScoreModifier(as.Dexterity)
 		if dexErr != nil {
-			return 0, dexErr
+			return 0, ability, dexErr
 		}
-		mod = int(math.Max(float64(mod), float64(dexMod)))
-		return mod, nil
+		if dexMod > mod {
+			mod = dexMod
+			ability = core.AbilityDexterity
+		} else {
+			ability = core.AbilityStrength
+		}
+		return mod, ability, nil
 	}
 
 	mod, err = core.GetAbilityScoreModifier(as.Strength)
 	if err != nil {
-		return 0, err
+		return 0, ability, err
 	}
-	return mod, nil
+	return mod, ability, nil
 }
