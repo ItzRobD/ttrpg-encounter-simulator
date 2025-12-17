@@ -124,6 +124,12 @@ func (s *SimulationManager) SetupCombatantsFromAPI(ctx context.Context, characte
 		return result, err
 	}
 
+	if result.Errors != nil && len(result.Errors) > 0 {
+		for _, e := range result.Errors {
+			fmt.Printf("Encountered errors during combatant setup: %+v\n", e)
+		}
+	}
+
 	// Add all valid combatants to the engine
 	for _, combatant := range result.Combatants {
 		fmt.Println(combatant.Entity.GetName() + " added to combat engine")

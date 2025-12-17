@@ -5,8 +5,7 @@ import (
 )
 
 type EntityConfiguration struct {
-	CombatFeatures    CombatFeatures
-	CharacterFeatures *CharacterSpecificFeatures
+	CombatFeatures CombatFeatures
 }
 
 type CombatFeatures struct {

@@ -13,6 +13,8 @@ import (
 
 // Legacy note: Main is used for local/manual runs. Core TODOs are tracked in todo-triage.md.
 
+// TODO: Class features added, need to implement functionality of them and dragonborn breath
+
 func main() {
 	dbErr := database.InitDb(nil)
 
@@ -81,7 +83,7 @@ func setupJack() character.CharacterConfig {
 func setupFrank() character.CharacterConfig {
 	charConfig := character.CharacterConfig{
 		Name:    "Frank",
-		ClassID: classes.Fighter,
+		ClassID: classes.Rogue,
 		Level:   4,
 		RaceID:  1,
 		AsConfig: core.AbilityScoresConfig{

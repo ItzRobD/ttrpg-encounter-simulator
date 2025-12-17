@@ -45,6 +45,10 @@ type EntityStateConfig struct {
 	InitiativeAdvantage  core.AdvantageType
 	Resistances          core.DamageResistances
 	InitiativeBonus      int
+	// Class specifics variables
+	BarbarianRelentlessUses  int
+	FighterIndomitableUses   int
+	PaladinLayingOnHandsPool int
 }
 
 type EntityStateManager struct {
@@ -84,6 +88,11 @@ type EntityStateManager struct {
 	InitiativeBonus      int
 	Resistances          core.DamageResistances
 	SavingThrowAdvantage map[core.Ability]core.AdvantageType
+
+	// Class specific variables
+	BarbarianRelentlessUses  int
+	FighterIndomitableUses   int
+	PaladinLayingOnHandsPool int
 }
 
 func (esm *EntityStateManager) ExpendAction() {
@@ -569,6 +578,41 @@ func (esm *EntityStateManager) GetResistance(dt core.DamageType) (core.DamageRes
 	return esm.Resistances.GetResistance(dt), nil
 }
 
+// Class-specific functions
+func (esm *EntityStateManager) ResetBarbarianRelentlessUses() {
+	esm.BarbarianRelentlessUses = 0
+}
+
+func (esm *EntityStateManager) GetBarbarianRelentlessUses() int {
+	return esm.BarbarianRelentlessUses
+}
+
+func (esm *EntityStateManager) IncrementBarbarianRelentlessUses() {
+	esm.BarbarianRelentlessUses++
+}
+
+func (esm *EntityStateManager) SetFighterIndomitableUses(val int) {
+	esm.FighterIndomitableUses = val
+}
+
+func (esm *EntityStateManager) GetFighterIndomitableUses() int {
+	return esm.FighterIndomitableUses
+}
+
+func (esm *EntityStateManager) SetPaladinLayingOnHandsPool(val int) {
+	esm.PaladinLayingOnHandsPool = val
+}
+
+func (esm *EntityStateManager) GetPaladinLayingOnHandsPool() int {
+	return esm.PaladinLayingOnHandsPool
+}
+
+// ModifyPaladinLayingOnHandsPool adjusts the Paladin's Lay on Hands pool by the specified value.
+// Negative value to expend points
+func (esm *EntityStateManager) ModifyPaladinLayingOnHandsPool(val int) {
+	esm.PaladinLayingOnHandsPool += val
+}
+
 // NewEntityStateManager initializes and returns a new EntityStateManager based on the provided parent entity and configuration.
 // Returns an error if the configuration contains invalid values.
 func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*EntityStateManager, error) {
@@ -617,5 +661,8 @@ func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*Entit
 		InitiativeAdvantage:       config.InitiativeAdvantage,
 		InitiativeBonus:           config.InitiativeBonus,
 		DeathSaves:                core.NewDeathSaves(),
+		PaladinLayingOnHandsPool:  config.PaladinLayingOnHandsPool,
+		BarbarianRelentlessUses:   config.BarbarianRelentlessUses,
+		FighterIndomitableUses:    config.FighterIndomitableUses,
 	}, nil
 }

@@ -107,6 +107,12 @@ func (em *EquipmentManager) GetAC() int {
 				return -1
 			}
 			returnValue = base + dexMod + wisMod
+		} else if classes.ClassID(id) == classes.Barbarian {
+			conMod, err := em.parent.GetAbilityScoreModifier(core.AbilityConstitution)
+			if err != nil {
+				return -1
+			}
+			returnValue = base + dexMod + conMod
 		} else {
 			returnValue = base + dexMod
 		}

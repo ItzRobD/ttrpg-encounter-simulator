@@ -86,6 +86,9 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	if err != nil {
 		return nil, err
 	}
+	// Setup class-specific features
+	classData.ClassFeatures.SetupFeatures(classData.ID, charConfig.Level)
+
 	// Apply Fighting Styles via class API to ensure they are registered properly
 	if len(charConfig.FightingStyles) > 0 {
 		for _, fs := range charConfig.FightingStyles {
@@ -134,6 +137,18 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		AttackCount: classData.AttackCount,
 		Conditions:  core.NewEntityConditions(),
 	}
+
+	switch classData.ID {
+	case classes.Barbarian:
+		esmConfig.BarbarianRelentlessUses = 0
+	case classes.Fighter:
+		esmConfig.FighterIndomitableUses = classData.ClassFeatures.FighterFeatures.IndomitableUses
+	case classes.Paladin:
+		esmConfig.PaladinLayingOnHandsPool = classData.ClassFeatures.PaladinFeatures.LayOnHandsPool
+	default:
+		break
+	}
+
 	esm, err := initializeEntityStateManager(&char, &esmConfig)
 	if err != nil {
 		return nil, err
@@ -200,6 +215,9 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 	if err != nil {
 		return nil, err
 	}
+	// Setup class-specific features
+	classData.ClassFeatures.SetupFeatures(classData.ID, charConfig.Level)
+
 	// Apply Fighting Styles via class API to ensure they are registered properly
 	if len(charConfig.FightingStyles) > 0 {
 		for _, fs := range charConfig.FightingStyles {
@@ -247,6 +265,18 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 		AttackCount: classData.AttackCount,
 		Conditions:  core.NewEntityConditions(),
 	}
+
+	switch classData.ID {
+	case classes.Barbarian:
+		esmConfig.BarbarianRelentlessUses = 0
+	case classes.Fighter:
+		esmConfig.FighterIndomitableUses = classData.ClassFeatures.FighterFeatures.IndomitableUses
+	case classes.Paladin:
+		esmConfig.PaladinLayingOnHandsPool = classData.ClassFeatures.PaladinFeatures.LayOnHandsPool
+	default:
+		break
+	}
+
 	esm, err := initializeEntityStateManager(&char, &esmConfig)
 	if err != nil {
 		return nil, err

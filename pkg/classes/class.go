@@ -95,14 +95,14 @@ func MakeClassID(s string) ClassID {
 
 // Class represents a character class with its attributes like ID, name, hit die, and spellcasting modifier.
 type Class struct {
-	ID                   ClassID
-	Name                 string
-	HitDie               core.DiceType
-	SpellcastingMod      core.Ability
-	SneakAttackDiceCount int
-	AttackCount          int
-	FightingStyles       []FightingStyle
-	AvailableStyles      []FightingStyle
+	ID              ClassID
+	Name            string
+	HitDie          core.DiceType
+	SpellcastingMod core.Ability
+	AttackCount     int
+	FightingStyles  []FightingStyle
+	AvailableStyles []FightingStyle
+	ClassFeatures   ClassFeatures
 }
 
 // ClassQueryParams defines parameters for querying a class, including its name and ID.

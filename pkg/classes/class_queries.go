@@ -144,10 +144,30 @@ func QueryClassData(ctx context.Context, params ClassQueryParams) (Class, error)
 	}
 
 	if classResult.ID == Rogue {
-		classResult.SneakAttackDiceCount, err = GetNumberOfSneakAttackDiceFromLevel(ctx, params.Level)
+		var features RogueFeatures
+		features.NumOfSneakAttackDice, err = getNumberOfSneakAttackDiceFromLevel(ctx, params.Level)
 		if err != nil {
 			return classResult, err
 		}
+		classResult.ClassFeatures.RogueFeatures = &features
+	}
+
+	if classResult.ID == Barbarian {
+		var features BarbarianFeatures
+		features.RageDamage, features.NumberOfBrutalCritDice, err = getBarbarianFeatureValuesByLevel(ctx, params.Level)
+		if err != nil {
+			return classResult, err
+		}
+		classResult.ClassFeatures.BarbarianFeatures = &features
+	}
+
+	if classResult.ID == Fighter {
+		var features FighterFeatures
+		features.IndomitableUses, err = getFighterFeatureValuesByLevel(ctx, params.Level)
+		if err != nil {
+			return classResult, err
+		}
+		classResult.ClassFeatures.FighterFeatures = &features
 	}
 
 	classResult.AttackCount, err = GetNumberOfAttacksFromLevelAndClass(ctx, params.Level, classResult.ID.Int())
@@ -236,11 +256,11 @@ func GetNumberOfAttacksFromLevelAndClass(ctx context.Context, level uint8, class
 	return numberOfAttacks, nil
 }
 
-// GetNumberOfSneakAttackDiceFromLevel retrieves the number of sneak attack dice for a given character level (1-20).
+// getNumberOfSneakAttackDiceFromLevel retrieves the number of sneak attack dice for a given character level (1-20).
 // ctx is the context for managing database queries.
 // level specifies the character's level and must be between 1 and 20.
 // Returns the number of dice or an error if the level is invalid or the query fails.
-func GetNumberOfSneakAttackDiceFromLevel(ctx context.Context, level uint8) (int, error) {
+func getNumberOfSneakAttackDiceFromLevel(ctx context.Context, level uint8) (int, error) {
 	if level <= 0 || level > 20 {
 		return 0, fmt.Errorf("invalid level provided: %d", level)
 	}
@@ -356,4 +376,61 @@ func GetSpellSlotsByLevelAndClassID(ctx context.Context, level uint8, classID ui
 	}
 
 	return slots, nil
+}
+
+// getBarbarianFeatureValues retrieves barbarian critical hit dice and rage damage values for a given level.
+// Returns rage damage, number of crit dice, and an error if the level is invalid or query/scanning fails.
+func getBarbarianFeatureValuesByLevel(ctx context.Context, level uint8) (int, int, error) {
+	if level <= 0 || level > 20 {
+		return 0, 0, fmt.Errorf("invalid level provided: %d", level)
+	}
+
+	stmt := SELECT(BarbarianExtraCritDice.NumberOfDice, BarbarianRageDamage.Damage).
+		FROM(BarbarianRageDamage, BarbarianExtraCritDice).
+		WHERE(BarbarianRageDamage.Level.LT_EQ(Int(int64(level))).AND(BarbarianExtraCritDice.Level.LT_EQ(Int(int64(level))))).
+		ORDER_BY(BarbarianExtraCritDice.Level.DESC()).
+		LIMIT(1)
+
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to query barbarian feature values by level: %w", err)
+	}
+	var numberOfDice, damage int
+	err = row.Scan(&numberOfDice, &damage)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, 0, nil
+		}
+		return 0, 0, fmt.Errorf("failed to scan barbarian feature values by level: %w", err)
+	}
+	return damage, numberOfDice, nil
+}
+
+// getFighterFeatureValuesByLevel retrieves fighter feature values based on the provided level from the database.
+// The function returns the feature value as an integer and an error if any issue occurs during execution.
+func getFighterFeatureValuesByLevel(ctx context.Context, level uint8) (int, error) {
+	if level <= 0 || level > 20 {
+		return 0, fmt.Errorf("invalid level provided: %d", level)
+	}
+
+	stmt := SELECT(FighterIndomitableUses.NumberOfUses).
+		FROM(FighterIndomitableUses).
+		WHERE(FighterIndomitableUses.Level.LT_EQ(Int(int64(level)))).
+		LIMIT(1)
+
+	query, args := stmt.Sql()
+	row, err := database.QueryRow(ctx, query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query fighter feature values by level: %w", err)
+	}
+	var numberOfUses int
+	err = row.Scan(&numberOfUses)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("failed to scan fighter feature values by level: %w", err)
+	}
+	return numberOfUses, nil
 }
