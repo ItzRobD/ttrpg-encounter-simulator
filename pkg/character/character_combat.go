@@ -265,7 +265,7 @@ func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int) (core
 	opts.RollType = core.DiceRollSavingThrow
 	opts.TargetValue = targetValue
 
-	res, err := c.RollManager.RollSavingThrow(ability, opts)
+	res, err := c.RollManager.RollSavingThrow(opts)
 	if err != nil {
 		return nil, err
 	}

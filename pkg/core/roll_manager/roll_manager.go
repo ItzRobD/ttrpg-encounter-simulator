@@ -1,7 +1,9 @@
 package roll_manager
 
 import (
+	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
 	"math/rand/v2"
@@ -56,6 +58,7 @@ type RerollAbilities struct {
 	HasElvenAccuracy       bool
 	HasGreatWeaponFighting bool
 	HasElementalAdept      bool
+	HasIndomitable         bool
 }
 
 type RollResult struct {
@@ -124,6 +127,7 @@ const (
 	RerollLuckyFeat      RerollType = "Lucky Feat"
 	RerollGWF            RerollType = "Great Weapon Fighting"
 	RerollElementalAdept RerollType = "Elemental Adept"
+	RerollIndomitable    RerollType = "Fighter Indomitable"
 )
 
 func (rt RerollType) String() string {
@@ -395,7 +399,7 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 }
 
 // RollSavingThrow rolls a d20 for a saving throw, applies bonuses and modifiers, and logs the result. Returns the roll result.
-func (rm *RollManager) RollSavingThrow(ability core.Ability, options RollOptions) (*RollResult, error) {
+func (rm *RollManager) RollSavingThrow(options RollOptions) (*RollResult, error) {
 	options.RollType = core.DiceRollSavingThrow
 
 	res, err := rm.RollD20(options, false)
@@ -403,12 +407,26 @@ func (rm *RollManager) RollSavingThrow(ability core.Ability, options RollOptions
 		return nil, err
 	}
 
+	// Fighter indomitable
+	if rm.parent.GetClassID() == uint8(classes.Fighter) && !res.IsSuccess {
+		newRoll, rEvent, rErr := rm.applyFighterIndomitable(res.FinalRollValue)
+		if rErr != nil {
+			return nil, rErr
+		}
+		if rEvent.Reason != "" {
+			res.RerollEvents = append(res.RerollEvents, rEvent)
+			res.WasRerolled = true
+			res.FinalRolls = []int{newRoll}
+			res.FinalRollValue = newRoll
+			res.IsNaturalOne = newRoll == 1
+			res.Total = newRoll + res.Modifier
+		}
+	}
+
 	rm.calculateSuccess(res, options)
 
 	// Log the roll
 	events.LogDiceRollEvent(rm.parent, res, rm.parent.GetEventListener())
-
-	res.Total += 8
 
 	return res, nil
 }
@@ -639,6 +657,32 @@ func (rm *RollManager) applyHalflingLucky(rolls []int, die core.DiceType) ([]int
 	}
 
 	return newRolls, rerollEvents
+}
+
+func (rm *RollManager) applyFighterIndomitable(originalRoll int) (int, RerollEvent, error) {
+	if rm.parent.GetClassID() != uint8(classes.Fighter) {
+		return 0, RerollEvent{}, nil
+	}
+
+	esm, ok := rm.parent.GetState().(*entity_state_manager.EntityStateManager)
+	if !ok {
+		return 0, RerollEvent{}, fmt.Errorf("failed to cast parent entity state to EntityStateManager")
+	}
+	if esm.GetFighterIndomitableUses() > 0 {
+		newRoll := rm.rollDie(core.D20)
+
+		rerollEvent := RerollEvent{
+			Reason:       RerollIndomitable.String(),
+			OriginalRoll: originalRoll,
+			NewRoll:      newRoll,
+			Die:          core.D20,
+			RerollType:   RerollIndomitable,
+		}
+
+		esm.ExpendFighterIndomitableUses()
+		return newRoll, rerollEvent, nil
+	}
+	return 0, RerollEvent{}, nil
 }
 
 // calculateSingleDieFinalValue determines the final roll value and total based on roll type (normal, advantage, disadvantage).

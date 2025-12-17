@@ -142,7 +142,7 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int) (core.R
 	opts.RollType = core.DiceRollSavingThrow
 	opts.TargetValue = targetValue
 
-	res, err := m.RollManager.RollSavingThrow(ability, opts)
+	res, err := m.RollManager.RollSavingThrow(opts)
 	if err != nil {
 		return nil, err
 	}

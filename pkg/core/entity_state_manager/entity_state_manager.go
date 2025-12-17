@@ -618,6 +618,10 @@ func (esm *EntityStateManager) SetPaladinLayingOnHandsPool(val int) {
 	esm.PaladinLayingOnHandsPool = val
 }
 
+func (esm *EntityStateManager) ExpendFighterIndomitableUses() {
+	esm.FighterIndomitableUses--
+}
+
 func (esm *EntityStateManager) GetPaladinLayingOnHandsPool() int {
 	return esm.PaladinLayingOnHandsPool
 }
