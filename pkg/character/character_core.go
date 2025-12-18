@@ -149,6 +149,9 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 					Value:          res.GetDamageResult().GetTotal(),
 					DamageType:     res.GetDamageType(),
 					ResistBreakers: res.ResistBreakers,
+					AttackCtx: &core.AttackContext{
+						IsRanged: req.ActionType == core.ATRanged,
+					},
 				})
 			}
 		}
@@ -180,6 +183,9 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 					Value:          res.GetDamageResult().GetTotal(),
 					DamageType:     res.GetDamageType(),
 					ResistBreakers: res.ResistBreakers,
+					AttackCtx: &core.AttackContext{
+						IsRanged: false,
+					},
 				})
 			}
 		}
@@ -209,6 +215,14 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 					Type:       core.EffectDamage,
 					Value:      res.GetSpellTotalValue(),
 					DamageType: res.GetDamageType(),
+					SaveCtx: &core.SaveContext{
+						Ability:   res.SpellSaveAbility,
+						Success:   res.SpellSaveSuccess,
+						OnSuccess: res.SpellSaveEffect,
+					},
+					AttackCtx: &core.AttackContext{
+						IsRanged: !req.SpellChoice.Spell.GetIsTouch(),
+					},
 				})
 			} else if req.SpellChoice.Spell.GetSpellType() == core.STHealing {
 				effects = append(effects, core.Effect{

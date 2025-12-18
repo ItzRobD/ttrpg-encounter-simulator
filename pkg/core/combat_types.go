@@ -637,6 +637,18 @@ type Effect struct {
 	DamageType     DamageType
 	ResistBreakers []ResistBreaker
 	Condition      *Condition
+	SaveCtx        *SaveContext
+	AttackCtx      *AttackContext
+}
+
+type SaveContext struct {
+	Ability   Ability
+	Success   bool
+	OnSuccess DCOnSuccess
+}
+
+type AttackContext struct {
+	IsRanged bool
 }
 
 type EffectType string

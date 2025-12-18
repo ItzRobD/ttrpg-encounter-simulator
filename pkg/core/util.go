@@ -306,10 +306,20 @@ func DetermineAttackAdvantageForEntities(attacker Entity, target Entity, isRange
 	if attacker != nil {
 		attackerConds = attacker.GetConditions()
 	}
+
+	adv := DetermineAttackAdvantage(attackerConds, targetConds, isRangedAttack, base)
+
 	if target != nil {
 		targetConds = target.GetConditions()
+		e, ok := target.(ElusiveEntity)
+		if ok {
+			if e.HasElusive() && adv == RollAdvantage && !targetConds.Has(ConditionIncapacitated) {
+				return RollNormal
+			}
+		}
 	}
-	return DetermineAttackAdvantage(attackerConds, targetConds, isRangedAttack, base)
+
+	return adv
 }
 
 // combineAdv combines two AdvantageType modifiers into one without losing opposing info.

@@ -61,6 +61,7 @@ type Spell interface {
 	GetLevel() int
 	GetSpellType() SpellType
 	GetIsAOE() bool
+	GetIsTouch() bool
 	GetHasDC() bool
 	GetApiURL() string
 	GetLevelType() string
@@ -144,4 +145,8 @@ type HPModificationResult interface {
 	GetDidHPDamage() bool
 	GetIsUnconscious() bool
 	GetIsMaxHealth() bool
+}
+
+type ElusiveEntity interface {
+	HasElusive() bool
 }

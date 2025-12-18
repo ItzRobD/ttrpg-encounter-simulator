@@ -15,6 +15,7 @@ type Spell struct {
 	IsRitual        bool
 	Level           int // Minimum spell level
 	SpellType       core.SpellType
+	IsTouch         bool
 	IsAOE           bool
 	HasDC           bool
 	ApiURL          string
@@ -31,6 +32,7 @@ func (s *Spell) GetCastingTime() core.CastingTime      { return s.CastingTime }
 func (s *Spell) GetIsRitual() bool                     { return s.IsRitual }
 func (s *Spell) GetLevel() int                         { return s.Level }
 func (s *Spell) GetSpellType() core.SpellType          { return s.SpellType }
+func (s *Spell) GetIsTouch() bool                      { return s.IsTouch }
 func (s *Spell) GetIsAOE() bool                        { return s.IsAOE }
 func (s *Spell) GetHasDC() bool                        { return s.HasDC }
 func (s *Spell) GetApiURL() string                     { return s.ApiURL }

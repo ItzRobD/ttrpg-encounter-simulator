@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/equipment_manager"
@@ -98,6 +99,157 @@ func buildCombatants(att *character.Character, tgt *monster.Monster) (*core.Comb
 	cAtt := core.NewCombatantWithInfo(att)
 	cTgt := core.NewCombatantWithInfo(tgt)
 	return cAtt, cTgt
+}
+
+// helper to run a fabricated outcome through the engine against registered combatants
+func runOutcome(t *testing.T, ce *CombatEngine, actor core.Entity, targetID int, effects []core.Effect) error {
+	t.Helper()
+	outcome := &core.ActionOutcome{
+		ActionType: core.ATSpell, // type not important for processing
+		TargetID:   targetID,
+		ActorID:    0,
+		Success:    true,
+		Effects:    effects,
+	}
+	return ce.processActionResults(actor, outcome)
+}
+
+func TestEvasion_DexSaveSuccess_OnSuccessHalf_ReducesToZero(t *testing.T) {
+	// Setup CE with class features enabled
+	ce := NewCombatEngine(&core.SimulationOptions{EnableClassFeatures: true})
+
+	// Attacker: monster (dummy)
+	attacker := buildTestMonster(t, 0)
+
+	// Target: Monk with Evasion
+	target := buildTestCharacter(t, core.AbilityScores{Dexterity: 16}, 7)
+	target.Class.ID = classes.Monk
+	target.Class.ClassFeatures.MonkFeatures = &classes.MonkFeatures{HasEvasion: true}
+
+	// Register combatants: attacker id 0, target id 1
+	ce.AddCombatant(core.NewCombatantWithInfo(attacker))
+	ce.AddCombatant(core.NewCombatantWithInfo(target))
+
+	startHP := target.EntityStateManager.GetCurrentHP()
+
+	// Fabricate a Dex save effect that would normally be half on success
+	effects := []core.Effect{{
+		Type:       core.EffectDamage,
+		Value:      18, // already computed spell damage before resistances
+		DamageType: core.DamageFire,
+		SaveCtx: &core.SaveContext{
+			Ability:   core.AbilityDexterity,
+			Success:   true,
+			OnSuccess: core.DCOnSuccessHalf,
+		},
+	}}
+
+	if err := runOutcome(t, ce, attacker, 1, effects); err != nil {
+		t.Fatalf("processActionResults: %v", err)
+	}
+
+	// Evasion: success on Dex save with half-on-success → 0 damage
+	if target.EntityStateManager.GetCurrentHP() != startHP {
+		t.Fatalf("expected no damage due to Evasion, hp=%d start=%d", target.EntityStateManager.GetCurrentHP(), startHP)
+	}
+}
+
+func TestEvasion_DexSaveFailure_HalvesDamage(t *testing.T) {
+	ce := NewCombatEngine(&core.SimulationOptions{EnableClassFeatures: true})
+	attacker := buildTestMonster(t, 0)
+	target := buildTestCharacter(t, core.AbilityScores{Dexterity: 16}, 7)
+	target.Class.ID = classes.Rogue
+	target.Class.ClassFeatures.RogueFeatures = &classes.RogueFeatures{HasEvasion: true}
+
+	ce.AddCombatant(core.NewCombatantWithInfo(attacker)) // id 0
+	ce.AddCombatant(core.NewCombatantWithInfo(target))   // id 1
+
+	startHP := target.EntityStateManager.GetCurrentHP()
+
+	effects := []core.Effect{{
+		Type:       core.EffectDamage,
+		Value:      20,
+		DamageType: core.DamageFire,
+		SaveCtx: &core.SaveContext{
+			Ability:   core.AbilityDexterity,
+			Success:   false,                // failed save
+			OnSuccess: core.DCOnSuccessHalf, // this spell/effect halves on success
+		},
+	}}
+
+	if err := runOutcome(t, ce, attacker, 1, effects); err != nil {
+		t.Fatalf("processActionResults: %v", err)
+	}
+
+	// Evasion on failure → half damage (20 → 10)
+	expectedHP := startHP - 10
+	if target.EntityStateManager.GetCurrentHP() != expectedHP {
+		t.Fatalf("expected hp %d, got %d", expectedHP, target.EntityStateManager.GetCurrentHP())
+	}
+}
+
+func TestEvasion_IgnoresNonDexSave(t *testing.T) {
+	ce := NewCombatEngine(&core.SimulationOptions{EnableClassFeatures: true})
+	attacker := buildTestMonster(t, 0)
+	target := buildTestCharacter(t, core.AbilityScores{Dexterity: 16, Constitution: 14}, 7)
+	target.Class.ID = classes.Monk
+	target.Class.ClassFeatures.MonkFeatures = &classes.MonkFeatures{HasEvasion: true}
+
+	ce.AddCombatant(core.NewCombatantWithInfo(attacker)) // id 0
+	ce.AddCombatant(core.NewCombatantWithInfo(target))   // id 1
+
+	startHP := target.EntityStateManager.GetCurrentHP()
+
+	effects := []core.Effect{{
+		Type:       core.EffectDamage,
+		Value:      12,
+		DamageType: core.DamagePoison,
+		SaveCtx: &core.SaveContext{
+			Ability:   core.AbilityConstitution, // not Dex
+			Success:   true,
+			OnSuccess: core.DCOnSuccessHalf,
+		},
+	}}
+
+	if err := runOutcome(t, ce, attacker, 1, effects); err != nil {
+		t.Fatalf("processActionResults: %v", err)
+	}
+
+	// Evasion should not apply → full 12 damage applied (no resistances in test)
+	expectedHP := startHP - 12
+	if target.EntityStateManager.GetCurrentHP() != expectedHP {
+		t.Fatalf("expected hp %d, got %d", expectedHP, target.EntityStateManager.GetCurrentHP())
+	}
+}
+
+func TestEvasion_IgnoresAttackRollEffects(t *testing.T) {
+	ce := NewCombatEngine(&core.SimulationOptions{EnableClassFeatures: true})
+	attacker := buildTestMonster(t, 0)
+	target := buildTestCharacter(t, core.AbilityScores{Dexterity: 16}, 7)
+	target.Class.ID = classes.Rogue
+	target.Class.ClassFeatures.RogueFeatures = &classes.RogueFeatures{HasEvasion: true}
+
+	ce.AddCombatant(core.NewCombatantWithInfo(attacker)) // id 0
+	ce.AddCombatant(core.NewCombatantWithInfo(target))   // id 1
+
+	startHP := target.EntityStateManager.GetCurrentHP()
+
+	// No SaveCtx => represents attack roll based damage
+	effects := []core.Effect{{
+		Type:       core.EffectDamage,
+		Value:      7,
+		DamageType: core.DamageForce,
+		SaveCtx:    nil,
+	}}
+
+	if err := runOutcome(t, ce, attacker, 1, effects); err != nil {
+		t.Fatalf("processActionResults: %v", err)
+	}
+
+	expectedHP := startHP - 7
+	if target.EntityStateManager.GetCurrentHP() != expectedHP {
+		t.Fatalf("expected hp %d, got %d", expectedHP, target.EntityStateManager.GetCurrentHP())
+	}
 }
 
 func TestCombatEngine_ProcessAIRequest_MeleeProducesDamage(t *testing.T) {

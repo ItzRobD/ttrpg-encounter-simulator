@@ -105,7 +105,7 @@ func TestSetEventListener_EmitsOnInitializeHP(t *testing.T) {
 func TestCreateAttackRequest_InvalidType_Error(t *testing.T) {
 	m := newSeededMonster(t)
 	// invalid action type should error
-	if _, err := m.createAttackRequest(m, 0, core.ATNoAction, core.RollNormal, &core.SimulationOptions{}); err == nil {
+	if _, err := m.createAttackRequest(m, 0, core.ATNoAction, &core.SimulationOptions{}); err == nil {
 		t.Fatalf("expected error for invalid monster action type")
 	}
 }

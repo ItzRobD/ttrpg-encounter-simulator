@@ -26,7 +26,7 @@ func (m *Monster) RollInitiative() (int, error) {
 	return res.Total, nil
 }
 
-func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actionType core.ActionType, adv core.AdvantageType, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
+func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actionType core.ActionType, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
 	if !isValidMonsterActionType(actionType) {
 		return nil, fmt.Errorf("invalid action type for monster attack request")
 	}
@@ -43,7 +43,7 @@ func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actio
 		isRanged = adList[0].IsRangedWeapon
 	}
 	// Compute final advantage using unified core helper
-	computedAdv := core.DetermineAttackAdvantageForEntities(m, target, isRanged, adv)
+	computedAdv := core.DetermineAttackAdvantageForEntities(m, target, isRanged, core.RollNormal)
 
 	attackOptions := core.AttackOptions{
 		Advantage:            computedAdv,

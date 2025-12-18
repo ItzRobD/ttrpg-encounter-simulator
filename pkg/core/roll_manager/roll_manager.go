@@ -157,7 +157,7 @@ func (rm *RollManager) RollD20(options RollOptions, shouldLogEvent bool) (*RollR
 	// Handle d20 rolls with advantage/disadvantage
 	switch options.Advantage {
 	case core.RollNormal:
-		roll := rm.rollDie(core.D20)
+		roll := rm.RollDie(core.D20)
 		res.OriginalRolls = []int{roll}
 		res.FinalRolls = []int{roll}
 	case core.RollAdvantage:
@@ -227,7 +227,7 @@ func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) 
 }
 
 func (rm *RollManager) RollRecharge(options RollOptions) *RollResult {
-	roll := rm.rollDie(core.D6)
+	roll := rm.RollDie(core.D6)
 	res := RollResult{
 		DiceRollType:   options.RollType,
 		NumberOfDice:   1,
@@ -409,6 +409,7 @@ func (rm *RollManager) RollSavingThrow(options RollOptions) (*RollResult, error)
 
 	// Fighter indomitable
 	if rm.parent.GetClassID() == uint8(classes.Fighter) && !res.IsSuccess {
+		// TODO: If sim options sets no class features, we need to set uses to zero
 		newRoll, rEvent, rErr := rm.applyFighterIndomitable(res.FinalRollValue)
 		if rErr != nil {
 			return nil, rErr
@@ -612,7 +613,7 @@ func (rm *RollManager) applyGreatWeaponFighting(rolls []int, die core.DiceType) 
 	for i, roll := range newRolls {
 		if roll == 1 || roll == 2 {
 			originalRoll := roll
-			newRoll := rm.rollDie(die)
+			newRoll := rm.RollDie(die)
 			newRolls[i] = newRoll
 
 			rerollEvents = append(rerollEvents, RerollEvent{
@@ -642,7 +643,7 @@ func (rm *RollManager) applyHalflingLucky(rolls []int, die core.DiceType) ([]int
 	for i, roll := range newRolls {
 		if roll == 1 {
 			originalRoll := roll
-			newRoll := rm.rollDie(die)
+			newRoll := rm.RollDie(die)
 			newRolls[i] = newRoll
 
 			rerollEvents = append(rerollEvents, RerollEvent{
@@ -669,7 +670,7 @@ func (rm *RollManager) applyFighterIndomitable(originalRoll int) (int, RerollEve
 		return 0, RerollEvent{}, fmt.Errorf("failed to cast parent entity state to EntityStateManager")
 	}
 	if esm.GetFighterIndomitableUses() > 0 {
-		newRoll := rm.rollDie(core.D20)
+		newRoll := rm.RollDie(core.D20)
 
 		rerollEvent := RerollEvent{
 			Reason:       RerollIndomitable.String(),
@@ -732,8 +733,8 @@ func (rm *RollManager) rollExtraMaxDice(numberOfDice int, die core.DiceType) (in
 	return sum(rolls), rolls
 }
 
-// rollDie simulates rolling a die of the specified type and returns the result as an integer between 1 and the die's maximum value.
-func (rm *RollManager) rollDie(die core.DiceType) int {
+// RollDie simulates rolling a die of the specified type and returns the result as an integer between 1 and the die's maximum value.
+func (rm *RollManager) RollDie(die core.DiceType) int {
 	return rm.rng.IntN(die.Int()) + 1
 }
 

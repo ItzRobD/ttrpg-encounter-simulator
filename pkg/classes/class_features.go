@@ -16,7 +16,7 @@ const (
 	PaladinImprovedDivineSmiteLevel = 11
 	PaladinLayOnHandsPoolModifier   = 5
 	RogueUncannyDodgeLevel          = 5
-	RogueBlindsenseLevel            = 14
+	RogueEvasionLevel               = 7
 	RogueSlipperyMindLevel          = 15
 	RogueElusiveLevel               = 18
 )
@@ -62,7 +62,7 @@ type RogueFeatures struct {
 	HasSneakAttack       bool // Apply extra damage if advantage or (no disadvantage && ally within 5ft)
 	NumOfSneakAttackDice int
 	HasUncannyDodge      bool // reaction to halve damage
-	HasBlindsense        bool // aware of invisible/hidden
+	HasEvasion           bool // dex save = no damage
 	HasSlipperyMind      bool // Adv on wis saves
 	HasElusive           bool // no incoming advantage while not incapacitated
 }
@@ -104,7 +104,7 @@ func (f *ClassFeatures) SetupFeatures(classID ClassID, level uint8) {
 			f.RogueFeatures = &RogueFeatures{}
 		}
 		f.RogueFeatures.HasElusive = level >= RogueElusiveLevel
-		f.RogueFeatures.HasBlindsense = level >= RogueBlindsenseLevel
+		f.RogueFeatures.HasEvasion = level >= RogueEvasionLevel
 		f.RogueFeatures.HasSlipperyMind = level >= RogueSlipperyMindLevel
 		f.RogueFeatures.HasUncannyDodge = level >= RogueUncannyDodgeLevel
 	default:

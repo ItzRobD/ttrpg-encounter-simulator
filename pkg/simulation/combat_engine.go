@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
+	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
@@ -159,6 +160,9 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 		for _, effect := range outcome.Effects {
 			switch effect.Type {
 			case core.EffectDamage:
+				ce.applyDeflectMissiles(target.GetEntity(), &effect)
+				ce.applyUncannyDodgeToEffect(target.GetEntity(), &effect)
+				ce.applyEvasionToEffect(target.GetEntity(), &effect)
 				res, rErr := ce.computeDamageValueAfterResistances(
 					target.GetEntity(),
 					effect.DamageType,
@@ -896,4 +900,109 @@ func (ce *CombatEngine) computeDamageValueAfterResistances(target core.Entity, d
 	result.WasModified = result.FinalValue != value
 
 	return result, nil
+}
+
+// applyEvasionToEffect applies the evasion feature effects for rogues and monks, modifying the effect value based on saving throws.
+func (ce *CombatEngine) applyEvasionToEffect(target core.Entity, effect *core.Effect) {
+	targetChar, ok := target.(*character.Character)
+	if !ok {
+		return // Ignore non-character targets
+	}
+
+	// Require a valid saving throw context and that it is a Dexterity save
+	if effect == nil || effect.SaveCtx == nil || effect.SaveCtx.Ability != core.AbilityDexterity {
+		return
+	}
+
+	// Only apply when class features are enabled (if options provided)
+	if ce.SimOptions != nil && !ce.SimOptions.EnableClassFeatures {
+		return
+	}
+
+	// Only Rogues/Monks have access to Evasion in this model
+	if !(targetChar.Class.ID == classes.Rogue || targetChar.Class.ID == classes.Monk) {
+		return // Ignore non-rogue/monk targets
+	}
+	hasEvasion := false
+
+	switch targetChar.Class.ID {
+	case classes.Rogue:
+		hasEvasion = targetChar.Class.ClassFeatures.RogueFeatures.HasEvasion
+	case classes.Monk:
+		hasEvasion = targetChar.Class.ClassFeatures.MonkFeatures.HasEvasion
+	default:
+		return // Ignore non-rogue/monk targets
+	}
+
+	if !hasEvasion {
+		return // Don't apply evasion if target doesn't have access
+	}
+
+	if effect.SaveCtx.Success && effect.SaveCtx.OnSuccess == core.DCOnSuccessHalf {
+		effect.Value = 0 // Feature reduces damage to zero
+	} else if !effect.SaveCtx.Success {
+		effect.Value /= 2
+	}
+}
+
+func (ce *CombatEngine) applyUncannyDodgeToEffect(target core.Entity, effect *core.Effect) {
+	targetChar, ok := target.(*character.Character)
+	if !ok {
+		return // Ignore non-character targets
+	}
+
+	// Require a valid saving throw context and that it is a Dexterity save
+	if effect == nil {
+		return
+	}
+
+	// Only apply when class features are enabled (if options provided)
+	if ce.SimOptions != nil && !ce.SimOptions.EnableClassFeatures {
+		return
+	}
+
+	if targetChar.Class.ID != classes.Rogue {
+		return
+	}
+
+	if targetChar.Class.ClassFeatures.RogueFeatures.HasUncannyDodge &&
+		!targetChar.EntityStateManager.HasUsedReaction {
+		effect.Value /= 2
+		targetChar.EntityStateManager.ExpendReaction()
+		return
+	}
+}
+
+func (ce *CombatEngine) applyDeflectMissiles(target core.Entity, effect *core.Effect) {
+	targetChar, ok := target.(*character.Character)
+	if !ok {
+		return // Ignore non-character targets
+	}
+
+	// Require a valid saving throw context and that it is a Dexterity save
+	if effect == nil {
+		return
+	}
+
+	// Only apply when class features are enabled (if options provided)
+	if ce.SimOptions != nil && !ce.SimOptions.EnableClassFeatures {
+		return
+	}
+
+	if targetChar.Class.ID != classes.Monk {
+		return
+	}
+
+	if targetChar.Class.ClassFeatures.MonkFeatures != nil &&
+		targetChar.Class.ClassFeatures.MonkFeatures.HasDeflectMissiles &&
+		effect.AttackCtx.IsRanged {
+		dexMod, err := targetChar.GetAbilityScoreModifier(core.AbilityDexterity)
+		if err != nil {
+			return
+		}
+		roll := targetChar.RollManager.RollDie(core.D10)
+		effect.Value = int(math.Max(0, float64(effect.Value)-float64(dexMod)-float64(roll)-float64(targetChar.Level)))
+		targetChar.EntityStateManager.ExpendReaction()
+		return
+	}
 }

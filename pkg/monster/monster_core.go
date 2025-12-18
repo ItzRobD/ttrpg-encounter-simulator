@@ -99,10 +99,10 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		req.Actor = m
 		log.Printf("warning: monster execute ai req - actor is nil")
 	}
-	adv := core.DetermineAttackAdvantageFromConditions(req.Actor.GetConditions(), req.Target.GetConditions())
+
 	switch req.ActionType {
 	case core.ATMonsterAction, core.ATMonsterMultiattack, core.ATMonsterSpecial, core.ATLegendaryAction:
-		attackReq, err := m.createAttackRequest(req.Target, req.ActionIndex, req.ActionType, adv, req.SimOptions)
+		attackReq, err := m.createAttackRequest(req.Target, req.ActionIndex, req.ActionType, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +143,9 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}, nil
 
 	case core.ATSpell:
-		scReq, err := m.createSpellCastRequest(req.Target, *req.SpellChoice, adv, req.SimOptions)
+		// Compute final advantage using unified core helper
+		computedAdv := core.DetermineAttackAdvantageForEntities(m, req.Target, req.SpellChoice.Spell.GetIsTouch(), core.RollNormal)
+		scReq, err := m.createSpellCastRequest(req.Target, *req.SpellChoice, computedAdv, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -160,6 +162,11 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 					Type:       core.EffectDamage,
 					Value:      res.GetSpellTotalValue(),
 					DamageType: res.GetDamageType(),
+					SaveCtx: &core.SaveContext{
+						Ability:   res.SpellSaveAbility,
+						Success:   res.SpellSaveSuccess,
+						OnSuccess: res.SpellSaveEffect,
+					},
 				})
 			} else if req.SpellChoice.Spell.GetSpellType() == core.STHealing {
 				effects = append(effects, core.Effect{
