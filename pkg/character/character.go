@@ -177,6 +177,18 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		}
 	}
 
+	// Apply race resistances esm
+	switch raceData.ID {
+	case races.Dwarf:
+		char.EntityStateManager.AddResistance(core.DamagePoison, core.ResistanceResistant, nil)
+	case races.Dragonborn:
+		if char.Race.DragonbornFeatures != nil {
+			char.EntityStateManager.AddResistance(char.Race.DragonbornFeatures.DamageType, core.ResistanceResistant, nil)
+		}
+	case races.Tiefling:
+		char.EntityStateManager.AddResistance(core.DamageFire, core.ResistanceResistant, nil)
+	}
+
 	// Equipment Manager
 	char.EquipmentManager, err = equipment_manager.NewEquipmentManager(&char)
 	if err != nil {

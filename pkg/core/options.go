@@ -19,6 +19,7 @@ type SimulationOptions struct {
 	AllowLairActions              bool
 	AllowDragonbornBreathAttack   bool
 	EnableClassFeatures           bool
+	EnableRacialFeatures          bool
 	BarbarianAlwaysRecklessAttack bool
 	PaladinAlwaysSmite            bool
 	PaladinUseHighestSmiteSlot    bool
