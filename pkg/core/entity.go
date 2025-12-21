@@ -16,7 +16,7 @@ type Entity interface {
 	GetLevel() float64
 	GetHitDie() DiceType
 	GetCasterLevel() int
-	MakeSavingThrow(ability Ability, targetValue int) (RollResult, error)
+	MakeSavingThrow(ability Ability, targetValue int, isSpell bool) (RollResult, error)
 	GetSpellSaveDC(ability *Ability) (int, error)
 	GetAbilityScores() AbilityScores
 	GetAbilityScore(ability Ability) int

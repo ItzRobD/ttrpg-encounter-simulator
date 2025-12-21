@@ -218,8 +218,8 @@ func GetConditionEffects(c Condition) ConditionEffect {
 	e.SavingThrow = make(map[Ability]AdvantageType)
 	switch c {
 	case ConditionBlinded:
-		e.OutgoingAttackRoll = RollNormal
-		e.IncomingAttackRoll = RollDisadvantage
+		e.OutgoingAttackRoll = RollDisadvantage
+		e.IncomingAttackRoll = RollAdvantage
 	case ConditionCharmed:
 		break
 	case ConditionDeafened:
@@ -245,7 +245,7 @@ func GetConditionEffects(c Condition) ConditionEffect {
 		e.OutgoingAttackRoll = RollDisadvantage
 	case ConditionProne:
 		e.OutgoingAttackRoll = RollDisadvantage
-		e.IncomingAttackRoll = RollAdvantage
+		e.IncomingAttackRoll = RollNormal
 	case ConditionRestrained:
 		e.OutgoingAttackRoll = RollDisadvantage
 		e.IncomingAttackRoll = RollAdvantage

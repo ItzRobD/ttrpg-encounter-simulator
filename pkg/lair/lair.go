@@ -85,7 +85,7 @@ func (l *Lair) GetRNG() *rand.Rand { return l.rng }
 func (l *Lair) GetTargetPriority() core.TargetPriority  { return core.PrioritizeLowestMaxHP }
 func (l *Lair) SetTargetPriority(p core.TargetPriority) {}
 
-func (l *Lair) MakeSavingThrow(ability core.Ability, targetValue int) (core.RollResult, error) {
+func (l *Lair) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool) (core.RollResult, error) {
 	return nil, fmt.Errorf("lair cannot make saving throws")
 }
 

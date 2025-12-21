@@ -37,7 +37,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			return nil, err
 		}
 
-		saveRes, err := req.GetTarget().MakeSavingThrow(ability, targetDC)
+		saveRes, err := req.GetTarget().MakeSavingThrow(ability, targetDC, true)
 		if err != nil {
 			return nil, err
 		}

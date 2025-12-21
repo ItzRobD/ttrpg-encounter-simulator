@@ -222,7 +222,7 @@ func (c *Character) applyFightingStyles(ad *core.AttackData, opts *core.AttackOp
 // Deprecated: computeAttackAdvantage has been replaced by core.DetermineAttackAdvantageForEntities
 
 // MakeSavingThrow calculates a saving throw roll using the specified ability and returns the result, rolls, and an error if any.
-func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int) (core.RollResult, error) {
+func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool) (core.RollResult, error) {
 	activeConditions := c.GetConditions().GetActive()
 	isStrDexSave := ability == core.AbilityStrength || ability == core.AbilityDexterity
 
@@ -260,7 +260,11 @@ func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int) (core
 	opts := roll_manager.NewRollOptions()
 	baseAdv := c.EntityStateManager.GetSavingThrowAdvantage(ability) // This should get the default advantage of the character
 	condAdv := core.DetermineSaveAdvantageFromConditions(c.GetConditions(), ability)
-	opts.Advantage = core.GetFinalAdvantageType([]core.AdvantageType{baseAdv, condAdv})
+	raceAdv := core.RollNormal
+	if !c.Race.SavingThrowAdv.AdvantageOnlyAgainstSpells || isSpell {
+		raceAdv = c.Race.SavingThrowAdv.Abilities[ability]
+	}
+	opts.Advantage = core.GetFinalAdvantageType([]core.AdvantageType{baseAdv, condAdv, raceAdv})
 	opts.Modifier = mod
 	opts.RollType = core.DiceRollSavingThrow
 	opts.TargetValue = targetValue

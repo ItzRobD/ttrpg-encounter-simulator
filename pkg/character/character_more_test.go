@@ -69,7 +69,7 @@ func TestCharacter_GetAIRequest_InvalidType_Error(t *testing.T) {
 
 func TestMakeSavingThrow_ReturnsResult(t *testing.T) {
 	ch := newTestCharacter(t, core.AbilityScores{Dexterity: 14}, 5)
-	res, err := ch.MakeSavingThrow(core.AbilityDexterity, 10)
+	res, err := ch.MakeSavingThrow(core.AbilityDexterity, 10, false)
 	if err != nil {
 		t.Fatalf("MakeSavingThrow: %v", err)
 	}

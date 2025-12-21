@@ -9,17 +9,19 @@ type entityStub struct{}
 
 // Only three methods really matter for EquipmentManager behavior
 // Implement them on a small embedding type below.
-func (entityStub) IsDead() bool                                                  { panic("not used") }
-func (entityStub) IsUnconscious() bool                                           { panic("not used") }
-func (entityStub) GetHPStatus() core.HPStatus                                    { panic("not used") }
-func (entityStub) GetName() string                                               { return "Test" }
-func (entityStub) GetAC() int                                                    { return 10 }
-func (entityStub) GetEventListener() func(event interface{})                     { return nil }
-func (entityStub) SetEventListener(func(event interface{}))                      {}
-func (entityStub) GetLevel() float64                                             { return 1 }
-func (entityStub) GetHitDie() core.DiceType                                      { return core.D8 }
-func (entityStub) GetCasterLevel() int                                           { return 0 }
-func (entityStub) MakeSavingThrow(core.Ability, int) (core.RollResult, error)    { panic("not used") }
+func (entityStub) IsDead() bool                              { panic("not used") }
+func (entityStub) IsUnconscious() bool                       { panic("not used") }
+func (entityStub) GetHPStatus() core.HPStatus                { panic("not used") }
+func (entityStub) GetName() string                           { return "Test" }
+func (entityStub) GetAC() int                                { return 10 }
+func (entityStub) GetEventListener() func(event interface{}) { return nil }
+func (entityStub) SetEventListener(func(event interface{}))  {}
+func (entityStub) GetLevel() float64                         { return 1 }
+func (entityStub) GetHitDie() core.DiceType                  { return core.D8 }
+func (entityStub) GetCasterLevel() int                       { return 0 }
+func (entityStub) MakeSavingThrow(core.Ability, int, bool) (core.RollResult, error) {
+	panic("not used")
+}
 func (entityStub) GetSpellSaveDC(*core.Ability) (int, error)                     { panic("not used") }
 func (entityStub) GetAbilityScores() core.AbilityScores                          { return core.AbilityScores{} }
 func (entityStub) GetAbilityScore(core.Ability) int                              { return 10 }

@@ -157,42 +157,46 @@ func GetNormalizedAbility(ability string) (Ability, error) {
 // DetermineAttackAdvantageFromConditions calculates attack roll advantage or disadvantage based on actor and target conditions.
 // It evaluates each condition's effect on outgoing and incoming attack rolls and returns the final AdvantageType.
 func DetermineAttackAdvantageFromConditions(actorConditions EntityConditions, targetConditions EntityConditions) AdvantageType {
-	advCount := 0
+	hasAdv := false
+	hasDis := false
+
 	if actorConditions == nil && targetConditions == nil {
 		return RollNormal
 	}
 
 	if actorConditions != nil {
-		for c, _ := range actorConditions {
+		for c := range actorConditions {
 			if actorConditions[c] {
 				e := GetConditionEffects(c)
 				if e.OutgoingAttackRoll == RollAdvantage {
-					advCount++
+					hasAdv = true
 				}
 				if e.OutgoingAttackRoll == RollDisadvantage {
-					advCount--
+					hasDis = true
 				}
 			}
 		}
 	}
 
 	if targetConditions != nil {
-		for c, _ := range targetConditions {
+		for c := range targetConditions {
 			if targetConditions[c] {
 				e := GetConditionEffects(c)
 				if e.IncomingAttackRoll == RollAdvantage {
-					advCount++
+					hasAdv = true
 				}
 				if e.IncomingAttackRoll == RollDisadvantage {
-					advCount--
+					hasDis = true
 				}
 			}
 		}
 	}
 
-	if advCount > 0 {
+	if hasAdv && hasDis {
+		return RollNormal
+	} else if hasAdv {
 		return RollAdvantage
-	} else if advCount < 0 {
+	} else if hasDis {
 		return RollDisadvantage
 	}
 
@@ -201,25 +205,29 @@ func DetermineAttackAdvantageFromConditions(actorConditions EntityConditions, ta
 
 // DetermineSaveAdvantageFromConditions evaluates the effective saving throw advantage or disadvantage based on current conditions.
 func DetermineSaveAdvantageFromConditions(actorConditions EntityConditions, ability Ability) AdvantageType {
-	advCount := 0
+	hasAdv := false
+	hasDis := false
+
 	if actorConditions == nil {
 		return RollNormal
 	}
 
-	for c, _ := range actorConditions {
+	for c := range actorConditions {
 		if actorConditions[c] {
 			e := GetConditionEffects(c)
 			if e.SavingThrow[ability] == RollAdvantage {
-				advCount++
+				hasAdv = true
 			} else if e.SavingThrow[ability] == RollDisadvantage {
-				advCount--
+				hasDis = true
 			}
 		}
 	}
 
-	if advCount > 0 {
+	if hasAdv && hasDis {
+		return RollNormal
+	} else if hasAdv {
 		return RollAdvantage
-	} else if advCount < 0 {
+	} else if hasDis {
 		return RollDisadvantage
 	}
 
@@ -227,18 +235,23 @@ func DetermineSaveAdvantageFromConditions(actorConditions EntityConditions, abil
 }
 
 func GetFinalAdvantageType(advs []AdvantageType) AdvantageType {
-	advCount := 0
+	hasAdv := false
+	hasDis := false
 	for _, a := range advs {
 		if a == RollAdvantage {
-			advCount++
+			hasAdv = true
 		} else if a == RollDisadvantage {
-			advCount--
+			hasDis = true
 		}
 	}
 
-	if advCount > 0 {
+	if hasAdv && hasDis {
+		return RollNormal
+	}
+	if hasAdv {
 		return RollAdvantage
-	} else if advCount < 0 {
+	}
+	if hasDis {
 		return RollDisadvantage
 	}
 
@@ -259,7 +272,7 @@ func GetFinalAdvantageType(advs []AdvantageType) AdvantageType {
 //
 // Returns the resolved AdvantageType after collapsing opposing modifiers.
 func DetermineAttackAdvantage(actorConditions EntityConditions, targetConditions EntityConditions, isRangedAttack bool, base AdvantageType) AdvantageType {
-	parts := make([]AdvantageType, 0, 3)
+	parts := make([]AdvantageType, 0, 8)
 	// 1) Baseline
 	parts = append(parts, base)
 
@@ -268,14 +281,12 @@ func DetermineAttackAdvantage(actorConditions EntityConditions, targetConditions
 	parts = append(parts, generic)
 
 	// 3) Context-sensitive rules
-	// Attacker-based disadvantages
-	ctxAdv := RollNormal
 	if actorConditions != nil {
 		if actorConditions.Has(ConditionBlinded) {
-			ctxAdv = combineAdv(ctxAdv, RollDisadvantage)
+			parts = append(parts, RollDisadvantage)
 		}
 		if actorConditions.Has(ConditionPoisoned) {
-			ctxAdv = combineAdv(ctxAdv, RollDisadvantage)
+			parts = append(parts, RollDisadvantage)
 		}
 	}
 
@@ -283,17 +294,15 @@ func DetermineAttackAdvantage(actorConditions EntityConditions, targetConditions
 	if targetConditions != nil {
 		if targetConditions.Has(ConditionProne) {
 			if isRangedAttack {
-				ctxAdv = combineAdv(ctxAdv, RollDisadvantage)
+				parts = append(parts, RollDisadvantage)
 			} else {
-				ctxAdv = combineAdv(ctxAdv, RollAdvantage)
+				parts = append(parts, RollAdvantage)
 			}
 		}
 		if targetConditions.Has(ConditionRestrained) || targetConditions.Has(ConditionParalyzed) || targetConditions.Has(ConditionUnconscious) {
-			ctxAdv = combineAdv(ctxAdv, RollAdvantage)
+			parts = append(parts, RollAdvantage)
 		}
 	}
-
-	parts = append(parts, ctxAdv)
 
 	// Resolve final
 	return GetFinalAdvantageType(parts)
