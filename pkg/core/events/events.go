@@ -9,23 +9,24 @@ import (
 type EventType string
 
 const (
-	ETAttackEvent         EventType = "attack"
-	ETSpellAttackEvent    EventType = "spellattack"
-	ETSpellDCEvent        EventType = "spelldc"
-	ETHealEvent           EventType = "heal"
-	ETDamageEvent         EventType = "damage"
-	ETDeathEvent          EventType = "death"
-	ETUnconsciousEvent    EventType = "unconscious"
-	ETRollEvent           EventType = "roll"
-	ETHPRollEvent         EventType = "hproll"
-	ETActionChoiceEvent   EventType = "actionchoice"
-	ETSpellChoiceEvent    EventType = "spellchoice"
-	ETSpellSlotsEvent     EventType = "spellslots"
-	ETHPModifiedEvent     EventType = "hpmodified"
-	ETSavingThrowEvent    EventType = "savingthrow"
-	ETTargetChoiceEvent   EventType = "targetchoice"
-	ECombatEventMessage   EventType = "combatmessage"
-	ETDamageModifiedEvent EventType = "damagedmodified"
+	ETAttackEvent                 EventType = "attack"
+	ETSpellAttackEvent            EventType = "spellattack"
+	ETSpellDCEvent                EventType = "spelldc"
+	ETHealEvent                   EventType = "heal"
+	ETDamageEvent                 EventType = "damage"
+	ETDeathEvent                  EventType = "death"
+	ETUnconsciousEvent            EventType = "unconscious"
+	ETRollEvent                   EventType = "roll"
+	ETHPRollEvent                 EventType = "hproll"
+	ETActionChoiceEvent           EventType = "actionchoice"
+	ETSpellChoiceEvent            EventType = "spellchoice"
+	ETSpellSlotsEvent             EventType = "spellslots"
+	ETHPModifiedEvent             EventType = "hpmodified"
+	ETSavingThrowEvent            EventType = "savingthrow"
+	ETTargetChoiceEvent           EventType = "targetchoice"
+	ECombatEventMessage           EventType = "combatmessage"
+	ETDamageModifiedEvent         EventType = "damagedmodified"
+	ETDragonbornBreathWeaponEvent EventType = "dragonbornbreathweapon"
 )
 
 type CombatEvent interface {
@@ -78,6 +79,19 @@ type MeleeAttackEvent struct {
 }
 
 func (e *MeleeAttackEvent) GetEventType() EventType { return ETAttackEvent }
+
+type DragonbornBreathWeaponEvent struct {
+	BaseEvent
+	Target             string
+	DamageTotal        int
+	DamageType         string
+	DC                 int
+	SaveAbility        string
+	SavingThrowSuccess bool
+	SavingThrowResult  int
+}
+
+func (e *DragonbornBreathWeaponEvent) GetEventType() EventType { return ETDragonbornBreathWeaponEvent }
 
 type ActionChoiceEvent struct {
 	BaseEvent

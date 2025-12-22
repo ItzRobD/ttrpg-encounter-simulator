@@ -171,21 +171,22 @@ func NewActionPreference(s string) ActionPreference {
 type ActionType string
 
 const (
-	ATNoAction           ActionType = "no action"
-	ATDamage                        = "damage"
-	ATMelee                         = "melee attack"
-	ATRanged                        = "ranged attack"
-	ATSpell                         = "spell attack"
-	ATHeal                          = "healing"
-	ATUnarmed                       = "unarmed attack"
-	ATMonsterHeal                   = "monster heal"
-	ATMonsterDamage                 = "monster damage"
-	ATMonsterAction                 = "monster action"
-	ATMonsterMultiattack            = "monster multiattack"
-	ATLegendaryAction               = "legendary action"
-	ATMonsterSpecial                = "monster special ability"
-	ATLairAction                    = "lair action"
-	ATOffhand                       = "offhand attack"
+	ATNoAction               ActionType = "no action"
+	ATDamage                            = "damage"
+	ATMelee                             = "melee attack"
+	ATRanged                            = "ranged attack"
+	ATSpell                             = "spell attack"
+	ATHeal                              = "healing"
+	ATUnarmed                           = "unarmed attack"
+	ATMonsterHeal                       = "monster heal"
+	ATMonsterDamage                     = "monster damage"
+	ATMonsterAction                     = "monster action"
+	ATMonsterMultiattack                = "monster multiattack"
+	ATLegendaryAction                   = "legendary action"
+	ATMonsterSpecial                    = "monster special ability"
+	ATLairAction                        = "lair action"
+	ATOffhand                           = "offhand attack"
+	ATDragonbornBreathWeapon            = "dragonborn breath weapon"
 )
 
 func (a ActionType) String() string {

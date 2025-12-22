@@ -140,11 +140,12 @@ func (h *UniversalEventHandler) handleSpellDC(e *SpellDCEvent) {
 }
 
 func (h *UniversalEventHandler) handleDamage(e *DamageEvent) {
-	fmt.Printf("[Round %d] <Damage> %s Does %d damage to %s.\n",
+	fmt.Printf("[Round %d] <Damage> %s Does %d damage to %s. Rolls: %v\n",
 		e.GetRound(),
 		e.GetActor(),
 		e.Amount,
-		e.Target)
+		e.Target,
+		e.Rolls)
 }
 
 func (h *UniversalEventHandler) handleHeal(e *HealEvent) {

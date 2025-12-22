@@ -48,6 +48,23 @@ func LogMeleeAttackEvent(actor core.Entity, attackResult *core.AttackResult, lis
 	}
 }
 
+func LogDragonbornBreathWeaponEvent(actor core.Entity, target core.Entity, damageTotal int, damageType string, dc int, saveAbility string, saveSuccess bool, saveResult int, listener func(event interface{})) {
+	event := &DragonbornBreathWeaponEvent{
+		Target:             target.GetName(),
+		DamageTotal:        damageTotal,
+		DamageType:         damageType,
+		DC:                 dc,
+		SaveAbility:        saveAbility,
+		SavingThrowSuccess: saveSuccess,
+		SavingThrowResult:  saveResult,
+	}
+	event.SetActor(actor.GetName())
+
+	if listener != nil {
+		listener(event)
+	}
+}
+
 //func LogMonsterAttackEvent(actor core.Entity, attackResult *core.AttackResult, listener func(event interface{})) {
 //	event := &
 //}

@@ -459,7 +459,14 @@ func (esm *EntityStateManager) ResetAllRechargeActions() {
 	}
 }
 
-// AddRechargeAction adds a recharge action at the specified index and initializes the RechargeActionStatus map if nil.
+func (esm *EntityStateManager) SetDBBreathWeaponUsed(val bool) {
+	esm.DBBreathWeaponUsed = val
+}
+
+func (esm *EntityStateManager) GetDBBreathWeaponUsed() bool {
+	return esm.DBBreathWeaponUsed
+}
+
 func (esm *EntityStateManager) AddRechargeAction(index int) {
 	if esm.RechargeActionStatus == nil {
 		esm.RechargeActionStatus = make(map[int]bool)

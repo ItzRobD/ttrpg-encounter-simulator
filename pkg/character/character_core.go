@@ -3,6 +3,8 @@ package character
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
+	"dnd5e-encounter-simulator-backend/pkg/races"
 	"errors"
 	"fmt"
 	"log"
@@ -84,6 +86,11 @@ func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReq
 		}
 
 		switch actionChoice {
+		case core.ATDragonbornBreathWeapon:
+			req, err = c.AI.createDragonbornBreathWeaponRequest()
+			if err != nil {
+				return nil, err
+			}
 		case core.ATDamage:
 			req, err = c.AI.createCharacterDamageActionRequest()
 			if err != nil {
@@ -238,6 +245,71 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			ActorID:    req.ActorID,
 			Effects:    effects,
 			Success:    len(effects) > 0,
+		}, nil
+	case core.ATDragonbornBreathWeapon:
+		if c.Race.DragonbornFeatures == nil {
+			return nil, fmt.Errorf("character is not a dragonborn or missing breath weapon features")
+		}
+
+		// Calculate damage
+		rollOpts := roll_manager.NewRollOptions()
+		rollOpts.RollType = core.DiceRollDamage
+		damage, err := c.RollManager.RollDice(c.Race.DragonbornFeatures.NumberOfDice, c.Race.DragonbornFeatures.Die, rollOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		// Save DC: 8 + Con mod + Proficiency
+		conMod, err := c.getAbilityScoreModifier(core.AbilityConstitution)
+		if err != nil {
+			return nil, err
+		}
+		pb, err := core.GetCharacterProficiencyBonus(c.Level)
+		if err != nil {
+			return nil, err
+		}
+		dc := 8 + conMod + pb
+
+		// Target makes a saving throw based on color
+		saveAbility := core.AbilityDexterity
+		switch c.Race.DragonbornFeatures.AncestryColor {
+		case races.DragonbornGreen, races.DragonbornSilver, races.DragonbornWhite:
+			saveAbility = core.AbilityConstitution
+		}
+
+		saveRes, err := req.Target.MakeSavingThrow(saveAbility, dc, false)
+		if err != nil {
+			return nil, err
+		}
+
+		finalDamage := damage.GetTotal()
+		if saveRes.GetIsSuccess() {
+			finalDamage /= 2
+		}
+
+		// Log breath weapon attack event
+		events.LogDragonbornBreathWeaponEvent(c, req.Target, damage.GetTotal(), c.Race.DragonbornFeatures.DamageType.String(), dc, saveAbility.String(), saveRes.GetIsSuccess(), saveRes.GetTotal(), c.EventListener)
+		events.LogDamageEvent(c, req.Target, c.Race.DragonbornFeatures.DamageType.String(), damage.GetTotal(), damage.GetFinalRolls(), c.EventListener)
+
+		c.EntityStateManager.SetDBBreathWeaponUsed(true)
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			TargetID:   req.TargetID,
+			ActorID:    req.ActorID,
+			Effects: []core.Effect{
+				{
+					Type:       core.EffectDamage,
+					Value:      finalDamage,
+					DamageType: c.Race.DragonbornFeatures.DamageType,
+					SaveCtx: &core.SaveContext{
+						Ability:   saveAbility,
+						Success:   saveRes.GetIsSuccess(),
+						OnSuccess: core.DCOnSuccessHalf,
+					},
+				},
+			},
+			Success: true,
 		}, nil
 	case core.ATHeal:
 		return nil, errors.New("not implemented")

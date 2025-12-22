@@ -46,6 +46,12 @@ func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
 		//	return ce.executeHeal(req)
 		//case core.ATUnarmed:
 		//	return ce.executeUnarmedAttack(req)
+	case core.ATDragonbornBreathWeapon:
+		outcome, err := req.Actor.ExecuteAIRequest(req)
+		if err != nil {
+			return err
+		}
+		return ce.processActionResults(req.Actor, outcome)
 	case core.ATMonsterAction:
 		return ce.executeMonsterAction(req)
 	case core.ATMonsterMultiattack:

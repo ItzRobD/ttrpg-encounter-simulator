@@ -146,6 +146,22 @@ func NewRollManager(parent core.Entity, abilities RerollAbilities) *RollManager 
 }
 
 // RollD20 performs a d20 roll based on the given options, handles advantage/disadvantage, and calculates the final result.
+// RollDice rolls the specified number of dice of the given type and returns a RollResult.
+func (rm *RollManager) RollDice(numberOfDice int, die core.DiceType, opts RollOptions) (*RollResult, error) {
+	total, rolls := rm.rollDice(numberOfDice, die)
+	res := &RollResult{
+		DiceRollType:   opts.RollType,
+		NumberOfDice:   numberOfDice,
+		Die:            die,
+		FinalRollValue: total,
+		FinalRolls:     rolls,
+		Modifier:       opts.Modifier,
+		Total:          total + opts.Modifier,
+	}
+
+	return res, nil
+}
+
 func (rm *RollManager) RollD20(options RollOptions, shouldLogEvent bool) (*RollResult, error) {
 	var res RollResult // Single return value
 	res.Advantage = options.Advantage

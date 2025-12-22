@@ -17,6 +17,7 @@ const (
 	AIReqNormalAction AIRequestType = iota
 	AIReqLegendaryAction
 	AIReqOffhandAttack
+	AIReqDragonbornBreathWeapon
 )
 
 type AIRequest struct {

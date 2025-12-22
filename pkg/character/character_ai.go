@@ -3,6 +3,7 @@ package character
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/races"
 	"fmt"
 	"math/rand/v2"
 )
@@ -142,6 +143,14 @@ func (cai *CharacterAI) getAllyTargets() map[int]*core.Combatant {
 func (cai *CharacterAI) chooseCharacterActionType() (core.ActionType, error) {
 	if cai.combatCtx == nil {
 		return core.ATNoAction, fmt.Errorf("combat context not set")
+	}
+
+	if cai.parent.Race.ID == races.Dragonborn && !cai.parent.EntityStateManager.GetDBBreathWeaponUsed() {
+		// Use breath weapon if there are targets (simple AI logic)
+		tStatus, _, _ := cai.selectTargetID(core.TTDamage)
+		if tStatus == core.TargetOK {
+			return core.ATDragonbornBreathWeapon, nil
+		}
 	}
 
 	if cai.combatCtx.Options.AllowCharacterHeals {
@@ -304,6 +313,28 @@ func (cai *CharacterAI) createCharacterOffhandActionRequest() (*core.AIRequest, 
 		Target:     cai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity(),
 		ActionType: core.ATOffhand,
 		WeaponSlot: core.WSSecondary,
+	}
+
+	return req, nil
+}
+
+func (cai *CharacterAI) createDragonbornBreathWeaponRequest() (*core.AIRequest, error) {
+	tStatus, targetID, err := cai.selectTargetID(core.TTDamage)
+	if err != nil {
+		return nil, err
+	}
+	if tStatus == core.TargetNone {
+		events.LogCombatEventMessage(cai.parent, "No valid targets for breath weapon", cai.parent.GetEventListener())
+		return nil, nil
+	}
+
+	req := &core.AIRequest{
+		Actor:      cai.parent,
+		ActorType:  core.EntityCharacter,
+		TargetID:   targetID,
+		Target:     cai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity(),
+		ActionType: core.ATDragonbornBreathWeapon,
+		Request:    core.AIReqDragonbornBreathWeapon,
 	}
 
 	return req, nil
