@@ -104,7 +104,12 @@ func (csm *CombatantSetupManager) createMonsters(ids []int) ([]*core.Combatant, 
 	// Track which monsters were successfully found
 	foundIDs := make(map[int]bool)
 
-	for _, monsterConfig := range cfg {
+	// Iterate over the original ids slice to ensure deterministic creation order
+	for _, id := range ids {
+		monsterConfig, exists := cfg[id]
+		if !exists {
+			continue
+		}
 		if csm.useHPAverageMonsters {
 			monsterConfig.HPSetMethod = core.HPSetAverage
 		} else {

@@ -494,6 +494,41 @@ func TestModifyHP_RelentlessEndurance(t *testing.T) {
 	})
 }
 
+func TestModifyHP_HealFromUnconscious(t *testing.T) {
+	parent := testhelpers.NewEmEntity(1, core.AbilityScores{}, nil)
+	esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 0})
+
+	// Set to unconscious and add a death save failure
+	esm.SetUnconscious(true)
+	esm.DeathSaves.AddFailure(false)
+
+	if !esm.GetIsUnconscious() {
+		t.Errorf("expected entity to be unconscious")
+	}
+
+	// Heal
+	_, err := esm.ModifyHP(5, false, false)
+	if err != nil {
+		t.Fatalf("ModifyHP error: %v", err)
+	}
+
+	if esm.CurrentHP != 5 {
+		t.Errorf("expected HP 5, got %d", esm.CurrentHP)
+	}
+
+	if esm.GetIsUnconscious() {
+		t.Errorf("expected entity NOT to be unconscious after healing")
+	}
+
+	if esm.Conditions.Has(core.ConditionUnconscious) {
+		t.Errorf("expected Unconscious condition to be removed")
+	}
+
+	if esm.DeathSaves.SaveFailure != 0 {
+		t.Errorf("expected death saves to be reset, got %d failures", esm.DeathSaves.SaveFailure)
+	}
+}
+
 func TestLegendaryPoints_ErrorAndRemaining(t *testing.T) {
 	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}, nil), EntityStateConfig{MaxLegendaryActions: 1})
 	if !esm.HasLegendaryActionPointsRemaining() {

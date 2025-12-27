@@ -531,8 +531,11 @@ func (c *Character) GetHitDie() core.DiceType                        { return c.
 func (c *Character) GetState() interface{}                           { return c.EntityStateManager }
 func (c *Character) InitializeHP() error                             { return c.setHP(c.HPConfig) }
 func (c *Character) IsSpellcaster() bool                             { return c.SpellCastingManager.HasAnyKnownSpells() }
-func (c *Character) IsHealer() bool                                  { return c.SpellCastingManager.HasHealingSpells() }
-func (c *Character) GetRNG() *rand.Rand                              { return c.RNG }
+func (c *Character) IsHealer() bool {
+	return c.SpellCastingManager.HasHealingSpells() ||
+		(c.Class.ID == classes.Paladin && c.EntityStateManager.GetPaladinLayingOnHandsPool() > 0)
+}
+func (c *Character) GetRNG() *rand.Rand { return c.RNG }
 func (c *Character) GetTargetPriority() core.TargetPriority {
 	return c.EntityStateManager.GetTargetPrioritization()
 }

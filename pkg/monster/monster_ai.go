@@ -5,6 +5,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
 	"math/rand/v2"
+	"sort"
 )
 
 type MonsterAIMode int
@@ -85,6 +86,7 @@ func (mai *MonsterAI) getAvailableLegendaryActions(legPointsRemaining int) []int
 			availableIdx = append(availableIdx, idx)
 		}
 	}
+	sort.Ints(availableIdx)
 	return availableIdx
 }
 
@@ -117,9 +119,6 @@ func (mai *MonsterAI) chooseLegendaryAction(indexes []int) (int, error) {
 }
 
 func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) {
-	var req core.AIRequest
-	var choice *core.SpellChoice
-
 	tStatus, targetID, err := mai.selectTargetID(core.TTHealing)
 	if err != nil {
 		return nil, err
@@ -129,29 +128,20 @@ func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) 
 		return nil, nil
 	}
 
-	// TODO: Will need to account for custom monsters with healing actions, maybe?
-
-	// choose spell
-	if mai.parent.SpellCastingManager.HasHealingSpells() {
-		targetValue := mai.combatCtx.CombatantInfo[targetID].Combatant.Entity.GetHPStatus().GetHPDifference()
-		choice, err = mai.parent.ChooseSpellByHealingEfficiency(targetValue)
-		if err != nil {
-			return nil, err
-		}
-
-		req = core.AIRequest{
-			Actor:       mai.parent,
-			ActorType:   core.EntityMonster,
-			TargetID:    targetID,
-			ActionType:  core.ATSpell,
-			SpellChoice: choice,
-		}
-
-	} else {
-		// TODO: Handle healing actions
+	target := mai.combatCtx.CombatantInfo[targetID].Combatant.Entity
+	healReq, err := mai.parent.CreateHealRequest(target)
+	if err != nil {
+		return nil, err
 	}
 
-	return &req, nil
+	return &core.AIRequest{
+		Actor:       mai.parent,
+		ActorType:   core.EntityMonster,
+		Target:      target,
+		TargetID:    targetID,
+		ActionType:  core.ATMonsterHeal,
+		HealRequest: healReq,
+	}, nil
 }
 
 func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error) {
@@ -176,20 +166,19 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 	if mai.hasMultiattack {
 		switch mai.AIMode {
 		case MAISimple:
-			if mai.parent.IsSpellcaster() && mai.rng.IntN(2) == 0 {
+			// Deterministic choice: prefer spell if available
+			if mai.parent.IsSpellcaster() {
 				spellChoice, err = mai.chooseSpell()
-				if err != nil {
-					fmt.Println(err)
-				} else {
+				if err == nil {
 					return mai.buildAIRequest(-1, spellChoice, core.ATSpell)
 				}
+				// If chooseSpell fails (no slots/spells), fallback to multiattack
+			}
+			actionChoiceID, err = mai.chooseMultiattackOption()
+			if err != nil {
+				fmt.Println(err)
 			} else {
-				actionChoiceID, err = mai.chooseMultiattackOption()
-				if err != nil {
-					fmt.Println(err)
-				} else {
-					return mai.buildAIRequest(actionChoiceID, nil, core.ATMonsterMultiattack)
-				}
+				return mai.buildAIRequest(actionChoiceID, nil, core.ATMonsterMultiattack)
 			}
 			// The tactical AI is going to be replaced by the more advanced weighted decision process
 		}
@@ -220,7 +209,7 @@ func (mai *MonsterAI) getAvailableRechargeActionIndexes() []int {
 			availableIdx = append(availableIdx, idx)
 		}
 	}
-
+	sort.Ints(availableIdx)
 	return availableIdx
 }
 
@@ -259,13 +248,21 @@ func (mai *MonsterAI) chooseMultiattackOption() (int, error) {
 
 	switch mai.AIMode {
 	case MAISimple:
-		idx := mai.rng.IntN(len(mai.parent.ActionManager.Multiattacks))
-		return idx, nil
+		// Deterministic choice: pick the first one
+		return 0, nil
 	case MAITactical:
 		bestIndex := -1
 		bestAvg := 0
 
-		for idx, option := range mai.parent.ActionManager.MultiAttackData {
+		// Sort MultiAttackData keys (indices) to ensure deterministic tie-breaking
+		indices := make([]int, 0, len(mai.parent.ActionManager.MultiAttackData))
+		for idx := range mai.parent.ActionManager.MultiAttackData {
+			indices = append(indices, idx)
+		}
+		sort.Ints(indices)
+
+		for _, idx := range indices {
+			option := mai.parent.ActionManager.MultiAttackData[idx]
 			if bestIndex == -1 {
 				bestIndex = idx
 				if mai.PrioritizeTotalAvg {
@@ -305,13 +302,21 @@ func (mai *MonsterAI) chooseMonsterAction() (int, error) {
 
 	switch mai.AIMode {
 	case MAISimple:
-		idx := mai.rng.IntN(len(mai.parent.ActionManager.Actions))
-		return actionIDs[idx], nil
+		// Deterministic choice: pick the first one
+		return actionIDs[0], nil
 	case MAITactical:
 		bestIndex := -1
 		bestAvg := 0
 
-		for idx, action := range mai.parent.ActionManager.ActionAttackData {
+		// Sort ActionAttackData keys (indices) to ensure deterministic tie-breaking
+		indices := make([]int, 0, len(mai.parent.ActionManager.ActionAttackData))
+		for idx := range mai.parent.ActionManager.ActionAttackData {
+			indices = append(indices, idx)
+		}
+		sort.Ints(indices)
+
+		for _, idx := range indices {
+			action := mai.parent.ActionManager.ActionAttackData[idx]
 			if bestIndex == -1 {
 				bestIndex = actionIDs[idx]
 				bestAvg = action.Average
@@ -392,7 +397,14 @@ func (mai *MonsterAI) selectTargetID(targetType core.TargetType) (core.TargetSta
 	case core.TTDamage:
 		validTargets = mai.getEnemyTargets()
 	case core.TTHealing:
-		validTargets = mai.getAllyTargets()
+		allies := mai.getAllyTargets()
+		validTargets = make(map[int]*core.Combatant)
+		needHealing := mai.combatCtx.MonstersInNeedOfHealing
+		for _, id := range needHealing {
+			if c, ok := allies[id]; ok {
+				validTargets[id] = c
+			}
+		}
 	default:
 		return core.TargetInvalidType, -1, fmt.Errorf("invalid target type")
 	}
@@ -437,7 +449,7 @@ func (mai *MonsterAI) getAllyTargets() map[int]*core.Combatant {
 			continue
 		}
 		e := combatant.Combatant.GetEntity()
-		if !e.IsUnconscious() && (self.IsMonster() == e.IsMonster()) {
+		if !e.IsDead() && (self.IsMonster() == e.IsMonster()) {
 			allies[id] = combatant.Combatant
 		}
 	}
@@ -454,6 +466,7 @@ func (mai *MonsterAI) getActionIDs() []int {
 	for idx := range mai.parent.ActionManager.Actions {
 		actionIDs = append(actionIDs, idx)
 	}
+	sort.Ints(actionIDs)
 	return actionIDs
 }
 

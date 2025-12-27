@@ -41,9 +41,8 @@ func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
 		return ce.executeWeaponAttack(req)
 	case core.ATSpell:
 		return ce.executeSpellCast(req)
-		// TODO: Complete these two paths - note, need to account for unconsious healing and removing of applicable conditions
-		//case core.ATHeal:
-		//	return ce.executeHeal(req)
+	case core.ATHeal, core.ATMonsterHeal:
+		return ce.executeHeal(req)
 		//case core.ATUnarmed:
 		//	return ce.executeUnarmedAttack(req)
 	case core.ATDragonbornBreathWeapon:
@@ -120,6 +119,14 @@ func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
 }
 
 func (ce *CombatEngine) executeSpellCast(aiReq *core.AIRequest) error {
+	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
+	if err != nil {
+		return err
+	}
+	return ce.processActionResults(aiReq.Actor, outcome)
+}
+
+func (ce *CombatEngine) executeHeal(aiReq *core.AIRequest) error {
 	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
 	if err != nil {
 		return err
@@ -238,6 +245,15 @@ func (ce *CombatEngine) AddCombatant(c *core.Combatant) {
 	ce.Combatants[len(ce.Combatants)] = c
 }
 
+func (ce *CombatEngine) getSortedCombatantIDs() []int {
+	ids := make([]int, 0, len(ce.Combatants))
+	for id := range ce.Combatants {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+	return ids
+}
+
 // SetupCombat initializes the combat by resetting the current round, rolling initiatives, and updating combatants and the tracker.
 // Returns an error if combatants are missing or if an issue occurs during initiative rolling or tracker setup.
 func (ce *CombatEngine) SetupCombat() error {
@@ -256,7 +272,11 @@ func (ce *CombatEngine) SetupCombat() error {
 		}
 	}
 
-	for id, c := range ce.Combatants {
+	// Sort combatant IDs to ensure deterministic roll order
+	ids := ce.getSortedCombatantIDs()
+
+	for _, id := range ids {
+		c := ce.Combatants[id]
 		entity := c.GetEntity()
 
 		initiative, err := entity.RollInitiative()
@@ -281,10 +301,7 @@ func (ce *CombatEngine) SetupCombat() error {
 
 // setupCombatTracker initializes and sorts the combat tracker based on initiative, dexterity, and ID order of combatants.
 func (ce *CombatEngine) setupCombatTracker() error {
-	ce.TurnOrder = make([]int, 0, len(ce.Combatants))
-	for id := range ce.Combatants {
-		ce.TurnOrder = append(ce.TurnOrder, id)
-	}
+	ce.TurnOrder = ce.getSortedCombatantIDs()
 
 	sort.Slice(ce.TurnOrder, func(i, j int) bool {
 		idxI := ce.TurnOrder[i]
@@ -332,7 +349,9 @@ func (ce *CombatEngine) setupCombatTracker() error {
 }
 
 func (ce *CombatEngine) rollInitiativeForAllCombatants() error {
-	for id, c := range ce.Combatants {
+	ids := ce.getSortedCombatantIDs()
+	for _, id := range ids {
+		c := ce.Combatants[id]
 		init, err := c.GetEntity().RollInitiative()
 		if err != nil {
 			return err
@@ -519,7 +538,10 @@ func (ce *CombatEngine) initializeCombatContext() {
 	ce.CombatContext.TurnOrder = ce.TurnOrder
 
 	ce.CombatContext.CombatantInfo = make(map[int]*core.CombatantInfo)
-	for id, combatant := range ce.Combatants {
+
+	ids := ce.getSortedCombatantIDs()
+	for _, id := range ids {
+		combatant := ce.Combatants[id]
 		// Skip lair combatants (they have no entity)
 		if combatant.IsLair {
 			continue
@@ -542,7 +564,8 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 	ce.CombatContext.DeadCombatants = ce.getDeadCombatantIDs()
 
 	// Update state for all combatants
-	for id := range ce.Combatants {
+	ids := ce.getSortedCombatantIDs()
+	for _, id := range ids {
 		if info, exists := ce.CombatContext.CombatantInfo[id]; exists {
 			info.UpdateState()
 		}
@@ -556,7 +579,9 @@ func (ce *CombatEngine) calculateEntitiesNeedingHealing() ([]int, []int) {
 	charNeedHealing := make([]int, 0)
 	monNeedHealing := make([]int, 0)
 
-	for id, combatant := range ce.Combatants {
+	ids := ce.getSortedCombatantIDs()
+	for _, id := range ids {
+		combatant := ce.Combatants[id]
 		// Skip lair combatants
 		if combatant.IsLair {
 			continue
@@ -588,7 +613,9 @@ func (ce *CombatEngine) calculateEntitiesNeedingHealing() ([]int, []int) {
 func (ce *CombatEngine) getDeadCombatantIDs() []int {
 	deadCombatants := make([]int, 0)
 
-	for id, combatant := range ce.Combatants {
+	ids := ce.getSortedCombatantIDs()
+	for _, id := range ids {
+		combatant := ce.Combatants[id]
 		// Skip lair combatants
 		if combatant.IsLair {
 			continue
@@ -626,7 +653,9 @@ func (ce *CombatEngine) roundStartEvents() error {
 }
 
 func (ce *CombatEngine) rollRechargeAbilities() error {
-	for _, c := range ce.Combatants {
+	ids := ce.getSortedCombatantIDs()
+	for _, id := range ids {
+		c := ce.Combatants[id]
 		if c.IsLair {
 			// Let lair roll recharge for its actions (if any)
 			// Type assert to known lair type without importing lair here; use interface probing

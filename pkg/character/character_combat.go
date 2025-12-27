@@ -6,6 +6,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/races"
+	"fmt"
 )
 
 func (c *Character) RollInitiative() (int, error) {
@@ -64,6 +65,46 @@ func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bo
 		DamageType:        w.DamageType,
 		IsVersatileAttack: v,
 	}, nil
+}
+
+func (c *Character) CreateHealRequest(target core.Entity) (*core.HealRequest, error) {
+	// 1. Determine how much healing the target actually needs
+	hpNeeded := target.GetHPStatus().GetHPDifference()
+	if hpNeeded <= 0 {
+		return nil, fmt.Errorf("target does not require healing")
+	}
+
+	// 2. Priority 1: Paladin Lay on Hands (Saves spell slots for Smite)
+	if c.Class.ID == classes.Paladin {
+		pool := c.EntityStateManager.GetPaladinLayingOnHandsPool()
+		if pool > 0 {
+			// Use just enough to top them off, or whatever is left in the pool
+			amount := hpNeeded
+			if amount > pool {
+				amount = pool
+			}
+
+			return &core.HealRequest{
+				Source:       core.HealSourceLayingOnHands,
+				Target:       target,
+				AbilityValue: amount,
+			}, nil
+		}
+	}
+
+	// 3. Priority 2: Healing Spells
+	// This uses your existing logic to find the best available spell slot
+	choice, err := c.ChooseSpellByHealingEfficiency(hpNeeded)
+	if err == nil && choice != nil {
+		return &core.HealRequest{
+			Source:      core.HealSourceSpell,
+			Target:      target,
+			SpellChoice: choice,
+		}, nil
+	}
+
+	// 4. No healing resources available
+	return nil, fmt.Errorf("no healing resources available (no pool/no slots)")
 }
 
 // CreateAttackRequest generates an attack request with specific weapon data, modifiers, and attack count.

@@ -4,6 +4,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
+	"sort"
 )
 
 type HPModificationResult struct {
@@ -421,6 +422,11 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 				esm.SetUnconscious(true)
 			}
 		}
+	} else if res.OriginalHP <= 0 && res.NewHP > 0 {
+		// Character was healed from 0 or stable
+		esm.SetUnconscious(false)
+		esm.DeathSaves.Reset()
+		esm.IsStable = false
 	}
 
 	return res, nil
@@ -455,6 +461,8 @@ func (esm *EntityStateManager) GetExpendedRechargeActionsIndex() []int {
 			result = append(result, i)
 		}
 	}
+	// Sort to ensure deterministic processing order
+	sort.Ints(result)
 	return result
 }
 

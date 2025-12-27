@@ -48,6 +48,8 @@ func NewDeathSaves() DeathSaves {
 }
 
 func (ds *DeathSaves) Reset() {
+	ds.SaveSuccess = 0
+	ds.SaveFailure = 0
 }
 
 func (ds *DeathSaves) String() string {

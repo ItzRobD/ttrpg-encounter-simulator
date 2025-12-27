@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"math/rand/v2"
+	"sort"
 )
 
 // SelectTargetFromMap chooses a target based on the given priority.
@@ -11,59 +12,70 @@ func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriorit
 	if len(validTargets) == 0 {
 		return TargetNone, -1, nil
 	}
+
+	targetIDs := make([]int, 0, len(validTargets))
+	for id := range validTargets {
+		targetIDs = append(targetIDs, id)
+	}
+	sort.Ints(targetIDs)
+
 	targetID := -1
 	switch priority {
 	case NoPriority:
-		targetIDs := make([]int, 0, len(validTargets))
-		for id := range validTargets {
-			targetIDs = append(targetIDs, id)
-		}
 		targetID = targetIDs[rng.IntN(len(targetIDs))]
 	case PrioritizeHighestLevel:
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if targetID == -1 || c.GetEntity().GetLevel() > validTargets[targetID].GetEntity().GetLevel() {
 				targetID = id
 			}
 		}
 	case PrioritizeLowestLevel:
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if targetID == -1 || c.GetEntity().GetLevel() < validTargets[targetID].GetEntity().GetLevel() {
 				targetID = id
 			}
 		}
 	case PrioritizeMostDamaged:
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if targetID == -1 || c.GetEntity().GetHPStatus().GetHPPct() < validTargets[targetID].GetEntity().GetHPStatus().GetHPPct() {
 				targetID = id
 			}
 		}
 	case PrioritizeLeastDamaged:
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if targetID == -1 || c.GetEntity().GetHPStatus().GetHPPct() > validTargets[targetID].GetEntity().GetHPStatus().GetHPPct() {
 				targetID = id
 			}
 		}
 	case PrioritizeLowestHealth:
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if targetID == -1 || c.GetEntity().GetHPStatus().GetHP() < validTargets[targetID].GetEntity().GetHPStatus().GetHP() {
 				targetID = id
 			}
 		}
 	case PrioritizeHighestMaxHP:
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if targetID == -1 || c.GetEntity().GetHPStatus().GetMaxHP() > validTargets[targetID].GetEntity().GetHPStatus().GetMaxHP() {
 				targetID = id
 			}
 		}
 	case PrioritizeLowestMaxHP:
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if targetID == -1 || c.GetEntity().GetHPStatus().GetMaxHP() < validTargets[targetID].GetEntity().GetHPStatus().GetMaxHP() {
 				targetID = id
 			}
 		}
 	case PrioritizeHealer:
 		targets := make(map[int]*Combatant)
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if c.GetEntity().IsSpellcaster() && c.GetEntity().IsHealer() {
 				targets[id] = c
 			}
@@ -73,7 +85,8 @@ func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriorit
 		}
 	case PrioritizeSpellcaster:
 		targets := make(map[int]*Combatant)
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if c.GetEntity().IsSpellcaster() {
 				targets[id] = c
 			}
@@ -83,7 +96,8 @@ func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriorit
 		}
 	case PrioritizeUnconscious:
 		targets := make(map[int]*Combatant)
-		for id, c := range validTargets {
+		for _, id := range targetIDs {
+			c := validTargets[id]
 			if c.GetEntity().IsUnconscious() {
 				targets[id] = c
 			}

@@ -91,6 +91,28 @@ func (m *Monster) createSpellCastRequest(target core.Entity, spellchoice core.Sp
 	}, nil
 }
 
+func (m *Monster) CreateHealRequest(target core.Entity) (*core.HealRequest, error) {
+	// 1. Determine how much healing the target actually needs
+	hpNeeded := target.GetHPStatus().GetHPDifference()
+	if hpNeeded <= 0 {
+		return nil, fmt.Errorf("target does not require healing")
+	}
+
+	// 2. Monsters only heal via spells for now
+	if m.SpellCastingManager.HasHealingSpells() {
+		choice, err := m.SpellCastingManager.GetMostEfficientHealingSpell(hpNeeded)
+		if err == nil && choice != nil {
+			return &core.HealRequest{
+				Source:      core.HealSourceSpell,
+				Target:      target,
+				SpellChoice: choice,
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no healing resources available")
+}
+
 func isValidMonsterActionType(actionType core.ActionType) bool {
 	return actionType == core.ATMonsterAction ||
 		actionType == core.ATLegendaryAction ||

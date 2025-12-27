@@ -156,6 +156,22 @@ func LogSpellHealEvent(actor core.Entity, res core.SpellResult, listener func(ev
 	}
 }
 
+func LogLayOnHandsHealEvent(actor core.Entity, subject core.Entity, value int, listener func(event interface{})) {
+	event := &HealEvent{
+		Target:     subject.GetName(),
+		Name:       "Lay on Hands",
+		SpellLevel: 0,
+		IsSpell:    false,
+		HealTotal:  value,
+		HealRolls:  []int{value},
+	}
+	event.SetActor(actor.GetName())
+
+	if listener != nil {
+		listener(event)
+	}
+}
+
 func LogDamageModifiedEvent(actor core.Entity, subject core.Entity, res core.DamageModificationResult, listener func(event interface{})) {
 	event := &DamageModifiedEvent{
 		BaseEvent:        BaseEvent{},

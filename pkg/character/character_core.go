@@ -312,8 +312,51 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			Success: true,
 		}, nil
 	case core.ATHeal:
-		// TODO: Execute AI Healing
-		return nil, errors.New("not implemented")
+		if req.SimOptions != nil && !req.SimOptions.AllowCharacterHeals {
+			return nil, errors.New("character healing is disabled")
+		}
+
+		hReq := req.HealRequest
+		if hReq == nil {
+			return nil, errors.New("missing heal request")
+		}
+
+		var healingValue int
+		if hReq.Source == core.HealSourceLayingOnHands {
+			// Ability Logic: Lay on Hands
+			pool := c.EntityStateManager.GetPaladinLayingOnHandsPool()
+			if hReq.AbilityValue > pool {
+				return nil, fmt.Errorf("insufficient Lay on Hands pool")
+			}
+			c.EntityStateManager.ModifyPaladinLayingOnHandsPool(-hReq.AbilityValue)
+			healingValue = hReq.AbilityValue
+
+			events.LogLayOnHandsHealEvent(c, hReq.Target, healingValue, c.EventListener)
+		} else if hReq.Source == core.HealSourceSpell {
+			// Existing Spell Logic
+			scReq, err := c.CreateSpellCastRequest(hReq.Target, *hReq.SpellChoice, hReq.Advantage, req.SimOptions)
+			if err != nil {
+				return nil, err
+			}
+			res, err := c.SpellCastingManager.CastSpell(scReq)
+			if err != nil {
+				return nil, err
+			}
+			healingValue = res.GetSpellTotalValue()
+		}
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			TargetID:   req.TargetID,
+			ActorID:    req.ActorID,
+			Effects: []core.Effect{
+				{
+					Type:  core.EffectHealing,
+					Value: healingValue,
+				},
+			},
+			Success: true,
+		}, nil
 	}
 	return nil, errors.New("invalid action type")
 }

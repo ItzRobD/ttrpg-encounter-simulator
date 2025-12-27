@@ -184,8 +184,38 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			Success:    len(effects) > 0,
 		}, nil
 	case core.ATMonsterHeal:
-		// TODO: AI execute Monster Healing
-		fallthrough // Placeholder for compile errors
+		hReq := req.HealRequest
+		if hReq == nil {
+			return nil, fmt.Errorf("missing heal request")
+		}
+
+		var healingValue int
+		if hReq.Source == core.HealSourceSpell {
+			scReq, err := m.createSpellCastRequest(hReq.Target, *hReq.SpellChoice, hReq.Advantage, req.SimOptions)
+			if err != nil {
+				return nil, err
+			}
+			res, err := m.SpellCastingManager.CastSpell(scReq)
+			if err != nil {
+				return nil, err
+			}
+			healingValue = res.GetSpellTotalValue()
+		} else {
+			return nil, fmt.Errorf("unsupported healing source for monster: %v", hReq.Source)
+		}
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			TargetID:   req.TargetID,
+			ActorID:    req.ActorID,
+			Effects: []core.Effect{
+				{
+					Type:  core.EffectHealing,
+					Value: healingValue,
+				},
+			},
+			Success: true,
+		}, nil
 	default:
 		return nil, fmt.Errorf("monster execute ai req - invalid action type: %s", req.ActionType)
 	}

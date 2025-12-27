@@ -152,7 +152,7 @@ func (h *UniversalEventHandler) handleHeal(e *HealEvent) {
 	var s string
 	switch e.IsSpell {
 	case true:
-		s = fmt.Sprintf("[Round %d] <Heal> %s heals %s using %s at level %d for %d hp, rolls: %v\n",
+		s = fmt.Sprintf("[Round %d] <Heal> %s heals %s using %s at level %d for %d hp, rolls: %v.\n",
 			e.GetRound(),
 			e.GetActor(),
 			e.Target,
@@ -161,13 +161,21 @@ func (h *UniversalEventHandler) handleHeal(e *HealEvent) {
 			e.HealTotal,
 			e.HealRolls)
 	case false:
-		s = fmt.Sprintf("[Round %d] <Heal> %s heals %s using %sfor %d hp, rolls: %v\n",
+		s = fmt.Sprintf("[Round %d] <Heal> %s heals %s using %s for %d hp, rolls: %v.\n",
 			e.GetRound(),
 			e.GetActor(),
 			e.Target,
 			e.Name,
 			e.HealTotal,
 			e.HealRolls)
+	}
+
+	if e.Name == "Lay on Hands" {
+		s = fmt.Sprintf("[Round %d] <Heal> %s uses Lay on Hands on %s for %d hp.\n",
+			e.GetRound(),
+			e.GetActor(),
+			e.Target,
+			e.HealTotal)
 	}
 
 	fmt.Print(s)
@@ -300,6 +308,17 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollDamage:
 		// Clarify that Total includes the modifier; show dice subtotal separately
 		s = fmt.Sprintf("[Round %d] <Damage Roll> %s rolls for %s. Dice: %dd%s, DiceTotal: %d, Final Rolls: %v, Modifier: %d, Total: %d.",
+			e.GetRound(),
+			e.GetActor(),
+			e.RollType,
+			e.NumberOfDice,
+			e.Die,
+			e.FinalRollValue,
+			e.FinalRolls,
+			e.Modifier,
+			e.Total)
+	case core.DiceRollHealing:
+		s = fmt.Sprintf("[Round %d] <Healing Roll> %s rolls for %s. Dice: %dd%s, DiceTotal: %d, Final Rolls: %v, Modifier: %d, Total: %d.",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,

@@ -4,6 +4,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"errors"
+	"sort"
 )
 
 func (scm *SpellcastingManager) GetMostEfficientHealingSpell(targetValue int) (*core.SpellChoice, error) {
@@ -418,6 +419,11 @@ func (scm *SpellcastingManager) getRandomCantripChoice(t core.SpellType) (*core.
 		return nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_FOUND)
 	}
 
+	// Sort choices by spell name to ensure deterministic slice order
+	sort.Slice(castableChoices, func(i, j int) bool {
+		return castableChoices[i].Spell.GetName() < castableChoices[j].Spell.GetName()
+	})
+
 	i := scm.parent.GetRNG().IntN(len(castableChoices))
 	return castableChoices[i], nil
 }
@@ -435,7 +441,15 @@ func (scm *SpellcastingManager) getRandomSpellChoice(t core.SpellType, excludeCa
 	}
 
 	var castableChoices []*core.SpellChoice
-	for level, spellsAtLevel := range pool {
+	// Sort levels for deterministic iteration
+	levels := make([]int, 0, len(pool))
+	for level := range pool {
+		levels = append(levels, level)
+	}
+	sort.Ints(levels)
+
+	for _, level := range levels {
+		spellsAtLevel := pool[level]
 		if level == 0 && excludeCantrips {
 			continue
 		}
@@ -450,6 +464,14 @@ func (scm *SpellcastingManager) getRandomSpellChoice(t core.SpellType, excludeCa
 	if len(castableChoices) == 0 {
 		return nil, NewSpellcastingError("", "no spells found of type", ERROR_SPELL_NOT_FOUND)
 	}
+
+	// Sort choices by spell name (and level) to ensure deterministic slice order
+	sort.Slice(castableChoices, func(i, j int) bool {
+		if castableChoices[i].Spell.GetName() != castableChoices[j].Spell.GetName() {
+			return castableChoices[i].Spell.GetName() < castableChoices[j].Spell.GetName()
+		}
+		return castableChoices[i].Spell.GetLevel() < castableChoices[j].Spell.GetLevel()
+	})
 
 	i := scm.parent.GetRNG().IntN(len(castableChoices))
 	return castableChoices[i], nil

@@ -532,6 +532,21 @@ type AttackRequest struct {
 	Target            Entity
 }
 
+type HealSource int
+
+const (
+	HealSourceSpell HealSource = iota
+	HealSourceLayingOnHands
+)
+
+type HealRequest struct {
+	Source       HealSource
+	Target       Entity
+	SpellChoice  *SpellChoice  // Used if Source == HealSourceSpell
+	AbilityValue int           // Used if Source == HealSourceLayingOnHands
+	Advantage    AdvantageType // For healing spells that might need it (rare)
+}
+
 func (ar *AttackRequest) GetAttackData() []AttackData              { return ar.AttackData }
 func (ar *AttackRequest) GetAttackOptions() AttackOptions          { return ar.AttackOptions }
 func (ar *AttackRequest) GetSimulationOptions() *SimulationOptions { return ar.SimulationOptions }

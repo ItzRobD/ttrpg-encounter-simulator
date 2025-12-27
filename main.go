@@ -36,44 +36,39 @@ func main() {
 	//fmt.Println(s)
 
 	frank := setupFrank()
-	//jack := setupJack()
-	testSimulation([]character.CharacterConfig{frank}, []int{153})
+	bob := setupBob()
+	testSimulation([]character.CharacterConfig{frank, bob}, []int{153})
 }
 
-func setupJack() character.CharacterConfig {
+func setupBob() character.CharacterConfig {
 	charConfig := character.CharacterConfig{
-		Name:    "Jack",
-		ClassID: classes.Wizard,
-		Level:   4,
+		Name:    "Bob",
+		ClassID: classes.Fighter,
+		Level:   1,
+		RaceID:  1,
 		AsConfig: core.AbilityScoresConfig{
 			AbilityScores: core.AbilityScores{
-				Strength:     18,
-				Dexterity:    14,
-				Constitution: 16,
+				Strength:     12,
+				Dexterity:    10,
+				Constitution: 8,
 				Intelligence: 10,
-				Wisdom:       12,
+				Wisdom:       10,
 				Charisma:     10,
 			},
-			Proficiencies: core.AbilityScoresProficiencies{
-				Strength:     false,
-				Dexterity:    true,
-				Constitution: false,
-				Intelligence: true,
-				Wisdom:       false,
-				Charisma:     true,
-			},
+			Proficiencies: core.AbilityScoresProficiencies{},
 		},
-		HPMethod: core.HPSetRoll,
-		HPValue:  0,
+		HPMethod: core.HPSetValue,
+		HPValue:  5,
 		Seed: core.Seed{
 			Seed1: 0,
 			Seed2: 0,
 		},
+		Resistances: core.NewDamageResistances(),
 	}
 
 	charConfig.Equipment = character.EquipmentConfig{
-		ArmorID:       5,
-		PrimarySlot:   map[int]bool{22: true},
+		ArmorID:       1,
+		PrimarySlot:   map[int]bool{1: true},
 		SecondarySlot: nil,
 		RangedSlot:    nil,
 	}
@@ -84,24 +79,24 @@ func setupJack() character.CharacterConfig {
 func setupFrank() character.CharacterConfig {
 	charConfig := character.CharacterConfig{
 		Name:    "Frank",
-		ClassID: classes.Fighter,
-		Level:   20,
+		ClassID: classes.Cleric,
+		Level:   5,
 		RaceID:  1,
 		AsConfig: core.AbilityScoresConfig{
 			AbilityScores: core.AbilityScores{
-				Strength:     18,
+				Strength:     14,
 				Dexterity:    14,
-				Constitution: 16,
+				Constitution: 14,
 				Intelligence: 10,
-				Wisdom:       12,
-				Charisma:     10,
+				Wisdom:       18,
+				Charisma:     12,
 			},
 			Proficiencies: core.AbilityScoresProficiencies{
 				Strength:     false,
-				Dexterity:    true,
+				Dexterity:    false,
 				Constitution: false,
-				Intelligence: true,
-				Wisdom:       false,
+				Intelligence: false,
+				Wisdom:       true,
 				Charisma:     true,
 			},
 		},
@@ -112,25 +107,14 @@ func setupFrank() character.CharacterConfig {
 			Seed2: 0,
 		},
 		Resistances: core.NewDamageResistances(),
-		// Mocked Fighting Styles as if sent by a front-end request
-		FightingStyles: []classes.FightingStyle{
-			// Enable/disable as needed for local testing
-			classes.StyleDueling,
-			// classes.StyleGWF,
-			//classes.StyleArchery,
-			// Common test: allow offhand to add ability mod to damage
-			classes.StyleTWF,
-		},
 	}
 
 	charConfig.Equipment = character.EquipmentConfig{
 		ArmorID:       5,
 		PrimarySlot:   map[int]bool{22: true},
-		SecondarySlot: map[int]bool{2: false},
+		SecondarySlot: nil,
 		RangedSlot:    nil,
 	}
-
-	charConfig.Resistances.SetResistance(core.DamageBludgeoning, core.ResistanceResistant, nil)
 
 	return charConfig
 }
@@ -164,11 +148,11 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 		UseImprovedCriticals:      false,
 		CharactersAlwaysUpcast:    false,
 		MonstersAlwaysUpcast:      false,
-		AllowCharacterHeals:       false,
-		AllowMonsterHeals:         false,
+		AllowCharacterHeals:       true,
+		AllowMonsterHeals:         true,
 		AOEHitsAllEnemies:         false,
-		CharacterHealThresholdPct: 0,
-		MonsterHealThresholdPct:   0,
+		CharacterHealThresholdPct: 50,
+		MonsterHealThresholdPct:   50,
 		AllowLairActions:          false,
 	}
 

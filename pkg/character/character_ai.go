@@ -46,7 +46,17 @@ func (cai *CharacterAI) chooseDamageActionType() (core.ActionType, error) {
 			return cai.chooseFallbackAction(core.ATRanged), nil
 		}
 	case core.APNoPreference:
-		fallthrough
+		// When no preference is set, we need a deterministic choice.
+		// For now, let's prefer Spells if available, then Melee, then Ranged.
+		if cai.parent.IsSpellcaster() && cai.parent.SpellCastingManager.GetDamageSpellCount() > 0 {
+			actionType = core.ATSpell
+		} else if cai.parent.EquipmentManager.HasMeleeWeapon() {
+			actionType = core.ATMelee
+		} else if cai.parent.EquipmentManager.HasRangedWeapon() {
+			actionType = core.ATRanged
+		} else {
+			actionType = core.ATUnarmed
+		}
 	case core.APPreferSpells:
 		if cai.parent.IsSpellcaster() && cai.parent.SpellCastingManager.GetDamageSpellCount() > 0 {
 			actionType = core.ATSpell
@@ -92,7 +102,14 @@ func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (core.TargetS
 	case core.TTDamage:
 		validTargets = cai.getEnemyTargets()
 	case core.TTHealing:
-		validTargets = cai.getAllyTargets()
+		allies := cai.getAllyTargets()
+		validTargets = make(map[int]*core.Combatant)
+		needHealing := cai.combatCtx.CharactersInNeedOfHealing
+		for _, id := range needHealing {
+			if c, ok := allies[id]; ok {
+				validTargets[id] = c
+			}
+		}
 	default:
 		return core.TargetInvalidType, -1, fmt.Errorf("unknown target type")
 	}
@@ -132,7 +149,7 @@ func (cai *CharacterAI) getAllyTargets() map[int]*core.Combatant {
 
 	for id, combatant := range cai.combatCtx.CombatantInfo {
 		e := combatant.Combatant.GetEntity()
-		if !e.IsUnconscious() && (self.IsCharacter() == e.IsCharacter()) {
+		if !e.IsDead() && (self.IsCharacter() == e.IsCharacter()) {
 			allies[id] = combatant.Combatant
 		}
 	}
@@ -163,9 +180,6 @@ func (cai *CharacterAI) chooseCharacterActionType() (core.ActionType, error) {
 }
 
 func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, error) {
-	var req core.AIRequest
-	var choice *core.SpellChoice
-
 	tStatus, targetID, err := cai.selectTargetID(core.TTHealing)
 	if err != nil {
 		return nil, err
@@ -175,22 +189,20 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 		return nil, nil
 	}
 
-	// choose spell
-	targetValue := cai.combatCtx.CombatantInfo[targetID].Combatant.Entity.GetHPStatus().GetHPDifference()
-	choice, err = cai.parent.ChooseSpellByHealingEfficiency(targetValue)
+	target := cai.combatCtx.CombatantInfo[targetID].Combatant.Entity
+	healReq, err := cai.parent.CreateHealRequest(target)
 	if err != nil {
 		return nil, err
 	}
 
-	req = core.AIRequest{
+	return &core.AIRequest{
 		Actor:       cai.parent,
 		ActorType:   core.EntityCharacter,
+		Target:      target,
 		TargetID:    targetID,
 		ActionType:  core.ATHeal,
-		SpellChoice: choice,
-	}
-
-	return &req, nil
+		HealRequest: healReq,
+	}, nil
 }
 
 func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, error) {
