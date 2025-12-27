@@ -1,34 +1,44 @@
 package character
 
 import (
-	"context"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/testhelpers"
 	"dnd5e-encounter-simulator-backend/pkg/races"
 	"testing"
 )
 
+type targetWithSavingThrow struct{ testhelpers.EmEntity }
+
+func (t targetWithSavingThrow) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType) (core.RollResult, error) {
+	return &roll_manager.RollResult{
+		DiceRollType:   core.DiceRollSavingThrow,
+		FinalRollValue: 10,
+		Total:          10,
+		IsSuccess:      false,
+		TargetValue:    targetValue,
+	}, nil
+}
+
 func TestExecuteAIRequest_DragonbornBreathWeapon_DamageEvent(t *testing.T) {
 	// Setup
 	color := races.DragonbornBlack
-	charConfig := CharacterConfig{
-		Name:            "DragonbornTester",
-		RaceID:          races.Dragonborn,
-		DragonbornColor: &color,
-		ClassID:         1, // Fighter
-		Level:           1,
-		AsConfig: core.AbilityScoresConfig{
-			AbilityScores: core.AbilityScores{Constitution: 14},
+	as := core.AbilityScores{Constitution: 14}
+	char := newTestCharacter(t, as, 1)
+
+	char.Race = races.Race{
+		ID:   races.Dragonborn,
+		Name: "Dragonborn",
+		DragonbornFeatures: &races.DragonbornFeatures{
+			AncestryColor: color,
+			DamageType:    core.DamageAcid,
+			NumberOfDice:  2,
+			Die:           core.D6,
 		},
 	}
 
-	char, err := NewCharacter(context.Background(), charConfig)
-	if err != nil {
-		t.Fatalf("Failed to create character: %v", err)
-	}
-
-	target := testhelpers.NewEmEntity(1, core.AbilityScores{}, nil)
+	target := targetWithSavingThrow{EmEntity: testhelpers.NewEmEntity(1, core.AbilityScores{}, nil)}
 
 	// Create request
 	req := &core.AIRequest{
@@ -52,7 +62,7 @@ func TestExecuteAIRequest_DragonbornBreathWeapon_DamageEvent(t *testing.T) {
 	})
 
 	// Execute
-	_, err = char.ExecuteAIRequest(req)
+	_, err := char.ExecuteAIRequest(req)
 	if err != nil {
 		t.Fatalf("ExecuteAIRequest failed: %v", err)
 	}

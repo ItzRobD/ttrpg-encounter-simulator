@@ -331,7 +331,7 @@ func (entityStub) SetEventListener(listener func(event interface{})) {}
 func (entityStub) GetLevel() float64                                 { return 0 }
 func (entityStub) GetHitDie() DiceType                               { return 0 }
 func (entityStub) GetCasterLevel() int                               { return 0 }
-func (entityStub) MakeSavingThrow(ability Ability, targetValue int, isSpell bool) (RollResult, error) {
+func (entityStub) MakeSavingThrow(ability Ability, targetValue int, isSpell bool, damageType DamageType) (RollResult, error) {
 	return nil, nil
 }
 func (entityStub) GetSpellSaveDC(ability *Ability) (int, error)         { return 0, nil }

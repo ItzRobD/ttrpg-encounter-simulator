@@ -277,7 +277,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			saveAbility = core.AbilityConstitution
 		}
 
-		saveRes, err := req.Target.MakeSavingThrow(saveAbility, dc, false)
+		saveRes, err := req.Target.MakeSavingThrow(saveAbility, dc, false, "")
 		if err != nil {
 			return nil, err
 		}

@@ -99,7 +99,7 @@ func isValidMonsterActionType(actionType core.ActionType) bool {
 }
 
 // MakeSavingThrow calculates a saving throw for the given ability and returns the total roll result or an error.
-func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool) (core.RollResult, error) {
+func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType) (core.RollResult, error) {
 	activeConditions := m.GetConditions().GetActive()
 	isStrDexSave := ability == core.AbilityStrength || ability == core.AbilityDexterity
 

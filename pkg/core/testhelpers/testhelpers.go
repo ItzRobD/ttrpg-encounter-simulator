@@ -19,7 +19,7 @@ func (entityStub) SetEventListener(func(event interface{}))  {}
 func (entityStub) GetLevel() float64                         { return 1 }
 func (entityStub) GetHitDie() core.DiceType                  { return core.D8 }
 func (entityStub) GetCasterLevel() int                       { return 0 }
-func (entityStub) MakeSavingThrow(core.Ability, int, bool) (core.RollResult, error) {
+func (entityStub) MakeSavingThrow(core.Ability, int, bool, core.DamageType) (core.RollResult, error) {
 	panic("not used")
 }
 func (entityStub) GetSpellSaveDC(*core.Ability) (int, error)                     { panic("not used") }

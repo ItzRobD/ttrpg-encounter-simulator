@@ -195,7 +195,7 @@ func (lam *LairActionManager) ExecuteAdvanced(actionIndex int, primaryTarget cor
 		events.LogDiceRollEvent(lam.parent, dmgRoll, lam.parent.GetEventListener())
 
 		for _, t := range targets {
-			saveRes, err := t.MakeSavingThrow(a.DCAbility, a.DCValue, false)
+			saveRes, err := t.MakeSavingThrow(a.DCAbility, a.DCValue, false, "")
 			if err != nil {
 				return nil, nil, err
 			}
