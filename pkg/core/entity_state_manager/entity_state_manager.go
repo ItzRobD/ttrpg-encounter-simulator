@@ -2,6 +2,7 @@ package entity_state_manager
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"fmt"
 )
 
@@ -68,7 +69,7 @@ type EntityStateManager struct {
 	LegendaryActionPointsMax int
 	NumberOfAttacks          int
 	RechargeActionStatus     map[int]bool // Key: Action index; Value: IsAvailable
-	DBBreathWeaponUsed       bool         // TODO: Account for this during turn execution, add option to simoptions
+	DBBreathWeaponUsed       bool
 
 	// Conditions
 	Conditions            core.EntityConditions
@@ -96,6 +97,10 @@ type EntityStateManager struct {
 	BarbarianIsRaging        bool
 	FighterIndomitableUses   int
 	PaladinLayingOnHandsPool int
+
+	// Race specific variables
+	HalfOrcHasSavageAttacks          bool
+	HalfOrcHasRelentlessEnduranceUse bool
 }
 
 func (esm *EntityStateManager) ExpendAction() {
@@ -403,7 +408,18 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 		if esm.Parent.IsMonster() {
 			esm.Kill()
 		} else {
-			esm.SetUnconscious(true)
+			// Relentless Endurance (Half-Orc)
+			// Trigger only if we were not already at 0 HP and we are not killed outright (massive damage)
+			if esm.HalfOrcHasRelentlessEnduranceUse && res.OriginalHP > 0 && !esm.CheckMassiveDamage() {
+				esm.SetUnconscious(false)
+				esm.CurrentHP = 1
+				esm.HalfOrcHasRelentlessEnduranceUse = false
+				res.IsUnconscious = false
+				res.NewHP = esm.CurrentHP
+				events.LogCombatEventMessage(esm.Parent, "Relentless Endurance expended. New HP set to 1.", esm.Parent.GetEventListener())
+			} else {
+				esm.SetUnconscious(true)
+			}
 		}
 	}
 

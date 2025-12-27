@@ -312,6 +312,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			Success: true,
 		}, nil
 	case core.ATHeal:
+		// TODO: Execute AI Healing
 		return nil, errors.New("not implemented")
 	}
 	return nil, errors.New("invalid action type")

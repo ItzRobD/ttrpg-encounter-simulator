@@ -5,6 +5,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
+	"dnd5e-encounter-simulator-backend/pkg/races"
 )
 
 func (c *Character) RollInitiative() (int, error) {
@@ -102,6 +103,10 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 			if c.EntityStateManager.BarbarianIsRaging {
 				bonusDmg += c.Class.ClassFeatures.BarbarianFeatures.RageDamage
 			}
+		}
+
+		if c.Race.ID == races.HalfOrc && c.EntityStateManager.HalfOrcHasSavageAttacks {
+			extraCritDice += 1
 		}
 	}
 

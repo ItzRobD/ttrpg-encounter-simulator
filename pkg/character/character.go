@@ -177,7 +177,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		}
 	}
 
-	// Apply race resistances esm
+	// Apply race features to esm
 	switch raceData.ID {
 	case races.Dwarf:
 		char.EntityStateManager.AddResistance(core.DamagePoison, core.ResistanceResistant, nil)
@@ -185,8 +185,13 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		if char.Race.DragonbornFeatures != nil {
 			char.EntityStateManager.AddResistance(char.Race.DragonbornFeatures.DamageType, core.ResistanceResistant, nil)
 		}
+	case races.HalfOrc:
+		char.EntityStateManager.HalfOrcHasSavageAttacks = true
+		char.EntityStateManager.HalfOrcHasRelentlessEnduranceUse = true
 	case races.Tiefling:
 		char.EntityStateManager.AddResistance(core.DamageFire, core.ResistanceResistant, nil)
+	default:
+		break
 	}
 
 	// Equipment Manager
@@ -337,6 +342,23 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 		if features.HasSlipperyMind {
 			char.EntityStateManager.SetHasSavingThrowAdvantage(core.AbilityWisdom, core.RollAdvantage)
 		}
+	}
+
+	// Apply race features to esm
+	switch raceData.ID {
+	case races.Dwarf:
+		char.EntityStateManager.AddResistance(core.DamagePoison, core.ResistanceResistant, nil)
+	case races.Dragonborn:
+		if char.Race.DragonbornFeatures != nil {
+			char.EntityStateManager.AddResistance(char.Race.DragonbornFeatures.DamageType, core.ResistanceResistant, nil)
+		}
+	case races.HalfOrc:
+		char.EntityStateManager.HalfOrcHasSavageAttacks = true
+		char.EntityStateManager.HalfOrcHasRelentlessEnduranceUse = true
+	case races.Tiefling:
+		char.EntityStateManager.AddResistance(core.DamageFire, core.ResistanceResistant, nil)
+	default:
+		break
 	}
 
 	// Equipment Manager

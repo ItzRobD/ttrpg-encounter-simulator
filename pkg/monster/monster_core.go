@@ -183,6 +183,9 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			Effects:    effects,
 			Success:    len(effects) > 0,
 		}, nil
+	case core.ATMonsterHeal:
+		// TODO: AI execute Monster Healing
+		fallthrough // Placeholder for compile errors
 	default:
 		return nil, fmt.Errorf("monster execute ai req - invalid action type: %s", req.ActionType)
 	}
