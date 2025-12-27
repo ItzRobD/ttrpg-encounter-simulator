@@ -170,6 +170,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 			char.EntityStateManager.AddResistance(core.DamagePiercing, core.ResistanceResistant, nil)
 			char.EntityStateManager.AddResistance(core.DamageBludgeoning, core.ResistanceResistant, nil)
 		}
+		char.EntityStateManager.SetBarbarianRelentlessRage(features.HasRelentlessRage)
 	case classes.Rogue:
 		features := char.Class.ClassFeatures.RogueFeatures
 		if features.HasSlipperyMind {
@@ -337,6 +338,7 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 			char.EntityStateManager.AddResistance(core.DamagePiercing, core.ResistanceResistant, nil)
 			char.EntityStateManager.AddResistance(core.DamageBludgeoning, core.ResistanceResistant, nil)
 		}
+		char.EntityStateManager.SetBarbarianRelentlessRage(features.HasRelentlessRage)
 	case classes.Rogue:
 		features := char.Class.ClassFeatures.RogueFeatures
 		if features.HasSlipperyMind {

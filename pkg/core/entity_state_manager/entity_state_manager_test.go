@@ -28,6 +28,38 @@ func (r dsRoll) GetIsCritical() bool                       { return r.crit }
 func (r dsRoll) GetIsNaturalOne() bool                     { return r.nat1 }
 func (r dsRoll) GetIsSuccess() bool                        { return r.success }
 func (r dsRoll) GetTargetValue() int                       { return 10 }
+func (r dsRoll) GetName() string                           { return "" }
+
+type mockBarbarian struct {
+	testhelpers.EmEntity
+	saveResult core.RollResult
+	lastDC     int
+}
+
+func (m *mockBarbarian) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType) (core.RollResult, error) {
+	m.lastDC = targetValue
+	return m.saveResult, nil
+}
+
+type rollResultStub struct {
+	success bool
+}
+
+func (r rollResultStub) GetDiceRollType() core.DiceRollType        { return "" }
+func (r rollResultStub) GetNumberOfDice() int                      { return 0 }
+func (r rollResultStub) GetDiceType() string                       { return "" }
+func (r rollResultStub) GetFinalRollValue() int                    { return 0 }
+func (r rollResultStub) GetFinalRolls() []int                      { return nil }
+func (r rollResultStub) GetModifier() int                          { return 0 }
+func (r rollResultStub) GetTotal() int                             { return 0 }
+func (r rollResultStub) GetAdvantage() string                      { return "" }
+func (r rollResultStub) GetOriginalRolls() []int                   { return nil }
+func (r rollResultStub) GetWasRerolled() bool                      { return false }
+func (r rollResultStub) GetIsCritical() bool                       { return false }
+func (r rollResultStub) GetIsNaturalOne() bool                     { return false }
+func (r rollResultStub) GetIsSuccess() bool                        { return r.success }
+func (r rollResultStub) GetTargetValue() int                       { return 0 }
+func (r rollResultStub) GetRerollEvents() []map[string]interface{} { return nil }
 
 func TestNewEntityStateManager_ClampsAndDefaults(t *testing.T) {
 	parent := testhelpers.NewEmEntity(5, core.AbilityScores{}, nil)
@@ -545,4 +577,97 @@ func TestLegendaryPoints_ErrorAndRemaining(t *testing.T) {
 	if esm.HasLegendaryActionPointsRemaining() {
 		t.Errorf("should have no points remaining")
 	}
+}
+
+func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
+	parent := &mockBarbarian{EmEntity: testhelpers.NewEmEntity(11, core.AbilityScores{}, nil)}
+
+	t.Run("Triggers correctly when raging and successful save", func(t *testing.T) {
+		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
+		esm.BarbarianHasRelentlessRage = true
+		esm.BarbarianIsRaging = true
+		parent.saveResult = rollResultStub{success: true}
+
+		res, err := esm.ModifyHP(-10, false, false)
+		if err != nil {
+			t.Fatalf("ModifyHP error: %v", err)
+		}
+
+		if esm.CurrentHP != 1 {
+			t.Errorf("CurrentHP = %d, want 1", esm.CurrentHP)
+		}
+		if res.IsUnconscious {
+			t.Errorf("IsUnconscious = true, want false")
+		}
+		if esm.BarbarianRelentlessUses != 1 {
+			t.Errorf("Uses = %d, want 1", esm.BarbarianRelentlessUses)
+		}
+		if parent.lastDC != 10 {
+			t.Errorf("DC = %d, want 10", parent.lastDC)
+		}
+	})
+
+	t.Run("DC increases on second use", func(t *testing.T) {
+		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
+		esm.BarbarianHasRelentlessRage = true
+		esm.BarbarianIsRaging = true
+		esm.BarbarianRelentlessUses = 1
+		parent.saveResult = rollResultStub{success: true}
+
+		_, _ = esm.ModifyHP(-10, false, false)
+
+		if esm.BarbarianRelentlessUses != 2 {
+			t.Errorf("Uses = %d, want 2", esm.BarbarianRelentlessUses)
+		}
+		if parent.lastDC != 15 {
+			t.Errorf("DC = %d, want 15", parent.lastDC)
+		}
+	})
+
+	t.Run("Does not trigger if not raging", func(t *testing.T) {
+		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
+		esm.BarbarianHasRelentlessRage = true
+		esm.BarbarianIsRaging = false
+		parent.saveResult = rollResultStub{success: true}
+
+		res, _ := esm.ModifyHP(-10, false, false)
+
+		if esm.CurrentHP != 0 {
+			t.Errorf("CurrentHP = %d, want 0", esm.CurrentHP)
+		}
+		if !res.IsUnconscious {
+			t.Errorf("IsUnconscious = false, want true")
+		}
+	})
+
+	t.Run("Does not trigger on failed save", func(t *testing.T) {
+		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
+		esm.BarbarianHasRelentlessRage = true
+		esm.BarbarianIsRaging = true
+		parent.saveResult = rollResultStub{success: false}
+
+		res, _ := esm.ModifyHP(-10, false, false)
+
+		if esm.CurrentHP != 0 {
+			t.Errorf("CurrentHP = %d, want 0", esm.CurrentHP)
+		}
+		if !res.IsUnconscious {
+			t.Errorf("IsUnconscious = false, want true")
+		}
+	})
+
+	t.Run("Does not trigger on massive damage", func(t *testing.T) {
+		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
+		esm.BarbarianHasRelentlessRage = true
+		esm.BarbarianIsRaging = true
+		parent.saveResult = rollResultStub{success: true}
+
+		// Takes 20 damage, MaxHP is 10. Massive damage!
+		_, _ = esm.ModifyHP(-20, false, false)
+
+		if esm.CurrentHP != -10 {
+			t.Errorf("CurrentHP = %d, want -10", esm.CurrentHP)
+		}
+		// Relentless Rage should NOT have reset HP to 1
+	})
 }

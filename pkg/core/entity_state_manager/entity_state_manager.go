@@ -94,10 +94,11 @@ type EntityStateManager struct {
 	SavingThrowAdvantage map[core.Ability]core.AdvantageType
 
 	// Class specific variables
-	BarbarianRelentlessUses  int
-	BarbarianIsRaging        bool
-	FighterIndomitableUses   int
-	PaladinLayingOnHandsPool int
+	BarbarianHasRelentlessRage bool
+	BarbarianRelentlessUses    int
+	BarbarianIsRaging          bool
+	FighterIndomitableUses     int
+	PaladinLayingOnHandsPool   int
 
 	// Race specific variables
 	HalfOrcHasSavageAttacks          bool
@@ -418,6 +419,22 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 				res.IsUnconscious = false
 				res.NewHP = esm.CurrentHP
 				events.LogCombatEventMessage(esm.Parent, "Relentless Endurance expended. New HP set to 1.", esm.Parent.GetEventListener())
+			} else if esm.BarbarianHasRelentlessRage && esm.BarbarianIsRaging && res.OriginalHP > 0 && !esm.CheckMassiveDamage() {
+				// Barbarian Relentless Rage
+				// Make DC 10 + (uses * 5) Con saving throw
+				dc := 10 + (esm.GetBarbarianRelentlessUses() * 5)
+				saveResult, err := esm.Parent.MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone)
+				if err != nil {
+					return res, err
+				}
+				if saveResult.GetIsSuccess() {
+					esm.SetUnconscious(false)
+					esm.CurrentHP = 1
+					res.IsUnconscious = false
+					res.NewHP = esm.CurrentHP
+					esm.IncrementBarbarianRelentlessUses()
+					events.LogCombatEventMessage(esm.Parent, "Relentless Rage expended. New HP set to 1.", esm.Parent.GetEventListener())
+				}
 			} else {
 				esm.SetUnconscious(true)
 			}
@@ -631,6 +648,10 @@ func (esm *EntityStateManager) SetIsRecklesslyAttacking(val bool) {
 
 func (esm *EntityStateManager) GetIsRecklesslyAttacking() bool {
 	return esm.IsRecklesslyAttacking
+}
+
+func (esm *EntityStateManager) SetBarbarianRelentlessRage(val bool) {
+	esm.BarbarianHasRelentlessRage = val
 }
 
 func (esm *EntityStateManager) IncrementBarbarianRelentlessUses() {

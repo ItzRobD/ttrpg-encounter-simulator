@@ -14,7 +14,6 @@ import (
 
 // Legacy note: Main is used for local/manual runs. Core TODOs are tracked in todo-triage.md.
 
-// TODO: Class features added, need to implement functionality of them and dragonborn breath
 // TODO: Add spell ranges|touch
 
 func main() {
