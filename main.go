@@ -7,6 +7,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/lair"
+	"dnd5e-encounter-simulator-backend/pkg/races"
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"fmt"
 )
@@ -41,11 +42,13 @@ func main() {
 }
 
 func setupBob() character.CharacterConfig {
+	color := races.DragonbornGold
 	charConfig := character.CharacterConfig{
-		Name:    "Bob",
-		ClassID: classes.Fighter,
-		Level:   1,
-		RaceID:  1,
+		Name:            "Bob",
+		ClassID:         classes.Fighter,
+		Level:           3,
+		RaceID:          races.Dragonborn,
+		DragonbornColor: &color,
 		AsConfig: core.AbilityScoresConfig{
 			AbilityScores: core.AbilityScores{
 				Strength:     12,

@@ -31,6 +31,8 @@ func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 		h.handleDeath(e)
 	case *HPModifiedEvent:
 		h.handleHPModified(e)
+	case *DragonbornBreathWeaponEvent:
+		h.handleDragonbornBreathWeapon(e)
 	case *UnconsciousEvent:
 		h.handleUnconscious(e)
 	case *DamageModifiedEvent:
@@ -63,6 +65,12 @@ func (h *UniversalEventHandler) handleMeleeAttack(e *MeleeAttackEvent) {
 		s = fmt.Sprintf("[Round %d] <Martial Attack> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Target: %d. Success: %t. Damage: %d %s\n",
 			e.GetRound(), e.AttackCount, e.GetActor(), e.Target, e.AttackName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.TargetValue, e.Success, e.DamageTotal, e.DamageType)
 	}
+	fmt.Print(s)
+}
+
+func (h *UniversalEventHandler) handleDragonbornBreathWeapon(e *DragonbornBreathWeaponEvent) {
+	s := fmt.Sprintf("[Round %d] <Dragonborn Breath Weapon> %s uses breath weapon against %s. DC: %d, %s save: %d. Success: %t. Damage: %d %s\n",
+		e.GetRound(), e.GetActor(), e.Target, e.DC, e.SaveAbility, e.SavingThrowResult, e.SavingThrowSuccess, e.DamageTotal, e.DamageType)
 	fmt.Print(s)
 }
 

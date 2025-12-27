@@ -10,6 +10,7 @@ type RaceID uint8
 const (
 	_ RaceID = iota
 	Dwarf
+	Elf
 	Halfling
 	Human
 	Dragonborn
@@ -25,6 +26,8 @@ func (r RaceID) String() string {
 	switch r {
 	case Dwarf:
 		return "Dwarf"
+	case Elf:
+		return "Elf"
 	case Halfling:
 		return "Halfling"
 	case Human:
@@ -48,6 +51,8 @@ func MakeRaceID(s string) RaceID {
 	switch strings.ToLower(s) {
 	case "dwarf":
 		return Dwarf
+	case "elf":
+		return Elf
 	case "halfling":
 		return Halfling
 	case "human":
