@@ -4,6 +4,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/races"
 	"errors"
 	"fmt"
@@ -160,6 +161,18 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 						IsRanged: req.ActionType == core.ATRanged,
 					},
 				})
+
+				// Divine Smite check
+				if req.ActionType == core.ATMelee && req.SimOptions != nil && req.SimOptions.EnableClassFeatures {
+					if c.Class.ClassFeatures.PaladinFeatures != nil && c.Class.ClassFeatures.PaladinFeatures.HasDivineSmite {
+						if req.SimOptions.PaladinAlwaysSmite {
+							smiteEffect := c.resolveDivineSmite(req.Target, res.IsCriticalHit, req.SimOptions)
+							if smiteEffect != nil {
+								effects = append(effects, *smiteEffect)
+							}
+						}
+					}
+				}
 			}
 		}
 
@@ -194,6 +207,18 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 						IsRanged: false,
 					},
 				})
+
+				// Divine Smite check
+				if req.SimOptions != nil && req.SimOptions.EnableClassFeatures {
+					if c.Class.ClassFeatures.PaladinFeatures != nil && c.Class.ClassFeatures.PaladinFeatures.HasDivineSmite {
+						if req.SimOptions.PaladinAlwaysSmite {
+							smiteEffect := c.resolveDivineSmite(req.Target, res.IsCriticalHit, req.SimOptions)
+							if smiteEffect != nil {
+								effects = append(effects, *smiteEffect)
+							}
+						}
+					}
+				}
 			}
 		}
 
@@ -404,4 +429,100 @@ func (c *Character) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.Tu
 
 	turnResult.Conditions = c.EntityStateManager.GetActiveIncapacitatingConditions()
 	return turnResult, nil
+}
+
+func (c *Character) resolveDivineSmite(target core.Entity, isCrit bool, simOptions *core.SimulationOptions) *core.Effect {
+	// 1. Identify slot level to use
+	slotLevel := -1
+	if simOptions.PaladinUseHighestSmiteSlot {
+		for l := 5; l >= 1; l-- {
+			if c.SpellCastingManager.HasSpellSlotsAtLevel(l) {
+				slotLevel = l
+				break
+			}
+		}
+	} else {
+		for l := 1; l <= 5; l++ {
+			if c.SpellCastingManager.HasSpellSlotsAtLevel(l) {
+				slotLevel = l
+				break
+			}
+		}
+	}
+
+	if slotLevel == -1 {
+		return nil
+	}
+
+	// 2. Calculate damage dice
+	// Divine Smite: 2d8 for 1st level, +1d8 per slot level above 1st, max 5d8.
+	// 1st: 2, 2nd: 3, 3rd: 4, 4th: 5, 5th: 5
+	numDice := 1 + slotLevel
+	if numDice > 5 {
+		numDice = 5
+	}
+
+	// Undead/Fiend bonus
+	targetType := target.GetType()
+	if targetType == monster.MTUndead || targetType == monster.MTFiend {
+		numDice++
+	}
+
+	// 3. Roll damage
+	rollOpts := roll_manager.NewRollOptions()
+	rollOpts.RollType = core.DiceRollDamage
+
+	var err error
+	var res *roll_manager.RollResult
+
+	if isCrit && simOptions.CanCharactersCrit {
+		if simOptions.UseImprovedCriticals {
+			dmgRollTotal, dmgRolls := c.RollManager.RollExtraMaxDice(numDice, core.D8)
+			res = &roll_manager.RollResult{
+				DiceRollType:   core.DiceRollDamage,
+				Die:            core.D8,
+				Name:           "Divine Smite",
+				OriginalRolls:  dmgRolls,
+				FinalRolls:     dmgRolls,
+				Total:          dmgRollTotal,
+				FinalRollValue: dmgRollTotal,
+				NumberOfDice:   numDice,
+				IsCritical:     true,
+			}
+		} else {
+			res, err = c.RollManager.RollDice(numDice*2, core.D8, rollOpts)
+			if res != nil {
+				res.Name = "Divine Smite"
+				res.NumberOfDice = numDice
+				res.IsCritical = true
+			}
+		}
+	} else {
+		res, err = c.RollManager.RollDice(numDice, core.D8, rollOpts)
+		if res != nil {
+			res.Name = "Divine Smite"
+		}
+	}
+
+	if err != nil {
+		log.Printf("error rolling divine smite damage: %v", err)
+		return nil
+	}
+
+	// 4. Expend slot
+	err = c.SpellCastingManager.ExpendSpellSlot(slotLevel)
+	if err != nil {
+		log.Printf("error expending spell slot for divine smite: %v", err)
+		return nil
+	}
+
+	// 5. Log & Return
+	events.LogCombatEventMessage(c, fmt.Sprintf("Divine Smite! (Level %d slot)", slotLevel), c.EventListener)
+	events.LogDiceRollEvent(c, res, c.EventListener)
+
+	return &core.Effect{
+		Type:       core.EffectDamage,
+		Value:      res.GetTotal(),
+		DamageType: core.DamageRadiant,
+	}
 }

@@ -46,6 +46,7 @@ type Entity interface {
 	CanTakeActions() bool
 	ProcessTurn(actorID int, turnType TurnType) (*TurnResult, *AIRequest, error)
 	GetConditions() EntityConditions
+	GetType() string
 }
 
 type Combatant struct {

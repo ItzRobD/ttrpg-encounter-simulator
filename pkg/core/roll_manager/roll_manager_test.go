@@ -119,11 +119,11 @@ func TestRollExtraMaxDice(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			total, rolls := rm.rollExtraMaxDice(tt.numDice, tt.die)
+			total, rolls := rm.RollExtraMaxDice(tt.numDice, tt.die)
 
 			// Should have double the dice
 			if len(rolls) != tt.numDice*2 {
-				t.Errorf("rollExtraMaxDice() rolled %d dice, want %d", len(rolls), tt.numDice*2)
+				t.Errorf("RollExtraMaxDice() rolled %d dice, want %d", len(rolls), tt.numDice*2)
 			}
 
 			// Second half should all be max

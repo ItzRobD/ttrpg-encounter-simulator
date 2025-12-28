@@ -108,3 +108,10 @@ func (e *testEntity) ProcessTurn(int, core.TurnType) (*core.TurnResult, *core.AI
 	return &core.TurnResult{TurnStatuses: map[core.TurnStatus]bool{core.TurnActionReady: true}}, &core.AIRequest{}, nil
 }
 func (e *testEntity) GetConditions() core.EntityConditions { return core.NewEntityConditions() }
+
+func (e *testEntity) GetType() string {
+	if e.isMon {
+		return "Dragon"
+	}
+	return "Humanoid"
+}

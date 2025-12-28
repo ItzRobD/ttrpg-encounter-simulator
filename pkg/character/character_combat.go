@@ -112,10 +112,13 @@ func (c *Character) CreateHealRequest(target core.Entity) (*core.HealRequest, er
 // Advantage is computed internally using core.DetermineAttackAdvantageForEntities, with a baseline derived from
 // Reckless Attack (if enabled via SimulationOptions and currently active) and weapon/context.
 func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot, useVersatile bool, simulationOptions *core.SimulationOptions) (*core.AttackRequest, error) {
+	adSlice := make([]core.AttackData, 0)
 	attackData, err := c.EquipmentManager.GetWeaponAttackData(slot, useVersatile)
 	if err != nil {
 		return nil, err
 	}
+
+	adSlice = append(adSlice, attackData)
 
 	// Determine ranged vs melee for condition rules (prefer precomputed attack data)
 	isRanged := attackData.IsRangedWeapon
@@ -166,8 +169,19 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 
 	c.applyFightingStyles(&attackData, &attackOptions, isRanged, isVersatile, isTwoHanded, slot)
 
+	if simulationOptions != nil && simulationOptions.EnableClassFeatures {
+		if c.Class.ID == classes.Paladin && c.Class.ClassFeatures.PaladinFeatures.HasImprovedDivineSmite {
+			adSlice = append(adSlice, core.AttackData{
+				Name:         "Improved Divine Smite",
+				NumberOfDice: 1,
+				Die:          8,
+				DamageType:   core.DamageRadiant,
+			})
+		}
+	}
+
 	return &core.AttackRequest{
-		AttackData:        []core.AttackData{attackData},
+		AttackData:        adSlice,
 		AttackOptions:     attackOptions,
 		SimulationOptions: simulationOptions,
 		Target:            target,
@@ -219,8 +233,20 @@ func (c *Character) CreateOffhandAttackRequest(target core.Entity, simulationOpt
 
 	c.applyFightingStyles(&ad, &opts, ad.IsRangedWeapon, ad.IsVersatileAttack, false, core.WSSecondary)
 
+	adSlice := []core.AttackData{ad}
+	if simulationOptions != nil && simulationOptions.EnableClassFeatures {
+		if c.Class.ID == classes.Paladin && c.Class.ClassFeatures.PaladinFeatures.HasImprovedDivineSmite {
+			adSlice = append(adSlice, core.AttackData{
+				Name:         "Improved Divine Smite",
+				NumberOfDice: 1,
+				Die:          8,
+				DamageType:   core.DamageRadiant,
+			})
+		}
+	}
+
 	return &core.AttackRequest{
-		AttackData:        []core.AttackData{ad},
+		AttackData:        adSlice,
 		AttackOptions:     opts,
 		SimulationOptions: simulationOptions,
 		Target:            target,

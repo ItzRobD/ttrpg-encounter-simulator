@@ -27,7 +27,7 @@ type MonsterBase struct {
 	ID                  int
 	Name                string
 	Size                string
-	Type                string
+	Type                MonsterType
 	AC                  int
 	ProficiencyBonus    int
 	CR                  float64
@@ -338,6 +338,10 @@ func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPMo
 func (m *Monster) CanTakeActions() bool { return m.EntityStateManager.CanTakeActions() }
 func (m *Monster) GetConditions() core.EntityConditions {
 	return m.EntityStateManager.GetConditions()
+}
+
+func (m *Monster) GetType() string {
+	return m.MonsterBase.Type.String()
 }
 
 var _ core.Entity = &Monster{}

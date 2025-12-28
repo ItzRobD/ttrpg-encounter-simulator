@@ -595,6 +595,10 @@ func (c *Character) GetConditions() core.EntityConditions {
 	return c.EntityStateManager.GetConditions()
 }
 
+func (c *Character) GetType() string {
+	return "Humanoid"
+}
+
 func (c *Character) HasElusive() bool {
 	if c.Class.ID == classes.Rogue && c.Class.ClassFeatures.RogueFeatures != nil {
 		return c.Class.ClassFeatures.RogueFeatures.HasElusive

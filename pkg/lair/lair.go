@@ -99,6 +99,8 @@ func (l *Lair) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPModif
 
 func (l *Lair) GetConditions() core.EntityConditions { return core.NewEntityConditions() }
 
+func (l *Lair) GetType() string { return "Lair" }
+
 // AI/context
 func (l *Lair) UpdateAICombatContext(ctx *core.CombatContext) error {
 	l.combatCtx = ctx

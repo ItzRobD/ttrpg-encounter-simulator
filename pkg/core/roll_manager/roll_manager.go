@@ -300,7 +300,7 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 
 	if crit {
 		if req.GetSimulationOptions().UseImprovedCriticals {
-			dmgRollTotal, dmgRolls = rm.rollExtraMaxDice(numDice, die)
+			dmgRollTotal, dmgRolls = rm.RollExtraMaxDice(numDice, die)
 
 		} else {
 			dmgRollTotal, dmgRolls = rm.rollDice(numDice*2, die)
@@ -373,7 +373,7 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 
 	if crit {
 		if req.GetSimulationOptions().UseImprovedCriticals {
-			valRollTotal, valRolls = rm.rollExtraMaxDice(numDice, die)
+			valRollTotal, valRolls = rm.RollExtraMaxDice(numDice, die)
 		} else {
 			valRollTotal, valRolls = rm.rollDice(numDice*2, die)
 		}
@@ -733,10 +733,10 @@ func (rm *RollManager) rollDice(numberOfDice int, die core.DiceType) (int, []int
 	return sum(rolls), rolls
 }
 
-// rollExtraMaxDice rolls additional dice and returns the sum and the list of rolled values.
+// RollExtraMaxDice rolls additional dice and returns the sum and the list of rolled values.
 // numberOfDice specifies the number of dice to roll initially and then adds the maximum value for each dice.
 // die defines the type of dice used for the rolls.
-func (rm *RollManager) rollExtraMaxDice(numberOfDice int, die core.DiceType) (int, []int) {
+func (rm *RollManager) RollExtraMaxDice(numberOfDice int, die core.DiceType) (int, []int) {
 	rolls := make([]int, numberOfDice*2)
 	for i := 0; i < numberOfDice*2; i++ {
 		if i >= numberOfDice {

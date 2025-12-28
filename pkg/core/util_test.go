@@ -317,6 +317,10 @@ func (m *mockEntity) HasElusive() bool {
 	return m.elusive
 }
 
+func (m *mockEntity) GetType() string {
+	return "Humanoid"
+}
+
 // Minimal implementation of Entity interface via embedding entityStub
 type entityStub struct{}
 
@@ -371,6 +375,7 @@ func (entityStub) ProcessTurn(actorID int, turnType TurnType) (*TurnResult, *AIR
 	return nil, nil, nil
 }
 func (entityStub) GetConditions() EntityConditions { return nil }
+func (entityStub) GetType() string                 { return "Humanoid" }
 
 func TestDetermineAttackAdvantageForEntities(t *testing.T) {
 	tests := []struct {

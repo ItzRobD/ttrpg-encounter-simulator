@@ -170,11 +170,12 @@ func getMonsterBaseDataByID(ctx context.Context, ids []int) (map[int]MonsterBase
 	defer rows.Close()
 	for rows.Next() {
 		var base MonsterBase
+		var baseType string
 		err = rows.Scan(
 			&base.ID,
 			&base.Name,
 			&base.Size,
-			&base.Type,
+			&baseType,
 			&base.AC,
 			&base.ProficiencyBonus,
 			&base.CR,
@@ -197,6 +198,8 @@ func getMonsterBaseDataByID(ctx context.Context, ids []int) (map[int]MonsterBase
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan monster base data by id: %w", err)
 		}
+
+		base.Type = MakeMonsterType(baseType)
 
 		base.AbilityScoreProf = core.NewAbilityScoresProficiencies(
 			strSave.Valid && strSave.Int32 != 0,

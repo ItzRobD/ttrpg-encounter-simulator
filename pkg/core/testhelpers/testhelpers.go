@@ -55,6 +55,7 @@ func (entityStub) ProcessTurn(int, core.TurnType) (*core.TurnResult, *core.AIReq
 	return nil, nil, nil
 }
 func (entityStub) GetConditions() core.EntityConditions { return core.EntityConditions{} }
+func (entityStub) GetType() string                      { return "Humanoid" }
 
 // Keep only what EquipmentManager needs here
 type EmEntity struct {
