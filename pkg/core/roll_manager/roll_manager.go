@@ -484,7 +484,7 @@ func (rm *RollManager) RollAbilityCheck(ability core.Ability, options RollOption
 // Logs dice roll events using the parent's event listener.
 func (rm *RollManager) RollHP(config core.HPConfig) (*RollResult, error) {
 	if config.NumberOfDice <= 0 || config.HitDie == 0 {
-		return nil, fmt.Errorf("invalid HP configuration: NumberOfDice=%d, HitDie=%v",
+		return nil, fmt.Errorf("invalid HP configuration: NumberOfDice=%d, hitDie=%v",
 			config.NumberOfDice, config.HitDie)
 	}
 	var res RollResult

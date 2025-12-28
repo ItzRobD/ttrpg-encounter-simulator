@@ -244,7 +244,7 @@ func (c *Character) applyFightingStyles(ad *core.AttackData, opts *core.AttackOp
 			// This requires that the character is only holding one weapon
 			// Check for shield - cannot apply if present
 			// Check for versatile - must be used with one hand
-			if c.EquipmentManager.HasShieldEquipped || ad.IsVersatileAttack {
+			if c.EquipmentManager.GetHasShieldEquipped() || ad.IsVersatileAttack {
 				break
 			}
 			ad.DamageModifier += 2

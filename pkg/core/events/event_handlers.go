@@ -238,7 +238,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 			e.Advantage,
 			e.Modifier)
 	case core.DiceRollInitiative:
-		s = fmt.Sprintf("[Round %d] <Initiative> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d.",
+		s = fmt.Sprintf("[Round %d] <initiative> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d.",
 			e.GetRound(),
 			e.GetActor(),
 			e.RollType,

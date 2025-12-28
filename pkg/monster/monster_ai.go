@@ -62,12 +62,12 @@ func (mai *MonsterAI) createMonsterLegendaryActionRequest() (*core.AIRequest, er
 		return nil, fmt.Errorf("monster is not legendary")
 	}
 
-	if mai.parent.EntityStateManager.LegendaryActionPoints == 0 {
+	if mai.parent.EntityStateManager.GetLegendaryActionPoints() == 0 {
 		return nil, fmt.Errorf("monster has no legendary action points")
 	}
 	actionChoiceID := -1
 	var err error
-	legendaryIndexes := mai.getAvailableLegendaryActions(mai.parent.EntityStateManager.LegendaryActionPoints)
+	legendaryIndexes := mai.getAvailableLegendaryActions(mai.parent.EntityStateManager.GetLegendaryActionPoints())
 	if len(legendaryIndexes) > 0 {
 		actionChoiceID, err = mai.chooseLegendaryAction(legendaryIndexes)
 	}
@@ -341,7 +341,7 @@ func (mai *MonsterAI) chooseSpell() (*core.SpellChoice, error) {
 	if mai.parent.SpellCastingManager == nil || !mai.parent.IsSpellcaster() {
 		return nil, fmt.Errorf("monster is not a spellcaster")
 	}
-	spellChoice, err := mai.parent.SpellCastingManager.ChooseSpellByPriority(core.STDamage, mai.parent.EntityStateManager.SpellcastingPriority)
+	spellChoice, err := mai.parent.SpellCastingManager.ChooseSpellByPriority(core.STDamage, mai.parent.EntityStateManager.GetSpellcastingPriority())
 	if err != nil {
 		return nil, err
 	}
@@ -409,7 +409,7 @@ func (mai *MonsterAI) selectTargetID(targetType core.TargetType) (core.TargetSta
 		return core.TargetInvalidType, -1, fmt.Errorf("invalid target type")
 	}
 
-	status, target, err := core.SelectTargetFromMap(validTargets, mai.parent.EntityStateManager.TargetPrioritization, mai.rng)
+	status, target, err := core.SelectTargetFromMap(validTargets, mai.parent.EntityStateManager.GetTargetPrioritization(), mai.rng)
 	if err != nil || status != core.TargetOK {
 		return status, -1, err
 	}

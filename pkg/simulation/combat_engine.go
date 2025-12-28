@@ -97,7 +97,7 @@ func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
 		return fmt.Errorf("actor state manager is nil or wrong type")
 	}
 
-	if !actorESM.HasUsedBonusAction {
+	if !actorESM.GetHasUsedBonusAction() {
 		offhandReq, ohErr := aiReq.Actor.GetAIRequest(aiReq.ActorID, core.AIReqOffhandAttack)
 		if ohErr != nil {
 			return ohErr
@@ -501,9 +501,9 @@ func (ce *CombatEngine) PrintCombatTracker() {
 		order++
 		combatant := ce.Combatants[index]
 		if combatant.IsLair {
-			fmt.Printf("Order Index: %d - Initiative: %d - Name: Lair\n", order, combatant.GetInitiative())
+			fmt.Printf("Order Index: %d - initiative: %d - Name: Lair\n", order, combatant.GetInitiative())
 		} else {
-			fmt.Printf("Order Index: %d - Initiative: %d - Name: %s\n", order, combatant.GetInitiative(), combatant.GetEntity().GetName())
+			fmt.Printf("Order Index: %d - initiative: %d - Name: %s\n", order, combatant.GetInitiative(), combatant.GetEntity().GetName())
 		}
 	}
 }
@@ -691,7 +691,7 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 			return fmt.Errorf("entity is character but type assertion failed")
 		}
 
-		if !c.EntityStateManager.IsDead && !c.EntityStateManager.GetIsUnconscious() {
+		if !c.EntityStateManager.GetIsDead() && !c.EntityStateManager.GetIsUnconscious() {
 			c.EntityStateManager.RefreshActions()
 		}
 	}
@@ -1001,7 +1001,7 @@ func (ce *CombatEngine) applyUncannyDodgeToEffect(target core.Entity, effect *co
 	}
 
 	if targetChar.Class.ClassFeatures.RogueFeatures.HasUncannyDodge &&
-		!targetChar.EntityStateManager.HasUsedReaction {
+		!targetChar.EntityStateManager.GetHasUsedReaction() {
 		effect.Value /= 2
 		targetChar.EntityStateManager.ExpendReaction()
 		return

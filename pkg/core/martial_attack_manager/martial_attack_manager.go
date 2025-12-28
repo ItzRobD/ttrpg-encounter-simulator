@@ -63,7 +63,7 @@ Encounter handle turn
 func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) ([]core.AttackResult, error) {
 	var results []core.AttackResult
 
-	// Index corresponds to the entry in AttackData; characters repeat via NumberOfAttacks, monsters expand AttackData per swing.
+	// Index corresponds to the entry in AttackData; characters repeat via numberOfAttacks, monsters expand AttackData per swing.
 	for idx, ad := range req.AttackData {
 		if req.GetAttackOptions().GetNumberOfAttacks() == 0 {
 			return nil, fmt.Errorf("invalid number of attacks - 0")

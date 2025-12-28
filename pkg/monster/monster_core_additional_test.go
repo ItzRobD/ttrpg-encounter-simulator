@@ -46,8 +46,8 @@ func TestExecuteAIRequest_MultiattackAndLegendary(t *testing.T) {
 	m.ActionManager = NewMonsterActionManager(m, m.RollManager, &cfg)
 
 	// Seed some legendary points
-	m.EntityStateManager.LegendaryActionPointsMax = 3
-	m.EntityStateManager.LegendaryActionPoints = 3
+	m.EntityStateManager.SetLegendaryActionPointsMax(3)
+	m.EntityStateManager.SetLegendaryActionPoints(3)
 
 	tgt := targetStub{Entity: m}
 
@@ -68,7 +68,7 @@ func TestExecuteAIRequest_MultiattackAndLegendary(t *testing.T) {
 	}
 
 	// Legendary action (cost 1 in basicConfig)
-	before := m.EntityStateManager.LegendaryActionPoints
+	before := m.EntityStateManager.GetLegendaryActionPoints()
 	lreq := &core.AIRequest{
 		ActionType:  core.ATLegendaryAction,
 		ActionIndex: 100,
@@ -83,8 +83,8 @@ func TestExecuteAIRequest_MultiattackAndLegendary(t *testing.T) {
 	if len(lout.Effects) != 1 {
 		t.Fatalf("expected 1 damage effect for legendary, got %d", len(lout.Effects))
 	}
-	if m.EntityStateManager.LegendaryActionPoints != before-1 {
-		t.Errorf("legendary points not decremented: before=%d after=%d", before, m.EntityStateManager.LegendaryActionPoints)
+	if m.EntityStateManager.GetLegendaryActionPoints() != before-1 {
+		t.Errorf("legendary points not decremented: before=%d after=%d", before, m.EntityStateManager.GetLegendaryActionPoints())
 	}
 }
 

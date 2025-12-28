@@ -15,11 +15,11 @@ type HPValues struct {
 
 func (esm *EntityStateManager) GetHPStatus() HPValues {
 	return HPValues{
-		CurrentHP: esm.CurrentHP,
-		MaxHP:     esm.MaxHP,
-		HPPct:     int(math.Floor(float64(esm.CurrentHP * 100 / esm.MaxHP))),
-		TempHP:    esm.TempHP,
-		HitDie:    esm.HitDie,
+		CurrentHP: esm.currentHP,
+		MaxHP:     esm.maxHP,
+		HPPct:     int(math.Floor(float64(esm.currentHP * 100 / esm.maxHP))),
+		TempHP:    esm.tempHP,
+		HitDie:    esm.hitDie,
 	}
 }
 

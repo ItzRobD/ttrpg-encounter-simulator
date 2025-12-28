@@ -58,8 +58,8 @@ func TestLegendaryAction_NoPoints_RemainsZero(t *testing.T) {
 	m.ActionManager = NewMonsterActionManager(m, m.RollManager, &cfg)
 
 	// Set LAP to 0 and execute a legendary action
-	m.EntityStateManager.LegendaryActionPointsMax = 0
-	m.EntityStateManager.LegendaryActionPoints = 0
+	m.EntityStateManager.SetLegendaryActionPointsMax(0)
+	m.EntityStateManager.SetLegendaryActionPoints(0)
 
 	tgt := targetZeroAC{Entity: m}
 	req := &core.AIRequest{ActionType: core.ATLegendaryAction, ActionIndex: 100, Target: tgt, ActorID: 1}
@@ -68,8 +68,8 @@ func TestLegendaryAction_NoPoints_RemainsZero(t *testing.T) {
 		// ExecuteAIRequest does not currently surface LAP spend errors; ensure it still does not crash
 		t.Fatalf("ExecuteAIRequest legendary error: %v", err)
 	}
-	if m.EntityStateManager.LegendaryActionPoints != 0 {
-		t.Errorf("legendary points should remain 0, got %d", m.EntityStateManager.LegendaryActionPoints)
+	if m.EntityStateManager.GetLegendaryActionPoints() != 0 {
+		t.Errorf("legendary points should remain 0, got %d", m.EntityStateManager.GetLegendaryActionPoints())
 	}
 }
 

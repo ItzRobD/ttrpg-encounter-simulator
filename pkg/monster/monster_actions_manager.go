@@ -39,7 +39,7 @@ func (mam *MonsterActionManager) GetLegendaryActions() map[int]LegendaryAction {
 }
 
 func (mam *MonsterActionManager) GetRechargeActionStatus() map[int]bool {
-	return mam.parent.EntityStateManager.RechargeActionStatus
+	return mam.parent.EntityStateManager.GetRechargeActionStatus()
 }
 
 func (mam *MonsterActionManager) ExpendRechargeAction(actionID int) {

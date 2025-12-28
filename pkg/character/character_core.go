@@ -41,7 +41,7 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 	}
 
 	// Unable to Act
-	if c.EntityStateManager.IsDead {
+	if c.EntityStateManager.GetIsDead() {
 		result.TurnStatuses[core.TurnDead] = true
 		return result, nil, nil
 	}
@@ -363,7 +363,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 
 func (c *Character) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.TurnResult, error) {
 	// Failsafes if character is already dead and this is called
-	if c.EntityStateManager.IsDead {
+	if c.EntityStateManager.GetIsDead() {
 		turnResult.TurnStatuses[core.TurnDead] = true
 		return turnResult, nil
 	}
@@ -373,7 +373,7 @@ func (c *Character) handleUnconsciousTurn(turnResult *core.TurnResult) (*core.Tu
 	}
 
 	// Character is not dead but is unconscious
-	if c.EntityStateManager.IsStable {
+	if c.EntityStateManager.GetIsStable() {
 		turnResult.TurnStatuses[core.TurnUnconscious] = true
 		return turnResult, nil
 	}

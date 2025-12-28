@@ -64,13 +64,13 @@ func (r rollResultStub) GetRerollEvents() []map[string]interface{} { return nil 
 func TestNewEntityStateManager_ClampsAndDefaults(t *testing.T) {
 	parent := testhelpers.NewEmEntity(5, core.AbilityScores{}, nil)
 
-	// Negative MaxHP should error per implementation
+	// Negative maxHP should error per implementation
 	_, err := NewEntityStateManager(parent, EntityStateConfig{MaxHP: -10})
 	if err == nil {
-		t.Fatalf("expected error when MaxHP < 0")
+		t.Fatalf("expected error when maxHP < 0")
 	}
 
-	// Valid MaxHP with negative CurrentHP/TempHP should clamp
+	// Valid maxHP with negative currentHP/tempHP should clamp
 	cfg := EntityStateConfig{
 		CurrentHP:           -5,
 		MaxHP:               10,
@@ -83,23 +83,23 @@ func TestNewEntityStateManager_ClampsAndDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewEntityStateManager error: %v", err)
 	}
-	if esm.MaxHP != 10 {
-		t.Errorf("MaxHP = %d, want 10", esm.MaxHP)
+	if esm.maxHP != 10 {
+		t.Errorf("maxHP = %d, want 10", esm.maxHP)
 	}
-	if esm.CurrentHP != 0 {
-		t.Errorf("CurrentHP = %d, want 0 (clamped)", esm.CurrentHP)
+	if esm.currentHP != 0 {
+		t.Errorf("currentHP = %d, want 0 (clamped)", esm.currentHP)
 	}
-	if esm.TempHP != 0 {
-		t.Errorf("TempHP = %d, want 0 (clamped)", esm.TempHP)
+	if esm.tempHP != 0 {
+		t.Errorf("tempHP = %d, want 0 (clamped)", esm.tempHP)
 	}
-	if esm.NumberOfAttacks != 0 {
-		t.Errorf("NumberOfAttacks = %d, want 0", esm.NumberOfAttacks)
+	if esm.numberOfAttacks != 0 {
+		t.Errorf("numberOfAttacks = %d, want 0", esm.numberOfAttacks)
 	}
-	if esm.LegendaryActionPoints != 0 || esm.LegendaryActionPointsMax != 0 {
-		t.Errorf("Legendary points = (%d,%d), want (0,0)", esm.LegendaryActionPoints, esm.LegendaryActionPointsMax)
+	if esm.legendaryActionPoints != 0 || esm.legendaryActionPointsMax != 0 {
+		t.Errorf("Legendary points = (%d,%d), want (0,0)", esm.legendaryActionPoints, esm.legendaryActionPointsMax)
 	}
-	if esm.Conditions == nil {
-		t.Errorf("Conditions should be initialized")
+	if esm.conditions == nil {
+		t.Errorf("conditions should be initialized")
 	}
 }
 
@@ -119,7 +119,7 @@ func TestActionEconomyAndRefresh(t *testing.T) {
 	if !esm.CanTakeActions() {
 		t.Errorf("expected can take actions after refresh")
 	}
-	if esm.LegendaryActionPoints != esm.LegendaryActionPointsMax {
+	if esm.legendaryActionPoints != esm.legendaryActionPointsMax {
 		t.Errorf("legendary not reset on refresh")
 	}
 }
@@ -133,7 +133,7 @@ func TestLegendaryActionPoints(t *testing.T) {
 		t.Errorf("LAP = %d, want 1", esm.GetLegendaryActionPoints())
 	}
 	esm.ReplenishLegendaryActionPoints(1)
-	if esm.GetLegendaryActionPoints() < esm.LegendaryActionPointsMax {
+	if esm.GetLegendaryActionPoints() < esm.legendaryActionPointsMax {
 		t.Errorf("LAP should be >= max after replenish, got %d", esm.GetLegendaryActionPoints())
 	}
 }
@@ -163,8 +163,8 @@ func TestHP_Modify_TempAndHealing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ModifyHP damage: %v", err)
 	}
-	if esm.TempHP != 2 || esm.CurrentHP != 10 {
-		t.Errorf("after -3 dmg: hp=%d temp=%d, want 10/2", esm.CurrentHP, esm.TempHP)
+	if esm.tempHP != 2 || esm.currentHP != 10 {
+		t.Errorf("after -3 dmg: hp=%d temp=%d, want 10/2", esm.currentHP, esm.tempHP)
 	}
 	if !res.DidTempDamage || res.DidHPDamage {
 		t.Errorf("expected only temp damage flags")
@@ -175,18 +175,18 @@ func TestHP_Modify_TempAndHealing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ModifyHP temp add: %v", err)
 	}
-	if esm.TempHP != 8 {
-		t.Errorf("temp after add max(2,8) = %d, want 8", esm.TempHP)
+	if esm.tempHP != 8 {
+		t.Errorf("temp after add max(2,8) = %d, want 8", esm.tempHP)
 	}
 
 	// Healing caps at max
-	esm.CurrentHP = 7
+	esm.currentHP = 7
 	res, err = esm.ModifyHP(10, false, false)
 	if err != nil {
 		t.Fatalf("ModifyHP heal: %v", err)
 	}
-	if esm.CurrentHP != 10 || !res.DidHealHP {
-		t.Errorf("healing cap failed: hp=%d", esm.CurrentHP)
+	if esm.currentHP != 10 || !res.DidHealHP {
+		t.Errorf("healing cap failed: hp=%d", esm.currentHP)
 	}
 
 	// isTemp=true with negative should error
@@ -197,10 +197,10 @@ func TestHP_Modify_TempAndHealing(t *testing.T) {
 
 func TestCheckMassiveDamage(t *testing.T) {
 	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 12, CurrentHP: 0})
-	// Constructor clamps CurrentHP to >= 0; set negative explicitly to simulate state after outside change
-	esm.CurrentHP = -12
+	// Constructor clamps currentHP to >= 0; set negative explicitly to simulate state after outside change
+	esm.currentHP = -12
 	if !esm.CheckMassiveDamage() {
-		t.Errorf("expected massive damage true at -MaxHP")
+		t.Errorf("expected massive damage true at -maxHP")
 	}
 }
 
@@ -231,8 +231,8 @@ func TestDeathSaves_CriticalRevive(t *testing.T) {
 	if err := esm.ApplyDeathSavingThrowResult(dsRoll{crit: true}); err != nil {
 		t.Fatalf("ApplyDeathSavingThrowResult: %v", err)
 	}
-	if esm.CurrentHP != 1 {
-		t.Errorf("crit should revive to 1 HP, got %d", esm.CurrentHP)
+	if esm.currentHP != 1 {
+		t.Errorf("crit should revive to 1 HP, got %d", esm.currentHP)
 	}
 	if esm.HasCondition(core.ConditionUnconscious) {
 		t.Errorf("revive should remove unconscious condition")
@@ -252,7 +252,7 @@ func TestModifyHP_KillsMonsterAtZero(t *testing.T) {
 func TestPreferencesAndInitiativeRoundTrip(t *testing.T) {
 	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(5, core.AbilityScores{}, nil), EntityStateConfig{})
 
-	// Initiative and bonuses
+	// initiative and bonuses
 	esm.SetInitiative(12)
 	esm.SetInitiativeBonus(3)
 	esm.SetInitiativeAdvantage(core.RollAdvantage)
@@ -390,24 +390,24 @@ func TestModifyHP_Edges_TempStackingAndOverflow(t *testing.T) {
 	if _, err := esm.ModifyHP(5, true, true); err != nil {
 		t.Fatalf("temp stacking add err: %v", err)
 	}
-	if esm.TempHP != 8 {
-		t.Errorf("temp after stacking add=%d want 8", esm.TempHP)
+	if esm.tempHP != 8 {
+		t.Errorf("temp after stacking add=%d want 8", esm.tempHP)
 	}
 
 	// Exact overflow boundary: temp exactly consumed (no HP change)
 	if _, err := esm.ModifyHP(-8, false, false); err != nil {
 		t.Fatalf("damage err: %v", err)
 	}
-	if esm.TempHP != 0 || esm.CurrentHP != 10 {
-		t.Errorf("after -8 into temp: hp=%d temp=%d want 10/0", esm.CurrentHP, esm.TempHP)
+	if esm.tempHP != 0 || esm.currentHP != 10 {
+		t.Errorf("after -8 into temp: hp=%d temp=%d want 10/0", esm.currentHP, esm.tempHP)
 	}
 
 	// Damage below zero HP
 	if _, err := esm.ModifyHP(-15, false, false); err != nil {
 		t.Fatalf("big damage err: %v", err)
 	}
-	if esm.CurrentHP >= 0 {
-		t.Errorf("hp should be negative or zero after big damage, got %d", esm.CurrentHP)
+	if esm.currentHP >= 0 {
+		t.Errorf("hp should be negative or zero after big damage, got %d", esm.currentHP)
 	}
 	if !esm.GetIsUnconscious() {
 		t.Errorf("should be unconscious at <=0 HP")
@@ -472,8 +472,8 @@ func TestModifyHP_RelentlessEndurance(t *testing.T) {
 			t.Fatalf("ModifyHP error: %v", err)
 		}
 
-		if esm.CurrentHP != 1 {
-			t.Errorf("CurrentHP = %d, want 1", esm.CurrentHP)
+		if esm.currentHP != 1 {
+			t.Errorf("currentHP = %d, want 1", esm.currentHP)
 		}
 		if res.NewHP != 1 {
 			t.Errorf("Result NewHP = %d, want 1", res.NewHP)
@@ -493,14 +493,14 @@ func TestModifyHP_RelentlessEndurance(t *testing.T) {
 		// Already at 0, taking 0 damage or any non-positive healing/damage
 		esm.ModifyHP(-1, false, false)
 
-		if esm.CurrentHP != -1 {
+		if esm.currentHP != -1 {
 			// Actually, if it's already 0, and we take damage, it goes negative.
 			// D&D rules say you stay at 0 but take a death save fail.
 			// Let's see how our implementation handles it.
 		}
 
 		// If it's already 0, it shouldn't trigger.
-		if esm.CurrentHP == 1 {
+		if esm.currentHP == 1 {
 			t.Errorf("Relentless Endurance should not trigger if already at 0")
 		}
 	})
@@ -510,17 +510,17 @@ func TestModifyHP_RelentlessEndurance(t *testing.T) {
 		esm.HalfOrcHasRelentlessEnduranceUse = true
 
 		// Massive damage: 10 HP, takes 20 damage. Total damage = 20.
-		// esm.CurrentHP becomes -10. -10 <= -10 (MaxHP) is true.
+		// esm.currentHP becomes -10. -10 <= -10 (maxHP) is true.
 		esm.ModifyHP(-20, false, false)
 
-		if esm.CurrentHP != -10 {
-			t.Errorf("CurrentHP = %d, want -10", esm.CurrentHP)
+		if esm.currentHP != -10 {
+			t.Errorf("currentHP = %d, want -10", esm.currentHP)
 		}
 		if esm.GetIsDead() == false {
 			// esm.Kill() should have been called
 			// Wait, does esm.Kill() set a dead flag?
 		}
-		if esm.CurrentHP == 1 {
+		if esm.currentHP == 1 {
 			t.Errorf("Relentless Endurance should not trigger on massive damage")
 		}
 	})
@@ -532,7 +532,7 @@ func TestModifyHP_HealFromUnconscious(t *testing.T) {
 
 	// Set to unconscious and add a death save failure
 	esm.SetUnconscious(true)
-	esm.DeathSaves.AddFailure(false)
+	esm.deathSaves.AddFailure(false)
 
 	if !esm.GetIsUnconscious() {
 		t.Errorf("expected entity to be unconscious")
@@ -544,20 +544,20 @@ func TestModifyHP_HealFromUnconscious(t *testing.T) {
 		t.Fatalf("ModifyHP error: %v", err)
 	}
 
-	if esm.CurrentHP != 5 {
-		t.Errorf("expected HP 5, got %d", esm.CurrentHP)
+	if esm.currentHP != 5 {
+		t.Errorf("expected HP 5, got %d", esm.currentHP)
 	}
 
 	if esm.GetIsUnconscious() {
 		t.Errorf("expected entity NOT to be unconscious after healing")
 	}
 
-	if esm.Conditions.Has(core.ConditionUnconscious) {
+	if esm.conditions.Has(core.ConditionUnconscious) {
 		t.Errorf("expected Unconscious condition to be removed")
 	}
 
-	if esm.DeathSaves.SaveFailure != 0 {
-		t.Errorf("expected death saves to be reset, got %d failures", esm.DeathSaves.SaveFailure)
+	if esm.deathSaves.SaveFailure != 0 {
+		t.Errorf("expected death saves to be reset, got %d failures", esm.deathSaves.SaveFailure)
 	}
 }
 
@@ -584,7 +584,7 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 
 	t.Run("Triggers correctly when raging and successful save", func(t *testing.T) {
 		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
-		esm.BarbarianHasRelentlessRage = true
+		esm.barbarianHasRelentlessRage = true
 		esm.BarbarianIsRaging = true
 		parent.saveResult = rollResultStub{success: true}
 
@@ -593,14 +593,14 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 			t.Fatalf("ModifyHP error: %v", err)
 		}
 
-		if esm.CurrentHP != 1 {
-			t.Errorf("CurrentHP = %d, want 1", esm.CurrentHP)
+		if esm.currentHP != 1 {
+			t.Errorf("currentHP = %d, want 1", esm.currentHP)
 		}
 		if res.IsUnconscious {
 			t.Errorf("IsUnconscious = true, want false")
 		}
-		if esm.BarbarianRelentlessUses != 1 {
-			t.Errorf("Uses = %d, want 1", esm.BarbarianRelentlessUses)
+		if esm.barbarianRelentlessUses != 1 {
+			t.Errorf("Uses = %d, want 1", esm.barbarianRelentlessUses)
 		}
 		if parent.lastDC != 10 {
 			t.Errorf("DC = %d, want 10", parent.lastDC)
@@ -609,15 +609,15 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 
 	t.Run("DC increases on second use", func(t *testing.T) {
 		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
-		esm.BarbarianHasRelentlessRage = true
+		esm.barbarianHasRelentlessRage = true
 		esm.BarbarianIsRaging = true
-		esm.BarbarianRelentlessUses = 1
+		esm.barbarianRelentlessUses = 1
 		parent.saveResult = rollResultStub{success: true}
 
 		_, _ = esm.ModifyHP(-10, false, false)
 
-		if esm.BarbarianRelentlessUses != 2 {
-			t.Errorf("Uses = %d, want 2", esm.BarbarianRelentlessUses)
+		if esm.barbarianRelentlessUses != 2 {
+			t.Errorf("Uses = %d, want 2", esm.barbarianRelentlessUses)
 		}
 		if parent.lastDC != 15 {
 			t.Errorf("DC = %d, want 15", parent.lastDC)
@@ -626,14 +626,14 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 
 	t.Run("Does not trigger if not raging", func(t *testing.T) {
 		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
-		esm.BarbarianHasRelentlessRage = true
+		esm.barbarianHasRelentlessRage = true
 		esm.BarbarianIsRaging = false
 		parent.saveResult = rollResultStub{success: true}
 
 		res, _ := esm.ModifyHP(-10, false, false)
 
-		if esm.CurrentHP != 0 {
-			t.Errorf("CurrentHP = %d, want 0", esm.CurrentHP)
+		if esm.currentHP != 0 {
+			t.Errorf("currentHP = %d, want 0", esm.currentHP)
 		}
 		if !res.IsUnconscious {
 			t.Errorf("IsUnconscious = false, want true")
@@ -642,14 +642,14 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 
 	t.Run("Does not trigger on failed save", func(t *testing.T) {
 		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
-		esm.BarbarianHasRelentlessRage = true
+		esm.barbarianHasRelentlessRage = true
 		esm.BarbarianIsRaging = true
 		parent.saveResult = rollResultStub{success: false}
 
 		res, _ := esm.ModifyHP(-10, false, false)
 
-		if esm.CurrentHP != 0 {
-			t.Errorf("CurrentHP = %d, want 0", esm.CurrentHP)
+		if esm.currentHP != 0 {
+			t.Errorf("currentHP = %d, want 0", esm.currentHP)
 		}
 		if !res.IsUnconscious {
 			t.Errorf("IsUnconscious = false, want true")
@@ -658,15 +658,15 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 
 	t.Run("Does not trigger on massive damage", func(t *testing.T) {
 		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
-		esm.BarbarianHasRelentlessRage = true
+		esm.barbarianHasRelentlessRage = true
 		esm.BarbarianIsRaging = true
 		parent.saveResult = rollResultStub{success: true}
 
-		// Takes 20 damage, MaxHP is 10. Massive damage!
+		// Takes 20 damage, maxHP is 10. Massive damage!
 		_, _ = esm.ModifyHP(-20, false, false)
 
-		if esm.CurrentHP != -10 {
-			t.Errorf("CurrentHP = %d, want -10", esm.CurrentHP)
+		if esm.currentHP != -10 {
+			t.Errorf("currentHP = %d, want -10", esm.currentHP)
 		}
 		// Relentless Rage should NOT have reset HP to 1
 	})

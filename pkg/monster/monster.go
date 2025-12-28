@@ -87,7 +87,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	// This avoids clobbering the default NewDamageResistances() with nil when a monster
 	// has no DB-defined resistances or a query returns no rows for that monster.
 	if config.Resistances != nil {
-		monster.EntityStateManager.Resistances = config.Resistances
+		monster.EntityStateManager.SetResistances(config.Resistances)
 	}
 
 	// Spellcasting Manager
@@ -154,7 +154,7 @@ func NewMonsterWithRNG(ctx context.Context, config MonsterConfig, rng *rand.Rand
 	}
 	// Only override initialized resistances if a non-nil map is provided
 	if config.Resistances != nil {
-		monster.EntityStateManager.Resistances = config.Resistances
+		monster.EntityStateManager.SetResistances(config.Resistances)
 	}
 
 	// Spellcasting Manager
@@ -326,10 +326,10 @@ func (m *Monster) InitializeHP() error  { return m.setHP(m.HP) }
 func (m *Monster) IsSpellcaster() bool  { return m.MonsterBase.IsSpellcaster }
 func (m *Monster) IsHealer() bool       { return m.SpellCastingManager.HasHealingSpells() }
 func (m *Monster) GetTargetPriority() core.TargetPriority {
-	return m.EntityStateManager.TargetPrioritization
+	return m.EntityStateManager.GetTargetPrioritization()
 }
 func (m *Monster) SetTargetPriority(priority core.TargetPriority) {
-	m.EntityStateManager.TargetPrioritization = priority
+	m.EntityStateManager.SetTargetPrioritization(priority)
 }
 func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPModificationResult, error) {
 	return m.EntityStateManager.ModifyHP(value, isTemp, tempStacking)
