@@ -12,10 +12,11 @@ import (
 func (c *Character) RollInitiative() (int, error) {
 	var err error
 	opts := roll_manager.NewRollOptions()
-	opts.Modifier, err = c.getAbilityScoreModifier(core.AbilityDexterity)
+	dexMod, err := c.getAbilityScoreModifier(core.AbilityDexterity)
 	if err != nil {
 		return 0, err
 	}
+	opts.Modifier = dexMod + c.Configuration.CombatFeatures.InitiativeBonus
 
 	res, err := c.RollManager.RollInitiative(opts)
 	if err != nil {
@@ -157,7 +158,7 @@ func (c *Character) CreateAttackRequest(target core.Entity, slot core.WeaponSlot
 		BonusToDamageRoll:    bonusDmg,
 		ShouldApplyDamageMod: true,
 		PowerAttack:          false,
-		ImprovedCritical:     simulationOptions != nil && simulationOptions.UseImprovedCriticals,
+		ImprovedCritical:     (simulationOptions != nil && simulationOptions.UseImprovedCriticals) || (c.Configuration.CombatFeatures.CriticalThreshold > 0 && c.Configuration.CombatFeatures.CriticalThreshold < 20),
 		RerollOnesAndTwos:    false,
 		Advantage:            computedAdv,
 		ExtraCritDice:        extraCritDice,
@@ -210,7 +211,7 @@ func (c *Character) CreateOffhandAttackRequest(target core.Entity, simulationOpt
 		BonusToDamageRoll:    bonusDmg,
 		ShouldApplyDamageMod: false, // Standard is false
 		PowerAttack:          false,
-		ImprovedCritical:     simulationOptions != nil && simulationOptions.UseImprovedCriticals,
+		ImprovedCritical:     (simulationOptions != nil && simulationOptions.UseImprovedCriticals) || (c.Configuration.CombatFeatures.CriticalThreshold > 0 && c.Configuration.CombatFeatures.CriticalThreshold < 20),
 		RerollOnesAndTwos:    false,
 		Advantage:            computedAdv,
 		ExtraCritDice:        extraCritDice,

@@ -183,7 +183,6 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 			DamageType:    ad.DamageType,
 		}
 
-		// TODO: Logging
 		events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())
 		if attackRollResult.IsSuccess {
 			events.LogDiceRollEvent(mam.parent, dmgRollResult, mam.parent.GetEventListener())

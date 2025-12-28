@@ -106,8 +106,8 @@ func (c *Character) CreateSpellCastRequest(target core.Entity, spellChoice core.
 		BonusToAttackRoll:    0,
 		BonusToDamageRoll:    0,
 		ShouldApplyDamageMod: false, // RollSpellValue handles spell modifiers when applicable
-		ImprovedCritical:     (spellChoice.Spell.GetSpellType() == core.STDamage) && (simOptions != nil && simOptions.UseImprovedCriticals),
-		TreatOnesAsTwos:      false, // Elemental Adept and similar will be wired via features later
+		ImprovedCritical:     (spellChoice.Spell.GetSpellType() == core.STDamage) && ((simOptions != nil && simOptions.UseImprovedCriticals) || (c.Configuration.CombatFeatures.CriticalThreshold > 0 && c.Configuration.CombatFeatures.CriticalThreshold < 20)),
+		TreatOnesAsTwos:      c.Configuration.CombatFeatures.ReRollAbilities.HasElementalAdept,
 	}
 
 	return &spellcasting_manager.SpellCastRequest{

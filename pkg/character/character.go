@@ -40,19 +40,19 @@ type Character struct {
 }
 
 type CharacterConfig struct {
-	Name            string
-	RaceID          races.RaceID
-	DragonbornColor *races.DragonbornColor
-	ClassID         classes.ClassID
-	Level           uint8
-	AsConfig        core.AbilityScoresConfig
-	HPMethod        core.HPSetMethod
-	HPValue         int
-	Seed            core.Seed
-	Equipment       EquipmentConfig
-	Resistances     core.DamageResistances
-	// FightingStyles allows the (mocked) frontend/API to specify styles to apply at creation
-	FightingStyles []classes.FightingStyle
+	Name                string
+	RaceID              races.RaceID
+	DragonbornColor     *races.DragonbornColor
+	ClassID             classes.ClassID
+	Level               uint8
+	AsConfig            core.AbilityScoresConfig
+	HPMethod            core.HPSetMethod
+	HPValue             int
+	Seed                core.Seed
+	Equipment           EquipmentConfig
+	Resistances         core.DamageResistances
+	FightingStyles      []classes.FightingStyle
+	EntityConfiguration entity_configuration.EntityConfiguration
 }
 
 // EquipmentConfig defines configuration for a character's equipment including armor and weapon slot mapping.
@@ -118,7 +118,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		MartialAttackManager: &martial_attack_manager.MartialAttackManager{},
 		RollManager:          &roll_manager.RollManager{},
 		AI:                   &CharacterAI{},
-		Configuration:        entity_configuration.EntityConfiguration{}, // TODO: this isn't being set up
+		Configuration:        charConfig.EntityConfiguration,
 		HPConfig:             core.HPConfig{HPSetMethod: charConfig.HPMethod, Value: charConfig.HPValue},
 		Seed:                 charConfig.Seed,
 		RNG:                  nil,
@@ -129,6 +129,19 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	char.RollManager = initializeRollManager(&char, &char.Configuration)
 	if char.Race.ID == races.Halfling {
 		char.RollManager.RerollAbilities.HasHalflingLucky = true
+	}
+	// Explicitly apply any extra reroll abilities from configuration
+	if char.Configuration.CombatFeatures.ReRollAbilities.HasGreatWeaponFighting {
+		char.RollManager.RerollAbilities.HasGreatWeaponFighting = true
+	}
+	if char.Configuration.CombatFeatures.ReRollAbilities.HasElementalAdept {
+		char.RollManager.RerollAbilities.HasElementalAdept = true
+	}
+	if char.Configuration.CombatFeatures.ReRollAbilities.HasElvenAccuracy {
+		char.RollManager.RerollAbilities.HasElvenAccuracy = true
+	}
+	if char.Configuration.CombatFeatures.ReRollAbilities.HasIndomitable {
+		char.RollManager.RerollAbilities.HasIndomitable = true
 	}
 	// AI
 	char.AI = NewCharacterAI(&char)
@@ -287,7 +300,7 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 		MartialAttackManager: &martial_attack_manager.MartialAttackManager{},
 		RollManager:          &roll_manager.RollManager{},
 		AI:                   &CharacterAI{},
-		Configuration:        entity_configuration.EntityConfiguration{},
+		Configuration:        charConfig.EntityConfiguration,
 		HPConfig:             core.HPConfig{HPSetMethod: charConfig.HPMethod, Value: charConfig.HPValue},
 		Seed:                 charConfig.Seed,
 		RNG:                  rng,
@@ -297,6 +310,19 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 	char.RollManager = initializeRollManager(&char, &char.Configuration)
 	if char.Race.ID == races.Halfling {
 		char.RollManager.RerollAbilities.HasHalflingLucky = true
+	}
+	// Explicitly apply any extra reroll abilities from configuration
+	if char.Configuration.CombatFeatures.ReRollAbilities.HasGreatWeaponFighting {
+		char.RollManager.RerollAbilities.HasGreatWeaponFighting = true
+	}
+	if char.Configuration.CombatFeatures.ReRollAbilities.HasElementalAdept {
+		char.RollManager.RerollAbilities.HasElementalAdept = true
+	}
+	if char.Configuration.CombatFeatures.ReRollAbilities.HasElvenAccuracy {
+		char.RollManager.RerollAbilities.HasElvenAccuracy = true
+	}
+	if char.Configuration.CombatFeatures.ReRollAbilities.HasIndomitable {
+		char.RollManager.RerollAbilities.HasIndomitable = true
 	}
 	char.AI = NewCharacterAI(&char)
 
