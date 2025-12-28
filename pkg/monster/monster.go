@@ -344,4 +344,16 @@ func (m *Monster) GetType() string {
 	return m.MonsterBase.Type.String()
 }
 
+func (m *Monster) IsConcentrating() bool {
+	return m.EntityStateManager.IsConcentrating()
+}
+
+func (m *Monster) BreakConcentration() {
+	m.EntityStateManager.BreakConcentration()
+}
+
+func (m *Monster) SetConcentrating(val bool, spellName string) {
+	m.EntityStateManager.SetConcentrating(val, spellName)
+}
+
 var _ core.Entity = &Monster{}

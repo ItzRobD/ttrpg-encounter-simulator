@@ -644,6 +644,10 @@ type ActionOutcome struct {
 	ActorID    int
 	Success    bool
 	Effects    []Effect
+
+	// Concentration info
+	IsConcentration bool
+	SpellName       string
 }
 
 type Effect struct {
@@ -764,6 +768,26 @@ func (ci *CombatantInfo) UpdateState() {
 	ci.State.MaxHP = entity.GetHPStatus().GetMaxHP()
 	// Heal Threshold
 	ci.State.Conditions = entity.GetConditions()
+
+	// Sync concentration from entity state manager
+	isConcentrating := entity.IsConcentrating()
+	if ci.State.Concentration != nil {
+		ci.State.Concentration.IsConcentrating = isConcentrating
+		if !isConcentrating {
+			ci.State.Concentration.SpellName = nil
+			ci.State.Concentration.AffectedTargets = nil
+			ci.State.Concentration.Duration = nil
+			ci.State.Concentration.RoundsRemaining = nil
+			ci.State.Concentration.RoundStarted = nil
+		}
+	} else if isConcentrating {
+		// If entity says it's concentrating but we don't have info,
+		// we might need to initialize it, but we lack details here.
+		// For now, assume CombatEngine/StartConcentration handles the heavy lifting.
+		ci.State.Concentration = &ConcentrationInfo{
+			IsConcentrating: true,
+		}
+	}
 }
 
 // StartConcentration begins concentration on a spell/ability
@@ -776,6 +800,8 @@ func (ci *CombatantInfo) StartConcentration(spellName string, targets []int, dur
 		RoundsRemaining: &duration,
 		RoundStarted:    &currentRound,
 	}
+	// Sync to entity
+	ci.Combatant.Entity.SetConcentrating(true, spellName)
 }
 
 // BreakConcentration ends concentration (failed save, new concentration, etc.)
@@ -788,6 +814,8 @@ func (ci *CombatantInfo) BreakConcentration() {
 		ci.State.Concentration.RoundsRemaining = nil
 		ci.State.Concentration.RoundStarted = nil
 	}
+	// Sync to entity
+	ci.Combatant.Entity.SetConcentrating(false, "")
 }
 
 // DecrementConcentrationRounds decrements rounds remaining

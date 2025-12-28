@@ -43,6 +43,7 @@ type SpellResult interface {
 	GetSpellSaveSuccess() bool
 	GetValueResult() RollResult
 	GetDamageType() DamageType
+	GetIsConcentration() bool
 }
 
 type SpellCastData interface {
@@ -145,6 +146,8 @@ type HPModificationResult interface {
 	GetDidHPDamage() bool
 	GetIsUnconscious() bool
 	GetIsMaxHealth() bool
+	GetTriggeredConcentrationCheck() bool
+	GetDamageTaken() int
 }
 
 type ElusiveEntity interface {

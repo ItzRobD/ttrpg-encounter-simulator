@@ -177,11 +177,13 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}
 
 		return &core.ActionOutcome{
-			ActionType: req.ActionType,
-			TargetID:   req.TargetID,
-			ActorID:    req.ActorID,
-			Effects:    effects,
-			Success:    len(effects) > 0,
+			ActionType:      req.ActionType,
+			TargetID:        req.TargetID,
+			ActorID:         req.ActorID,
+			Effects:         effects,
+			Success:         len(effects) > 0,
+			IsConcentration: res.IsConcentration,
+			SpellName:       res.SpellName,
 		}, nil
 	case core.ATMonsterHeal:
 		hReq := req.HealRequest

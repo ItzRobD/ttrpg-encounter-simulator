@@ -8,17 +8,19 @@ import (
 )
 
 type HPModificationResult struct {
-	ModificationValue int
-	OriginalHP        int
-	OriginalTempHP    int
-	NewHP             int
-	NewTempHP         int
-	DidHealHP         bool
-	DidHealTempHP     bool
-	DidTempDamage     bool
-	DidHPDamage       bool
-	IsUnconscious     bool
-	IsMaxHealth       bool
+	ModificationValue           int
+	OriginalHP                  int
+	OriginalTempHP              int
+	NewHP                       int
+	NewTempHP                   int
+	DidHealHP                   bool
+	DidHealTempHP               bool
+	DidTempDamage               bool
+	DidHPDamage                 bool
+	IsUnconscious               bool
+	IsMaxHealth                 bool
+	TriggeredConcentrationCheck bool
+	DamageTaken                 int
 }
 
 func (hpmr HPModificationResult) GetModificationValue() int { return hpmr.ModificationValue }
@@ -32,6 +34,10 @@ func (hpmr HPModificationResult) GetDidTempDamage() bool    { return hpmr.DidTem
 func (hpmr HPModificationResult) GetDidHPDamage() bool      { return hpmr.DidHPDamage }
 func (hpmr HPModificationResult) GetIsUnconscious() bool    { return hpmr.IsUnconscious }
 func (hpmr HPModificationResult) GetIsMaxHealth() bool      { return hpmr.IsMaxHealth }
+func (hpmr HPModificationResult) GetTriggeredConcentrationCheck() bool {
+	return hpmr.TriggeredConcentrationCheck
+}
+func (hpmr HPModificationResult) GetDamageTaken() int { return hpmr.DamageTaken }
 
 type EntityStateConfig struct {
 	CurrentHP            int
@@ -78,6 +84,9 @@ type EntityStateManager struct {
 	isStable              bool
 	isDead                bool
 	isRecklesslyAttacking bool
+
+	isConcentrating        bool
+	concentratingSpellName string
 
 	initiative int
 
@@ -269,6 +278,11 @@ func (esm *EntityStateManager) AddCondition(c core.Condition) {
 	} else {
 		esm.conditions.Add(c)
 	}
+
+	// Break concentration if incapacitated or other severe conditions
+	if c == core.ConditionIncapacitated || c == core.ConditionStunned || c == core.ConditionParalyzed || c == core.ConditionPetrified || c == core.ConditionUnconscious {
+		esm.BreakConcentration()
+	}
 }
 
 func (esm *EntityStateManager) RemoveCondition(c core.Condition) {
@@ -296,6 +310,7 @@ func (esm *EntityStateManager) SetUnconscious(isUnconscious bool) {
 		// Directly add conditions to avoid circular call
 		esm.conditions.Add(core.ConditionUnconscious)
 		esm.conditions.Add(core.ConditionProne)
+		esm.BreakConcentration()
 	} else {
 		esm.conditions.Remove(core.ConditionUnconscious)
 	}
@@ -386,20 +401,24 @@ func (esm *EntityStateManager) GetTotalHP() int {
 
 func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking bool) (HPModificationResult, error) {
 	res := HPModificationResult{
-		ModificationValue: value,
-		OriginalHP:        esm.currentHP,
-		OriginalTempHP:    esm.tempHP,
-		NewHP:             esm.currentHP,
-		NewTempHP:         esm.tempHP,
-		DidHealHP:         false,
-		DidHealTempHP:     false,
-		DidTempDamage:     false,
-		DidHPDamage:       false,
-		IsUnconscious:     false,
-		IsMaxHealth:       false,
+		ModificationValue:           value,
+		OriginalHP:                  esm.currentHP,
+		OriginalTempHP:              esm.tempHP,
+		NewHP:                       esm.currentHP,
+		NewTempHP:                   esm.tempHP,
+		DidHealHP:                   false,
+		DidHealTempHP:               false,
+		DidTempDamage:               false,
+		DidHPDamage:                 false,
+		IsUnconscious:               false,
+		IsMaxHealth:                 false,
+		TriggeredConcentrationCheck: false,
+		DamageTaken:                 0,
 	}
 	if isTemp { // This should only be true if we are adding to temp hp
 		if value < 0 {
+			dmg := -value
+			res.DamageTaken = dmg
 			res.DidHealHP = res.NewHP > res.OriginalHP
 			res.DidHealTempHP = res.NewTempHP > res.OriginalTempHP
 			res.DidTempDamage = res.NewTempHP < res.OriginalTempHP
@@ -419,6 +438,7 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 	} else {
 		if value < 0 {
 			dmg := -value // positive magnitude
+			res.DamageTaken = dmg
 			if esm.tempHP > 0 {
 				if esm.tempHP >= dmg {
 					esm.tempHP -= dmg // exact or partial absorption
@@ -429,6 +449,11 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 				}
 			} else {
 				esm.currentHP -= dmg
+			}
+
+			// Trigger concentration check if damage was taken and concentrating
+			if esm.isConcentrating && dmg > 0 {
+				res.TriggeredConcentrationCheck = true
 			}
 		} else { // Healing
 			esm.currentHP = min(esm.currentHP+value, esm.maxHP)
@@ -676,6 +701,27 @@ func (esm *EntityStateManager) GetResistance(dt core.DamageType) (core.DamageRes
 // Class-specific functions
 func (esm *EntityStateManager) ResetBarbarianRelentlessUses() {
 	esm.barbarianRelentlessUses = 0
+}
+
+func (esm *EntityStateManager) SetConcentrating(val bool, spellName string) {
+	esm.isConcentrating = val
+	esm.concentratingSpellName = spellName
+}
+
+func (esm *EntityStateManager) IsConcentrating() bool {
+	return esm.isConcentrating
+}
+
+func (esm *EntityStateManager) GetConcentratingSpellName() string {
+	return esm.concentratingSpellName
+}
+
+func (esm *EntityStateManager) BreakConcentration() {
+	if esm.isConcentrating {
+		esm.isConcentrating = false
+		esm.concentratingSpellName = ""
+		// Dispatch event? Maybe later if needed
+	}
 }
 
 func (esm *EntityStateManager) GetBarbarianRelentlessUses() int {

@@ -265,11 +265,13 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		}
 
 		return &core.ActionOutcome{
-			ActionType: req.ActionType,
-			TargetID:   req.TargetID,
-			ActorID:    req.ActorID,
-			Effects:    effects,
-			Success:    len(effects) > 0,
+			ActionType:      req.ActionType,
+			TargetID:        req.TargetID,
+			ActorID:         req.ActorID,
+			Effects:         effects,
+			Success:         len(effects) > 0,
+			IsConcentration: res.IsConcentration,
+			SpellName:       res.SpellName,
 		}, nil
 	case core.ATDragonbornBreathWeapon:
 		if c.Race.DragonbornFeatures == nil {

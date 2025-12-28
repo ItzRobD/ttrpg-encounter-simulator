@@ -47,6 +47,9 @@ type Entity interface {
 	ProcessTurn(actorID int, turnType TurnType) (*TurnResult, *AIRequest, error)
 	GetConditions() EntityConditions
 	GetType() string
+	IsConcentrating() bool
+	BreakConcentration()
+	SetConcentrating(val bool, spellName string)
 }
 
 type Combatant struct {

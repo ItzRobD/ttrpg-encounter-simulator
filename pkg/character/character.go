@@ -599,6 +599,18 @@ func (c *Character) GetType() string {
 	return "Humanoid"
 }
 
+func (c *Character) IsConcentrating() bool {
+	return c.EntityStateManager.IsConcentrating()
+}
+
+func (c *Character) BreakConcentration() {
+	c.EntityStateManager.BreakConcentration()
+}
+
+func (c *Character) SetConcentrating(val bool, spellName string) {
+	c.EntityStateManager.SetConcentrating(val, spellName)
+}
+
 func (c *Character) HasElusive() bool {
 	if c.Class.ID == classes.Rogue && c.Class.ClassFeatures.RogueFeatures != nil {
 		return c.Class.ClassFeatures.RogueFeatures.HasElusive

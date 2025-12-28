@@ -56,6 +56,9 @@ func (entityStub) ProcessTurn(int, core.TurnType) (*core.TurnResult, *core.AIReq
 }
 func (entityStub) GetConditions() core.EntityConditions { return core.EntityConditions{} }
 func (entityStub) GetType() string                      { return "Humanoid" }
+func (entityStub) IsConcentrating() bool                { return false }
+func (entityStub) BreakConcentration()                  {}
+func (entityStub) SetConcentrating(bool, string)        {}
 
 // Keep only what EquipmentManager needs here
 type EmEntity struct {

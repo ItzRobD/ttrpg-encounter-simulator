@@ -162,6 +162,25 @@ func (ce *CombatEngine) executeMonsterLegendaryAction(aiReq *core.AIRequest) err
 }
 
 func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.ActionOutcome) error {
+	// Handle concentration start if the action is a concentration spell
+	if outcome.IsConcentration {
+		actorCombatant, exists := ce.Combatants[outcome.ActorID]
+		if exists {
+			// Determine targets - for now we just use the primary target of the action
+			// In the future, this could be expanded for AOE concentration spells
+			targets := []int{outcome.TargetID}
+			// Duration is usually 10 rounds (1 minute) for most combat spells, but we should ideally get it from the spell
+			// For now, default to 10 rounds as a placeholder if not specified.
+			// Most concentration spells in this system are likely 1 minute.
+			duration := 10
+
+			// We need the current round
+			currentRound := ce.CurrentRound
+
+			actorCombatant.Info.StartConcentration(outcome.SpellName, targets, duration, currentRound)
+		}
+	}
+
 	target, exists := ce.Combatants[outcome.TargetID]
 	if !exists {
 		return fmt.Errorf("target entity not found in combat")
@@ -207,6 +226,24 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 
 			// Log after each effect's HP modification for clarity
 			events.LogHPModifiedEvent(actor, target.GetEntity(), hpModResult, actor.GetEventListener())
+
+			// Handle concentration check if triggered
+			if hpModResult.GetTriggeredConcentrationCheck() {
+				damageTaken := hpModResult.GetDamageTaken()
+				dc := max(10, damageTaken/2)
+				saveResult, err := target.GetEntity().MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone)
+				if err != nil {
+					return fmt.Errorf("failed to make concentration check: %v", err)
+				}
+
+				if !saveResult.GetIsSuccess() {
+					target.Info.BreakConcentration()
+					events.LogCombatEventMessage(target.GetEntity(), "Failed concentration check. Concentration broken.", target.GetEntity().GetEventListener())
+				} else {
+					events.LogCombatEventMessage(target.GetEntity(), "Succeeded concentration check. Concentration maintained.", target.GetEntity().GetEventListener())
+				}
+			}
+
 			// Persist any state changes immediately
 			ce.Combatants[outcome.TargetID] = target
 

@@ -101,6 +101,12 @@ func (l *Lair) GetConditions() core.EntityConditions { return core.NewEntityCond
 
 func (l *Lair) GetType() string { return "Lair" }
 
+func (l *Lair) IsConcentrating() bool { return false }
+
+func (l *Lair) BreakConcentration() {}
+
+func (l *Lair) SetConcentrating(val bool, spellName string) {}
+
 // AI/context
 func (l *Lair) UpdateAICombatContext(ctx *core.CombatContext) error {
 	l.combatCtx = ctx

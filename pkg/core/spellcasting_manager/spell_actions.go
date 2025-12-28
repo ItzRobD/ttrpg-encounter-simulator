@@ -24,6 +24,12 @@ func (scm *SpellcastingManager) CastSpell(req *SpellCastRequest) (*SpellResult, 
 	default:
 		return nil, fmt.Errorf("invalid spell cast data")
 	}
+
+	// Apply concentration to entity state manager if it's a concentration spell
+	if req.SpellCastData.SpellChoice.Spell.GetIsConcentration() {
+		scm.parent.SetConcentrating(true, req.SpellCastData.SpellChoice.Spell.GetName())
+	}
+
 	return res, nil
 }
 
@@ -65,6 +71,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 				SpellSaveSuccess: saveRes.GetIsSuccess(),
 				ValueRoll:        nil,
 				DamageType:       req.GetSpellCastData().GetSpellChoice().GetFormula().GetDamageType(),
+				IsConcentration:  req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 			}
 
 			events.LogSpellAttackEvent(scm.parent, &spellResult, scm.parent.GetEventListener())
@@ -119,6 +126,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			SpellSaveSuccess: saveRes.GetIsSuccess(),
 			ValueRoll:        dmgRollResult,
 			DamageType:       req.GetSpellCastData().GetSpellChoice().GetFormula().GetDamageType(),
+			IsConcentration:  req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 		}
 
 		if saveRes.GetIsSuccess() && req.GetSpellCastData().GetSpellChoice().GetSpell().GetSpellDC().GetOnSuccess() == core.DCOnSuccessHalf {
@@ -179,6 +187,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			SpellSaveSuccess: false,
 			ValueRoll:        dmgRollResult,
 			DamageType:       req.GetSpellCastData().GetSpellChoice().GetFormula().GetDamageType(),
+			IsConcentration:  req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 		}
 
 		events.LogSpellAttackEvent(scm.parent, &attackResult, scm.parent.GetEventListener())
@@ -209,6 +218,7 @@ func (scm *SpellcastingManager) castHealingSpell(req *SpellCastRequest) (*SpellR
 		SpellSaveSuccess: false,
 		ValueRoll:        nil,
 		DamageType:       "",
+		IsConcentration:  req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 	}
 
 	opts := roll_manager.NewRollOptions()

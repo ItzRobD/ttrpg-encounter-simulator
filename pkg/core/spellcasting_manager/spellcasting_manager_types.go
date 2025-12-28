@@ -63,6 +63,7 @@ type SpellResult struct {
 	SpellSaveSuccess bool
 	ValueRoll        core.RollResult
 	DamageType       core.DamageType
+	IsConcentration  bool
 }
 
 func (r *SpellResult) GetActorName() string                 { return r.ActorName }
@@ -83,3 +84,4 @@ func (r *SpellResult) GetSpellSaveTotal() int               { return r.SpellSave
 func (r *SpellResult) GetSpellSaveSuccess() bool            { return r.SpellSaveSuccess }
 func (r *SpellResult) GetValueResult() core.RollResult      { return r.ValueRoll }
 func (r *SpellResult) GetDamageType() core.DamageType       { return r.DamageType }
+func (r *SpellResult) GetIsConcentration() bool             { return r.IsConcentration }
