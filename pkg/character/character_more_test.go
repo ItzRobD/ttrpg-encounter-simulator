@@ -12,7 +12,7 @@ func TestExecuteAIRequest_MultiAttackCountEffects(t *testing.T) {
 	// Two attacks per action
 	ch.EntityStateManager.SetNumberOfExtraAttacks(2)
 
-	sword := &weapon.Weapon{Name: "Sword", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageSlashing, IsRanged: false}
+	sword := &weapon.Weapon{Name: "Sword", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageSlashing, Properties: weapon.Properties{IsRanged: false}}
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, sword, true); err != nil {
 		t.Fatalf("SetWeapon: %v", err)
 	}
@@ -30,7 +30,7 @@ func TestExecuteAIRequest_MultiAttackCountEffects(t *testing.T) {
 
 func TestExecuteAIRequest_RangedProducesDamage(t *testing.T) {
 	ch := newTestCharacter(t, core.AbilityScores{Dexterity: 16}, 5)
-	bow := &weapon.Weapon{Name: "Shortbow", NumberOfDice: 1, Die: core.D6, DamageType: core.DamagePiercing, IsRanged: true, IsFinesse: false}
+	bow := &weapon.Weapon{Name: "Shortbow", NumberOfDice: 1, Die: core.D6, DamageType: core.DamagePiercing, Properties: weapon.Properties{IsRanged: true, IsFinesse: false}}
 	if err := ch.EquipmentManager.SetWeapon(core.WSRanged, bow, true); err != nil {
 		t.Fatalf("SetWeapon ranged: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestExecuteAIRequest_RangedProducesDamage(t *testing.T) {
 
 func TestCreateWeaponAttackData_VersatileDie(t *testing.T) {
 	ch := newTestCharacter(t, core.AbilityScores{Strength: 16}, 5)
-	longsword := &weapon.Weapon{Name: "Longsword", NumberOfDice: 1, Die: core.D8, DamageType: core.DamageSlashing, IsRanged: false, IsVersatile: true}
+	longsword := &weapon.Weapon{Name: "Longsword", NumberOfDice: 1, Die: core.D8, DamageType: core.DamageSlashing, Properties: weapon.Properties{IsRanged: false, IsVersatile: true}}
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, longsword, true); err != nil {
 		t.Fatalf("SetWeapon: %v", err)
 	}

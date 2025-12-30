@@ -35,6 +35,7 @@ func getWeaponIDByName(ctx context.Context, name string) (int, error) {
 // getWeaponByID retrieves a weapon by its ID from the database and returns the weapon or an error if any issues occur.
 func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 	var weaponResult Weapon
+	var weaponProperties Properties
 	stmt := SELECT(
 		EquipmentWeapons.Name,
 		EquipmentWeapons.IsVersatile,
@@ -60,8 +61,8 @@ func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 	if err != nil {
 		return weaponResult, fmt.Errorf("error getting weaponResult by id: %w", err)
 	}
-	err = row.Scan(&weaponResult.Name, &weaponResult.IsVersatile, &weaponResult.IsFinesse, &weaponResult.IsTwoHanded,
-		&weaponResult.IsHeavy, &weaponResult.IsLight, &weaponResult.IsThrown, &weaponResult.IsRanged, &weaponResult.IsOnlyRanged,
+	err = row.Scan(&weaponResult.Name, &weaponProperties.IsVersatile, &weaponProperties.IsFinesse, &weaponProperties.IsTwoHanded,
+		&weaponProperties.IsHeavy, &weaponProperties.IsLight, &weaponProperties.IsThrown, &weaponProperties.IsRanged, &weaponProperties.IsOnlyRanged,
 		&weaponResult.NumberOfDice, &weaponResult.Die, &weaponResult.DamageType)
 	if err != nil {
 		return weaponResult, fmt.Errorf("error scanning weaponResult by id: %w", err)
@@ -71,6 +72,8 @@ func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 	if dt, err := core.MakeDamageType(weaponResult.DamageType.String()); err == nil {
 		weaponResult.DamageType = dt
 	}
+
+	weaponResult.Properties = weaponProperties
 
 	return weaponResult, nil
 }

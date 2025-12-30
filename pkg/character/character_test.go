@@ -116,7 +116,9 @@ func TestExecuteAIRequest_MeleeProducesDamage(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsRanged:     false,
+		Properties: weapon.Properties{
+			IsRanged: false,
+		},
 	}
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, longsword, true); err != nil {
 		t.Fatalf("SetWeapon: %v", err)
@@ -156,8 +158,10 @@ func TestCreateAttackRequest_PropagatesOptions(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamagePiercing,
-		IsRanged:     false,
-		IsFinesse:    true,
+		Properties: weapon.Properties{
+			IsRanged:  false,
+			IsFinesse: true,
+		},
 	}
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, rapier, true); err != nil {
 		t.Fatalf("SetWeapon: %v", err)
@@ -182,7 +186,7 @@ func TestCreateWeaponAttackData_Modifiers(t *testing.T) {
 	ch := newTestCharacter(t, core.AbilityScores{Strength: 16, Dexterity: 14}, 5)
 
 	// Non-finesse melee should use STR
-	mace := &weapon.Weapon{Name: "Mace", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageBludgeoning, IsRanged: false}
+	mace := &weapon.Weapon{Name: "Mace", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageBludgeoning, Properties: weapon.Properties{IsRanged: false}}
 	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, mace, true); err != nil {
 		t.Fatalf("SetWeapon: %v", err)
 	}
@@ -198,7 +202,7 @@ func TestCreateWeaponAttackData_Modifiers(t *testing.T) {
 	}
 
 	// Finesse melee should use DEX if higher
-	rapier := &weapon.Weapon{Name: "Rapier", NumberOfDice: 1, Die: core.D8, DamageType: core.DamagePiercing, IsRanged: false, IsFinesse: true}
+	rapier := &weapon.Weapon{Name: "Rapier", NumberOfDice: 1, Die: core.D8, DamageType: core.DamagePiercing, Properties: weapon.Properties{IsRanged: false, IsFinesse: true}}
 	if err := ch.EquipmentManager.SetWeapon(core.WSSecondary, rapier, true); err != nil {
 		t.Fatalf("SetWeapon secondary: %v", err)
 	}

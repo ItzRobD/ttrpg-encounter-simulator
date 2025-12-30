@@ -57,7 +57,7 @@ func buildTestCharacter(t *testing.T, as core.AbilityScores, lvl uint8) *charact
 // equip a simple melee weapon in the desired slot
 func equipSword(t *testing.T, ch *character.Character, slot core.WeaponSlot) {
 	t.Helper()
-	sword := &weapon.Weapon{Name: "Sword", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageSlashing, IsRanged: false}
+	sword := &weapon.Weapon{Name: "Sword", NumberOfDice: 1, Die: core.D6, DamageType: core.DamageSlashing, Properties: weapon.Properties{IsRanged: false}}
 	if err := ch.EquipmentManager.SetWeapon(slot, sword, true); err != nil {
 		t.Fatalf("SetWeapon: %v", err)
 	}

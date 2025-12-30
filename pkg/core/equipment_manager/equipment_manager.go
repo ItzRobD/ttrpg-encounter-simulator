@@ -208,7 +208,7 @@ func (em *EquipmentManager) HasMeleeWeapon() bool {
 	}
 
 	for _, weaponSlot := range em.Weapons {
-		if weaponSlot != nil && weaponSlot.Weapon != nil && !weaponSlot.Weapon.IsOnlyRanged {
+		if weaponSlot != nil && weaponSlot.Weapon != nil && !weaponSlot.Weapon.Properties.IsOnlyRanged {
 			return true
 		}
 	}
@@ -221,7 +221,7 @@ func (em *EquipmentManager) HasRangedWeapon() bool {
 	}
 
 	for _, weaponSlot := range em.Weapons {
-		if weaponSlot != nil && weaponSlot.Weapon != nil && weaponSlot.Weapon.IsRanged {
+		if weaponSlot != nil && weaponSlot.Weapon != nil && weaponSlot.Weapon.Properties.IsRanged {
 			return true
 		}
 	}
@@ -301,17 +301,17 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 		DamageType:        normDT,
 		ResistBreakers:    resistBreakers,
 		IsVersatileAttack: false,
-		IsRangedWeapon:    w.Weapon.IsRanged,
-		IsTwoHandedWeapon: w.Weapon.IsTwoHanded,
-		IsFinesseWeapon:   w.Weapon.IsFinesse,
-		IsOnlyRanged:      w.Weapon.IsOnlyRanged,
-		IsLightWeapon:     w.Weapon.IsLight,
-		IsThrownWeapon:    w.Weapon.IsThrown,
-		IsHeavyWeapon:     w.Weapon.IsHeavy,
+		IsRangedWeapon:    w.Weapon.Properties.IsRanged,
+		IsTwoHandedWeapon: w.Weapon.Properties.IsTwoHanded,
+		IsFinesseWeapon:   w.Weapon.Properties.IsFinesse,
+		IsOnlyRanged:      w.Weapon.Properties.IsOnlyRanged,
+		IsLightWeapon:     w.Weapon.Properties.IsLight,
+		IsThrownWeapon:    w.Weapon.Properties.IsThrown,
+		IsHeavyWeapon:     w.Weapon.Properties.IsHeavy,
 	}
 	weaponData := WeaponAttackData{Normal: normal}
 
-	if w.Weapon.IsVersatile {
+	if w.Weapon.Properties.IsVersatile {
 		vNormDT := w.Weapon.DamageType
 		if dt, err := core.MakeDamageType(vNormDT.String()); err == nil {
 			vNormDT = dt

@@ -251,12 +251,12 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 			if wErr != nil {
 				return nil, wErr
 			}
-			useVersatile = primaryWeapon.IsVersatile
+			useVersatile = primaryWeapon.Properties.IsVersatile
 		}
 	case core.ATRanged:
 		slot = core.WSPrimary
 		if w, wErr := cai.parent.EquipmentManager.GetWeaponFromSlot(core.WSRanged); wErr == nil {
-			if w.IsRanged {
+			if w.Properties.IsRanged {
 				slot = core.WSRanged
 			} else {
 				// explicit fallback to primary; check capability if you want to enforce it
@@ -265,11 +265,11 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 		} else {
 			// Ranged slot missing: try primary (and optionally secondary) as fallbacks
 			if pw, pwErr := cai.parent.EquipmentManager.GetWeaponFromSlot(core.WSPrimary); pwErr == nil {
-				if pw.IsRanged {
+				if pw.Properties.IsRanged {
 					slot = core.WSPrimary
 				} else {
 					// Optional: try secondary for thrown/ranged; otherwise, surface a clear error
-					if sw, swErr := cai.parent.EquipmentManager.GetWeaponFromSlot(core.WSSecondary); swErr == nil && sw.IsRanged {
+					if sw, swErr := cai.parent.EquipmentManager.GetWeaponFromSlot(core.WSSecondary); swErr == nil && sw.Properties.IsRanged {
 						slot = core.WSSecondary
 					} else {
 						return nil, fmt.Errorf("no valid ranged weapon available in ranged/primary/secondary slots")

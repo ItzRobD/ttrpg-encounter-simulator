@@ -19,8 +19,26 @@ func TestGetWeaponAttackData_ModifiersAndVersatile(t *testing.T) {
 		t.Fatalf("NewEquipmentManager: %v", err)
 	}
 
-	longsword := &weapon.Weapon{Name: "Longsword", NumberOfDice: 1, Die: core.D8, DamageType: core.DamageSlashing, IsRanged: false, IsVersatile: true}
-	rapier := &weapon.Weapon{Name: "Rapier", NumberOfDice: 1, Die: core.D8, DamageType: core.DamagePiercing, IsRanged: false, IsFinesse: true}
+	longsword := &weapon.Weapon{
+		Name:         "Longsword",
+		NumberOfDice: 1,
+		Die:          core.D8,
+		DamageType:   core.DamageSlashing,
+		Properties: weapon.Properties{
+			IsRanged:    false,
+			IsVersatile: true,
+		},
+	}
+	rapier := &weapon.Weapon{
+		Name:         "Rapier",
+		NumberOfDice: 1,
+		Die:          core.D8,
+		DamageType:   core.DamagePiercing,
+		Properties: weapon.Properties{
+			IsRanged:  false,
+			IsFinesse: true,
+		},
+	}
 
 	tests := []struct {
 		name      string
@@ -198,7 +216,7 @@ func TestHasMeleeWeapon(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsRanged:     false,
+		Properties:   weapon.Properties{IsRanged: false},
 	}
 
 	longbow := &weapon.Weapon{
@@ -206,8 +224,7 @@ func TestHasMeleeWeapon(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamagePiercing,
-		IsRanged:     true,
-		IsOnlyRanged: true,
+		Properties:   weapon.Properties{IsRanged: true, IsOnlyRanged: true},
 	}
 
 	tests := []struct {
@@ -260,7 +277,7 @@ func TestHasRangedWeapon(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsRanged:     false,
+		Properties:   weapon.Properties{IsRanged: false},
 	}
 
 	longbow := &weapon.Weapon{
@@ -268,8 +285,7 @@ func TestHasRangedWeapon(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamagePiercing,
-		IsRanged:     true,
-		IsOnlyRanged: true,
+		Properties:   weapon.Properties{IsRanged: true, IsOnlyRanged: true},
 	}
 
 	tests := []struct {
@@ -322,8 +338,10 @@ func TestCanUseVersatile(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsRanged:     false,
-		IsVersatile:  true,
+		Properties: weapon.Properties{
+			IsRanged:    false,
+			IsVersatile: true,
+		},
 	}
 
 	dagger := &weapon.Weapon{
@@ -331,8 +349,10 @@ func TestCanUseVersatile(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D4,
 		DamageType:   core.DamagePiercing,
-		IsRanged:     false,
-		IsVersatile:  false,
+		Properties: weapon.Properties{
+			IsRanged:    false,
+			IsVersatile: false,
+		},
 	}
 
 	tests := []struct {
@@ -377,8 +397,10 @@ func TestGetWeaponAttackData_Versatile(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8, // 1d8 normal
 		DamageType:   core.DamageSlashing,
-		IsRanged:     false,
-		IsVersatile:  true, // 1d10 versatile (d8 + 2)
+		Properties: weapon.Properties{
+			IsRanged:    false,
+			IsVersatile: true, // 1d10 versatile (d8 + 2)
+		},
 	}
 
 	em.SetWeapon(core.WSPrimary, longsword, true)
@@ -420,7 +442,9 @@ func TestGetAvailableWeaponSlots(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsRanged:     false,
+		Properties: weapon.Properties{
+			IsRanged: false,
+		},
 	}
 
 	tests := []struct {
@@ -473,7 +497,9 @@ func TestSetWeaponProficiencyBySlot(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsRanged:     false,
+		Properties: weapon.Properties{
+			IsRanged: false,
+		},
 	}
 
 	// Equip weapon as not proficient
@@ -501,9 +527,11 @@ func TestComputeAttackDataForSlot(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsRanged:     false,
-		IsFinesse:    false,
-		IsVersatile:  false,
+		Properties: weapon.Properties{
+			IsRanged:    false,
+			IsFinesse:   false,
+			IsVersatile: false,
+		},
 	}
 
 	rapier := &weapon.Weapon{
@@ -511,9 +539,11 @@ func TestComputeAttackDataForSlot(t *testing.T) {
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamagePiercing,
-		IsRanged:     false,
-		IsFinesse:    true, // Can use DEX
-		IsVersatile:  false,
+		Properties: weapon.Properties{
+			IsRanged:    false,
+			IsFinesse:   true, // Can use DEX
+			IsVersatile: false,
+		},
 	}
 
 	tests := []struct {

@@ -11,12 +11,13 @@ import (
 func TestGetAttackModifier_Logic(t *testing.T) {
 	longsword := Weapon{
 		Name:         "Longsword",
-		IsFinesse:    false,
-		IsVersatile:  true,
 		NumberOfDice: 1,
 		Die:          core.D8,
 		DamageType:   core.DamageSlashing,
-		IsRanged:     false,
+		Properties: Properties{
+			IsVersatile: true,
+			IsRanged:    false,
+		},
 	}
 
 	tests := []struct {
@@ -189,7 +190,7 @@ func TestGetAttackModifier_DB(t *testing.T) {
 				// Calculate expected value based on weapon properties
 				var abilityMod int
 				var modErr error
-				if weapon.IsFinesse || weapon.IsRanged {
+				if weapon.Properties.IsFinesse || weapon.Properties.IsRanged {
 					// Finesse/ranged weapons use DEX
 					abilityMod, modErr = core.GetAbilityScoreModifier(st.as.Dexterity)
 				} else {

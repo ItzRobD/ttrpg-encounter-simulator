@@ -52,7 +52,7 @@ func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bo
 
 	die := w.Die
 	var v bool
-	if useVersatile && w.IsVersatile {
+	if useVersatile && w.Properties.IsVersatile {
 		die = w.Die + 2
 		v = true
 	}

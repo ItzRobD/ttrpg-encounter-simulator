@@ -15,11 +15,15 @@ import (
 // IsRanged indicates if the weapon is a ranged weapon.
 type Weapon struct {
 	Name         string
-	IsVersatile  bool
-	IsFinesse    bool
 	NumberOfDice int
 	Die          core.DiceType
 	DamageType   core.DamageType
+	Properties   Properties
+}
+
+type Properties struct {
+	IsVersatile  bool
+	IsFinesse    bool
 	IsRanged     bool
 	IsHeavy      bool
 	IsTwoHanded  bool
@@ -36,27 +40,20 @@ type WeaponQueryParams struct {
 
 // New creates a new weapon with specified attributes, validating inputs and returning an error for invalid configurations.
 func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die core.DiceType,
-	damageType core.DamageType, isRanged bool, isHeavy bool, isTwoHanded bool,
-	isLight bool, isThrown bool, isOnlyRanged bool) (Weapon, error) {
+	damageType core.DamageType, properties Properties) (Weapon, error) {
 	if name == "" {
 		name = "Unnamed weapon"
 	}
 	if numberOfDice < 1 {
 		return Weapon{}, fmt.Errorf("number of rolling must be greater than 0")
 	}
+
 	return Weapon{
 		Name:         name,
-		IsVersatile:  isVersatile,
-		IsFinesse:    isFinesse,
 		NumberOfDice: numberOfDice,
 		Die:          die,
 		DamageType:   damageType,
-		IsRanged:     isRanged,
-		IsHeavy:      isHeavy,
-		IsTwoHanded:  isTwoHanded,
-		IsLight:      isLight,
-		IsThrown:     isThrown,
-		IsOnlyRanged: isOnlyRanged,
+		Properties:   properties,
 	}, nil
 }
 
@@ -86,13 +83,13 @@ func (w *Weapon) GetWeaponModifier(as *core.AbilityScores) (int, core.Ability, e
 	var mod int
 	var err error
 	ability := core.AbilityNone
-	if w.IsRanged {
+	if w.Properties.IsRanged {
 		mod, err = core.GetAbilityScoreModifier(as.Dexterity)
 		if err != nil {
 			return 0, ability, err
 		}
 		return mod, core.AbilityDexterity, nil
-	} else if w.IsFinesse {
+	} else if w.Properties.IsFinesse {
 		mod, err = core.GetAbilityScoreModifier(as.Strength)
 		if err != nil {
 			return 0, ability, err

@@ -108,6 +108,9 @@ func (e *testEntity) ProcessTurn(int, core.TurnType) (*core.TurnResult, *core.AI
 	return &core.TurnResult{TurnStatuses: map[core.TurnStatus]bool{core.TurnActionReady: true}}, &core.AIRequest{}, nil
 }
 func (e *testEntity) GetConditions() core.EntityConditions { return core.NewEntityConditions() }
+func (e *testEntity) BreakConcentration()                  {}
+func (e *testEntity) IsConcentrating() bool                { return false }
+func (e *testEntity) SetConcentrating(bool, string)        {}
 
 func (e *testEntity) GetType() string {
 	if e.isMon {

@@ -321,6 +321,10 @@ func (m *mockEntity) GetType() string {
 	return "Humanoid"
 }
 
+func (m *mockEntity) BreakConcentration()           {}
+func (m *mockEntity) IsConcentrating() bool         { return false }
+func (m *mockEntity) SetConcentrating(bool, string) {}
+
 // Minimal implementation of Entity interface via embedding entityStub
 type entityStub struct{}
 
@@ -376,6 +380,9 @@ func (entityStub) ProcessTurn(actorID int, turnType TurnType) (*TurnResult, *AIR
 }
 func (entityStub) GetConditions() EntityConditions { return nil }
 func (entityStub) GetType() string                 { return "Humanoid" }
+func (entityStub) IsConcentrating() bool           { return false }
+func (entityStub) BreakConcentration()             {}
+func (entityStub) SetConcentrating(bool, string)   {}
 
 func TestDetermineAttackAdvantageForEntities(t *testing.T) {
 	tests := []struct {
