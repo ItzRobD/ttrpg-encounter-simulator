@@ -218,6 +218,55 @@ func TestCreateWeaponAttackData_Modifiers(t *testing.T) {
 	}
 }
 
+func TestCreateWeaponAttackData_MagicalModifiers(t *testing.T) {
+	// Build a character with STR 16 (+3) and Level 5 (Prof +3)
+	ch := newTestCharacter(t, core.AbilityScores{Strength: 16, Dexterity: 14}, 5)
+
+	sword := &weapon.Weapon{
+		Name:         "Magic Sword",
+		NumberOfDice: 1,
+		Die:          core.D8,
+		DamageType:   core.DamageSlashing,
+		Properties:   weapon.Properties{IsRanged: false},
+	}
+	sword.SetModifiers(weapon.Modifiers{
+		IsMagic:     true,
+		AttackBonus: 1,
+		DamageBonus: 1,
+	})
+
+	if err := ch.EquipmentManager.SetWeapon(core.WSPrimary, sword, true); err != nil {
+		t.Fatalf("SetWeapon: %v", err)
+	}
+
+	ad, err := ch.CreateWeaponAttackData(core.WSPrimary, false)
+	if err != nil {
+		t.Fatalf("CreateWeaponAttackData: %v", err)
+	}
+
+	// Normal: 3 (STR) + 3 (Prof) = 6
+	// With +1 weapon: 6 + 1 = 7
+	if ad.AttackModifier != 7 {
+		t.Errorf("AttackModifier = %d, want 7", ad.AttackModifier)
+	}
+	// Normal damage: 3 (STR)
+	// With +1 weapon: 3 + 1 = 4
+	if ad.DamageModifier != 4 {
+		t.Errorf("DamageModifier = %d, want 4", ad.DamageModifier)
+	}
+
+	foundMagic := false
+	for _, rb := range ad.ResistBreakers {
+		if rb == core.ResistBreakerMagic {
+			foundMagic = true
+			break
+		}
+	}
+	if !foundMagic {
+		t.Error("expected magic resist breaker")
+	}
+}
+
 func TestTargetPriority_RoundTrip(t *testing.T) {
 	ch := newTestCharacter(t, core.AbilityScores{}, 1)
 	ch.SetTargetPriority(core.PrioritizeMostDamaged)

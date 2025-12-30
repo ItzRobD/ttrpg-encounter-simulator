@@ -316,7 +316,7 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 
 	// Configure result
 	res.DiceRollType = opts.RollType
-	res.NumberOfDice = numDice
+	res.NumberOfDice = len(dmgRolls)
 	res.Die = die
 	res.FinalRollValue = dmgRollTotal
 	res.FinalRolls = dmgRolls
@@ -383,7 +383,7 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 
 	// Configure result
 	res.DiceRollType = opts.RollType
-	res.NumberOfDice = numDice
+	res.NumberOfDice = len(valRolls)
 	res.Die = die
 	res.FinalRollValue = valRollTotal
 	res.FinalRolls = valRolls

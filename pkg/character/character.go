@@ -13,6 +13,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/entity_configuration"
 	"dnd5e-encounter-simulator-backend/pkg/races"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
+	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"fmt"
 	"math"
 	"math/rand/v2"
@@ -55,13 +56,18 @@ type CharacterConfig struct {
 	EntityConfiguration entity_configuration.EntityConfiguration
 }
 
+type WeaponSlotConfig struct {
+	WeaponID     int
+	IsProficient bool
+	Modifiers    *weapon.Modifiers
+}
+
 // EquipmentConfig defines configuration for a character's equipment including armor and weapon slot mapping.
-// Weapons slots are of map[weaponID]isProficient
 type EquipmentConfig struct {
 	ArmorID       int
-	PrimarySlot   map[int]bool
-	SecondarySlot map[int]bool
-	RangedSlot    map[int]bool
+	PrimarySlot   []WeaponSlotConfig
+	SecondarySlot []WeaponSlotConfig
+	RangedSlot    []WeaponSlotConfig
 }
 
 // NewCharacter initializes and returns a new Character with the specified parameters or an error if validation fails.

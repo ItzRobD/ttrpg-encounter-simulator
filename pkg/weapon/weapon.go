@@ -19,6 +19,7 @@ type Weapon struct {
 	Die          core.DiceType
 	DamageType   core.DamageType
 	Properties   Properties
+	modifiers    Modifiers
 }
 
 type Properties struct {
@@ -30,6 +31,15 @@ type Properties struct {
 	IsLight      bool
 	IsThrown     bool
 	IsOnlyRanged bool
+}
+
+type Modifiers struct {
+	IsMagic          bool
+	IsSilvered       bool
+	IsAdamantine     bool
+	IsColdForgedIron bool
+	AttackBonus      int
+	DamageBonus      int
 }
 
 // WeaponQueryParams defines the parameters for querying weapon data, including weapon name and ID.
@@ -55,6 +65,47 @@ func New(name string, isVersatile bool, isFinesse bool, numberOfDice int, die co
 		DamageType:   damageType,
 		Properties:   properties,
 	}, nil
+}
+
+func (w *Weapon) SetModifiers(mods Modifiers) {
+	w.modifiers = mods
+}
+
+func (w *Weapon) GetModifiers() Modifiers {
+	return w.modifiers
+}
+
+func (w *Weapon) SetDamageBonus(v int) {
+	w.modifiers.DamageBonus = v
+}
+
+func (w *Weapon) SetAttackBonus(v int) {
+	w.modifiers.AttackBonus = v
+}
+
+func (w *Weapon) GetAttackBonus() int {
+	return w.modifiers.AttackBonus
+}
+
+func (w *Weapon) GetDamageBonus() int {
+	return w.modifiers.DamageBonus
+}
+
+func (w *Weapon) GetResistBreakers() []core.ResistBreaker {
+	breakers := make([]core.ResistBreaker, 0)
+	if w.modifiers.IsMagic {
+		breakers = append(breakers, core.ResistBreakerMagic)
+	}
+	if w.modifiers.IsSilvered {
+		breakers = append(breakers, core.ResistBreakerSilvered)
+	}
+	if w.modifiers.IsAdamantine {
+		breakers = append(breakers, core.ResistBreakerAdamantine)
+	}
+	if w.modifiers.IsColdForgedIron {
+		breakers = append(breakers, core.ResistBreakerColdForgedIron)
+	}
+	return breakers
 }
 
 // GetAttackModifier calculates the attack modifier for a weapon based on ability scores, character level, and proficiency status.

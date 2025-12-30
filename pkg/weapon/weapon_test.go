@@ -226,3 +226,61 @@ func getTestWeapon(t *testing.T, id int) Weapon {
 	}
 	return weapon
 }
+
+func TestWeapon_GetResistBreakers(t *testing.T) {
+	tests := []struct {
+		name string
+		mods Modifiers
+		want []core.ResistBreaker
+	}{
+		{
+			"no modifiers",
+			Modifiers{},
+			[]core.ResistBreaker{},
+		},
+		{
+			"magic and silvered",
+			Modifiers{IsMagic: true, IsSilvered: true},
+			[]core.ResistBreaker{core.ResistBreakerMagic, core.ResistBreakerSilvered},
+		},
+		{
+			"all breakers",
+			Modifiers{IsMagic: true, IsSilvered: true, IsAdamantine: true, IsColdForgedIron: true},
+			[]core.ResistBreaker{core.ResistBreakerMagic, core.ResistBreakerSilvered, core.ResistBreakerAdamantine, core.ResistBreakerColdForgedIron},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := &Weapon{modifiers: tt.mods}
+			got := w.GetResistBreakers()
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d breakers, want %d", len(got), len(tt.want))
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("breaker[%d] = %v, want %v", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestWeapon_Modifiers(t *testing.T) {
+	w := &Weapon{}
+	w.SetAttackBonus(2)
+	w.SetDamageBonus(3)
+
+	if w.GetAttackBonus() != 2 {
+		t.Errorf("GetAttackBonus() = %d, want 2", w.GetAttackBonus())
+	}
+	if w.GetDamageBonus() != 3 {
+		t.Errorf("GetDamageBonus() = %d, want 3", w.GetDamageBonus())
+	}
+
+	mods := Modifiers{IsMagic: true, AttackBonus: 1}
+	w.SetModifiers(mods)
+	if !w.GetModifiers().IsMagic || w.GetAttackBonus() != 1 {
+		t.Errorf("SetModifiers failed: %+v", w.GetModifiers())
+	}
+}

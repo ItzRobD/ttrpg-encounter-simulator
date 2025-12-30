@@ -33,39 +33,7 @@ func (c *Character) RollInitiative() (int, error) {
 // useVersatile indicates whether to use the weapon in versatile mode, if applicable.
 // Returns the constructed AttackData and an error if any issue occurs in retrieving or calculating weapon properties.
 func (c *Character) CreateWeaponAttackData(slot core.WeaponSlot, useVersatile bool) (core.AttackData, error) {
-	w, err := c.EquipmentManager.GetWeaponFromSlot(slot)
-	if err != nil {
-		return core.AttackData{}, err
-	}
-
-	prof := c.EquipmentManager.GetIsProficientWithSlot(slot)
-
-	attackMod, err := w.GetAttackModifier(&c.AbilityScores, c.Level, prof)
-	if err != nil {
-		return core.AttackData{}, err
-	}
-
-	damageMod, _, err := w.GetWeaponModifier(&c.AbilityScores)
-	if err != nil {
-		return core.AttackData{}, err
-	}
-
-	die := w.Die
-	var v bool
-	if useVersatile && w.Properties.IsVersatile {
-		die = w.Die + 2
-		v = true
-	}
-
-	return core.AttackData{
-		Name:              w.Name,
-		NumberOfDice:      w.NumberOfDice,
-		Die:               die,
-		AttackModifier:    attackMod,
-		DamageModifier:    damageMod,
-		DamageType:        w.DamageType,
-		IsVersatileAttack: v,
-	}, nil
+	return c.EquipmentManager.GetWeaponAttackData(slot, useVersatile)
 }
 
 func (c *Character) CreateHealRequest(target core.Entity) (*core.HealRequest, error) {

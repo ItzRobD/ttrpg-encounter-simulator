@@ -9,6 +9,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/lair"
 	"dnd5e-encounter-simulator-backend/pkg/races"
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
+	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"fmt"
 )
 
@@ -35,9 +36,9 @@ func main() {
 	//}
 	//fmt.Println(s)
 
-	frank := setupFrank()
+	//frank := setupFrank()
 	bob := setupBob()
-	testSimulation([]character.CharacterConfig{frank, bob}, []int{153})
+	testSimulation([]character.CharacterConfig{bob}, []int{64})
 }
 
 func setupBob() character.CharacterConfig {
@@ -60,7 +61,7 @@ func setupBob() character.CharacterConfig {
 			Proficiencies: core.AbilityScoresProficiencies{},
 		},
 		HPMethod: core.HPSetValue,
-		HPValue:  5,
+		HPValue:  150,
 		Seed: core.Seed{
 			Seed1: 0,
 			Seed2: 0,
@@ -68,11 +69,17 @@ func setupBob() character.CharacterConfig {
 		Resistances: core.NewDamageResistances(),
 	}
 
+	wMods := weapon.Modifiers{
+		IsMagic:          true,
+		IsSilvered:       false,
+		IsAdamantine:     true,
+		IsColdForgedIron: false,
+		AttackBonus:      0,
+		DamageBonus:      0,
+	}
 	charConfig.Equipment = character.EquipmentConfig{
-		ArmorID:       1,
-		PrimarySlot:   map[int]bool{1: true},
-		SecondarySlot: nil,
-		RangedSlot:    nil,
+		ArmorID:     1,
+		PrimarySlot: []character.WeaponSlotConfig{{WeaponID: 22, IsProficient: true, Modifiers: &wMods}},
 	}
 
 	return charConfig
@@ -112,10 +119,8 @@ func setupFrank() character.CharacterConfig {
 	}
 
 	charConfig.Equipment = character.EquipmentConfig{
-		ArmorID:       5,
-		PrimarySlot:   map[int]bool{22: true},
-		SecondarySlot: nil,
-		RangedSlot:    nil,
+		ArmorID:     5,
+		PrimarySlot: []character.WeaponSlotConfig{{WeaponID: 1, IsProficient: true}},
 	}
 
 	return charConfig
@@ -139,13 +144,13 @@ func setupFrank() character.CharacterConfig {
 //}
 
 func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
-	seed := core.Seed{Seed1: 11, Seed2: 22}
+	seed := core.Seed{Seed1: 11, Seed2: 23}
 	config := core.SimulationOptions{
 		Seed:                      seed,
 		UseHPAverageCharacter:     false,
 		UseHPAverageMonster:       false,
-		CanMonstersCrit:           false,
-		CanCharactersCrit:         false,
+		CanMonstersCrit:           true,
+		CanCharactersCrit:         true,
 		HasIncreasedCrits:         false,
 		UseImprovedCriticals:      false,
 		CharactersAlwaysUpcast:    false,

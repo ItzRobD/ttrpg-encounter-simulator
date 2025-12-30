@@ -19,39 +19,51 @@ func (c *Character) setupEquipmentFromConfig(ctx context.Context, config Equipme
 	}
 
 	// Handle primary slot weapons
-	for weaponID, isProficient := range config.PrimarySlot {
-		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: weaponID})
+	for _, wConfig := range config.PrimarySlot {
+		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: wConfig.WeaponID})
 		if err != nil {
-			return fmt.Errorf("failed to get w ID %d for primary slot: %w", weaponID, err)
+			return fmt.Errorf("failed to get w ID %d for primary slot: %w", wConfig.WeaponID, err)
 		}
 
-		err = c.EquipmentManager.SetWeapon(core.WSPrimary, &w, isProficient)
+		if wConfig.Modifiers != nil {
+			w.SetModifiers(*wConfig.Modifiers)
+		}
+
+		err = c.EquipmentManager.SetWeapon(core.WSPrimary, &w, wConfig.IsProficient)
 		if err != nil {
 			return fmt.Errorf("failed to set primary w: %w", err)
 		}
 	}
 
 	// Handle secondary slot weapons
-	for weaponID, isProficient := range config.SecondarySlot {
-		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: weaponID})
+	for _, wConfig := range config.SecondarySlot {
+		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: wConfig.WeaponID})
 		if err != nil {
-			return fmt.Errorf("failed to get w ID %d for secondary slot: %w", weaponID, err)
+			return fmt.Errorf("failed to get w ID %d for secondary slot: %w", wConfig.WeaponID, err)
 		}
 
-		err = c.EquipmentManager.SetWeapon(core.WSSecondary, &w, isProficient)
+		if wConfig.Modifiers != nil {
+			w.SetModifiers(*wConfig.Modifiers)
+		}
+
+		err = c.EquipmentManager.SetWeapon(core.WSSecondary, &w, wConfig.IsProficient)
 		if err != nil {
 			return fmt.Errorf("failed to set secondary w: %w", err)
 		}
 	}
 
 	// Handle ranged slot weapons
-	for weaponID, isProficient := range config.RangedSlot {
-		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: weaponID})
+	for _, wConfig := range config.RangedSlot {
+		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: wConfig.WeaponID})
 		if err != nil {
-			return fmt.Errorf("failed to get w ID %d for ranged slot: %w", weaponID, err)
+			return fmt.Errorf("failed to get w ID %d for ranged slot: %w", wConfig.WeaponID, err)
 		}
 
-		err = c.EquipmentManager.SetWeapon(core.WSRanged, &w, isProficient)
+		if wConfig.Modifiers != nil {
+			w.SetModifiers(*wConfig.Modifiers)
+		}
+
+		err = c.EquipmentManager.SetWeapon(core.WSRanged, &w, wConfig.IsProficient)
 		if err != nil {
 			return fmt.Errorf("failed to set ranged w: %w", err)
 		}

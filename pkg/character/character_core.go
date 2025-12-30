@@ -488,14 +488,14 @@ func (c *Character) resolveDivineSmite(target core.Entity, isCrit bool, simOptio
 				FinalRolls:     dmgRolls,
 				Total:          dmgRollTotal,
 				FinalRollValue: dmgRollTotal,
-				NumberOfDice:   numDice,
+				NumberOfDice:   len(dmgRolls),
 				IsCritical:     true,
 			}
 		} else {
 			res, err = c.RollManager.RollDice(numDice*2, core.D8, rollOpts)
 			if res != nil {
 				res.Name = "Divine Smite"
-				res.NumberOfDice = numDice
+				res.NumberOfDice = len(res.FinalRolls)
 				res.IsCritical = true
 			}
 		}

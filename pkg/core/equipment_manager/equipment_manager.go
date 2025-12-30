@@ -23,19 +23,6 @@ type EquipmentManager struct {
 type WeaponSlotData struct {
 	Weapon       *weapon.Weapon
 	IsProficient bool
-	Breakers     []core.ResistBreaker // magic/silvered/adamantine/cold forged iron
-}
-
-func (wsd *WeaponSlotData) SetBreakers(rb []core.ResistBreaker) {
-	wsd.Breakers = rb
-}
-
-func (wsd *WeaponSlotData) GetBreakers() []core.ResistBreaker {
-	return wsd.Breakers
-}
-
-func (wsd *WeaponSlotData) AddBreaker(rb core.ResistBreaker) {
-	wsd.Breakers = append(wsd.Breakers, rb)
 }
 
 type WeaponAttackData struct {
@@ -282,7 +269,7 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 	}
 
 	resistBreakers := make([]core.ResistBreaker, 0)
-	resistBreakers = append(resistBreakers, w.GetBreakers()...)
+	resistBreakers = append(resistBreakers, w.Weapon.GetResistBreakers()...)
 
 	// Normalize damage type to the canonical core.DamageType constants to ensure
 	// downstream lookups (e.g., resistances) use consistent keys.
@@ -295,9 +282,9 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 		Name:              w.Weapon.Name,
 		NumberOfDice:      w.Weapon.NumberOfDice,
 		Die:               w.Weapon.Die,
-		AttackModifier:    attackMod,
+		AttackModifier:    attackMod + w.Weapon.GetAttackBonus(),
 		AbilityUsed:       ability,
-		DamageModifier:    damageMod,
+		DamageModifier:    damageMod + w.Weapon.GetDamageBonus(),
 		DamageType:        normDT,
 		ResistBreakers:    resistBreakers,
 		IsVersatileAttack: false,
@@ -320,8 +307,8 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 			Name:              w.Weapon.Name,
 			NumberOfDice:      w.Weapon.NumberOfDice,
 			Die:               w.Weapon.Die + 2,
-			AttackModifier:    attackMod,
-			DamageModifier:    damageMod,
+			AttackModifier:    attackMod + w.Weapon.GetAttackBonus(),
+			DamageModifier:    damageMod + w.Weapon.GetDamageBonus(),
 			DamageType:        vNormDT,
 			ResistBreakers:    resistBreakers,
 			IsVersatileAttack: true,

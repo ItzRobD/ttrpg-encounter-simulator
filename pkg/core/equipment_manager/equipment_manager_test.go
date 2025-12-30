@@ -643,3 +643,52 @@ func getTestWeapon(t testing.TB, name string) *weapon.Weapon {
 	}
 	return &armor
 }
+
+func TestComputeAttackDataForSlot_MagicalModifiers(t *testing.T) {
+	parent := testhelpers.NewEmEntity(5, core.AbilityScores{Strength: 16, Dexterity: 14}, nil)
+	em, _ := NewEquipmentManager(parent)
+
+	// STR 16 (+3), Level 5 (prof +3)
+	// Normal: 3 + 3 = 6
+	// +1 Weapon: 6 + 1 = 7
+
+	magicSword := &weapon.Weapon{
+		Name:         "Magic Sword",
+		NumberOfDice: 1,
+		Die:          core.D8,
+		DamageType:   core.DamageSlashing,
+		Properties:   weapon.Properties{IsRanged: false},
+	}
+	magicSword.SetModifiers(weapon.Modifiers{
+		IsMagic:     true,
+		AttackBonus: 1,
+		DamageBonus: 1,
+	})
+
+	if err := em.SetWeapon(core.WSPrimary, magicSword, true); err != nil {
+		t.Fatalf("SetWeapon: %v", err)
+	}
+
+	ad, err := em.GetWeaponAttackData(core.WSPrimary, false)
+	if err != nil {
+		t.Fatalf("GetWeaponAttackData: %v", err)
+	}
+
+	if ad.AttackModifier != 7 {
+		t.Errorf("AttackModifier = %d, want 7", ad.AttackModifier)
+	}
+	if ad.DamageModifier != 4 {
+		t.Errorf("DamageModifier = %d, want 4", ad.DamageModifier)
+	}
+
+	foundMagic := false
+	for _, rb := range ad.ResistBreakers {
+		if rb == core.ResistBreakerMagic {
+			foundMagic = true
+			break
+		}
+	}
+	if !foundMagic {
+		t.Errorf("expected magic resist breaker in AttackData")
+	}
+}
