@@ -18,6 +18,7 @@ type Spell struct {
 	IsTouch         bool
 	IsAOE           bool
 	HasDC           bool
+	IsAutoHit       bool
 	ApiURL          string
 	LevelType       string // character || slot
 	SpellDC         SpellDC
@@ -35,6 +36,7 @@ func (s *Spell) GetSpellType() core.SpellType          { return s.SpellType }
 func (s *Spell) GetIsTouch() bool                      { return s.IsTouch }
 func (s *Spell) GetIsAOE() bool                        { return s.IsAOE }
 func (s *Spell) GetHasDC() bool                        { return s.HasDC }
+func (s *Spell) GetIsAutoHit() bool                    { return s.IsAutoHit }
 func (s *Spell) GetApiURL() string                     { return s.ApiURL }
 func (s *Spell) GetLevelType() string                  { return s.LevelType }
 func (s *Spell) GetSpellDC() core.SpellDC              { return s.SpellDC }

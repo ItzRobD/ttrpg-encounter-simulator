@@ -242,8 +242,13 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		}
 
 		var effects []core.Effect
-		if res.GetIsHit() {
+		if res.GetIsHit() || req.SpellChoice.Spell.GetIsAutoHit() {
 			if req.SpellChoice.Spell.GetSpellType() == core.STDamage {
+				// Special handling for Magic Missile multi-dart logic if needed
+				// For now, if it's Magic Missile, we might want to split it into multiple effects
+				// but since they hit the same target (usually in this sim), one combined effect is fine.
+				// However, if we want to be accurate to "multi-target logic", we should consider it.
+
 				effects = append(effects, core.Effect{
 					Type:       core.EffectDamage,
 					Value:      res.GetSpellTotalValue(),

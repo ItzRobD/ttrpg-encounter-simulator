@@ -66,6 +66,7 @@ type Spell interface {
 	GetHasDC() bool
 	GetApiURL() string
 	GetLevelType() string
+	GetIsAutoHit() bool
 	GetSpellDC() SpellDC
 	GetFormulas() map[int]CastFormula
 }

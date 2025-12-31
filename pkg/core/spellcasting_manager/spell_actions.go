@@ -36,6 +36,38 @@ func (scm *SpellcastingManager) CastSpell(req *SpellCastRequest) (*SpellResult, 
 }
 
 func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellResult, error) {
+	if req.SpellCastData.SpellChoice.Spell.GetIsAutoHit() {
+		// Auto-hit spell (like Magic Missile)
+		rollOpts := roll_manager.NewRollOptions()
+		rollOpts.TreatOnesAsTwos = req.SpellOptions.TreatOnesAsTwos
+		rollOpts.RollType = core.DiceRollDamage
+
+		dmgRollResult, err := scm.rollManager.RollSpellValue(req, false, rollOpts)
+		if err != nil {
+			return nil, err
+		}
+
+		spellResult := SpellResult{
+			ActorName:       scm.parent.GetName(),
+			TargetName:      req.Target.GetName(),
+			SpellName:       req.GetSpellCastData().GetSpellChoice().GetSpell().GetName(),
+			SpellLevel:      req.GetSpellCastData().GetSpellChoice().GetSpell().GetLevel(),
+			SpellTotalValue: dmgRollResult.Total,
+			AttackRoll:      0,
+			AttackTotal:     0,
+			IsSuccess:       true,
+			IsCriticalHit:   false,
+			HasDC:           false,
+			ValueRoll:       dmgRollResult,
+			DamageType:      req.GetSpellCastData().GetSpellChoice().GetFormula().GetDamageType(),
+			IsConcentration: req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
+		}
+
+		events.LogSpellAttackEvent(scm.parent, &spellResult, scm.parent.GetEventListener())
+
+		return &spellResult, nil
+	}
+
 	switch req.SpellCastData.SpellChoice.Spell.GetHasDC() {
 	case true:
 		// Has DC So no attack roll needed -> target makes saving throw

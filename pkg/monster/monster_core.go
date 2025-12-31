@@ -157,7 +157,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}
 
 		var effects []core.Effect
-		if res.GetIsHit() {
+		if res.GetIsHit() || req.SpellChoice.Spell.GetIsAutoHit() {
 			if req.SpellChoice.Spell.GetSpellType() == core.STDamage {
 				effects = append(effects, core.Effect{
 					Type:       core.EffectDamage,

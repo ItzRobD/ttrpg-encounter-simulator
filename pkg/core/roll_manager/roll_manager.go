@@ -145,6 +145,10 @@ func NewRollManager(parent core.Entity, abilities RerollAbilities) *RollManager 
 	return &rm
 }
 
+func (rm *RollManager) SetRNG(seed1, seed2 uint64) {
+	rm.rng = rand.New(rand.NewPCG(seed1, seed2))
+}
+
 // RollD20 performs a d20 roll based on the given options, handles advantage/disadvantage, and calculates the final result.
 // RollDice rolls the specified number of dice of the given type and returns a RollResult.
 func (rm *RollManager) RollDice(numberOfDice int, die core.DiceType, opts RollOptions) (*RollResult, error) {
@@ -350,7 +354,7 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 	var res RollResult
 
 	var valueMod int
-	if !req.GetSpellCastData().GetSpellChoice().GetFormula().GetUseSpellModifier() {
+	if req.GetSpellCastData().GetSpellChoice().GetFormula().GetUseSpellModifier() {
 		// Get the caster's spell ability modifier
 		valueMod = req.GetSpellCastData().GetSpellcastingModifier()
 	} else {
