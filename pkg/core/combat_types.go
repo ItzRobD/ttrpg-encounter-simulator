@@ -644,6 +644,7 @@ type ActionOutcome struct {
 	ActorID    int
 	Success    bool
 	Effects    []Effect
+	IsAOE      bool
 
 	// Concentration info
 	IsConcentration bool
@@ -652,7 +653,8 @@ type ActionOutcome struct {
 
 type Effect struct {
 	Type           EffectType
-	Value          int
+	Value          int // Calculated value (after primary target save if applicable)
+	BaseValue      int // Base value (before any saves/resistances)
 	DamageType     DamageType
 	ResistBreakers []ResistBreaker
 	Condition      *Condition
@@ -662,6 +664,7 @@ type Effect struct {
 
 type SaveContext struct {
 	Ability   Ability
+	TargetDC  int
 	Success   bool
 	OnSuccess DCOnSuccess
 }

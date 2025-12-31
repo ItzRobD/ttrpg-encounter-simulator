@@ -23,4 +23,5 @@ type SimulationOptions struct {
 	BarbarianAlwaysRecklessAttack bool
 	PaladinAlwaysSmite            bool
 	PaladinUseHighestSmiteSlot    bool
+	UseMassiveDamage              bool
 }

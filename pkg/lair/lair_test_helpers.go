@@ -101,9 +101,11 @@ func (e *testEntity) GetRNG() *rand.Rand                                        
 func (e *testEntity) GetAIRequest(int, core.AIRequestType) (*core.AIRequest, error) { return nil, nil }
 func (e *testEntity) ExecuteAIRequest(*core.AIRequest) (*core.ActionOutcome, error) { return nil, nil }
 func (e *testEntity) UpdateAICombatContext(*core.CombatContext) error               { return nil }
-func (e *testEntity) ModifyHP(int, bool, bool) (core.HPModificationResult, error)   { return nil, nil }
-func (e *testEntity) RefreshLegendaryActions()                                      {}
-func (e *testEntity) CanTakeActions() bool                                          { return true }
+func (e *testEntity) ModifyHP(int, bool, bool, bool) (core.HPModificationResult, error) {
+	return nil, nil
+}
+func (e *testEntity) RefreshLegendaryActions() {}
+func (e *testEntity) CanTakeActions() bool     { return true }
 func (e *testEntity) ProcessTurn(int, core.TurnType) (*core.TurnResult, *core.AIRequest, error) {
 	return &core.TurnResult{TurnStatuses: map[core.TurnStatus]bool{core.TurnActionReady: true}}, &core.AIRequest{}, nil
 }

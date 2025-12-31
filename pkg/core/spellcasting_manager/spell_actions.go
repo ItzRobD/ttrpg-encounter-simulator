@@ -30,6 +30,8 @@ func (scm *SpellcastingManager) CastSpell(req *SpellCastRequest) (*SpellResult, 
 		scm.parent.SetConcentrating(true, req.SpellCastData.SpellChoice.Spell.GetName())
 	}
 
+	res.IsAOE = req.SpellCastData.SpellChoice.Spell.GetIsAOE()
+
 	return res, nil
 }
 

@@ -159,7 +159,7 @@ func TestUnconsciousFromHP(t *testing.T) {
 func TestHP_Modify_TempAndHealing(t *testing.T) {
 	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 10, TempHP: 5})
 	// Damage that consumes only temp
-	res, err := esm.ModifyHP(-3, false, false)
+	res, err := esm.ModifyHP(-3, false, false, false)
 	if err != nil {
 		t.Fatalf("ModifyHP damage: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestHP_Modify_TempAndHealing(t *testing.T) {
 	}
 
 	// Temp HP add without stacking uses max
-	res, err = esm.ModifyHP(8, true, false)
+	res, err = esm.ModifyHP(8, true, false, false)
 	if err != nil {
 		t.Fatalf("ModifyHP temp add: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestHP_Modify_TempAndHealing(t *testing.T) {
 
 	// Healing caps at max
 	esm.currentHP = 7
-	res, err = esm.ModifyHP(10, false, false)
+	res, err = esm.ModifyHP(10, false, false, false)
 	if err != nil {
 		t.Fatalf("ModifyHP heal: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestHP_Modify_TempAndHealing(t *testing.T) {
 	}
 
 	// isTemp=true with negative should error
-	if _, err := esm.ModifyHP(-1, true, false); err == nil {
+	if _, err := esm.ModifyHP(-1, true, false, false); err == nil {
 		t.Errorf("expected error when applying negative temp hp")
 	}
 }
@@ -243,7 +243,7 @@ func TestModifyHP_KillsMonsterAtZero(t *testing.T) {
 	// Monster should die at 0 HP when damage reduces to 0 or below
 	monster := testhelpers.NewEmMonster(1, core.AbilityScores{})
 	esm, _ := NewEntityStateManager(monster, EntityStateConfig{MaxHP: 10, CurrentHP: 1})
-	_, _ = esm.ModifyHP(-5, false, false)
+	_, _ = esm.ModifyHP(-5, false, false, false)
 	if !esm.GetIsDead() {
 		t.Errorf("monster should be dead after dropping to 0 or below")
 	}
@@ -387,7 +387,7 @@ func TestModifyHP_Edges_TempStackingAndOverflow(t *testing.T) {
 	esm, _ := NewEntityStateManager(testhelpers.NewEmEntity(1, core.AbilityScores{}, nil), EntityStateConfig{MaxHP: 10, CurrentHP: 10, TempHP: 3})
 
 	// Temp stacking true: adds
-	if _, err := esm.ModifyHP(5, true, true); err != nil {
+	if _, err := esm.ModifyHP(5, true, true, false); err != nil {
 		t.Fatalf("temp stacking add err: %v", err)
 	}
 	if esm.tempHP != 8 {
@@ -395,7 +395,7 @@ func TestModifyHP_Edges_TempStackingAndOverflow(t *testing.T) {
 	}
 
 	// Exact overflow boundary: temp exactly consumed (no HP change)
-	if _, err := esm.ModifyHP(-8, false, false); err != nil {
+	if _, err := esm.ModifyHP(-8, false, false, false); err != nil {
 		t.Fatalf("damage err: %v", err)
 	}
 	if esm.tempHP != 0 || esm.currentHP != 10 {
@@ -403,7 +403,7 @@ func TestModifyHP_Edges_TempStackingAndOverflow(t *testing.T) {
 	}
 
 	// Damage below zero HP
-	if _, err := esm.ModifyHP(-15, false, false); err != nil {
+	if _, err := esm.ModifyHP(-15, false, false, false); err != nil {
 		t.Fatalf("big damage err: %v", err)
 	}
 	if esm.currentHP >= 0 {
@@ -467,7 +467,7 @@ func TestModifyHP_RelentlessEndurance(t *testing.T) {
 		esm, _ := NewEntityStateManager(parent, EntityStateConfig{MaxHP: 10, CurrentHP: 10})
 		esm.HalfOrcHasRelentlessEnduranceUse = true
 
-		res, err := esm.ModifyHP(-10, false, false)
+		res, err := esm.ModifyHP(-10, false, false, false)
 		if err != nil {
 			t.Fatalf("ModifyHP error: %v", err)
 		}
@@ -491,7 +491,7 @@ func TestModifyHP_RelentlessEndurance(t *testing.T) {
 		esm.HalfOrcHasRelentlessEnduranceUse = true
 
 		// Already at 0, taking 0 damage or any non-positive healing/damage
-		esm.ModifyHP(-1, false, false)
+		esm.ModifyHP(-1, false, false, false)
 
 		if esm.currentHP != -1 {
 			// Actually, if it's already 0, and we take damage, it goes negative.
@@ -511,7 +511,7 @@ func TestModifyHP_RelentlessEndurance(t *testing.T) {
 
 		// Massive damage: 10 HP, takes 20 damage. Total damage = 20.
 		// esm.currentHP becomes -10. -10 <= -10 (maxHP) is true.
-		esm.ModifyHP(-20, false, false)
+		esm.ModifyHP(-20, false, false, true)
 
 		if esm.currentHP != -10 {
 			t.Errorf("currentHP = %d, want -10", esm.currentHP)
@@ -539,7 +539,7 @@ func TestModifyHP_HealFromUnconscious(t *testing.T) {
 	}
 
 	// Heal
-	_, err := esm.ModifyHP(5, false, false)
+	_, err := esm.ModifyHP(5, false, false, false)
 	if err != nil {
 		t.Fatalf("ModifyHP error: %v", err)
 	}
@@ -588,7 +588,7 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 		esm.BarbarianIsRaging = true
 		parent.saveResult = rollResultStub{success: true}
 
-		res, err := esm.ModifyHP(-10, false, false)
+		res, err := esm.ModifyHP(-10, false, false, false)
 		if err != nil {
 			t.Fatalf("ModifyHP error: %v", err)
 		}
@@ -614,7 +614,7 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 		esm.barbarianRelentlessUses = 1
 		parent.saveResult = rollResultStub{success: true}
 
-		_, _ = esm.ModifyHP(-10, false, false)
+		_, _ = esm.ModifyHP(-10, false, false, false)
 
 		if esm.barbarianRelentlessUses != 2 {
 			t.Errorf("Uses = %d, want 2", esm.barbarianRelentlessUses)
@@ -630,7 +630,7 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 		esm.BarbarianIsRaging = false
 		parent.saveResult = rollResultStub{success: true}
 
-		res, _ := esm.ModifyHP(-10, false, false)
+		res, _ := esm.ModifyHP(-10, false, false, false)
 
 		if esm.currentHP != 0 {
 			t.Errorf("currentHP = %d, want 0", esm.currentHP)
@@ -646,7 +646,7 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 		esm.BarbarianIsRaging = true
 		parent.saveResult = rollResultStub{success: false}
 
-		res, _ := esm.ModifyHP(-10, false, false)
+		res, _ := esm.ModifyHP(-10, false, false, false)
 
 		if esm.currentHP != 0 {
 			t.Errorf("currentHP = %d, want 0", esm.currentHP)
@@ -663,7 +663,7 @@ func TestModifyHP_BarbarianRelentlessRage(t *testing.T) {
 		parent.saveResult = rollResultStub{success: true}
 
 		// Takes 20 damage, maxHP is 10. Massive damage!
-		_, _ = esm.ModifyHP(-20, false, false)
+		_, _ = esm.ModifyHP(-20, false, false, true)
 
 		if esm.currentHP != -10 {
 			t.Errorf("currentHP = %d, want -10", esm.currentHP)

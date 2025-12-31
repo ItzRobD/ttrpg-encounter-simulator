@@ -195,6 +195,11 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 		return nil, err
 	}
 
+	if healReq.Source == core.HealSourceSpell {
+		// Log spell choice event
+		events.LogSpellChoiceEvent(cai.parent, healReq.SpellChoice, cai.parent.SpellCastingManager.GetStatus(), cai.parent.GetEventListener())
+	}
+
 	return &core.AIRequest{
 		Actor:       cai.parent,
 		ActorType:   core.EntityCharacter,
@@ -231,6 +236,9 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 		if err != nil {
 			return nil, err
 		}
+
+		// Log spell choice event
+		events.LogSpellChoiceEvent(cai.parent, choice, cai.parent.SpellCastingManager.GetStatus(), cai.parent.GetEventListener())
 	case core.ATMelee:
 		slot = core.WSPrimary
 		em := cai.parent.EquipmentManager

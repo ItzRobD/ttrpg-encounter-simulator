@@ -83,8 +83,11 @@ func LogDamageEvent(actor core.Entity, target core.Entity, damageType string, da
 	}
 }
 
-func LogSpellChoiceEvent(actor core.Entity, spellChoiceEvent SpellChoiceEvent, listener func(event interface{})) {
-	event := spellChoiceEvent
+func LogSpellChoiceEvent(actor core.Entity, choice *core.SpellChoice, status *spells.SpellcastingManagerStatus, listener func(event interface{})) {
+	event := &SpellChoiceEvent{
+		SpellChoice:   choice,
+		ManagerStatus: status,
+	}
 	event.SetActor(actor.GetName())
 
 	if listener != nil {

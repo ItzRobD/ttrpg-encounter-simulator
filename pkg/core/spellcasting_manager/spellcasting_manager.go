@@ -51,6 +51,8 @@ func NewSpellcastingManager(parent core.Entity, rm *roll_manager.RollManager, ca
 		spellcastModifierValue: spellcastModValue,
 		healingSpells:          map[int][]*spells.Spell{}, // Key is spell level
 		damageSpells:           map[int][]*spells.Spell{}, // Key is spell level
+		healingSpellsInnate:    map[int][]*spells.InnateSpell{},
+		damageSpellsInnate:     map[int][]*spells.InnateSpell{},
 	}
 }
 

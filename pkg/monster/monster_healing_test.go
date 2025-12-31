@@ -26,7 +26,7 @@ func TestMonster_CreateHealRequest(t *testing.T) {
 	m.MonsterBase.IsSpellcaster = true
 
 	target := newSeededMonster(t)
-	target.EntityStateManager.ModifyHP(-5, false, false) // Needs 5 HP
+	target.EntityStateManager.ModifyHP(-5, false, false, false) // Needs 5 HP
 
 	// Test CreateHealRequest
 	req, err := m.CreateHealRequest(target)
@@ -61,7 +61,7 @@ func TestMonster_ExecuteAIRequest_Heal(t *testing.T) {
 	m.MonsterBase.IsSpellcaster = true
 
 	target := newSeededMonster(t)
-	target.EntityStateManager.ModifyHP(-5, false, false) // Needs 5 HP
+	target.EntityStateManager.ModifyHP(-5, false, false, false) // Needs 5 HP
 
 	healReq, err := m.CreateHealRequest(target)
 	if err != nil {

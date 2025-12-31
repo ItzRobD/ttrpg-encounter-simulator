@@ -399,7 +399,7 @@ func (esm *EntityStateManager) GetTotalHP() int {
 	return esm.currentHP + esm.tempHP
 }
 
-func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking bool) (HPModificationResult, error) {
+func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool) (HPModificationResult, error) {
 	res := HPModificationResult{
 		ModificationValue:           value,
 		OriginalHP:                  esm.currentHP,
@@ -470,21 +470,26 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 
 	// Handle 0 HP logic
 	if res.IsUnconscious {
-		// Monsters die instantly at 0 HP (standard D&D 5e rules)
-		// Player characters go unconscious and make death saves
-		if esm.Parent.IsMonster() {
+		// Massive Damage Check: if remaining damage equals or exceeds max HP, it's instant death
+		if allowMassiveDamage && esm.CheckMassiveDamage() {
+			esm.Kill()
+			res.IsUnconscious = false // Overridden by dead
+			events.LogCombatEventMessage(esm.Parent, "Killed by massive damage!", esm.Parent.GetEventListener())
+		} else if esm.Parent.IsMonster() {
+			// Monsters die instantly at 0 HP (standard D&D 5e rules)
+			// Player characters go unconscious and make death saves
 			esm.Kill()
 		} else {
 			// Relentless Endurance (Half-Orc)
-			// Trigger only if we were not already at 0 HP and we are not killed outright (massive damage)
-			if esm.HalfOrcHasRelentlessEnduranceUse && res.OriginalHP > 0 && !esm.CheckMassiveDamage() {
+			// Trigger only if we were not already at 0 HP
+			if esm.HalfOrcHasRelentlessEnduranceUse && res.OriginalHP > 0 {
 				esm.SetUnconscious(false)
 				esm.currentHP = 1
 				esm.HalfOrcHasRelentlessEnduranceUse = false
 				res.IsUnconscious = false
 				res.NewHP = esm.currentHP
 				events.LogCombatEventMessage(esm.Parent, "Relentless Endurance expended. New HP set to 1.", esm.Parent.GetEventListener())
-			} else if esm.barbarianHasRelentlessRage && esm.BarbarianIsRaging && res.OriginalHP > 0 && !esm.CheckMassiveDamage() {
+			} else if esm.barbarianHasRelentlessRage && esm.BarbarianIsRaging && res.OriginalHP > 0 {
 				// Barbarian Relentless Rage
 				// Make DC 10 + (uses * 5) Con saving throw
 				dc := 10 + (esm.GetBarbarianRelentlessUses() * 5)
@@ -653,6 +658,9 @@ func (esm *EntityStateManager) Kill() {
 	esm.isDead = true
 	esm.isStable = false
 	esm.conditions.Clear()
+	if esm.isConcentrating {
+		esm.BreakConcentration()
+	}
 }
 
 func (esm *EntityStateManager) GetSavingThrowAdvantage(ability core.Ability) core.AdvantageType {

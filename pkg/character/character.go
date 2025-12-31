@@ -53,6 +53,7 @@ type CharacterConfig struct {
 	Equipment           EquipmentConfig
 	Resistances         core.DamageResistances
 	FightingStyles      []classes.FightingStyle
+	KnownSpells         []string
 	EntityConfiguration entity_configuration.EntityConfiguration
 }
 
@@ -151,6 +152,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	}
 	// AI
 	char.AI = NewCharacterAI(&char)
+
 	// Entity State Manager
 	esmConfig := entity_state_manager.EntityStateConfig{
 		AttackCount: classData.AttackCount,
@@ -227,7 +229,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 	}
 
 	// Spellcasting Manager
-	char.SpellCastingManager, err = initializeSpellcastingManager(ctx, &char)
+	char.SpellCastingManager, err = initializeSpellcastingManager(ctx, &char, charConfig.KnownSpells)
 	if err != nil {
 		fmt.Printf("Error initializing spellcasting manager: %v\n", err)
 		return nil, err
@@ -405,7 +407,7 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 	}
 
 	// Spellcasting Manager
-	char.SpellCastingManager, err = initializeSpellcastingManager(ctx, &char)
+	char.SpellCastingManager, err = initializeSpellcastingManager(ctx, &char, charConfig.KnownSpells)
 	if err != nil {
 		return nil, err
 	}
@@ -442,7 +444,7 @@ func initializeEntityStateManager(c *Character, config *entity_state_manager.Ent
 // initializeSpellcastingManager initializes and returns a SpellCastingManager for the given character and context.
 // It configures spell slots, casting options, usable spells, and other spell-related properties.
 // Returns an error if data retrieval or initialization fails.
-func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcasting_manager.SpellcastingManager, error) {
+func initializeSpellcastingManager(ctx context.Context, c *Character, knownSpells []string) (*spellcasting_manager.SpellcastingManager, error) {
 	if c.Class.ID == classes.Barbarian {
 		return &spellcasting_manager.SpellcastingManager{}, nil
 	}
@@ -455,24 +457,34 @@ func initializeSpellcastingManager(ctx context.Context, c *Character) (*spellcas
 
 	// Upcast decision is deferred to combat-time via CombatContext options
 	sm := spellcasting_manager.NewSpellcastingManager(c, c.RollManager, core.CasterCharacter, int(c.Level), slots, slots, spellModValue)
-	if err != nil {
-		return nil, err
-	}
 
-	availableSpellIDs, err := spells.GetUsableSpellIDsByClassID(ctx, c.Class.ID.Int())
-	if err != nil {
-		return nil, err
-	}
-
-	if len(availableSpellIDs) > 0 {
-		spellMap, err := spells.QuerySpellData(ctx, spells.SpellQueryParams{ID: availableSpellIDs})
+	if len(knownSpells) > 0 {
+		spellData, err := spells.QuerySpellData(ctx, spells.SpellQueryParams{Name: knownSpells})
+		if err != nil {
+			return nil, fmt.Errorf("failed to query spell data: %v", err)
+		}
+		for _, s := range spellData {
+			spellCopy := s
+			if err := sm.AddKnownSpell(&spellCopy); err != nil {
+				return nil, fmt.Errorf("failed to add spell %s: %v", s.Name, err)
+			}
+		}
+	} else {
+		availableSpellIDs, err := spells.GetUsableSpellIDsByClassID(ctx, c.Class.ID.Int())
 		if err != nil {
 			return nil, err
 		}
 
-		err = sm.AddKnownSpellsFromMap(spellMap)
-		if err != nil {
-			return nil, err
+		if len(availableSpellIDs) > 0 {
+			spellMap, err := spells.QuerySpellData(ctx, spells.SpellQueryParams{ID: availableSpellIDs})
+			if err != nil {
+				return nil, err
+			}
+
+			err = sm.AddKnownSpellsFromMap(spellMap)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -576,8 +588,8 @@ func (c *Character) GetTargetPriority() core.TargetPriority {
 func (c *Character) SetTargetPriority(p core.TargetPriority) {
 	c.EntityStateManager.SetTargetPrioritization(p)
 }
-func (c *Character) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPModificationResult, error) {
-	return c.EntityStateManager.ModifyHP(value, isTemp, tempStacking)
+func (c *Character) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool) (core.HPModificationResult, error) {
+	return c.EntityStateManager.ModifyHP(value, isTemp, tempStacking, allowMassiveDamage)
 }
 
 func (c *Character) GetHealingSpellCount() int {

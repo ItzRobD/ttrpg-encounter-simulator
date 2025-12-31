@@ -64,6 +64,7 @@ type SpellResult struct {
 	ValueRoll        core.RollResult
 	DamageType       core.DamageType
 	IsConcentration  bool
+	IsAOE            bool
 }
 
 func (r *SpellResult) GetActorName() string                 { return r.ActorName }

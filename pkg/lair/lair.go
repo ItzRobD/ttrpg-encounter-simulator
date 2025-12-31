@@ -93,7 +93,7 @@ func (l *Lair) GetSpellSaveDC(ability *core.Ability) (int, error) {
 	return 0, fmt.Errorf("lair has no spell save DC")
 }
 
-func (l *Lair) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPModificationResult, error) {
+func (l *Lair) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool) (core.HPModificationResult, error) {
 	return nil, fmt.Errorf("lair cannot be damaged or healed")
 }
 

@@ -181,94 +181,130 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 		}
 	}
 
-	target, exists := ce.Combatants[outcome.TargetID]
-	if !exists {
-		return fmt.Errorf("target entity not found in combat")
+	// Identify targets for the action
+	targetIDs := []int{outcome.TargetID}
+	if outcome.IsAOE && ce.SimOptions.AOEHitsAllEnemies {
+		targetIDs = []int{}
+		for id, combatant := range ce.Combatants {
+			if combatant.Entity.IsDead() {
+				continue
+			}
+			// AOE hits all enemies
+			if actor.IsCharacter() && combatant.Entity.IsMonster() {
+				targetIDs = append(targetIDs, id)
+			} else if actor.IsMonster() && combatant.Entity.IsCharacter() {
+				targetIDs = append(targetIDs, id)
+			}
+		}
 	}
 
-	if len(outcome.Effects) > 0 {
-		var hpModResult core.HPModificationResult
-		var err error
-		for _, effect := range outcome.Effects {
-			switch effect.Type {
-			case core.EffectDamage:
-				ce.applyDeflectMissiles(target.GetEntity(), &effect)
-				ce.applyUncannyDodgeToEffect(target.GetEntity(), &effect)
-				ce.applyEvasionToEffect(target.GetEntity(), &effect)
-				res, rErr := ce.computeDamageValueAfterResistances(
-					target.GetEntity(),
-					effect.DamageType,
-					effect.ResistBreakers,
-					-effect.Value)
-				if rErr != nil {
-					return rErr
-				}
-				events.LogDamageModifiedEvent(actor, target.GetEntity(), res, actor.GetEventListener())
-				hpModResult, err = target.GetEntity().ModifyHP(res.FinalValue, false, false)
-				if err != nil {
-					return fmt.Errorf("failed to modify target entity HP: %v", err)
-				}
-			case core.EffectHealing:
-				v := math.Abs(float64(effect.Value))
-				hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false)
-				if err != nil {
-					return fmt.Errorf("failed to modify target entity HP: %v", err)
-				}
-			case core.EffectTempHP:
-				v := math.Abs(float64(effect.Value))
-				hpModResult, err = target.GetEntity().ModifyHP(int(v), true, false)
-				if err != nil {
-					return fmt.Errorf("failed to modify target entity HP: %v", err)
-				}
-			case core.EffectCondition:
-				return fmt.Errorf("effects of type %v are not supported", core.EffectCondition)
-			}
+	for _, targetID := range targetIDs {
+		target, exists := ce.Combatants[targetID]
+		if !exists {
+			continue // Should not happen for primary target, but possible for AOE if someone died mid-process
+		}
 
-			// Log after each effect's HP modification for clarity
-			events.LogHPModifiedEvent(actor, target.GetEntity(), hpModResult, actor.GetEventListener())
+		if len(outcome.Effects) > 0 {
+			var hpModResult core.HPModificationResult
+			var err error
+			for _, effect := range outcome.Effects {
+				currentEffect := effect
+				if targetID != outcome.TargetID && currentEffect.SaveCtx != nil {
+					// Re-evaluate saving throw for secondary targets
+					saveRes, err := target.GetEntity().MakeSavingThrow(
+						currentEffect.SaveCtx.Ability,
+						currentEffect.SaveCtx.TargetDC,
+						true,
+						currentEffect.DamageType)
+					if err != nil {
+						return fmt.Errorf("failed to make saving throw for AOE target: %v", err)
+					}
 
-			// Handle concentration check if triggered
-			if hpModResult.GetTriggeredConcentrationCheck() {
-				damageTaken := hpModResult.GetDamageTaken()
-				dc := max(10, damageTaken/2)
-				saveResult, err := target.GetEntity().MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone)
-				if err != nil {
-					return fmt.Errorf("failed to make concentration check: %v", err)
+					// Update currentEffect based on new save result
+					if saveRes.GetIsSuccess() {
+						if currentEffect.SaveCtx.OnSuccess == core.DCOnSuccessHalf {
+							currentEffect.Value = currentEffect.BaseValue / 2
+						} else if currentEffect.SaveCtx.OnSuccess == core.DCOnSuccessNone {
+							currentEffect.Value = 0
+						}
+						// If OnSuccessOther, we might need more logic, but current system uses None/Half mostly
+					} else {
+						currentEffect.Value = currentEffect.BaseValue
+					}
 				}
 
-				if !saveResult.GetIsSuccess() {
-					target.Info.BreakConcentration()
-					events.LogCombatEventMessage(target.GetEntity(), "Failed concentration check. Concentration broken.", target.GetEntity().GetEventListener())
-				} else {
-					events.LogCombatEventMessage(target.GetEntity(), "Succeeded concentration check. Concentration maintained.", target.GetEntity().GetEventListener())
+				switch currentEffect.Type {
+				case core.EffectDamage:
+					ce.applyDeflectMissiles(target.GetEntity(), &currentEffect)
+					ce.applyUncannyDodgeToEffect(target.GetEntity(), &currentEffect)
+					ce.applyEvasionToEffect(target.GetEntity(), &currentEffect)
+					res, rErr := ce.computeDamageValueAfterResistances(
+						target.GetEntity(),
+						currentEffect.DamageType,
+						currentEffect.ResistBreakers,
+						-currentEffect.Value)
+					if rErr != nil {
+						return rErr
+					}
+					events.LogDamageModifiedEvent(actor, target.GetEntity(), res, actor.GetEventListener())
+					hpModResult, err = target.GetEntity().ModifyHP(res.FinalValue, false, false, ce.SimOptions.UseMassiveDamage)
+					if err != nil {
+						return fmt.Errorf("failed to modify target entity HP: %v", err)
+					}
+				case core.EffectHealing:
+					v := math.Abs(float64(currentEffect.Value))
+					hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false, ce.SimOptions.UseMassiveDamage)
+					if err != nil {
+						return fmt.Errorf("failed to modify target entity HP: %v", err)
+					}
+				case core.EffectTempHP:
+					v := math.Abs(float64(currentEffect.Value))
+					hpModResult, err = target.GetEntity().ModifyHP(int(v), true, false, ce.SimOptions.UseMassiveDamage)
+					if err != nil {
+						return fmt.Errorf("failed to modify target entity HP: %v", err)
+					}
+				case core.EffectCondition:
+					return fmt.Errorf("effects of type %v are not supported", core.EffectCondition)
 				}
-			}
 
-			// Persist any state changes immediately
-			ce.Combatants[outcome.TargetID] = target
+				// Log after each effect's HP modification for clarity
+				events.LogHPModifiedEvent(actor, target.GetEntity(), hpModResult, actor.GetEventListener())
 
-			// If target is down or dead, check victory then stop processing remaining effects
-			if target.GetEntity().IsDead() || target.GetEntity().IsUnconscious() {
+				// Handle concentration check if triggered
+				if hpModResult.GetTriggeredConcentrationCheck() {
+					damageTaken := hpModResult.GetDamageTaken()
+					dc := max(10, damageTaken/2)
+					saveResult, err := target.GetEntity().MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone)
+					if err != nil {
+						return fmt.Errorf("failed to make concentration check: %v", err)
+					}
+
+					if !saveResult.GetIsSuccess() {
+						target.Info.BreakConcentration()
+						events.LogCombatEventMessage(target.GetEntity(), "Failed concentration check. Concentration broken.", target.GetEntity().GetEventListener())
+					} else {
+						events.LogCombatEventMessage(target.GetEntity(), "Succeeded concentration check. Concentration maintained.", target.GetEntity().GetEventListener())
+					}
+				}
+
+				// Persist any state changes immediately
+				ce.Combatants[targetID] = target
+
+				// If target is down or dead, check victory
+				if target.GetEntity().IsDead() || target.GetEntity().IsUnconscious() {
+					if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+						return nil
+					}
+				}
+
+				// Early victory check after each effect
 				if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
 					return nil
 				}
-				break
 			}
-
-			// Early victory check after each effect
-			if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
-				return nil
-			}
+			// Final state persist
+			ce.Combatants[targetID] = target
 		}
-
-		//actor, exists := ce.Combatants[outcome.ActorID]
-		//if !exists {
-		//	return fmt.Errorf("actor entity not found in combat")
-		//}
-		//entity := actor.GetEntity()
-
-		// Final state persist (already persisted per-effect) left for safety
-		ce.Combatants[outcome.TargetID] = target
 	}
 
 	return nil

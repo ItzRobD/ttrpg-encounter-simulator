@@ -136,9 +136,11 @@ func TestEvasion_DexSaveSuccess_OnSuccessHalf_ReducesToZero(t *testing.T) {
 	effects := []core.Effect{{
 		Type:       core.EffectDamage,
 		Value:      18, // already computed spell damage before resistances
+		BaseValue:  36,
 		DamageType: core.DamageFire,
 		SaveCtx: &core.SaveContext{
 			Ability:   core.AbilityDexterity,
+			TargetDC:  15,
 			Success:   true,
 			OnSuccess: core.DCOnSuccessHalf,
 		},
@@ -169,9 +171,11 @@ func TestEvasion_DexSaveFailure_HalvesDamage(t *testing.T) {
 	effects := []core.Effect{{
 		Type:       core.EffectDamage,
 		Value:      20,
+		BaseValue:  20,
 		DamageType: core.DamageFire,
 		SaveCtx: &core.SaveContext{
 			Ability:   core.AbilityDexterity,
+			TargetDC:  15,
 			Success:   false,                // failed save
 			OnSuccess: core.DCOnSuccessHalf, // this spell/effect halves on success
 		},
@@ -203,9 +207,11 @@ func TestEvasion_IgnoresNonDexSave(t *testing.T) {
 	effects := []core.Effect{{
 		Type:       core.EffectDamage,
 		Value:      12,
+		BaseValue:  24,
 		DamageType: core.DamagePoison,
 		SaveCtx: &core.SaveContext{
 			Ability:   core.AbilityConstitution, // not Dex
+			TargetDC:  15,
 			Success:   true,
 			OnSuccess: core.DCOnSuccessHalf,
 		},
@@ -362,5 +368,60 @@ func TestCombatEngine_ProcessActionResults_AppliesDamageAndHealing(t *testing.T)
 	}
 	if b.GetHPStatus().GetHP() != start-dmg+3 {
 		t.Errorf("expected hp=%d after heal, got %d", start-dmg+3, b.GetHPStatus().GetHP())
+	}
+}
+
+func TestCombatEngine_ProcessActionResults_AOEHitsAllEnemies(t *testing.T) {
+	opts := &core.SimulationOptions{AOEHitsAllEnemies: true}
+	ce := NewCombatEngine(opts)
+
+	att := buildTestCharacter(t, core.AbilityScores{}, 1)
+	// target 1 will fail the save (low dex)
+	tgt1 := buildTestMonster(t, 10)
+	tgt1.MonsterBase.AbilityScores.Dexterity = 1
+	// target 2 will pass the save (high dex)
+	tgt2 := buildTestMonster(t, 10)
+	tgt2.MonsterBase.AbilityScores.Dexterity = 30
+
+	cAtt := core.NewCombatantWithInfo(att)
+	cTgt1 := core.NewCombatantWithInfo(tgt1)
+	cTgt2 := core.NewCombatantWithInfo(tgt2)
+
+	ce.AddCombatant(cAtt)  // ID 0
+	ce.AddCombatant(cTgt1) // ID 1
+	ce.AddCombatant(cTgt2) // ID 2
+
+	outcome := &core.ActionOutcome{
+		ActionType: core.ATSpell,
+		TargetID:   1, // Primary target is tgt1
+		ActorID:    0,
+		Success:    true,
+		IsAOE:      true,
+		Effects: []core.Effect{
+			{
+				Type:       core.EffectDamage,
+				Value:      10, // tgt1 fails, takes full 10
+				BaseValue:  10,
+				DamageType: core.DamageFire,
+				SaveCtx: &core.SaveContext{
+					Ability:   core.AbilityDexterity,
+					TargetDC:  5, // Lower DC to ensure tgt2 passes
+					Success:   false,
+					OnSuccess: core.DCOnSuccessHalf,
+				},
+			},
+		},
+	}
+
+	if err := ce.processActionResults(att, outcome); err != nil {
+		t.Fatalf("processActionResults: %v", err)
+	}
+
+	if tgt1.EntityStateManager.GetCurrentHP() != 5 {
+		t.Errorf("Target 1 (primary, failed save): expected 5 HP (15-10), got %d", tgt1.EntityStateManager.GetCurrentHP())
+	}
+	// Target 2 is high dex, should pass the save and take 5 damage
+	if tgt2.EntityStateManager.GetCurrentHP() != 10 {
+		t.Errorf("Target 2 (AOE, should pass save): expected 10 HP (15-5), got %d", tgt2.EntityStateManager.GetCurrentHP())
 	}
 }

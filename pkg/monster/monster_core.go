@@ -129,6 +129,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 				effects = append(effects, core.Effect{
 					Type:       core.EffectDamage,
 					Value:      res.GetDamageResult().GetTotal(),
+					BaseValue:  res.GetDamageResult().GetTotal(),
 					DamageType: res.GetDamageType(),
 				})
 			}
@@ -161,9 +162,11 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 				effects = append(effects, core.Effect{
 					Type:       core.EffectDamage,
 					Value:      res.GetSpellTotalValue(),
+					BaseValue:  res.ValueRoll.GetTotal(),
 					DamageType: res.GetDamageType(),
 					SaveCtx: &core.SaveContext{
 						Ability:   res.SpellSaveAbility,
+						TargetDC:  res.TargetDCValue,
 						Success:   res.SpellSaveSuccess,
 						OnSuccess: res.SpellSaveEffect,
 					},
@@ -184,6 +187,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			Success:         len(effects) > 0,
 			IsConcentration: res.IsConcentration,
 			SpellName:       res.SpellName,
+			IsAOE:           res.IsAOE,
 		}, nil
 	case core.ATMonsterHeal:
 		hReq := req.HealRequest

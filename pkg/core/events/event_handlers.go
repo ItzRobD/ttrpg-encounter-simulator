@@ -82,7 +82,7 @@ func (h *UniversalEventHandler) handleActionChoice(e *ActionChoiceEvent) {
 }
 
 func (h *UniversalEventHandler) handleSpellChoice(e *SpellChoiceEvent) {
-	fmt.Printf("[Round %d] %s chooses to cast %s at level %d. Formula: %dd%d + %d. Damage type: %s\n",
+	fmt.Printf("[Round %d] <Spell Choice> %s chooses to cast %s at level %d. Formula: %dd%d + %d. Damage type: %s\n",
 		e.GetRound(),
 		e.GetActor(),
 		e.SpellChoice.Spell.GetName(),

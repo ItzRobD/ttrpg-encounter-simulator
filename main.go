@@ -36,9 +36,9 @@ func main() {
 	//}
 	//fmt.Println(s)
 
-	//frank := setupFrank()
-	bob := setupBob()
-	testSimulation([]character.CharacterConfig{bob}, []int{64})
+	frank := setupFrank()
+	//bob := setupBob()
+	testSimulation([]character.CharacterConfig{frank}, []int{64, 64, 64})
 }
 
 func setupBob() character.CharacterConfig {
@@ -88,7 +88,7 @@ func setupBob() character.CharacterConfig {
 func setupFrank() character.CharacterConfig {
 	charConfig := character.CharacterConfig{
 		Name:    "Frank",
-		ClassID: classes.Cleric,
+		ClassID: classes.Wizard,
 		Level:   5,
 		RaceID:  1,
 		AsConfig: core.AbilityScoresConfig{
@@ -96,7 +96,7 @@ func setupFrank() character.CharacterConfig {
 				Strength:     14,
 				Dexterity:    14,
 				Constitution: 14,
-				Intelligence: 10,
+				Intelligence: 18,
 				Wisdom:       18,
 				Charisma:     12,
 			},
@@ -109,13 +109,14 @@ func setupFrank() character.CharacterConfig {
 				Charisma:     true,
 			},
 		},
-		HPMethod: core.HPSetRoll,
-		HPValue:  0,
+		HPMethod: core.HPSetValue,
+		HPValue:  200,
 		Seed: core.Seed{
 			Seed1: 0,
 			Seed2: 0,
 		},
 		Resistances: core.NewDamageResistances(),
+		KnownSpells: []string{"Fireball", "Lightning Bolt"},
 	}
 
 	charConfig.Equipment = character.EquipmentConfig{
@@ -157,7 +158,7 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 		MonstersAlwaysUpcast:      false,
 		AllowCharacterHeals:       true,
 		AllowMonsterHeals:         true,
-		AOEHitsAllEnemies:         false,
+		AOEHitsAllEnemies:         true,
 		CharacterHealThresholdPct: 50,
 		MonsterHealThresholdPct:   50,
 		AllowLairActions:          false,
@@ -210,6 +211,7 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 	// SetupCombat so the lair (inserted at init 20) gets a listener too.
 	sim.SetupEventListeners()
 	//sim.InitializeCombatants()
+
 	err := sim.RunSimulation(24)
 	if err != nil {
 		fmt.Println(err)

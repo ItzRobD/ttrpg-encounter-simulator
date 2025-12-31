@@ -48,9 +48,11 @@ func (entityStub) GetRNG() *rand.Rand                                           
 func (entityStub) GetAIRequest(int, core.AIRequestType) (*core.AIRequest, error) { return nil, nil }
 func (entityStub) ExecuteAIRequest(*core.AIRequest) (*core.ActionOutcome, error) { return nil, nil }
 func (entityStub) UpdateAICombatContext(*core.CombatContext) error               { return nil }
-func (entityStub) ModifyHP(int, bool, bool) (core.HPModificationResult, error)   { panic("not used") }
-func (entityStub) RefreshLegendaryActions()                                      {}
-func (entityStub) CanTakeActions() bool                                          { return true }
+func (entityStub) ModifyHP(int, bool, bool, bool) (core.HPModificationResult, error) {
+	panic("not used")
+}
+func (entityStub) RefreshLegendaryActions() {}
+func (entityStub) CanTakeActions() bool     { return true }
 func (entityStub) ProcessTurn(int, core.TurnType) (*core.TurnResult, *core.AIRequest, error) {
 	return nil, nil, nil
 }

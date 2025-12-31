@@ -134,6 +134,11 @@ func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) 
 		return nil, err
 	}
 
+	if healReq.Source == core.HealSourceSpell {
+		// Log spell choice event
+		events.LogSpellChoiceEvent(mai.parent, healReq.SpellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
+	}
+
 	return &core.AIRequest{
 		Actor:       mai.parent,
 		ActorType:   core.EntityMonster,
@@ -170,6 +175,8 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 			if mai.parent.IsSpellcaster() {
 				spellChoice, err = mai.chooseSpell()
 				if err == nil {
+					// Log spell choice event
+					events.LogSpellChoiceEvent(mai.parent, spellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
 					return mai.buildAIRequest(-1, spellChoice, core.ATSpell)
 				}
 				// If chooseSpell fails (no slots/spells), fallback to multiattack
@@ -190,6 +197,8 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 		if err != nil {
 			fmt.Println(err)
 		} else {
+			// Log spell choice event
+			events.LogSpellChoiceEvent(mai.parent, spellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
 			return mai.buildAIRequest(-1, spellChoice, core.ATSpell)
 		}
 	}

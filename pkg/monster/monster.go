@@ -331,8 +331,8 @@ func (m *Monster) GetTargetPriority() core.TargetPriority {
 func (m *Monster) SetTargetPriority(priority core.TargetPriority) {
 	m.EntityStateManager.SetTargetPrioritization(priority)
 }
-func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool) (core.HPModificationResult, error) {
-	return m.EntityStateManager.ModifyHP(value, isTemp, tempStacking)
+func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool) (core.HPModificationResult, error) {
+	return m.EntityStateManager.ModifyHP(value, isTemp, tempStacking, allowMassiveDamage)
 }
 
 func (m *Monster) CanTakeActions() bool { return m.EntityStateManager.CanTakeActions() }

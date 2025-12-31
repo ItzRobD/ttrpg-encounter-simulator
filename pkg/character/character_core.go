@@ -112,7 +112,6 @@ func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReq
 	if req == nil {
 		return nil, nil
 	}
-	events.LogCharacterActionChoiceEvent(c, req.ActionType, c.EventListener)
 	req.ActorID = actorID
 	req.Actor = c
 	return req, nil
@@ -155,6 +154,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 				effects = append(effects, core.Effect{
 					Type:           core.EffectDamage,
 					Value:          res.GetDamageResult().GetTotal(),
+					BaseValue:      res.GetDamageResult().GetTotal(),
 					DamageType:     res.GetDamageType(),
 					ResistBreakers: res.ResistBreakers,
 					AttackCtx: &core.AttackContext{
@@ -201,6 +201,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 				effects = append(effects, core.Effect{
 					Type:           core.EffectDamage,
 					Value:          res.GetDamageResult().GetTotal(),
+					BaseValue:      res.GetDamageResult().GetTotal(),
 					DamageType:     res.GetDamageType(),
 					ResistBreakers: res.ResistBreakers,
 					AttackCtx: &core.AttackContext{
@@ -246,9 +247,11 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 				effects = append(effects, core.Effect{
 					Type:       core.EffectDamage,
 					Value:      res.GetSpellTotalValue(),
+					BaseValue:  res.ValueRoll.GetTotal(),
 					DamageType: res.GetDamageType(),
 					SaveCtx: &core.SaveContext{
 						Ability:   res.SpellSaveAbility,
+						TargetDC:  res.TargetDCValue,
 						Success:   res.SpellSaveSuccess,
 						OnSuccess: res.SpellSaveEffect,
 					},
@@ -272,6 +275,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			Success:         len(effects) > 0,
 			IsConcentration: res.IsConcentration,
 			SpellName:       res.SpellName,
+			IsAOE:           res.IsAOE,
 		}, nil
 	case core.ATDragonbornBreathWeapon:
 		if c.Race.DragonbornFeatures == nil {
@@ -324,13 +328,16 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			ActionType: req.ActionType,
 			TargetID:   req.TargetID,
 			ActorID:    req.ActorID,
+			IsAOE:      true,
 			Effects: []core.Effect{
 				{
 					Type:       core.EffectDamage,
 					Value:      finalDamage,
+					BaseValue:  damage.GetTotal(),
 					DamageType: c.Race.DragonbornFeatures.DamageType,
 					SaveCtx: &core.SaveContext{
 						Ability:   saveAbility,
+						TargetDC:  dc,
 						Success:   saveRes.GetIsSuccess(),
 						OnSuccess: core.DCOnSuccessHalf,
 					},

@@ -370,7 +370,7 @@ func (entityStub) GetRNG() *rand.Rand                                           
 func (entityStub) GetAIRequest(actorID int, t AIRequestType) (*AIRequest, error) { return nil, nil }
 func (entityStub) ExecuteAIRequest(req *AIRequest) (*ActionOutcome, error)       { return nil, nil }
 func (entityStub) UpdateAICombatContext(ctx *CombatContext) error                { return nil }
-func (entityStub) ModifyHP(value int, isTemp bool, tempStacking bool) (HPModificationResult, error) {
+func (entityStub) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool) (HPModificationResult, error) {
 	return nil, nil
 }
 func (entityStub) RefreshLegendaryActions() {}

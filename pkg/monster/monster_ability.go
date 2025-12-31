@@ -76,6 +76,9 @@ func (m *Monster) GetSavingThrowBonus(ability core.Ability) (int, error) {
 	var err error
 
 	mod, err = m.GetAbilityScoreModifier(ability)
+	if err != nil {
+		return 0, err
+	}
 	pb, err = core.GetMonsterProficiencyBonus(m.CR)
 	if err != nil {
 		return 0, err
