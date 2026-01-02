@@ -15,13 +15,13 @@ type MonsterActionManager struct {
 	Actions          map[int]Action        // Key: ActionID; Value: Action
 	Multiattacks     map[int][]Multiattack // Key: Option Index; Value: Slice of ActionIDs and Count
 	LegendaryActions map[int]LegendaryAction
-	SpecialAbilities []SpecialAbility
 	RechargeActions  map[int]uint8
 
 	// Precomputed
 	ActionAttackData    map[int]core.AttackData // actionID -> AttackData
 	MultiAttackData     map[int]MultiattackData // option index -> complete action
 	LegendaryAttackData map[int]core.AttackData // Legendary action ID -> Attack Data
+	SpecialAbilities    *SpecialAbilities
 }
 
 func (mam *MonsterActionManager) GetActions() map[int]Action {
@@ -73,10 +73,6 @@ func (mam *MonsterActionManager) RollRechargeActions() {
 	}
 }
 
-func (mam *MonsterActionManager) GetSpecialAbilities() []SpecialAbility {
-	return mam.SpecialAbilities
-}
-
 func (mam *MonsterActionManager) GetAttackDataFromIndex(index int, actionType core.ActionType) []core.AttackData {
 	switch actionType {
 	case core.ATMonsterAction:
@@ -95,7 +91,7 @@ func (mam *MonsterActionManager) InitializeActions(config *MAMConfig) {
 	mam.Actions = config.Actions
 	mam.Multiattacks = config.Multiattacks
 	mam.LegendaryActions = config.LegendaryActions
-	mam.SpecialAbilities = config.SpecialAbilities
+	mam.SpecialAbilities = &config.SpecialAbilities
 
 	if mam.RechargeActions == nil {
 		mam.RechargeActions = make(map[int]uint8)
@@ -122,7 +118,6 @@ func NewMonsterActionManager(parent *Monster, rm *roll_manager.RollManager, conf
 		mam.Actions = config.Actions
 		mam.Multiattacks = config.Multiattacks
 		mam.LegendaryActions = config.LegendaryActions
-		mam.SpecialAbilities = config.SpecialAbilities
 		mam.precomputeAttackData()
 
 		for _, a := range mam.Actions {
@@ -138,6 +133,26 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 	var results []core.AttackResult
 
 	for idx, ad := range req.AttackData {
+		// Apply special abilities if enabled
+		if req.SimulationOptions != nil && req.SimulationOptions.EnableSpecialAbilities {
+			if mam.parent.SpecialAbilities.MagicWeapons {
+				switch ad.DamageType {
+				case core.DamageSlashing, core.DamagePiercing, core.DamageBludgeoning:
+					// Check if it already has magic breaker to avoid duplicates
+					hasMagic := false
+					for _, b := range ad.ResistBreakers {
+						if b == core.ResistBreakerMagic {
+							hasMagic = true
+							break
+						}
+					}
+					if !hasMagic {
+						ad.ResistBreakers = append(ad.ResistBreakers, core.ResistBreakerMagic)
+					}
+				}
+			}
+		}
+
 		// Structured logging: action about to be executed
 		events.LogCombatEventMessage(mam.parent, fmt.Sprintf("Monster action '%s' against %s", ad.Name, req.Target.GetName()), mam.parent.GetEventListener())
 		// Attack Roll
@@ -170,17 +185,18 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 		}
 
 		attackResult := core.AttackResult{
-			ActorName:     mam.parent.GetName(),
-			TargetName:    req.Target.GetName(),
-			AttackName:    ad.Name,
-			AttackCount:   idx + 1,
-			TargetValue:   attackRollResult.TargetValue,
-			IsHit:         attackRollResult.IsSuccess,
-			IsCriticalHit: attackRollResult.IsCritical,
-			AttackTotal:   attackRollResult.Total,
-			AttackRoll:    attackRollResult.FinalRollValue,
-			DamageRoll:    dmgRollResult,
-			DamageType:    ad.DamageType,
+			ActorName:      mam.parent.GetName(),
+			TargetName:     req.Target.GetName(),
+			AttackName:     ad.Name,
+			AttackCount:    idx + 1,
+			TargetValue:    attackRollResult.TargetValue,
+			IsHit:          attackRollResult.IsSuccess,
+			IsCriticalHit:  attackRollResult.IsCritical,
+			AttackTotal:    attackRollResult.Total,
+			AttackRoll:     attackRollResult.FinalRollValue,
+			DamageRoll:     dmgRollResult,
+			DamageType:     ad.DamageType,
+			ResistBreakers: ad.ResistBreakers,
 		}
 
 		events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())

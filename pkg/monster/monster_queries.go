@@ -475,13 +475,12 @@ func getMonsterLegendaryActionsByID(ctx context.Context, id []int) (map[int]map[
 	return mLAMap, nil
 }
 
-func getMonsterSpecialAbilitiesByID(ctx context.Context, id []int) (map[int][]SpecialAbility, error) {
-	mSAMap := make(map[int][]SpecialAbility)
+func getMonsterSpecialAbilitiesByID(ctx context.Context, id []int) (map[int]SpecialAbilities, error) {
+	mSAMap := make(map[int]SpecialAbilities)
 	stmt := SELECT(
 		MonsterSpecialAbilities.MonsterID,
 		MonsterSpecialAbilities.Name,
 		MonsterSpecialAbilities.UsageCount,
-		MonsterSpecialAbilities.Description,
 	).FROM(
 		MonsterSpecialAbilities,
 	).WHERE(
@@ -496,20 +495,34 @@ func getMonsterSpecialAbilitiesByID(ctx context.Context, id []int) (map[int][]Sp
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sa SpecialAbility
+		var sa SpecialAbilities
 		var monsterID int
+		var saName sql.NullString
 		var usageCount sql.NullInt64
-		err = rows.Scan(&monsterID, &sa.Name, &usageCount, &sa.Description)
+		var uc int
+		var dt core.DamageType
+		err = rows.Scan(&monsterID, &saName, &usageCount)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan monster special abilities by id: %w", err)
 		}
 		if usageCount.Valid {
-			sa.UsageCount = int(usageCount.Int64)
-		} else {
-			sa.UsageCount = 0
+			uc = int(usageCount.Int64)
+		}
+		if !saName.Valid {
+			return nil, fmt.Errorf("monster special ability name cannot be null")
 		}
 
-		mSAMap[monsterID] = append(mSAMap[monsterID], sa)
+		switch saName.String {
+		case SpecAbilityDeathBurst:
+			dt = core.DamageSlashing
+		case SpecAbilityFireAura, SpecAbilityFireForm, SpecAbilityHeatedBody:
+			dt = core.DamageFire
+		default:
+			dt = core.DamageNone
+		}
+
+		sa.AddSpecialAbility(saName.String, uc, dt)
+		mSAMap[monsterID] = sa
 	}
 
 	if err := rows.Err(); err != nil {

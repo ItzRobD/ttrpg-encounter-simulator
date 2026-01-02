@@ -263,7 +263,7 @@ func (c *Character) applyFightingStyles(ad *core.AttackData, opts *core.AttackOp
 // Deprecated: computeAttackAdvantage has been replaced by core.DetermineAttackAdvantageForEntities
 
 // MakeSavingThrow calculates a saving throw roll using the specified ability and returns the result, rolls, and an error if any.
-func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType) (core.RollResult, error) {
+func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType, simOptions *core.SimulationOptions) (core.RollResult, error) {
 	activeConditions := c.GetConditions().GetActive()
 	isStrDexSave := ability == core.AbilityStrength || ability == core.AbilityDexterity
 

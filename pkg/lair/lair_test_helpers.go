@@ -66,7 +66,7 @@ func (e *testEntity) SetEventListener(func(event interface{}))  {}
 func (e *testEntity) GetLevel() float64                         { return 0 }
 func (e *testEntity) GetHitDie() core.DiceType                  { return core.D8 }
 func (e *testEntity) GetCasterLevel() int                       { return 0 }
-func (e *testEntity) MakeSavingThrow(core.Ability, int, bool, core.DamageType) (core.RollResult, error) {
+func (e *testEntity) MakeSavingThrow(core.Ability, int, bool, core.DamageType, *core.SimulationOptions) (core.RollResult, error) {
 	// Return a deterministic pass/fail without rolling
 	if e.succeedST {
 		return testRollResult{diceType: core.DiceRollSavingThrow, final: 10, rolls: []int{10}, total: 20, success: true}, nil

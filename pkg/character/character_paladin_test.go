@@ -25,6 +25,10 @@ func (t mockTarget) GetAC() int {
 	return t.ac
 }
 
+func (t mockTarget) MakeSavingThrow(core.Ability, int, bool, core.DamageType, *core.SimulationOptions) (core.RollResult, error) {
+	return &roll_manager.RollResult{IsSuccess: true}, nil
+}
+
 func TestPaladin_DivineSmite(t *testing.T) {
 	as := core.AbilityScores{Strength: 16, Charisma: 14}
 	lvl := uint8(2)

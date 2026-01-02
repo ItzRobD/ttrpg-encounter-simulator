@@ -11,7 +11,7 @@ import (
 
 type targetWithSavingThrow struct{ testhelpers.EmEntity }
 
-func (t targetWithSavingThrow) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType) (core.RollResult, error) {
+func (t targetWithSavingThrow) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType, simOptions *core.SimulationOptions) (core.RollResult, error) {
 	return &roll_manager.RollResult{
 		DiceRollType:   core.DiceRollSavingThrow,
 		FinalRollValue: 10,

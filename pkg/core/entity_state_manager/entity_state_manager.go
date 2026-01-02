@@ -112,6 +112,10 @@ type EntityStateManager struct {
 	// Race specific variables
 	HalfOrcHasSavageAttacks          bool
 	HalfOrcHasRelentlessEnduranceUse bool
+
+	// Monster special abilities
+	LegendaryResistanceUses int
+	isBerserking            bool
 }
 
 func (esm *EntityStateManager) GetHasUsedAction() bool {
@@ -493,7 +497,7 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 				// Barbarian Relentless Rage
 				// Make DC 10 + (uses * 5) Con saving throw
 				dc := 10 + (esm.GetBarbarianRelentlessUses() * 5)
-				saveResult, err := esm.Parent.MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone)
+				saveResult, err := esm.Parent.MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone, nil)
 				if err != nil {
 					return res, err
 				}
@@ -780,6 +784,26 @@ func (esm *EntityStateManager) GetPaladinLayingOnHandsPool() int {
 // Negative value to expend points
 func (esm *EntityStateManager) ModifyPaladinLayingOnHandsPool(val int) {
 	esm.PaladinLayingOnHandsPool += val
+}
+
+func (esm *EntityStateManager) SetLegendaryResistanceUses(val int) {
+	esm.LegendaryResistanceUses = val
+}
+
+func (esm *EntityStateManager) GetLegendaryResistanceUses() int {
+	return esm.LegendaryResistanceUses
+}
+
+func (esm *EntityStateManager) ExpendLegendaryResistanceUse() {
+	esm.LegendaryResistanceUses--
+}
+
+func (esm *EntityStateManager) SetIsBerserking(val bool) {
+	esm.isBerserking = val
+}
+
+func (esm *EntityStateManager) GetIsBerserking() bool {
+	return esm.isBerserking
 }
 
 // NewEntityStateManager initializes and returns a new EntityStateManager based on the provided parent entity and configuration.

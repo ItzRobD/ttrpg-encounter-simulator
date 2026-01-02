@@ -10,6 +10,7 @@ type EntityType string
 const (
 	EntityCharacter EntityType = "character"
 	EntityMonster   EntityType = "monster"
+	EntityUnknown   EntityType = "unknown"
 )
 
 func (et EntityType) String() string {

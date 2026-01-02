@@ -50,7 +50,7 @@ func basicConfig() MAMConfig {
 		Actions:          map[int]Action{1: act},
 		Multiattacks:     ma,
 		LegendaryActions: leg,
-		SpecialAbilities: nil,
+		SpecialAbilities: SpecialAbilities{},
 	}
 }
 
@@ -138,5 +138,60 @@ func TestRechargeFlow_WithInitializedMap(t *testing.T) {
 	mam.RollRechargeActions()
 	if !mam.GetRechargeActionStatus()[2] {
 		t.Errorf("expected action 2 to be recharged after roll")
+	}
+}
+
+func TestMagicWeaponsAbility(t *testing.T) {
+	m := newTestMonster(t)
+	m.SpecialAbilities.MagicWeapons = true
+	act := Action{ActionID: 1, Name: "Magic Claw", DamageType: core.DamageSlashing}
+	cfg := MAMConfig{Actions: map[int]Action{1: act}, SpecialAbilities: m.SpecialAbilities}
+	mam := NewMonsterActionManager(m, m.RollManager, &cfg)
+
+	tgt := targetStub{Entity: m}
+
+	// Case 1: Special abilities enabled
+	ad := mam.GetAttackDataFromIndex(1, core.ATMonsterAction)
+	req := &core.AttackRequest{
+		AttackData: ad,
+		SimulationOptions: &core.SimulationOptions{
+			EnableSpecialAbilities: true,
+		},
+		Target: tgt,
+	}
+
+	res, err := mam.ProcessAttackRequest(req)
+	if err != nil {
+		t.Fatalf("ProcessAttackRequest err: %v", err)
+	}
+
+	// Verify ResistBreakerMagic was added
+	foundMagic := false
+	for _, b := range res[0].ResistBreakers {
+		if b == core.ResistBreakerMagic {
+			foundMagic = true
+			break
+		}
+	}
+	if !foundMagic {
+		t.Errorf("expected ResistBreakerMagic to be present when special abilities are enabled")
+	}
+
+	// Case 2: Special abilities disabled
+	req.SimulationOptions.EnableSpecialAbilities = false
+	res, err = mam.ProcessAttackRequest(req)
+	if err != nil {
+		t.Fatalf("ProcessAttackRequest err: %v", err)
+	}
+
+	foundMagic = false
+	for _, b := range res[0].ResistBreakers {
+		if b == core.ResistBreakerMagic {
+			foundMagic = true
+			break
+		}
+	}
+	if foundMagic {
+		t.Errorf("expected ResistBreakerMagic NOT to be present when special abilities are disabled")
 	}
 }

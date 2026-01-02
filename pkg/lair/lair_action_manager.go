@@ -195,7 +195,11 @@ func (lam *LairActionManager) ExecuteAdvanced(actionIndex int, primaryTarget cor
 		events.LogDiceRollEvent(lam.parent, dmgRoll, lam.parent.GetEventListener())
 
 		for _, t := range targets {
-			saveRes, err := t.MakeSavingThrow(a.DCAbility, a.DCValue, false, "")
+			var simOpts *core.SimulationOptions
+			if lam.parent.combatCtx != nil {
+				simOpts = lam.parent.combatCtx.Opt()
+			}
+			saveRes, err := t.MakeSavingThrow(a.DCAbility, a.DCValue, false, a.AttackData.DamageType, simOpts)
 			if err != nil {
 				return nil, nil, err
 			}

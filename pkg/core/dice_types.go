@@ -61,6 +61,14 @@ func (dt DiceType) IsValid() bool {
 	return false
 }
 
+func MakeDiceType(v int) (DiceType, error) {
+	switch v {
+	case 4, 6, 8, 10, 12, 20, 100:
+		return DiceType(v), nil
+	}
+	return DiceType(0), fmt.Errorf("invalid dice type")
+}
+
 type AdvantageType int
 
 const (

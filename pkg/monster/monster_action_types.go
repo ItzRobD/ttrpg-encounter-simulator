@@ -36,15 +36,9 @@ type LegendaryAction struct {
 	Action Action
 }
 
-type SpecialAbility struct {
-	Name        string
-	UsageCount  int
-	Description string
-}
-
 type MAMConfig struct {
 	Actions          map[int]Action
 	Multiattacks     map[int][]Multiattack
 	LegendaryActions map[int]LegendaryAction
-	SpecialAbilities []SpecialAbility
+	SpecialAbilities SpecialAbilities
 }

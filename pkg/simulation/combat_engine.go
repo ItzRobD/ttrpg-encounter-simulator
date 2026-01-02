@@ -215,7 +215,8 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 						currentEffect.SaveCtx.Ability,
 						currentEffect.SaveCtx.TargetDC,
 						true,
-						currentEffect.DamageType)
+						currentEffect.DamageType,
+						ce.SimOptions)
 					if err != nil {
 						return fmt.Errorf("failed to make saving throw for AOE target: %v", err)
 					}
@@ -274,7 +275,7 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 				if hpModResult.GetTriggeredConcentrationCheck() {
 					damageTaken := hpModResult.GetDamageTaken()
 					dc := max(10, damageTaken/2)
-					saveResult, err := target.GetEntity().MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone)
+					saveResult, err := target.GetEntity().MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone, ce.SimOptions)
 					if err != nil {
 						return fmt.Errorf("failed to make concentration check: %v", err)
 					}
@@ -1012,44 +1013,61 @@ func (ce *CombatEngine) computeDamageValueAfterResistances(target core.Entity, d
 
 // applyEvasionToEffect applies the evasion feature effects for rogues and monks, modifying the effect value based on saving throws.
 func (ce *CombatEngine) applyEvasionToEffect(target core.Entity, effect *core.Effect) {
-	targetChar, ok := target.(*character.Character)
-	if !ok {
-		return // Ignore non-character targets
-	}
+	switch t := target.(type) {
+	case *character.Character:
+		// Require a valid saving throw context and that it is a Dexterity save
+		if effect == nil || effect.SaveCtx == nil || effect.SaveCtx.Ability != core.AbilityDexterity {
+			return
+		}
 
-	// Require a valid saving throw context and that it is a Dexterity save
-	if effect == nil || effect.SaveCtx == nil || effect.SaveCtx.Ability != core.AbilityDexterity {
-		return
-	}
+		// Only apply when class features are enabled (if options provided)
+		if ce.SimOptions != nil && !ce.SimOptions.EnableClassFeatures {
+			return
+		}
 
-	// Only apply when class features are enabled (if options provided)
-	if ce.SimOptions != nil && !ce.SimOptions.EnableClassFeatures {
-		return
-	}
+		// Only Rogues/Monks have access to Evasion in this model
+		if !(t.Class.ID == classes.Rogue || t.Class.ID == classes.Monk) {
+			return // Ignore non-rogue/monk targets
+		}
+		hasEvasion := false
 
-	// Only Rogues/Monks have access to Evasion in this model
-	if !(targetChar.Class.ID == classes.Rogue || targetChar.Class.ID == classes.Monk) {
-		return // Ignore non-rogue/monk targets
-	}
-	hasEvasion := false
+		switch t.Class.ID {
+		case classes.Rogue:
+			hasEvasion = t.Class.ClassFeatures.RogueFeatures.HasEvasion
+		case classes.Monk:
+			hasEvasion = t.Class.ClassFeatures.MonkFeatures.HasEvasion
+		default:
+			return // Ignore non-rogue/monk targets
+		}
 
-	switch targetChar.Class.ID {
-	case classes.Rogue:
-		hasEvasion = targetChar.Class.ClassFeatures.RogueFeatures.HasEvasion
-	case classes.Monk:
-		hasEvasion = targetChar.Class.ClassFeatures.MonkFeatures.HasEvasion
+		if !hasEvasion {
+			return // Don't apply evasion if target doesn't have access
+		}
+
+		if effect.SaveCtx.Success && effect.SaveCtx.OnSuccess == core.DCOnSuccessHalf {
+			effect.Value = 0 // Feature reduces damage to zero
+		} else if !effect.SaveCtx.Success {
+			effect.Value /= 2
+		}
+	case *monster.Monster:
+		if effect == nil || effect.SaveCtx == nil || effect.SaveCtx.Ability != core.AbilityDexterity {
+			return
+		}
+
+		if ce.SimOptions != nil && !ce.SimOptions.EnableSpecialAbilities {
+			return
+		}
+		if !t.SpecialAbilities.Evasion {
+			return
+		}
+
+		if effect.SaveCtx.Success && effect.SaveCtx.OnSuccess == core.DCOnSuccessHalf {
+			effect.Value = 0 // Feature reduces damage to zero
+		} else if !effect.SaveCtx.Success {
+			effect.Value /= 2
+		}
 	default:
-		return // Ignore non-rogue/monk targets
-	}
-
-	if !hasEvasion {
-		return // Don't apply evasion if target doesn't have access
-	}
-
-	if effect.SaveCtx.Success && effect.SaveCtx.OnSuccess == core.DCOnSuccessHalf {
-		effect.Value = 0 // Feature reduces damage to zero
-	} else if !effect.SaveCtx.Success {
-		effect.Value /= 2
+		return
 	}
 }
 

@@ -38,6 +38,7 @@ type MonsterBase struct {
 	AbilityScores       core.AbilityScores
 	AbilityScoreProf    core.AbilityScoresProficiencies
 	HP                  core.HPConfig
+	SpecialAbilities    SpecialAbilities
 }
 
 type MonsterQueryParams struct {

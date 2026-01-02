@@ -121,7 +121,7 @@ func isValidMonsterActionType(actionType core.ActionType) bool {
 }
 
 // MakeSavingThrow calculates a saving throw for the given ability and returns the total roll result or an error.
-func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType) (core.RollResult, error) {
+func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType, simOptions *core.SimulationOptions) (core.RollResult, error) {
 	activeConditions := m.GetConditions().GetActive()
 	isStrDexSave := ability == core.AbilityStrength || ability == core.AbilityDexterity
 
@@ -137,6 +137,9 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 			Advantage:      core.RollNormal,
 			IsSuccess:      false,
 			TargetValue:    targetValue,
+		}
+		if m.EntityStateManager.GetLegendaryResistanceUses() > 0 {
+			m.useLegendaryResistance(&result)
 		}
 		events.LogDiceRollEvent(m, &result, m.EventListener)
 		return result
@@ -157,9 +160,24 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 	}
 
 	opts := roll_manager.NewRollOptions()
+	advSlice := make([]core.AdvantageType, 0)
 	baseAdv := m.EntityStateManager.GetSavingThrowAdvantage(ability) // This should get the default advantage of the character
 	condAdv := core.DetermineSaveAdvantageFromConditions(m.GetConditions(), ability)
-	opts.Advantage = core.GetFinalAdvantageType([]core.AdvantageType{baseAdv, condAdv})
+	advSlice = append(advSlice, baseAdv, condAdv)
+
+	// Check for Magic Resistance (Special Ability)
+	if simOptions != nil && simOptions.EnableSpecialAbilities {
+		if m.SpecialAbilities.MagicResistance && isSpell {
+			advSlice = append(advSlice, core.RollAdvantage)
+		}
+	} else if simOptions == nil {
+		// Fallback for when options are not provided (e.g. tests or simple calls)
+		if m.SpecialAbilities.MagicResistance && isSpell {
+			advSlice = append(advSlice, core.RollAdvantage)
+		}
+	}
+
+	opts.Advantage = core.GetFinalAdvantageType(advSlice)
 	opts.Modifier = mod
 	opts.RollType = core.DiceRollSavingThrow
 	opts.TargetValue = targetValue
@@ -167,6 +185,10 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 	res, err := m.RollManager.RollSavingThrow(opts)
 	if err != nil {
 		return nil, err
+	}
+
+	if !res.IsSuccess && m.EntityStateManager.GetLegendaryResistanceUses() > 0 {
+		m.useLegendaryResistance(res)
 	}
 
 	return res, nil
@@ -178,4 +200,17 @@ func (m *Monster) UpdateAICombatContext(ctx *core.CombatContext) error {
 		m.SpellCastingManager.SetSimulationOptions(ctx.Opt())
 	}
 	return nil
+}
+
+// useLegendaryResistance allows a Monster to succeed a failed roll by modifying the RollResult and expending a use.
+func (m *Monster) useLegendaryResistance(res *roll_manager.RollResult) {
+	if res.IsSuccess || m.EntityStateManager.GetLegendaryResistanceUses() <= 0 {
+		return // nothing to change if success or no uses left
+	}
+
+	res.IsSuccess = true
+	res.WasRerolled = true
+	m.EntityStateManager.ExpendLegendaryResistanceUse()
+
+	events.LogCombatEventMessage(m, fmt.Sprintf("%s uses Legendary Resistance to succeed on the saving throw!", m.GetName()), m.EventListener)
 }

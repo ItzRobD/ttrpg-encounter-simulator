@@ -24,4 +24,5 @@ type SimulationOptions struct {
 	PaladinAlwaysSmite            bool
 	PaladinUseHighestSmiteSlot    bool
 	UseMassiveDamage              bool
+	EnableSpecialAbilities        bool
 }
