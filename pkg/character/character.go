@@ -637,4 +637,8 @@ func (c *Character) HasElusive() bool {
 	return false
 }
 
+func (c *Character) Regenerate() {
+	return // Characters don't regenerate
+}
+
 var _ core.Entity = &Character{}

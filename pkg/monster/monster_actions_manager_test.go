@@ -11,6 +11,11 @@ import (
 // target stub that only controls AC
 type targetStub struct{ core.Entity }
 
+func (t targetStub) Regenerate() {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t targetStub) GetAC() int      { return 0 }
 func (t targetStub) GetName() string { return "Target" }
 

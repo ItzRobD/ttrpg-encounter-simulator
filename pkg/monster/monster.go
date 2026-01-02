@@ -357,4 +357,21 @@ func (m *Monster) SetConcentrating(val bool, spellName string) {
 	m.EntityStateManager.SetConcentrating(val, spellName)
 }
 
+func (m *Monster) Regenerate() {
+	if m.AI.GetCombatContext() == nil {
+		return
+	}
+
+	ctx := m.AI.GetCombatContext()
+
+	if ctx.Opt().EnableSpecialAbilities && m.SpecialAbilities.RegenerationValue > 0 && !m.IsDead() {
+		res, err := m.EntityStateManager.ModifyHP(m.SpecialAbilities.RegenerationValue, false, false, true)
+		if err != nil {
+			return
+		}
+		events.LogCombatEventMessage(m, fmt.Sprintf("%s uses Regeneration.", m.Name), m.EventListener)
+		events.LogHPModifiedEvent(m, m, res, m.EventListener)
+	}
+}
+
 var _ core.Entity = &Monster{}

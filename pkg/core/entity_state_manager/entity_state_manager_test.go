@@ -36,7 +36,12 @@ type mockBarbarian struct {
 	lastDC     int
 }
 
-func (m *mockBarbarian) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType) (core.RollResult, error) {
+func (m *mockBarbarian) Regenerate() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mockBarbarian) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType, simOptions *core.SimulationOptions) (core.RollResult, error) {
 	m.lastDC = targetValue
 	return m.saveResult, nil
 }

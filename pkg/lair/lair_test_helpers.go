@@ -47,6 +47,11 @@ type testEntity struct {
 	rng       *rand.Rand
 }
 
+func (e *testEntity) Regenerate() {
+	//TODO implement me
+	panic("implement me")
+}
+
 func newChar(name string, ac int, succeedST bool) *testEntity {
 	return &testEntity{name: name, isChar: true, isMon: false, ac: ac, succeedST: succeedST, rng: rand.New(rand.NewPCG(3, 4))}
 }

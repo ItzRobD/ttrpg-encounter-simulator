@@ -15,6 +15,11 @@ import (
 // target with controllable AC using the lightweight entity fake
 type targetZeroAC struct{ testhelpers.EmEntity }
 
+func (t targetZeroAC) Regenerate() {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t targetZeroAC) GetAC() int { return 0 }
 func (t targetZeroAC) MakeSavingThrow(ability core.Ability, targetValue int, isSpell bool, damageType core.DamageType, simOptions *core.SimulationOptions) (core.RollResult, error) {
 	return nil, nil

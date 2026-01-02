@@ -43,10 +43,19 @@ func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actio
 		isRanged = adList[0].IsRangedWeapon
 	}
 	// Compute final advantage using unified core helper
+	advSlice := make([]core.AdvantageType, 0)
 	computedAdv := core.DetermineAttackAdvantageForEntities(m, target, isRanged, core.RollNormal)
+	advSlice = append(advSlice, computedAdv)
+	if m.hasPackTacticsAdvantage() {
+		advSlice = append(advSlice, core.RollAdvantage)
+	}
+	if m.hasBloodFrenzyAdvantage(target) {
+		advSlice = append(advSlice, core.RollAdvantage)
+	}
+	adv := core.GetFinalAdvantageType(advSlice)
 
 	attackOptions := core.AttackOptions{
-		Advantage:            computedAdv,
+		Advantage:            adv,
 		ShouldApplyDamageMod: true,
 		ImprovedCritical:     simulationOptions.UseImprovedCriticals,
 	}
@@ -68,11 +77,20 @@ func (m *Monster) createSpellAttackData(spellChoice core.SpellChoice) (spellcast
 	}, nil
 }
 
-func (m *Monster) createSpellCastRequest(target core.Entity, spellchoice core.SpellChoice, adv core.AdvantageType, simOptions *core.SimulationOptions) (*spellcasting_manager.SpellCastRequest, error) {
+func (m *Monster) createSpellCastRequest(target core.Entity, spellchoice core.SpellChoice, simOptions *core.SimulationOptions) (*spellcasting_manager.SpellCastRequest, error) {
 	spellcastData, err := m.createSpellAttackData(spellchoice)
 	if err != nil {
 		return nil, err
 	}
+
+	// Compute final advantage using unified core helper
+	advSlice := make([]core.AdvantageType, 0)
+	computedAdv := core.DetermineAttackAdvantageForEntities(m, target, !spellcastData.SpellChoice.GetSpell().GetIsTouch(), core.RollNormal)
+	advSlice = append(advSlice, computedAdv)
+	if m.hasPackTacticsAdvantage() {
+		advSlice = append(advSlice, core.RollAdvantage)
+	}
+	adv := core.GetFinalAdvantageType(advSlice)
 
 	options := spellcasting_manager.SpellOptions{
 		Advantage:            adv,
@@ -213,4 +231,36 @@ func (m *Monster) useLegendaryResistance(res *roll_manager.RollResult) {
 	m.EntityStateManager.ExpendLegendaryResistanceUse()
 
 	events.LogCombatEventMessage(m, fmt.Sprintf("%s uses Legendary Resistance to succeed on the saving throw!", m.GetName()), m.EventListener)
+}
+
+func (m *Monster) hasPackTacticsAdvantage() bool {
+	if !m.SpecialAbilities.PackTactics {
+		return false
+	}
+
+	if m.AI.GetCombatContext() == nil {
+		return false
+	}
+
+	ctx := m.AI.GetCombatContext()
+
+	return ((ctx.ConsciousMonsterCount - 1) > 0) && ctx.Opt().EnableSpecialAbilities && m.SpecialAbilities.PackTactics
+}
+
+func (m *Monster) hasBloodFrenzyAdvantage(target core.Entity) bool {
+	if !m.SpecialAbilities.BloodFrenzy {
+		return false
+	}
+
+	if m.AI.GetCombatContext() == nil {
+		return false
+	}
+
+	ctx := m.AI.GetCombatContext()
+
+	if target.GetHPStatus().GetHPDifference() > 0 && ctx.Opt().EnableSpecialAbilities && m.SpecialAbilities.BloodFrenzy {
+		return true
+	}
+
+	return false
 }

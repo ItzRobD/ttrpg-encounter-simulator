@@ -14,6 +14,11 @@ type emEntityRNG struct {
 	rng *rand.Rand
 }
 
+func (e emEntityRNG) Regenerate() {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (e emEntityRNG) GetRNG() *rand.Rand { return e.rng }
 func (e emEntityRNG) GetName() string    { return "Actor" }
 
@@ -21,6 +26,11 @@ func (e emEntityRNG) GetName() string    { return "Actor" }
 type targetStub struct {
 	testhelpers.EmEntity
 	ac int
+}
+
+func (t targetStub) Regenerate() {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (t targetStub) GetAC() int      { return t.ac }

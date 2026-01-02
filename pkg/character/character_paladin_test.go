@@ -17,6 +17,11 @@ type mockTarget struct {
 	ac         int
 }
 
+func (t mockTarget) Regenerate() {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t mockTarget) GetType() string {
 	return t.targetType
 }
@@ -26,7 +31,7 @@ func (t mockTarget) GetAC() int {
 }
 
 func (t mockTarget) MakeSavingThrow(core.Ability, int, bool, core.DamageType, *core.SimulationOptions) (core.RollResult, error) {
-	return &roll_manager.RollResult{IsSuccess: true}, nil
+	return nil, nil
 }
 
 func TestPaladin_DivineSmite(t *testing.T) {

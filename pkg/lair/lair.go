@@ -19,6 +19,8 @@ type Lair struct {
 	combatCtx     *core.CombatContext
 }
 
+func (l *Lair) Regenerate() {}
+
 func NewLair(name string, rng *rand.Rand) *Lair {
 	if name == "" {
 		name = "Lair"

@@ -601,8 +601,10 @@ func (ao AttackOptions) GetIsImprovedCritical() bool   { return ao.ImprovedCriti
 func (ao AttackOptions) GetTreatOnesAsTwos() bool      { return ao.RerollOnesAndTwos }
 
 type CombatContext struct {
-	CombatantInfo      map[int]*CombatantInfo
-	LegendaryCreatures map[int]bool
+	CombatantInfo           map[int]*CombatantInfo
+	LegendaryCreatures      map[int]bool
+	ConsciousCharacterCount int
+	ConsciousMonsterCount   int
 
 	// Lookup lists
 	CharactersInNeedOfHealing []int

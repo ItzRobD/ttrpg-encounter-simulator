@@ -633,9 +633,21 @@ func (ce *CombatEngine) initializeCombatContext() {
 func (ce *CombatEngine) updateCombatContext(actorID int) {
 	ce.CombatContext.CurrentRound = ce.CurrentRound
 	ce.CombatContext.ActingEntityID = actorID
+	ce.CombatContext.ConsciousCharacterCount = 0
+	ce.CombatContext.ConsciousMonsterCount = 0
 
 	ce.CombatContext.CharactersInNeedOfHealing, ce.CombatContext.MonstersInNeedOfHealing = ce.calculateEntitiesNeedingHealing()
 	ce.CombatContext.DeadCombatants = ce.getDeadCombatantIDs()
+
+	for _, c := range ce.Combatants {
+		if !c.GetEntity().IsUnconscious() {
+			if c.GetEntity().IsCharacter() {
+				ce.CombatContext.ConsciousCharacterCount++
+			} else {
+				ce.CombatContext.ConsciousMonsterCount++
+			}
+		}
+	}
 
 	// Update state for all combatants
 	ids := ce.getSortedCombatantIDs()
@@ -758,6 +770,8 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 	combatant := ce.Combatants[combatantID]
 	entity := combatant.GetEntity()
 
+	entity.Regenerate()
+
 	// Character Specific Events
 	if entity.IsCharacter() {
 		c, ok := entity.(*character.Character)
@@ -773,6 +787,7 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 	// Monster Specific Events
 	if entity.IsMonster() {
 		ce.refreshLegendaryActions(combatantID)
+		entity.Regenerate()
 	}
 
 	return nil

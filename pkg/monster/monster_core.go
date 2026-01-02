@@ -144,9 +144,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}, nil
 
 	case core.ATSpell:
-		// Compute final advantage using unified core helper
-		computedAdv := core.DetermineAttackAdvantageForEntities(m, req.Target, req.SpellChoice.Spell.GetIsTouch(), core.RollNormal)
-		scReq, err := m.createSpellCastRequest(req.Target, *req.SpellChoice, computedAdv, req.SimOptions)
+		scReq, err := m.createSpellCastRequest(req.Target, *req.SpellChoice, req.SimOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -197,7 +195,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 
 		var healingValue int
 		if hReq.Source == core.HealSourceSpell {
-			scReq, err := m.createSpellCastRequest(hReq.Target, *hReq.SpellChoice, hReq.Advantage, req.SimOptions)
+			scReq, err := m.createSpellCastRequest(hReq.Target, *hReq.SpellChoice, req.SimOptions)
 			if err != nil {
 				return nil, err
 			}

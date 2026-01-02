@@ -57,6 +57,10 @@ func (mai *MonsterAI) UpdateCombatContext(ctx *core.CombatContext) {
 	mai.combatCtx = ctx
 }
 
+func (mai *MonsterAI) GetCombatContext() *core.CombatContext {
+	return mai.combatCtx
+}
+
 func (mai *MonsterAI) createMonsterLegendaryActionRequest() (*core.AIRequest, error) {
 	if !mai.isLegendary {
 		return nil, fmt.Errorf("monster is not legendary")
