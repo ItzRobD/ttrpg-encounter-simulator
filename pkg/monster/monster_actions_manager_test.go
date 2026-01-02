@@ -42,6 +42,8 @@ func newTestMonster(t *testing.T) *Monster {
 		t.Fatalf("NewEntityStateManager: %v", err)
 	}
 	m.EntityStateManager = esm
+	m.ActionManager = &MonsterActionManager{} // Initialize to avoid nil deref in NewMonsterAI
+	m.AI = NewMonsterAI(m)
 	return m
 }
 

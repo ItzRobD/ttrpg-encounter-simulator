@@ -285,3 +285,117 @@ func (m *Monster) hasRecklessAdvantage() bool {
 
 	return ctx.Opt().EnableSpecialAbilities && m.SpecialAbilities.Reckless
 }
+
+func (m *Monster) resolveMartialAdvantage(isCritical bool, simOptions *core.SimulationOptions) *core.Effect {
+	if m.SpecialAbilities.MartialAdvantageNumDice <= 0 {
+		return nil
+	}
+
+	if m.EntityStateManager.GetHasUsedMartialAdvantage() {
+		return nil
+	}
+
+	if m.AI.GetCombatContext() == nil {
+		return nil
+	}
+
+	ctx := m.AI.GetCombatContext()
+
+	// Condition: "The hobgoblin can deal an extra 7 (2d6) damage to a creature it hits with a weapon attack
+	// if that creature is within 5 feet of an ally of the hobgoblin that isn't incapacitated."
+	// Simplified: Check if there's at least one other conscious monster in the combat.
+	if (ctx.ConsciousMonsterCount - 1) <= 0 {
+		return nil
+	}
+
+	numDice := m.SpecialAbilities.MartialAdvantageNumDice
+	opts := roll_manager.NewRollOptions()
+	opts.RollType = core.DiceRollDamage
+
+	var res *roll_manager.RollResult
+	var err error
+
+	if isCritical && simOptions.UseImprovedCriticals {
+		total, rolls := m.RollManager.RollExtraMaxDice(numDice, core.D6)
+		res = &roll_manager.RollResult{
+			DiceRollType:   core.DiceRollDamage,
+			NumberOfDice:   len(rolls),
+			Die:            core.D6,
+			FinalRollValue: total,
+			FinalRolls:     rolls,
+			Total:          total,
+		}
+	} else {
+		if isCritical {
+			numDice *= 2
+		}
+		res, err = m.RollManager.RollDice(numDice, core.D6, opts)
+	}
+
+	if err != nil || res == nil {
+		return nil
+	}
+
+	m.EntityStateManager.SetHasUsedMartialAdvantage(true)
+	events.LogSpecialAbilityEvent(m, "Martial Advantage", fmt.Sprintf("%s deals extra damage from Martial Advantage!", m.GetName()), "", res.Total, m.EventListener)
+
+	return &core.Effect{
+		Type:       core.EffectDamage,
+		Value:      res.Total,
+		BaseValue:  res.Total,
+		DamageType: core.DamageSlashing, // Extra damage is usually of the same type as the attack, simplified to Slashing
+	}
+}
+
+func (m *Monster) resolveDivineEminence(isCritical bool, simOptions *core.SimulationOptions) *core.Effect {
+	if m.SpecialAbilities.DivineEminenceNumDice <= 0 {
+		return nil
+	}
+
+	if !m.EntityStateManager.GetIsDivineEminenceActive() {
+		return nil
+	}
+
+	// Divine Eminence: As a bonus action, the priest can cause its melee weapon attacks to magically deal
+	// an extra 10 (3d6) radiant damage to a target on a hit.
+	numDice := m.EntityStateManager.GetDivineEminenceDice()
+	if numDice <= 0 {
+		numDice = m.SpecialAbilities.DivineEminenceNumDice
+	}
+
+	opts := roll_manager.NewRollOptions()
+	opts.RollType = core.DiceRollDamage
+
+	var res *roll_manager.RollResult
+	var err error
+
+	if isCritical && simOptions.UseImprovedCriticals {
+		total, rolls := m.RollManager.RollExtraMaxDice(numDice, core.D6)
+		res = &roll_manager.RollResult{
+			DiceRollType:   core.DiceRollDamage,
+			NumberOfDice:   len(rolls),
+			Die:            core.D6,
+			FinalRollValue: total,
+			FinalRolls:     rolls,
+			Total:          total,
+		}
+	} else {
+		if isCritical {
+			numDice *= 2
+		}
+		res, err = m.RollManager.RollDice(numDice, core.D6, opts)
+	}
+
+	if err != nil || res == nil {
+		return nil
+	}
+
+	events.LogSpecialAbilityEvent(m, "Divine Eminence", fmt.Sprintf("%s deals extra radiant damage from Divine Eminence!", m.GetName()), "", res.Total, m.EventListener)
+
+	return &core.Effect{
+		Type:       core.EffectDamage,
+		Value:      res.Total,
+		BaseValue:  res.Total,
+		DamageType: core.DamageRadiant,
+	}
+}

@@ -27,6 +27,7 @@ const (
 	ECombatEventMessage           EventType = "combatmessage"
 	ETDamageModifiedEvent         EventType = "damagedmodified"
 	ETDragonbornBreathWeaponEvent EventType = "dragonbornbreathweapon"
+	ETSpecialAbilityEvent         EventType = "specialability"
 )
 
 type CombatEvent interface {
@@ -264,6 +265,16 @@ type TargetChoiceEvent struct {
 }
 
 func (e *TargetChoiceEvent) GetEventType() EventType { return ETTargetChoiceEvent }
+
+type SpecialAbilityEvent struct {
+	BaseEvent
+	AbilityName string
+	Description string
+	Target      string
+	Value       int
+}
+
+func (e *SpecialAbilityEvent) GetEventType() EventType { return ETSpecialAbilityEvent }
 
 type CombatEventMessage struct {
 	BaseEvent

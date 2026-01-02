@@ -158,6 +158,20 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 	var spellChoice *core.SpellChoice
 	var err error
 
+	// Divine Eminence activation
+	if mai.parent.SpecialAbilities.DivineEminenceNumDice > 0 &&
+		!mai.parent.EntityStateManager.GetIsDivineEminenceActive() &&
+		!mai.parent.EntityStateManager.GetHasUsedBonusAction() &&
+		mai.parent.SpellCastingManager != nil &&
+		mai.parent.SpellCastingManager.HasAnySpellSlots() {
+
+		return &core.AIRequest{
+			Actor:      mai.parent,
+			ActorType:  core.EntityMonster,
+			ActionType: core.ATMonsterDivineEminence,
+		}, nil
+	}
+
 	// Use recharge actions first
 	if mai.hasRechargeActions {
 		rechargeIndexes := mai.getAvailableRechargeActionIndexes()

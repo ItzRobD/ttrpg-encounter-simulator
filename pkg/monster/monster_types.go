@@ -101,7 +101,7 @@ type SpecialAbilities struct {
 	DeathBurstDC              int
 	DeathThroesNumDice        int // Nd6 damage
 	DeathThroesDC             int
-	DivineEminence            bool
+	DivineEminenceNumDice     int
 	Evasion                   bool
 	FireAuraNumDice           int // Nd6 damage
 	FireForm                  bool
@@ -176,7 +176,11 @@ func (s *SpecialAbilities) AddSpecialAbility(name string, values SpecialAbilityV
 		s.DeathThroesDC = values.dc
 		s.DeathThroesNumDice = values.value
 	case SpecAbilityDivineEminence:
-		s.DivineEminence = true
+		if values.value < 1 {
+			return fmt.Errorf("divine eminence dice must be greater than 0")
+		}
+		s.DivineEminenceNumDice = values.value
+
 	case SpecAbilityEvasion:
 		s.Evasion = true
 	case SpecAbilityFireAura:

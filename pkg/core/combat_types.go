@@ -565,6 +565,7 @@ type AttackResult struct {
 	DamageRoll     RollResult
 	DamageType     DamageType
 	ResistBreakers []ResistBreaker
+	IsRanged       bool
 }
 
 func (r AttackResult) GetActorName() string        { return r.ActorName }

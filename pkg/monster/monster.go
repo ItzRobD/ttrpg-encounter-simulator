@@ -372,7 +372,7 @@ func (m *Monster) Regenerate() {
 		if err != nil {
 			return
 		}
-		events.LogCombatEventMessage(m, fmt.Sprintf("%s uses Regeneration.", m.Name), m.EventListener)
+		events.LogSpecialAbilityEvent(m, "Regeneration", fmt.Sprintf("%s uses Regeneration.", m.Name), "", m.SpecialAbilities.RegenerationValue, m.EventListener)
 		events.LogHPModifiedEvent(m, m, res, m.EventListener)
 	}
 }

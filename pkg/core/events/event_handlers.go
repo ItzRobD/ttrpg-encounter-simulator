@@ -45,6 +45,8 @@ func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 		h.handleTargetChoice(e)
 	case *SavingThrowEvent:
 		h.handleSavingThrow(e)
+	case *SpecialAbilityEvent:
+		h.handleSpecialAbility(e)
 	case *CombatEventMessage:
 		h.handleCombatMessage(e)
 	default:
@@ -379,6 +381,13 @@ func (h *UniversalEventHandler) handleSavingThrow(e *SavingThrowEvent) {
 		e.Roll,
 		e.Modifier,
 		e.Success)
+}
+
+func (h *UniversalEventHandler) handleSpecialAbility(e *SpecialAbilityEvent) {
+	fmt.Printf("[Round %d] <Special Ability> %s: %s\n",
+		e.GetRound(),
+		e.AbilityName,
+		e.Description)
 }
 
 func (h *UniversalEventHandler) handleCombatMessage(e *CombatEventMessage) {

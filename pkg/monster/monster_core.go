@@ -111,6 +111,42 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 	}
 
 	switch req.ActionType {
+	case core.ATMonsterDivineEminence:
+		if m.SpellCastingManager != nil {
+			// Find highest slot to expend
+			slotToExpend := -1
+			for i := 9; i >= 1; i-- {
+				if m.SpellCastingManager.HasSpellSlotsAtLevel(i) {
+					slotToExpend = i
+					break
+				}
+			}
+
+			if slotToExpend != -1 {
+				m.SpellCastingManager.ExpendSpellSlot(slotToExpend)
+				m.EntityStateManager.ExpendBonusAction()
+				m.EntityStateManager.SetDivineEminenceActive(true)
+
+				// Bonus damage: +1d6 for each level above 1st
+				// We already have m.SpecialAbilities.DivineEminenceNumDice as the base (3d6 for level 1 slot)
+				// The ability says: "If the priest expends a spell slot of 2nd level or higher, the extra damage increases by 1d6 for each level above 1st."
+				// So if they expend a 2nd level slot, it should be base + 1.
+				// However, our m.SpecialAbilities is fixed.
+				// We need a way to track the CURRENT number of dice for the activation.
+				// Let's add a field to ESM to track the active dice count.
+
+				activeDice := m.SpecialAbilities.DivineEminenceNumDice + (slotToExpend - 1)
+				m.EntityStateManager.SetDivineEminenceDice(activeDice)
+
+				events.LogSpecialAbilityEvent(m, "Divine Eminence Activation", fmt.Sprintf("%s activates Divine Eminence (expended level %d slot, %d dice)!", m.Name, slotToExpend, activeDice), "", slotToExpend, m.EventListener)
+			}
+		}
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			ActorID:    req.ActorID,
+			Success:    true,
+		}, nil
+
 	case core.ATMonsterAction, core.ATMonsterMultiattack, core.ATMonsterSpecial, core.ATLegendaryAction:
 		// Reckless special ability
 		if req.SimOptions != nil && req.SimOptions.EnableSpecialAbilities {
@@ -152,6 +188,25 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 						IsCritical: res.IsCriticalHit,
 					},
 				})
+
+				// Special abilities: Martial Advantage, Divine Eminence
+				if req.SimOptions != nil && req.SimOptions.EnableSpecialAbilities {
+					// Martial Advantage
+					if m.SpecialAbilities.MartialAdvantageNumDice > 0 {
+						maEffect := m.resolveMartialAdvantage(res.IsCriticalHit, req.SimOptions)
+						if maEffect != nil {
+							effects = append(effects, *maEffect)
+						}
+					}
+
+					// Divine Eminence
+					if m.SpecialAbilities.DivineEminenceNumDice > 0 && !res.IsRanged {
+						deEffect := m.resolveDivineEminence(res.IsCriticalHit, req.SimOptions)
+						if deEffect != nil {
+							effects = append(effects, *deEffect)
+						}
+					}
+				}
 			}
 		}
 

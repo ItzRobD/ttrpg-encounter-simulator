@@ -120,6 +120,9 @@ type EntityStateManager struct {
 	isBerserking            bool
 	relentlessThreshold     int
 	hasUndeadFortitude      bool
+	hasUsedMartialAdvantage bool
+	isDivineEminenceActive  bool
+	divineEminenceDice      int
 }
 
 func (esm *EntityStateManager) GetHasUsedAction() bool {
@@ -175,6 +178,8 @@ func (esm *EntityStateManager) RefreshActions() {
 	esm.hasUsedBonusAction = false
 	esm.hasUsedReaction = false
 	esm.legendaryActionPoints = esm.legendaryActionPointsMax
+	esm.hasUsedMartialAdvantage = false
+	esm.isDivineEminenceActive = false
 }
 
 func (esm *EntityStateManager) CanTakeActions() bool {
@@ -355,6 +360,30 @@ func (esm *EntityStateManager) GetIsStable() bool {
 
 func (esm *EntityStateManager) GetIsDead() bool { return esm.isDead }
 
+func (esm *EntityStateManager) GetHasUsedMartialAdvantage() bool {
+	return esm.hasUsedMartialAdvantage
+}
+
+func (esm *EntityStateManager) SetHasUsedMartialAdvantage(val bool) {
+	esm.hasUsedMartialAdvantage = val
+}
+
+func (esm *EntityStateManager) GetIsDivineEminenceActive() bool {
+	return esm.isDivineEminenceActive
+}
+
+func (esm *EntityStateManager) SetDivineEminenceActive(val bool) {
+	esm.isDivineEminenceActive = val
+}
+
+func (esm *EntityStateManager) GetDivineEminenceDice() int {
+	return esm.divineEminenceDice
+}
+
+func (esm *EntityStateManager) SetDivineEminenceDice(val int) {
+	esm.divineEminenceDice = val
+}
+
 func (esm *EntityStateManager) SetLegendaryActionPoints(val int) {
 	esm.legendaryActionPoints = val
 }
@@ -482,7 +511,7 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 		if allowMassiveDamage && esm.CheckMassiveDamage() {
 			esm.Kill()
 			res.IsUnconscious = false // Overridden by dead
-			events.LogCombatEventMessage(esm.Parent, "Killed by massive damage!", esm.Parent.GetEventListener())
+			events.LogSpecialAbilityEvent(esm.Parent, "Massive Damage", "Killed by massive damage!", "", 0, esm.Parent.GetEventListener())
 		} else if esm.Parent.IsMonster() {
 			// Relentless (Monster)
 			if esm.relentlessThreshold > 0 && res.OriginalHP > 0 && res.DamageTaken <= esm.relentlessThreshold {
@@ -490,7 +519,7 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 				esm.currentHP = 1
 				res.IsUnconscious = false
 				res.NewHP = esm.currentHP
-				events.LogCombatEventMessage(esm.Parent, fmt.Sprintf("Relentless triggered. New HP set to 1 (Damage taken: %d <= threshold: %d).", res.DamageTaken, esm.relentlessThreshold), esm.Parent.GetEventListener())
+				events.LogSpecialAbilityEvent(esm.Parent, "Relentless", fmt.Sprintf("Relentless triggered. New HP set to 1 (Damage taken: %d <= threshold: %d).", res.DamageTaken, esm.relentlessThreshold), "", 1, esm.Parent.GetEventListener())
 			} else if esm.hasUndeadFortitude && res.OriginalHP > 0 && damageType != core.DamageRadiant && !isCritical {
 				// Undead Fortitude
 				// If damage reduces the zombie to 0 hit points, it must make a Constitution saving throw with a DC of 5 + the damage taken,
@@ -507,7 +536,7 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 					esm.currentHP = 1
 					res.IsUnconscious = false
 					res.NewHP = esm.currentHP
-					events.LogCombatEventMessage(esm.Parent, fmt.Sprintf("Undead Fortitude triggered. New HP set to 1 (DC %d).", dc), esm.Parent.GetEventListener())
+					events.LogSpecialAbilityEvent(esm.Parent, "Undead Fortitude", fmt.Sprintf("Undead Fortitude triggered. New HP set to 1 (DC %d).", dc), "", 1, esm.Parent.GetEventListener())
 				} else {
 					esm.Kill()
 				}
@@ -524,7 +553,7 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 				esm.HalfOrcHasRelentlessEnduranceUse = false
 				res.IsUnconscious = false
 				res.NewHP = esm.currentHP
-				events.LogCombatEventMessage(esm.Parent, "Relentless Endurance expended. New HP set to 1.", esm.Parent.GetEventListener())
+				events.LogSpecialAbilityEvent(esm.Parent, "Relentless Endurance", "Relentless Endurance expended. New HP set to 1.", "", 1, esm.Parent.GetEventListener())
 			} else if esm.barbarianHasRelentlessRage && esm.BarbarianIsRaging && res.OriginalHP > 0 {
 				// Barbarian Relentless Rage
 				// Make DC 10 + (uses * 5) Con saving throw
@@ -539,7 +568,7 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 					res.IsUnconscious = false
 					res.NewHP = esm.currentHP
 					esm.IncrementBarbarianRelentlessUses()
-					events.LogCombatEventMessage(esm.Parent, "Relentless Rage expended. New HP set to 1.", esm.Parent.GetEventListener())
+					events.LogSpecialAbilityEvent(esm.Parent, "Relentless Rage", "Relentless Rage expended. New HP set to 1.", "", 1, esm.Parent.GetEventListener())
 				}
 			} else {
 				esm.SetUnconscious(true)

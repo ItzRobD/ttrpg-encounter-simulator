@@ -197,6 +197,7 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 			DamageRoll:     dmgRollResult,
 			DamageType:     ad.DamageType,
 			ResistBreakers: ad.ResistBreakers,
+			IsRanged:       ad.IsRangedWeapon,
 		}
 
 		events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())

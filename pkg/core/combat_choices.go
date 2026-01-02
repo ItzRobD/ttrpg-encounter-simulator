@@ -189,6 +189,7 @@ const (
 	ATDragonbornBreathWeapon              = "dragonborn breath weapon"
 	ATMonsterDeathEffect                  = "monster death effect"
 	ATMonsterRetaliatoryEffect            = "monster retaliatory effect"
+	ATMonsterDivineEminence               = "monster divine eminence"
 )
 
 func (a ActionType) String() string {

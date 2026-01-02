@@ -3,6 +3,7 @@ package events
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
+	"time"
 )
 
 func LogCharacterActionChoiceEvent(actor core.Entity, choice core.ActionType, listener func(event interface{})) {
@@ -272,6 +273,21 @@ func LogTargetChoiceEvent(actor core.Entity, target core.Entity, listener func(e
 		Target: target.GetName(),
 	}
 	event.SetActor(actor.GetName())
+
+	if listener != nil {
+		listener(event)
+	}
+}
+
+func LogSpecialAbilityEvent(actor core.Entity, abilityName string, description string, targetName string, value int, listener func(event interface{})) {
+	event := &SpecialAbilityEvent{
+		AbilityName: abilityName,
+		Description: description,
+		Target:      targetName,
+		Value:       value,
+	}
+	event.SetActor(actor.GetName())
+	event.SetTimestamp(time.Now())
 
 	if listener != nil {
 		listener(event)

@@ -1117,7 +1117,7 @@ func (ce *CombatEngine) applyLightningAbsorption(target core.Entity, effect *cor
 				// Convert damage to healing
 				effect.Type = core.EffectHealing
 				// Value remains the same (it was damage value, now it's healing value)
-				events.LogCombatEventMessage(m, fmt.Sprintf("%s absorbs lightning damage and is healed!", m.GetName()), m.GetEventListener())
+				events.LogSpecialAbilityEvent(m, "Lightning Absorption", fmt.Sprintf("%s absorbs lightning damage and is healed!", m.GetName()), "", effect.Value, m.GetEventListener())
 			}
 		}
 	}
