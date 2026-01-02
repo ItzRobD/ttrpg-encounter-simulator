@@ -425,3 +425,37 @@ func TestCombatEngine_ProcessActionResults_AOEHitsAllEnemies(t *testing.T) {
 		t.Errorf("Target 2 (AOE, should pass save): expected 10 HP (15-5), got %d", tgt2.EntityStateManager.GetCurrentHP())
 	}
 }
+
+func TestCombatEngine_LightningAbsorption(t *testing.T) {
+	ce := NewCombatEngine(&core.SimulationOptions{EnableSpecialAbilities: true})
+
+	// Attacker
+	attacker := buildTestMonster(t, 0)
+
+	// Target: Monster with Lightning Absorption
+	target := buildTestMonster(t, 0)
+	target.SpecialAbilities.LightningAbsorption = true
+	target.EntityStateManager.ModifyHP(-5, false, false, false, core.DamageNone, false) // 10/15 HP
+
+	ce.AddCombatant(core.NewCombatantWithInfo(attacker)) // id 0
+	ce.AddCombatant(core.NewCombatantWithInfo(target))   // id 1
+
+	startHP := target.EntityStateManager.GetCurrentHP()
+
+	// Fabricate a Lightning damage effect
+	effects := []core.Effect{{
+		Type:       core.EffectDamage,
+		Value:      5,
+		BaseValue:  5,
+		DamageType: core.DamageLightning,
+	}}
+
+	if err := runOutcome(t, ce, attacker, 1, effects); err != nil {
+		t.Fatalf("processActionResults: %v", err)
+	}
+
+	// Lightning Absorption: 10 HP + 5 absorbed = 15 HP
+	if target.EntityStateManager.GetCurrentHP() != startHP+5 {
+		t.Fatalf("expected healing due to Lightning Absorption, hp=%d want=%d", target.EntityStateManager.GetCurrentHP(), startHP+5)
+	}
+}

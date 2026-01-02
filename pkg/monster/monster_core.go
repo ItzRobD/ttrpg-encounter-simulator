@@ -87,6 +87,10 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 			ActionType: core.ATMonsterDeathEffect,
 			TargetID:   -1, // Hits all in radius
 		}
+	case core.AIReqRetaliatoryEffect:
+		req = &core.AIRequest{
+			ActionType: core.ATMonsterRetaliatoryEffect,
+		}
 	default:
 		return req, fmt.Errorf("invalid AI request type: %v", t)
 	}
@@ -143,6 +147,10 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 					Value:      res.GetDamageResult().GetTotal(),
 					BaseValue:  res.GetDamageResult().GetTotal(),
 					DamageType: res.GetDamageType(),
+					AttackCtx: &core.AttackContext{
+						IsRanged:   req.ActionType == core.ATRanged,
+						IsCritical: res.IsCriticalHit,
+					},
 				})
 			}
 		}
@@ -180,11 +188,21 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 						Success:   res.SpellSaveSuccess,
 						OnSuccess: res.SpellSaveEffect,
 					},
+					AttackCtx: &core.AttackContext{
+						IsRanged:   false,
+						IsCritical: res.GetIsCriticalHit(),
+					},
+					SpellCtx: &core.SpellContext{
+						SpellLevel: req.SpellChoice.Formula.CastLevel,
+					},
 				})
 			} else if req.SpellChoice.Spell.GetSpellType() == core.STHealing {
 				effects = append(effects, core.Effect{
 					Type:  core.EffectHealing,
 					Value: res.GetSpellTotalValue(),
+					SpellCtx: &core.SpellContext{
+						SpellLevel: req.SpellChoice.Formula.CastLevel,
+					},
 				})
 			}
 		}
@@ -278,6 +296,83 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			Effects:    effects,
 			Success:    len(effects) > 0,
 			IsAOE:      isAOE,
+			SpellName:  spellName,
+		}, nil
+	case core.ATMonsterRetaliatoryEffect:
+		var effects []core.Effect
+		var spellName string
+
+		opts := roll_manager.NewRollOptions()
+
+		// Corrosive Form
+		if m.SpecialAbilities.CorrosiveFormNumDice > 0 {
+			damage, _ := m.RollManager.RollDice(m.SpecialAbilities.CorrosiveFormNumDice, core.D8, opts)
+			effects = append(effects, core.Effect{
+				Type:       core.EffectDamage,
+				Value:      damage.GetTotal(),
+				BaseValue:  damage.GetTotal(),
+				DamageType: core.DamageAcid,
+			})
+			if spellName != "" {
+				spellName += " & Corrosive Form"
+			} else {
+				spellName = "Corrosive Form"
+			}
+		}
+
+		// Fire Form / Fire Aura (retaliatory part)
+		if m.SpecialAbilities.FireForm || m.SpecialAbilities.FireAuraNumDice > 0 {
+			// Balor's Fire Aura is 3d6, Fire Form is usually 1d10 or similar but often flat
+			// In our csv Fire Aura is 3d6. Fire Form doesn't specify dice in csv yet but we have the flag.
+			// Let's use FireAuraNumDice if available, fallback to 1d10 for generic Fire Form if we want,
+			// but better to stick to what we have in SpecialAbilities struct.
+			numDice := m.SpecialAbilities.FireAuraNumDice
+			if numDice == 0 && m.SpecialAbilities.FireForm {
+				numDice = 1 // default to 1 die if not specified?
+			}
+
+			if numDice > 0 {
+				damage, _ := m.RollManager.RollDice(numDice, core.D6, opts)
+				effects = append(effects, core.Effect{
+					Type:       core.EffectDamage,
+					Value:      damage.GetTotal(),
+					BaseValue:  damage.GetTotal(),
+					DamageType: core.DamageFire,
+				})
+				name := "Fire Form"
+				if m.SpecialAbilities.FireAuraNumDice > 0 {
+					name = "Fire Aura"
+				}
+				if spellName != "" {
+					spellName += " & " + name
+				} else {
+					spellName = name
+				}
+			}
+		}
+
+		// Heated Body
+		if m.SpecialAbilities.HeatedBodyNumDice > 0 {
+			damage, _ := m.RollManager.RollDice(m.SpecialAbilities.HeatedBodyNumDice, core.D10, opts)
+			effects = append(effects, core.Effect{
+				Type:       core.EffectDamage,
+				Value:      damage.GetTotal(),
+				BaseValue:  damage.GetTotal(),
+				DamageType: core.DamageFire,
+			})
+			if spellName != "" {
+				spellName += " & Heated Body"
+			} else {
+				spellName = "Heated Body"
+			}
+		}
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			ActorID:    req.ActorID,
+			TargetID:   req.TargetID,
+			Effects:    effects,
+			Success:    len(effects) > 0,
 			SpellName:  spellName,
 		}, nil
 	default:

@@ -41,7 +41,7 @@ type Entity interface {
 	GetAIRequest(actorID int, t AIRequestType) (*AIRequest, error)
 	ExecuteAIRequest(req *AIRequest) (*ActionOutcome, error)
 	UpdateAICombatContext(ctx *CombatContext) error
-	ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool) (HPModificationResult, error)
+	ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool, damageType DamageType, isCritical bool) (HPModificationResult, error)
 	RefreshLegendaryActions()
 	CanTakeActions() bool
 	ProcessTurn(actorID int, turnType TurnType) (*TurnResult, *AIRequest, error)

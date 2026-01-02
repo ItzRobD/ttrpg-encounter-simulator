@@ -662,6 +662,11 @@ type Effect struct {
 	Condition      *Condition
 	SaveCtx        *SaveContext
 	AttackCtx      *AttackContext
+	SpellCtx       *SpellContext
+}
+
+type SpellContext struct {
+	SpellLevel int
 }
 
 type SaveContext struct {
@@ -672,7 +677,8 @@ type SaveContext struct {
 }
 
 type AttackContext struct {
-	IsRanged bool
+	IsRanged   bool
+	IsCritical bool
 }
 
 type EffectType string

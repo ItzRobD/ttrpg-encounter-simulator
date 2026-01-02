@@ -58,6 +58,8 @@ type EntityStateConfig struct {
 	BarbarianIsRaging        bool
 	FighterIndomitableUses   int
 	PaladinLayingOnHandsPool int
+	RelentlessThreshold      int
+	HasUndeadFortitude       bool
 }
 
 type EntityStateManager struct {
@@ -116,6 +118,8 @@ type EntityStateManager struct {
 	// Monster special abilities
 	LegendaryResistanceUses int
 	isBerserking            bool
+	relentlessThreshold     int
+	hasUndeadFortitude      bool
 }
 
 func (esm *EntityStateManager) GetHasUsedAction() bool {
@@ -403,7 +407,7 @@ func (esm *EntityStateManager) GetTotalHP() int {
 	return esm.currentHP + esm.tempHP
 }
 
-func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool) (HPModificationResult, error) {
+func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool, damageType core.DamageType, isCritical bool) (HPModificationResult, error) {
 	res := HPModificationResult{
 		ModificationValue:           value,
 		OriginalHP:                  esm.currentHP,
@@ -480,9 +484,37 @@ func (esm *EntityStateManager) ModifyHP(value int, isTemp bool, tempStacking boo
 			res.IsUnconscious = false // Overridden by dead
 			events.LogCombatEventMessage(esm.Parent, "Killed by massive damage!", esm.Parent.GetEventListener())
 		} else if esm.Parent.IsMonster() {
-			// Monsters die instantly at 0 HP (standard D&D 5e rules)
-			// Player characters go unconscious and make death saves
-			esm.Kill()
+			// Relentless (Monster)
+			if esm.relentlessThreshold > 0 && res.OriginalHP > 0 && res.DamageTaken <= esm.relentlessThreshold {
+				esm.SetUnconscious(false)
+				esm.currentHP = 1
+				res.IsUnconscious = false
+				res.NewHP = esm.currentHP
+				events.LogCombatEventMessage(esm.Parent, fmt.Sprintf("Relentless triggered. New HP set to 1 (Damage taken: %d <= threshold: %d).", res.DamageTaken, esm.relentlessThreshold), esm.Parent.GetEventListener())
+			} else if esm.hasUndeadFortitude && res.OriginalHP > 0 && damageType != core.DamageRadiant && !isCritical {
+				// Undead Fortitude
+				// If damage reduces the zombie to 0 hit points, it must make a Constitution saving throw with a DC of 5 + the damage taken,
+				// unless the damage is radiant or from a critical hit. On a success, the zombie drops to 1 hit point instead.
+				dc := 5 + res.DamageTaken
+
+				saveResult, err := esm.Parent.MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone, nil)
+				if err != nil {
+					return res, err
+				}
+
+				if saveResult.GetIsSuccess() {
+					esm.SetUnconscious(false)
+					esm.currentHP = 1
+					res.IsUnconscious = false
+					res.NewHP = esm.currentHP
+					events.LogCombatEventMessage(esm.Parent, fmt.Sprintf("Undead Fortitude triggered. New HP set to 1 (DC %d).", dc), esm.Parent.GetEventListener())
+				} else {
+					esm.Kill()
+				}
+			} else {
+				// Monsters die instantly at 0 HP (standard D&D 5e rules)
+				esm.Kill()
+			}
 		} else {
 			// Relentless Endurance (Half-Orc)
 			// Trigger only if we were not already at 0 HP
@@ -806,6 +838,14 @@ func (esm *EntityStateManager) GetIsBerserking() bool {
 	return esm.isBerserking
 }
 
+func (esm *EntityStateManager) SetRelentlessThreshold(val int) {
+	esm.relentlessThreshold = val
+}
+
+func (esm *EntityStateManager) GetRelentlessThreshold() int {
+	return esm.relentlessThreshold
+}
+
 // NewEntityStateManager initializes and returns a new EntityStateManager based on the provided parent entity and configuration.
 // Returns an error if the configuration contains invalid values.
 func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*EntityStateManager, error) {
@@ -858,5 +898,7 @@ func NewEntityStateManager(parent core.Entity, config EntityStateConfig) (*Entit
 		barbarianRelentlessUses:   config.BarbarianRelentlessUses,
 		BarbarianIsRaging:         config.BarbarianIsRaging,
 		FighterIndomitableUses:    config.FighterIndomitableUses,
+		relentlessThreshold:       config.RelentlessThreshold,
+		hasUndeadFortitude:        config.HasUndeadFortitude,
 	}, nil
 }

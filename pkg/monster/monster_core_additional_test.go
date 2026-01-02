@@ -143,7 +143,7 @@ func TestModifyHP_KillsMonsterAtZeroOrBelow(t *testing.T) {
 	m := newTestMonster(t)
 	// Ensure non-zero HP
 	m.EntityStateManager.ResetHP()
-	if _, err := m.ModifyHP(-999, false, false, false); err != nil {
+	if _, err := m.ModifyHP(-999, false, false, false, core.DamageNone, false); err != nil {
 		t.Fatalf("ModifyHP error: %v", err)
 	}
 	if !m.IsDead() {

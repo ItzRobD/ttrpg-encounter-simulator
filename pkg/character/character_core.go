@@ -158,7 +158,8 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 					DamageType:     res.GetDamageType(),
 					ResistBreakers: res.ResistBreakers,
 					AttackCtx: &core.AttackContext{
-						IsRanged: req.ActionType == core.ATRanged,
+						IsRanged:   req.ActionType == core.ATRanged,
+						IsCritical: res.IsCriticalHit,
 					},
 				})
 
@@ -205,7 +206,8 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 					DamageType:     res.GetDamageType(),
 					ResistBreakers: res.ResistBreakers,
 					AttackCtx: &core.AttackContext{
-						IsRanged: false,
+						IsRanged:   false,
+						IsCritical: res.IsCriticalHit,
 					},
 				})
 
@@ -261,13 +263,20 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 						OnSuccess: res.SpellSaveEffect,
 					},
 					AttackCtx: &core.AttackContext{
-						IsRanged: !req.SpellChoice.Spell.GetIsTouch(),
+						IsRanged:   false,
+						IsCritical: res.GetIsCriticalHit(),
+					},
+					SpellCtx: &core.SpellContext{
+						SpellLevel: req.SpellChoice.Formula.CastLevel,
 					},
 				})
 			} else if req.SpellChoice.Spell.GetSpellType() == core.STHealing {
 				effects = append(effects, core.Effect{
 					Type:  core.EffectHealing,
 					Value: res.GetSpellTotalValue(),
+					SpellCtx: &core.SpellContext{
+						SpellLevel: req.SpellChoice.Formula.CastLevel,
+					},
 				})
 			}
 		}

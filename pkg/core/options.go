@@ -25,4 +25,5 @@ type SimulationOptions struct {
 	PaladinUseHighestSmiteSlot    bool
 	UseMassiveDamage              bool
 	EnableSpecialAbilities        bool
+	MonsterDeathEffectsHitAllies  bool
 }

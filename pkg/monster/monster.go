@@ -73,8 +73,10 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 
 	// ESM
 	esmConfig := entity_state_manager.EntityStateConfig{
-		AttackCount: 1,
-		Conditions:  core.NewEntityConditions(),
+		AttackCount:         1,
+		Conditions:          core.NewEntityConditions(),
+		RelentlessThreshold: monster.SpecialAbilities.RelentlessThreshold,
+		HasUndeadFortitude:  monster.SpecialAbilities.UndeadFortitude,
 	}
 	if monster.IsLegendary {
 		esmConfig.MaxLegendaryActions = 3
@@ -142,8 +144,9 @@ func NewMonsterWithRNG(ctx context.Context, config MonsterConfig, rng *rand.Rand
 
 	// ESM
 	esmConfig := entity_state_manager.EntityStateConfig{
-		AttackCount: 1,
-		Conditions:  core.NewEntityConditions(),
+		AttackCount:         1,
+		Conditions:          core.NewEntityConditions(),
+		RelentlessThreshold: monster.SpecialAbilities.RelentlessThreshold,
 	}
 	if monster.IsLegendary {
 		esmConfig.MaxLegendaryActions = 3
@@ -332,8 +335,8 @@ func (m *Monster) GetTargetPriority() core.TargetPriority {
 func (m *Monster) SetTargetPriority(priority core.TargetPriority) {
 	m.EntityStateManager.SetTargetPrioritization(priority)
 }
-func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool) (core.HPModificationResult, error) {
-	return m.EntityStateManager.ModifyHP(value, isTemp, tempStacking, allowMassiveDamage)
+func (m *Monster) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool, damageType core.DamageType, isCritical bool) (core.HPModificationResult, error) {
+	return m.EntityStateManager.ModifyHP(value, isTemp, tempStacking, allowMassiveDamage, damageType, isCritical)
 }
 
 func (m *Monster) CanTakeActions() bool { return m.EntityStateManager.CanTakeActions() }
@@ -365,7 +368,7 @@ func (m *Monster) Regenerate() {
 	ctx := m.AI.GetCombatContext()
 
 	if ctx.Opt().EnableSpecialAbilities && m.SpecialAbilities.RegenerationValue > 0 && !m.IsDead() {
-		res, err := m.EntityStateManager.ModifyHP(m.SpecialAbilities.RegenerationValue, false, false, true)
+		res, err := m.EntityStateManager.ModifyHP(m.SpecialAbilities.RegenerationValue, false, false, true, core.DamageNone, false)
 		if err != nil {
 			return
 		}

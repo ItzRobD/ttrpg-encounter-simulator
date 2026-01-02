@@ -19,6 +19,7 @@ const (
 	AIReqOffhandAttack
 	AIReqDragonbornBreathWeapon
 	AIReqDeathEffect
+	AIReqRetaliatoryEffect
 )
 
 type AIRequest struct {

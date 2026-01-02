@@ -588,8 +588,8 @@ func (c *Character) GetTargetPriority() core.TargetPriority {
 func (c *Character) SetTargetPriority(p core.TargetPriority) {
 	c.EntityStateManager.SetTargetPrioritization(p)
 }
-func (c *Character) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool) (core.HPModificationResult, error) {
-	return c.EntityStateManager.ModifyHP(value, isTemp, tempStacking, allowMassiveDamage)
+func (c *Character) ModifyHP(value int, isTemp bool, tempStacking bool, allowMassiveDamage bool, damageType core.DamageType, isCritical bool) (core.HPModificationResult, error) {
+	return c.EntityStateManager.ModifyHP(value, isTemp, tempStacking, allowMassiveDamage, damageType, isCritical)
 }
 
 func (c *Character) GetHealingSpellCount() int {

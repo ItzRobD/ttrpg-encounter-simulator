@@ -106,7 +106,7 @@ func (e *testEntity) GetRNG() *rand.Rand                                        
 func (e *testEntity) GetAIRequest(int, core.AIRequestType) (*core.AIRequest, error) { return nil, nil }
 func (e *testEntity) ExecuteAIRequest(*core.AIRequest) (*core.ActionOutcome, error) { return nil, nil }
 func (e *testEntity) UpdateAICombatContext(*core.CombatContext) error               { return nil }
-func (e *testEntity) ModifyHP(int, bool, bool, bool) (core.HPModificationResult, error) {
+func (e *testEntity) ModifyHP(int, bool, bool, bool, core.DamageType, bool) (core.HPModificationResult, error) {
 	return nil, nil
 }
 func (e *testEntity) RefreshLegendaryActions() {}

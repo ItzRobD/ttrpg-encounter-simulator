@@ -183,17 +183,36 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 
 	// Identify targets for the action
 	targetIDs := []int{outcome.TargetID}
-	if outcome.IsAOE && ce.SimOptions.AOEHitsAllEnemies {
-		targetIDs = []int{}
-		for id, combatant := range ce.Combatants {
-			if combatant.Entity.IsDead() {
-				continue
-			}
-			// AOE hits all enemies
-			if actor.IsCharacter() && combatant.Entity.IsMonster() {
-				targetIDs = append(targetIDs, id)
-			} else if actor.IsMonster() && combatant.Entity.IsCharacter() {
-				targetIDs = append(targetIDs, id)
+	if outcome.IsAOE {
+		if ce.SimOptions.AOEHitsAllEnemies || outcome.ActionType == core.ATMonsterDeathEffect {
+			targetIDs = []int{}
+			for id, combatant := range ce.Combatants {
+				if combatant.Entity.IsDead() {
+					continue
+				}
+				// For death effects, we hit everyone EXCEPT the dying actor (who is already dead/processed)
+				if outcome.ActionType == core.ATMonsterDeathEffect {
+					if id != outcome.ActorID {
+						// Check if we should only hit enemies
+						if !ce.SimOptions.MonsterDeathEffectsHitAllies {
+							if actor.IsMonster() && combatant.Entity.IsMonster() {
+								continue
+							}
+							if actor.IsCharacter() && combatant.Entity.IsCharacter() {
+								continue
+							}
+						}
+						targetIDs = append(targetIDs, id)
+					}
+					continue
+				}
+
+				// Standard AOE hits all enemies
+				if actor.IsCharacter() && combatant.Entity.IsMonster() {
+					targetIDs = append(targetIDs, id)
+				} else if actor.IsMonster() && combatant.Entity.IsCharacter() {
+					targetIDs = append(targetIDs, id)
+				}
 			}
 		}
 	}
@@ -234,6 +253,10 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 					}
 				}
 
+				// Pre-processing effects that might change the type or value before standard logic
+				ce.applyLimitedMagicImmunity(target.GetEntity(), &currentEffect)
+				ce.applyLightningAbsorption(target.GetEntity(), &currentEffect)
+
 				switch currentEffect.Type {
 				case core.EffectDamage:
 					ce.applyDeflectMissiles(target.GetEntity(), &currentEffect)
@@ -248,7 +271,7 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 						return rErr
 					}
 					events.LogDamageModifiedEvent(actor, target.GetEntity(), res, actor.GetEventListener())
-					hpModResult, err = target.GetEntity().ModifyHP(res.FinalValue, false, false, ce.SimOptions.UseMassiveDamage)
+					hpModResult, err = target.GetEntity().ModifyHP(res.FinalValue, false, false, ce.SimOptions.UseMassiveDamage, currentEffect.DamageType, currentEffect.AttackCtx != nil && currentEffect.AttackCtx.IsCritical)
 					if err != nil {
 						return fmt.Errorf("failed to modify target entity HP: %v", err)
 					}
@@ -261,8 +284,33 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 								if deathReq != nil {
 									deathOutcome, _ := m.ExecuteAIRequest(deathReq)
 									if deathOutcome != nil {
+										events.LogCombatEventMessage(m, fmt.Sprintf("%s triggers %s!", m.GetName(), deathOutcome.SpellName), m.GetEventListener())
 										// Process death effect recursively
 										ce.processActionResults(m, deathOutcome)
+									}
+								}
+							}
+						}
+					} else {
+						// Check for retaliatory effects (Corrosive Form, Fire Form, Heated Body)
+						// Triggers if hit by a melee attack within 5ft.
+						// Our system doesn't explicitly track range in distance units yet, but we have isRanged in AttackContext.
+						// Assume all melee hits are within 5ft for these purposes.
+						if m, ok := target.GetEntity().(*monster.Monster); ok && ce.SimOptions.EnableSpecialAbilities {
+							if currentEffect.AttackCtx != nil && !currentEffect.AttackCtx.IsRanged {
+								if m.SpecialAbilities.CorrosiveFormNumDice > 0 || m.SpecialAbilities.FireForm ||
+									m.SpecialAbilities.FireAuraNumDice > 0 || m.SpecialAbilities.HeatedBodyNumDice > 0 {
+
+									retalliationReq, _ := m.GetAIRequest(m.GetID(), core.AIReqRetaliatoryEffect)
+									if retalliationReq != nil {
+										retalliationReq.Target = actor
+										retalliationReq.TargetID = outcome.ActorID
+										retalOutcome, _ := m.ExecuteAIRequest(retalliationReq)
+										if retalOutcome != nil {
+											events.LogCombatEventMessage(m, fmt.Sprintf("%s triggers retaliatory %s against %s!", m.GetName(), retalOutcome.SpellName, actor.GetName()), m.GetEventListener())
+											// Process retaliatory effect
+											ce.processActionResults(m, retalOutcome)
+										}
 									}
 								}
 							}
@@ -270,13 +318,13 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 					}
 				case core.EffectHealing:
 					v := math.Abs(float64(currentEffect.Value))
-					hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false, ce.SimOptions.UseMassiveDamage)
+					hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false, ce.SimOptions.UseMassiveDamage, core.DamageNone, false)
 					if err != nil {
 						return fmt.Errorf("failed to modify target entity HP: %v", err)
 					}
 				case core.EffectTempHP:
 					v := math.Abs(float64(currentEffect.Value))
-					hpModResult, err = target.GetEntity().ModifyHP(int(v), true, false, ce.SimOptions.UseMassiveDamage)
+					hpModResult, err = target.GetEntity().ModifyHP(int(v), true, false, ce.SimOptions.UseMassiveDamage, core.DamageNone, false)
 					if err != nil {
 						return fmt.Errorf("failed to modify target entity HP: %v", err)
 					}
@@ -1040,6 +1088,39 @@ func (ce *CombatEngine) computeDamageValueAfterResistances(target core.Entity, d
 	result.WasModified = result.FinalValue != value
 
 	return result, nil
+}
+
+func (ce *CombatEngine) applyLimitedMagicImmunity(target core.Entity, effect *core.Effect) {
+	if effect.SpellCtx == nil {
+		return
+	}
+
+	if m, ok := target.(*monster.Monster); ok {
+		if ce.SimOptions != nil && ce.SimOptions.EnableSpecialAbilities {
+			if m.SpecialAbilities.LimitedMagicImmunityLevel > 0 {
+				if effect.SpellCtx.SpellLevel <= m.SpecialAbilities.LimitedMagicImmunityLevel {
+					effect.Value = 0
+				}
+			}
+		}
+	}
+}
+
+func (ce *CombatEngine) applyLightningAbsorption(target core.Entity, effect *core.Effect) {
+	if effect.Type != core.EffectDamage || effect.DamageType != core.DamageLightning {
+		return
+	}
+
+	if m, ok := target.(*monster.Monster); ok {
+		if ce.SimOptions != nil && ce.SimOptions.EnableSpecialAbilities {
+			if m.SpecialAbilities.LightningAbsorption {
+				// Convert damage to healing
+				effect.Type = core.EffectHealing
+				// Value remains the same (it was damage value, now it's healing value)
+				events.LogCombatEventMessage(m, fmt.Sprintf("%s absorbs lightning damage and is healed!", m.GetName()), m.GetEventListener())
+			}
+		}
+	}
 }
 
 // applyEvasionToEffect applies the evasion feature effects for rogues and monks, modifying the effect value based on saving throws.

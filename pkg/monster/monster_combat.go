@@ -186,9 +186,13 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 	condAdv := core.DetermineSaveAdvantageFromConditions(m.GetConditions(), ability)
 	advSlice = append(advSlice, baseAdv, condAdv)
 
-	// Check for Magic Resistance (Special Ability)
+	// Special abilities
 	if simOptions != nil && simOptions.EnableSpecialAbilities {
 		if m.SpecialAbilities.MagicResistance && isSpell {
+			advSlice = append(advSlice, core.RollAdvantage)
+		}
+		if m.SpecialAbilities.GnomeCunning && isSpell &&
+			(ability == core.AbilityWisdom || ability == core.AbilityCharisma || ability == core.AbilityIntelligence) {
 			advSlice = append(advSlice, core.RollAdvantage)
 		}
 	} else if simOptions == nil {
