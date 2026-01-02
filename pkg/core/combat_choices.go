@@ -187,6 +187,7 @@ const (
 	ATLairAction                        = "lair action"
 	ATOffhand                           = "offhand attack"
 	ATDragonbornBreathWeapon            = "dragonborn breath weapon"
+	ATMonsterDeathEffect                = "monster death effect"
 )
 
 func (a ActionType) String() string {

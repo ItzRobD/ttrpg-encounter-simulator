@@ -3,6 +3,7 @@ package monster
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"fmt"
 	"log"
 )
@@ -80,6 +81,11 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 		req, err = m.AI.createMonsterLegendaryActionRequest()
 		if err != nil {
 			return nil, err
+		}
+	case core.AIReqDeathEffect:
+		req = &core.AIRequest{
+			ActionType: core.ATMonsterDeathEffect,
+			TargetID:   -1, // Hits all in radius
 		}
 	default:
 		return req, fmt.Errorf("invalid AI request type: %v", t)
@@ -225,6 +231,54 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 				},
 			},
 			Success: true,
+		}, nil
+	case core.ATMonsterDeathEffect:
+		var effects []core.Effect
+		var isAOE bool
+		var spellName string
+
+		opts := roll_manager.NewRollOptions()
+
+		if m.SpecialAbilities.DeathBurstNumDice > 0 {
+			damage, _ := m.RollManager.RollDice(m.SpecialAbilities.DeathBurstNumDice, core.D8, opts)
+			effects = append(effects, core.Effect{
+				Type:       core.EffectDamage,
+				Value:      damage.GetTotal(),
+				BaseValue:  damage.GetTotal(),
+				DamageType: m.SpecialAbilities.DeathBurstDamageType,
+				SaveCtx: &core.SaveContext{
+					Ability:   core.AbilityDexterity,
+					TargetDC:  m.SpecialAbilities.DeathBurstDC,
+					OnSuccess: core.DCOnSuccessHalf,
+				},
+			})
+			isAOE = true
+			spellName = "Death Burst"
+		} else if m.SpecialAbilities.DeathThroesNumDice > 0 {
+			damage, _ := m.RollManager.RollDice(m.SpecialAbilities.DeathThroesNumDice, core.D6, opts)
+			effects = append(effects, core.Effect{
+				Type:       core.EffectDamage,
+				Value:      damage.GetTotal(),
+				BaseValue:  damage.GetTotal(),
+				DamageType: core.DamageFire,
+				SaveCtx: &core.SaveContext{
+					Ability:   core.AbilityDexterity,
+					TargetDC:  m.SpecialAbilities.DeathThroesDC,
+					OnSuccess: core.DCOnSuccessHalf,
+				},
+			})
+			isAOE = true
+			spellName = "Death Throes"
+		}
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			ActorID:    req.ActorID,
+			TargetID:   -1,
+			Effects:    effects,
+			Success:    len(effects) > 0,
+			IsAOE:      isAOE,
+			SpellName:  spellName,
 		}, nil
 	default:
 		return nil, fmt.Errorf("monster execute ai req - invalid action type: %s", req.ActionType)

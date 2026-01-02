@@ -252,6 +252,22 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 					if err != nil {
 						return fmt.Errorf("failed to modify target entity HP: %v", err)
 					}
+
+					// Check for death effects
+					if target.GetEntity().IsDead() {
+						if m, ok := target.GetEntity().(*monster.Monster); ok && ce.SimOptions.EnableSpecialAbilities {
+							if m.SpecialAbilities.DeathBurstNumDice > 0 || m.SpecialAbilities.DeathThroesNumDice > 0 {
+								deathReq, _ := m.GetAIRequest(m.GetID(), core.AIReqDeathEffect)
+								if deathReq != nil {
+									deathOutcome, _ := m.ExecuteAIRequest(deathReq)
+									if deathOutcome != nil {
+										// Process death effect recursively
+										ce.processActionResults(m, deathOutcome)
+									}
+								}
+							}
+						}
+					}
 				case core.EffectHealing:
 					v := math.Abs(float64(currentEffect.Value))
 					hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false, ce.SimOptions.UseMassiveDamage)

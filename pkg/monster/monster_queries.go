@@ -500,6 +500,7 @@ func getMonsterSpecialAbilitiesByID(ctx context.Context, id []int) (map[int]Spec
 		var saName sql.NullString
 		var usageCount sql.NullInt64
 		var uc int
+		var dc int
 		var dt core.DamageType
 		err = rows.Scan(&monsterID, &saName, &usageCount)
 		if err != nil {
@@ -514,14 +515,19 @@ func getMonsterSpecialAbilitiesByID(ctx context.Context, id []int) (map[int]Spec
 
 		switch saName.String {
 		case SpecAbilityDeathBurst:
+
 			dt = core.DamageSlashing
+			dc = 10
+		case SpecAbilityDeathThroes:
+			dt = core.DamageFire
+			dc = 20
 		case SpecAbilityFireAura, SpecAbilityFireForm, SpecAbilityHeatedBody:
 			dt = core.DamageFire
 		default:
 			dt = core.DamageNone
 		}
 
-		sa.AddSpecialAbility(saName.String, uc, dt)
+		sa.AddSpecialAbility(saName.String, SpecialAbilityValues{value: uc, dc: dc}, dt)
 		mSAMap[monsterID] = sa
 	}
 
