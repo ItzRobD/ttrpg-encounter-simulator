@@ -52,6 +52,9 @@ func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actio
 	if m.hasBloodFrenzyAdvantage(target) {
 		advSlice = append(advSlice, core.RollAdvantage)
 	}
+	if m.hasRecklessAdvantage() {
+		advSlice = append(advSlice, core.RollAdvantage)
+	}
 	adv := core.GetFinalAdvantageType(advSlice)
 
 	attackOptions := core.AttackOptions{
@@ -263,4 +266,18 @@ func (m *Monster) hasBloodFrenzyAdvantage(target core.Entity) bool {
 	}
 
 	return false
+}
+
+func (m *Monster) hasRecklessAdvantage() bool {
+	if !m.SpecialAbilities.Reckless {
+		return false
+	}
+
+	if m.AI.GetCombatContext() == nil {
+		return false
+	}
+
+	ctx := m.AI.GetCombatContext()
+
+	return ctx.Opt().EnableSpecialAbilities && m.SpecialAbilities.Reckless
 }

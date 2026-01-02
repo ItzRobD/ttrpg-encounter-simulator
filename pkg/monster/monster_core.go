@@ -102,6 +102,12 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 
 	switch req.ActionType {
 	case core.ATMonsterAction, core.ATMonsterMultiattack, core.ATMonsterSpecial, core.ATLegendaryAction:
+		// Reckless special ability
+		if req.SimOptions != nil && req.SimOptions.EnableSpecialAbilities {
+			m.EntityStateManager.SetIsRecklesslyAttacking(true)
+			m.EntityStateManager.AddCondition(core.ConditionRecklessExposed)
+		}
+
 		attackReq, err := m.createAttackRequest(req.Target, req.ActionIndex, req.ActionType, req.SimOptions)
 		if err != nil {
 			return nil, err
