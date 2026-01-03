@@ -51,6 +51,7 @@ type Entity interface {
 	BreakConcentration()
 	SetConcentrating(val bool, spellName string)
 	Regenerate()
+	GetHasTakenTurnInCombat() bool
 }
 
 type Combatant struct {

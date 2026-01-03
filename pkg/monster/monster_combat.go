@@ -55,6 +55,10 @@ func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actio
 	if m.hasRecklessAdvantage() {
 		advSlice = append(advSlice, core.RollAdvantage)
 	}
+	if m.hasAssassinateAdvantage(target) {
+		advSlice = append(advSlice, core.RollAdvantage)
+	}
+
 	adv := core.GetFinalAdvantageType(advSlice)
 
 	attackOptions := core.AttackOptions{
@@ -91,6 +95,9 @@ func (m *Monster) createSpellCastRequest(target core.Entity, spellchoice core.Sp
 	computedAdv := core.DetermineAttackAdvantageForEntities(m, target, !spellcastData.SpellChoice.GetSpell().GetIsTouch(), core.RollNormal)
 	advSlice = append(advSlice, computedAdv)
 	if m.hasPackTacticsAdvantage() {
+		advSlice = append(advSlice, core.RollAdvantage)
+	}
+	if m.hasAssassinateAdvantage(target) {
 		advSlice = append(advSlice, core.RollAdvantage)
 	}
 	adv := core.GetFinalAdvantageType(advSlice)
@@ -286,6 +293,24 @@ func (m *Monster) hasRecklessAdvantage() bool {
 	return ctx.Opt().EnableSpecialAbilities && m.SpecialAbilities.Reckless
 }
 
+func (m *Monster) hasAssassinateAdvantage(target core.Entity) bool {
+	if !m.SpecialAbilities.Assassinate {
+		return false
+	}
+
+	if m.AI.GetCombatContext() == nil {
+		return false
+	}
+
+	ctx := m.AI.GetCombatContext()
+	if !ctx.Opt().EnableSpecialAbilities {
+		return false
+	}
+
+	// Assassinate: advantage on attack rolls against any creature that hasn't taken a turn in the combat yet.
+	return !target.GetHasTakenTurnInCombat()
+}
+
 func (m *Monster) resolveMartialAdvantage(isCritical bool, simOptions *core.SimulationOptions) *core.Effect {
 	if m.SpecialAbilities.MartialAdvantageNumDice <= 0 {
 		return nil
@@ -397,5 +422,65 @@ func (m *Monster) resolveDivineEminence(isCritical bool, simOptions *core.Simula
 		Value:      res.Total,
 		BaseValue:  res.Total,
 		DamageType: core.DamageRadiant,
+	}
+}
+
+func (m *Monster) resolveSneakAttack(params core.SneakAttackParams, simOptions *core.SimulationOptions) *core.Effect {
+	if m.SpecialAbilities.SneakAttackNumDice <= 0 {
+		return nil
+	}
+
+	if params.IsSpell || params.IsRanged {
+		return nil
+	}
+
+	if m.EntityStateManager.GetHasUsedSneakAttack() {
+		return nil
+	}
+
+	// Sneak Attack: if you have advantage then perform sneak attack
+	// or if within 5 feet (simulated by AlwaysUseSneakAttack flag)
+	canUse := params.Advantage == core.RollAdvantage || (simOptions != nil && simOptions.AlwaysUseSneakAttack)
+
+	if !canUse {
+		return nil
+	}
+
+	numDice := m.SpecialAbilities.SneakAttackNumDice
+	opts := roll_manager.NewRollOptions()
+	opts.RollType = core.DiceRollDamage
+
+	var res *roll_manager.RollResult
+	var err error
+
+	if params.IsCritical && simOptions.UseImprovedCriticals {
+		total, rolls := m.RollManager.RollExtraMaxDice(numDice, core.D6)
+		res = &roll_manager.RollResult{
+			DiceRollType:   core.DiceRollDamage,
+			NumberOfDice:   len(rolls),
+			Die:            core.D6,
+			FinalRollValue: total,
+			FinalRolls:     rolls,
+			Total:          total,
+		}
+	} else {
+		if params.IsCritical {
+			numDice *= 2
+		}
+		res, err = m.RollManager.RollDice(numDice, core.D6, opts)
+	}
+
+	if err != nil || res == nil {
+		return nil
+	}
+
+	m.EntityStateManager.SetHasUsedSneakAttack(true)
+	events.LogSpecialAbilityEvent(m, "Sneak Attack", fmt.Sprintf("%s deals extra damage from Sneak Attack!", m.GetName()), "", res.Total, m.EventListener)
+
+	return &core.Effect{
+		Type:       core.EffectDamage,
+		Value:      res.Total,
+		BaseValue:  res.Total,
+		DamageType: params.DamageType,
 	}
 }

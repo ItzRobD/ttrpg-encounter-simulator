@@ -547,6 +547,14 @@ type HealRequest struct {
 	Advantage    AdvantageType // For healing spells that might need it (rare)
 }
 
+type SneakAttackParams struct {
+	IsCritical bool
+	Advantage  AdvantageType
+	DamageType DamageType
+	IsRanged   bool
+	IsSpell    bool
+}
+
 func (ar *AttackRequest) GetAttackData() []AttackData              { return ar.AttackData }
 func (ar *AttackRequest) GetAttackOptions() AttackOptions          { return ar.AttackOptions }
 func (ar *AttackRequest) GetSimulationOptions() *SimulationOptions { return ar.SimulationOptions }
@@ -566,6 +574,7 @@ type AttackResult struct {
 	DamageType     DamageType
 	ResistBreakers []ResistBreaker
 	IsRanged       bool
+	AdvantageUsed  AdvantageType
 }
 
 func (r AttackResult) GetActorName() string        { return r.ActorName }

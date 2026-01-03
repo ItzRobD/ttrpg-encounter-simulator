@@ -62,7 +62,8 @@ func (entityStub) IsConcentrating() bool                { return false }
 func (entityStub) BreakConcentration()                  {}
 func (entityStub) SetConcentrating(bool, string)        {}
 
-func (entityStub) Regenerate() {}
+func (entityStub) Regenerate()                   {}
+func (entityStub) GetHasTakenTurnInCombat() bool { return false }
 
 // Keep only what EquipmentManager needs here
 type EmEntity struct {

@@ -26,4 +26,5 @@ type SimulationOptions struct {
 	UseMassiveDamage              bool
 	EnableSpecialAbilities        bool
 	MonsterDeathEffectsHitAllies  bool
+	AlwaysUseSneakAttack          bool
 }

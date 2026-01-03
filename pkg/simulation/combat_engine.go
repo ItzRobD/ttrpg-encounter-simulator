@@ -836,6 +836,15 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 
 	entity.Regenerate()
 
+	// Track that the entity has taken a turn in this combat
+	if entity.IsCharacter() {
+		c := entity.(*character.Character)
+		c.EntityStateManager.SetHasTakenTurnInCombat(true)
+	} else if entity.IsMonster() {
+		m := entity.(*monster.Monster)
+		m.EntityStateManager.SetHasTakenTurnInCombat(true)
+	}
+
 	// Character Specific Events
 	if entity.IsCharacter() {
 		c, ok := entity.(*character.Character)
@@ -851,7 +860,6 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 	// Monster Specific Events
 	if entity.IsMonster() {
 		ce.refreshLegendaryActions(combatantID)
-		entity.Regenerate()
 	}
 
 	return nil

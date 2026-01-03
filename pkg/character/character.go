@@ -641,4 +641,8 @@ func (c *Character) Regenerate() {
 	return // Characters don't regenerate
 }
 
+func (c *Character) GetHasTakenTurnInCombat() bool {
+	return c.EntityStateManager.GetHasTakenTurnInCombat()
+}
+
 var _ core.Entity = &Character{}

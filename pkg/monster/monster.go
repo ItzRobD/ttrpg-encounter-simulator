@@ -377,4 +377,8 @@ func (m *Monster) Regenerate() {
 	}
 }
 
+func (m *Monster) GetHasTakenTurnInCombat() bool {
+	return m.EntityStateManager.GetHasTakenTurnInCombat()
+}
+
 var _ core.Entity = &Monster{}

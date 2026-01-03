@@ -116,6 +116,7 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) (
 				DamageType:     ad.DamageType,
 				ResistBreakers: resistBreakers,
 				IsRanged:       ad.IsRangedWeapon,
+				AdvantageUsed:  attackRollResult.Advantage,
 			}
 
 			events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())

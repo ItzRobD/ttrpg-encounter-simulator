@@ -123,6 +123,8 @@ type EntityStateManager struct {
 	hasUsedMartialAdvantage bool
 	isDivineEminenceActive  bool
 	divineEminenceDice      int
+	hasUsedSneakAttack      bool
+	hasTakenTurnInCombat    bool
 }
 
 func (esm *EntityStateManager) GetHasUsedAction() bool {
@@ -180,6 +182,7 @@ func (esm *EntityStateManager) RefreshActions() {
 	esm.legendaryActionPoints = esm.legendaryActionPointsMax
 	esm.hasUsedMartialAdvantage = false
 	esm.isDivineEminenceActive = false
+	esm.hasUsedSneakAttack = false
 }
 
 func (esm *EntityStateManager) CanTakeActions() bool {
@@ -366,6 +369,22 @@ func (esm *EntityStateManager) GetHasUsedMartialAdvantage() bool {
 
 func (esm *EntityStateManager) SetHasUsedMartialAdvantage(val bool) {
 	esm.hasUsedMartialAdvantage = val
+}
+
+func (esm *EntityStateManager) GetHasUsedSneakAttack() bool {
+	return esm.hasUsedSneakAttack
+}
+
+func (esm *EntityStateManager) SetHasUsedSneakAttack(val bool) {
+	esm.hasUsedSneakAttack = val
+}
+
+func (esm *EntityStateManager) GetHasTakenTurnInCombat() bool {
+	return esm.hasTakenTurnInCombat
+}
+
+func (esm *EntityStateManager) SetHasTakenTurnInCombat(val bool) {
+	esm.hasTakenTurnInCombat = val
 }
 
 func (esm *EntityStateManager) GetIsDivineEminenceActive() bool {

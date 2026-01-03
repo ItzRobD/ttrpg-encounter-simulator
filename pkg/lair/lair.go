@@ -21,6 +21,8 @@ type Lair struct {
 
 func (l *Lair) Regenerate() {}
 
+func (l *Lair) GetHasTakenTurnInCombat() bool { return true }
+
 func NewLair(name string, rng *rand.Rand) *Lair {
 	if name == "" {
 		name = "Lair"

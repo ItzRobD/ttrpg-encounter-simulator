@@ -5,7 +5,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"fmt"
-	"log"
 )
 
 func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnResult, *core.AIRequest, error) {
@@ -98,6 +97,9 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 	if req == nil {
 		return nil, nil
 	}
+	if req.Actor == nil {
+		req.Actor = m
+	}
 	events.LogMonsterActionChoiceEvent(m, req.ActionType, m.EventListener)
 	req.ActorID = actorID
 	req.Actor = m
@@ -107,7 +109,6 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, error) {
 	if req.Actor == nil {
 		req.Actor = m
-		log.Printf("warning: monster execute ai req - actor is nil")
 	}
 
 	switch req.ActionType {
@@ -147,7 +148,8 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			Success:    true,
 		}, nil
 
-	case core.ATMonsterAction, core.ATMonsterMultiattack, core.ATMonsterSpecial, core.ATLegendaryAction:
+	case core.ATMonsterAction, core.ATMonsterMultiattack, core.ATMonsterSpecial:
+		m.EntityStateManager.ExpendAction()
 		// Reckless special ability
 		if req.SimOptions != nil && req.SimOptions.EnableSpecialAbilities {
 			m.EntityStateManager.SetIsRecklesslyAttacking(true)
@@ -169,12 +171,6 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			m.EntityStateManager.ExpendRechargeAction(req.ActionIndex)
 		}
 
-		// Legendary actions
-		if req.ActionType == core.ATLegendaryAction {
-			cost := m.ActionManager.LegendaryActions[req.ActionIndex].Cost
-			m.EntityStateManager.ExpendLegendaryActionPoints(cost)
-		}
-
 		var effects []core.Effect
 		for _, res := range results {
 			if res.GetIsHit() {
@@ -184,7 +180,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 					BaseValue:  res.GetDamageResult().GetTotal(),
 					DamageType: res.GetDamageType(),
 					AttackCtx: &core.AttackContext{
-						IsRanged:   req.ActionType == core.ATRanged,
+						IsRanged:   res.IsRanged,
 						IsCritical: res.IsCriticalHit,
 					},
 				})
@@ -206,6 +202,92 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 							effects = append(effects, *deEffect)
 						}
 					}
+
+					// Sneak Attack
+					if m.SpecialAbilities.SneakAttackNumDice > 0 {
+						saEffect := m.resolveSneakAttack(core.SneakAttackParams{
+							IsCritical: res.IsCriticalHit,
+							Advantage:  res.AdvantageUsed,
+							DamageType: res.DamageType,
+							IsRanged:   res.IsRanged,
+							IsSpell:    false,
+						}, req.SimOptions)
+						if saEffect != nil {
+							effects = append(effects, *saEffect)
+						}
+					}
+				}
+			}
+		}
+
+		return &core.ActionOutcome{
+			ActionType: req.ActionType,
+			TargetID:   req.TargetID,
+			ActorID:    req.ActorID,
+			Effects:    effects,
+			Success:    len(effects) > 0,
+		}, nil
+
+	case core.ATLegendaryAction:
+		attackReq, err := m.createAttackRequest(req.Target, req.ActionIndex, req.ActionType, req.SimOptions)
+		if err != nil {
+			return nil, err
+		}
+
+		results, err := m.ActionManager.ProcessAttackRequest(attackReq)
+		if err != nil {
+			return nil, err
+		}
+
+		// Legendary actions
+		cost := m.ActionManager.LegendaryActions[req.ActionIndex].Cost
+		m.EntityStateManager.ExpendLegendaryActionPoints(cost)
+
+		var effects []core.Effect
+		for _, res := range results {
+			if res.GetIsHit() {
+				effects = append(effects, core.Effect{
+					Type:       core.EffectDamage,
+					Value:      res.GetDamageResult().GetTotal(),
+					BaseValue:  res.GetDamageResult().GetTotal(),
+					DamageType: res.GetDamageType(),
+					AttackCtx: &core.AttackContext{
+						IsRanged:   res.IsRanged,
+						IsCritical: res.IsCriticalHit,
+					},
+				})
+
+				// Special abilities: Martial Advantage, Divine Eminence
+				if req.SimOptions != nil && req.SimOptions.EnableSpecialAbilities {
+					// Martial Advantage
+					if m.SpecialAbilities.MartialAdvantageNumDice > 0 {
+						maEffect := m.resolveMartialAdvantage(res.IsCriticalHit, req.SimOptions)
+						if maEffect != nil {
+							effects = append(effects, *maEffect)
+						}
+					}
+
+					// Divine Eminence
+					if m.SpecialAbilities.DivineEminenceNumDice > 0 && !res.IsRanged {
+						deEffect := m.resolveDivineEminence(res.IsCriticalHit, req.SimOptions)
+						if deEffect != nil {
+							effects = append(effects, *deEffect)
+						}
+					}
+
+					// Sneak Attack
+					if m.SpecialAbilities.SneakAttackNumDice > 0 {
+						saEffect := m.resolveSneakAttack(core.SneakAttackParams{
+							IsCritical: res.IsCriticalHit,
+							Advantage:  res.AdvantageUsed,
+							DamageType: res.DamageType,
+							IsRanged:   res.IsRanged,
+							IsSpell:    false,
+						}, req.SimOptions)
+						if saEffect != nil {
+							effects = append(effects, *saEffect)
+						}
+					}
 				}
 			}
 		}
@@ -219,6 +301,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}, nil
 
 	case core.ATSpell:
+		m.EntityStateManager.ExpendAction()
 		scReq, err := m.createSpellCastRequest(req.Target, *req.SpellChoice, req.SimOptions)
 		if err != nil {
 			return nil, err
@@ -273,6 +356,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			IsAOE:           res.IsAOE,
 		}, nil
 	case core.ATMonsterHeal:
+		m.EntityStateManager.ExpendAction()
 		hReq := req.HealRequest
 		if hReq == nil {
 			return nil, fmt.Errorf("missing heal request")

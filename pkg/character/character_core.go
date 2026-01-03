@@ -128,6 +128,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 
 	switch req.ActionType {
 	case core.ATMelee, core.ATRanged:
+		c.EntityStateManager.ExpendAction()
 		// If class features are enabled, decide whether to use Reckless Attack this turn (simple rule or override)
 		if req.SimOptions != nil && req.SimOptions.EnableClassFeatures {
 			// Basic policy: if config forces recklessness, enable; otherwise leave for future AI heuristics
@@ -158,7 +159,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 					DamageType:     res.GetDamageType(),
 					ResistBreakers: res.ResistBreakers,
 					AttackCtx: &core.AttackContext{
-						IsRanged:   req.ActionType == core.ATRanged,
+						IsRanged:   res.IsRanged,
 						IsCritical: res.IsCriticalHit,
 					},
 				})
@@ -174,6 +175,22 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 						}
 					}
 				}
+
+				// Sneak Attack check
+				if req.SimOptions != nil && req.SimOptions.EnableClassFeatures {
+					if c.Class.ClassFeatures.RogueFeatures != nil && c.Class.ClassFeatures.RogueFeatures.NumOfSneakAttackDice > 0 {
+						saEffect := c.resolveSneakAttack(core.SneakAttackParams{
+							IsCritical: res.IsCriticalHit,
+							Advantage:  res.AdvantageUsed,
+							DamageType: res.DamageType,
+							IsRanged:   res.IsRanged,
+							IsSpell:    false,
+						}, req.SimOptions)
+						if saEffect != nil {
+							effects = append(effects, *saEffect)
+						}
+					}
+				}
 			}
 		}
 
@@ -185,6 +202,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			Success:    len(effects) > 0,
 		}, nil
 	case core.ATOffhand:
+		c.EntityStateManager.ExpendBonusAction()
 		// Offhand attacks should not apply ability modifier to damage unless Two-Weapon Fighting style is present.
 		attackReq, err := c.CreateOffhandAttackRequest(req.Target, req.SimOptions)
 		if err != nil {
@@ -222,6 +240,22 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 						}
 					}
 				}
+
+				// Sneak Attack check
+				if req.SimOptions != nil && req.SimOptions.EnableClassFeatures {
+					if c.Class.ClassFeatures.RogueFeatures != nil && c.Class.ClassFeatures.RogueFeatures.NumOfSneakAttackDice > 0 {
+						saEffect := c.resolveSneakAttack(core.SneakAttackParams{
+							IsCritical: res.IsCriticalHit,
+							Advantage:  res.AdvantageUsed,
+							DamageType: res.DamageType,
+							IsRanged:   res.IsRanged,
+							IsSpell:    false,
+						}, req.SimOptions)
+						if saEffect != nil {
+							effects = append(effects, *saEffect)
+						}
+					}
+				}
 			}
 		}
 
@@ -233,6 +267,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			Success:    len(effects) > 0,
 		}, nil
 	case core.ATSpell:
+		c.EntityStateManager.ExpendAction()
 		scReq, err := c.CreateSpellCastRequest(req.Target, *req.SpellChoice, adv, req.SimOptions)
 		if err != nil {
 			return nil, err
@@ -292,6 +327,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			IsAOE:           res.IsAOE,
 		}, nil
 	case core.ATDragonbornBreathWeapon:
+		c.EntityStateManager.ExpendAction()
 		if c.Race.DragonbornFeatures == nil {
 			return nil, fmt.Errorf("character is not a dragonborn or missing breath weapon features")
 		}
@@ -360,6 +396,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			Success: true,
 		}, nil
 	case core.ATHeal:
+		c.EntityStateManager.ExpendAction()
 		if req.SimOptions != nil && !req.SimOptions.AllowCharacterHeals {
 			return nil, errors.New("character healing is disabled")
 		}

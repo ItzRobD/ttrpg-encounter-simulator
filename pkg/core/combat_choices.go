@@ -190,6 +190,7 @@ const (
 	ATMonsterDeathEffect                  = "monster death effect"
 	ATMonsterRetaliatoryEffect            = "monster retaliatory effect"
 	ATMonsterDivineEminence               = "monster divine eminence"
+	ATMonsterConsumeLife                  = "monster consume life"
 )
 
 func (a ActionType) String() string {

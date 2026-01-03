@@ -154,6 +154,9 @@ func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) 
 }
 
 func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error) {
+	if mai.parent.EntityStateManager.GetHasUsedAction() {
+		return nil, nil
+	}
 	var actionChoiceID int
 	var spellChoice *core.SpellChoice
 	var err error
@@ -365,6 +368,9 @@ func (mai *MonsterAI) chooseMonsterAction() (int, error) {
 }
 
 func (mai *MonsterAI) chooseSpell() (*core.SpellChoice, error) {
+	if mai.parent.EntityStateManager.GetHasUsedAction() {
+		return nil, fmt.Errorf("action already used")
+	}
 	if mai.parent.SpellCastingManager == nil || !mai.parent.IsSpellcaster() {
 		return nil, fmt.Errorf("monster is not a spellcaster")
 	}

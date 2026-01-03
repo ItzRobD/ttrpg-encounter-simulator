@@ -320,3 +320,63 @@ func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int, isSpe
 
 	return res, nil
 }
+
+func (c *Character) resolveSneakAttack(params core.SneakAttackParams, simOptions *core.SimulationOptions) *core.Effect {
+	if c.Class.ClassFeatures.RogueFeatures == nil || c.Class.ClassFeatures.RogueFeatures.NumOfSneakAttackDice <= 0 {
+		return nil
+	}
+
+	if params.IsSpell || params.IsRanged {
+		return nil
+	}
+
+	if c.EntityStateManager.GetHasUsedSneakAttack() {
+		return nil
+	}
+
+	// Sneak Attack: if you have advantage then perform sneak attack
+	// or if within 5 feet (simulated by AlwaysUseSneakAttack flag)
+	canUse := params.Advantage == core.RollAdvantage || (simOptions != nil && simOptions.AlwaysUseSneakAttack)
+
+	if !canUse {
+		return nil
+	}
+
+	numDice := c.Class.ClassFeatures.RogueFeatures.NumOfSneakAttackDice
+	opts := roll_manager.NewRollOptions()
+	opts.RollType = core.DiceRollDamage
+
+	var res *roll_manager.RollResult
+	var err error
+
+	if params.IsCritical && simOptions.UseImprovedCriticals {
+		total, rolls := c.RollManager.RollExtraMaxDice(numDice, core.D6)
+		res = &roll_manager.RollResult{
+			DiceRollType:   core.DiceRollDamage,
+			NumberOfDice:   len(rolls),
+			Die:            core.D6,
+			FinalRollValue: total,
+			FinalRolls:     rolls,
+			Total:          total,
+		}
+	} else {
+		if params.IsCritical {
+			numDice *= 2
+		}
+		res, err = c.RollManager.RollDice(numDice, core.D6, opts)
+	}
+
+	if err != nil || res == nil {
+		return nil
+	}
+
+	c.EntityStateManager.SetHasUsedSneakAttack(true)
+	events.LogSpecialAbilityEvent(c, "Sneak Attack", fmt.Sprintf("%s deals extra damage from Sneak Attack!", c.GetName()), "", res.Total, c.EventListener)
+
+	return &core.Effect{
+		Type:       core.EffectDamage,
+		Value:      res.Total,
+		BaseValue:  res.Total,
+		DamageType: params.DamageType,
+	}
+}
