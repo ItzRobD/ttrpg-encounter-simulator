@@ -47,7 +47,9 @@ func (s *SimulationManager) SetupEventListeners() {
 		}
 	}
 
-	for _, combatant := range s.combatEngine.Combatants {
+	ids := s.combatEngine.getSortedCombatantIDs()
+	for _, id := range ids {
+		combatant := s.combatEngine.Combatants[id]
 		// Attach listener to all combatants, including lair, so events can be logged uniformly
 		combatant.Entity.SetEventListener(eventListener)
 	}
@@ -106,7 +108,9 @@ func (s *SimulationManager) RunSimulation(maxRounds int) error {
 }
 
 func (s *SimulationManager) InitializeCombatants() {
-	for _, combatant := range s.combatEngine.Combatants {
+	ids := s.combatEngine.getSortedCombatantIDs()
+	for _, id := range ids {
+		combatant := s.combatEngine.Combatants[id]
 		// Skip lair combatants
 		if combatant.IsLair {
 			continue

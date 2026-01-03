@@ -186,7 +186,9 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 	if outcome.IsAOE {
 		if ce.SimOptions.AOEHitsAllEnemies || outcome.ActionType == core.ATMonsterDeathEffect {
 			targetIDs = []int{}
-			for id, combatant := range ce.Combatants {
+			ids := ce.getSortedCombatantIDs()
+			for _, id := range ids {
+				combatant := ce.Combatants[id]
 				if combatant.Entity.IsDead() {
 					continue
 				}
@@ -648,7 +650,9 @@ func (ce *CombatEngine) PrintCombatTracker() {
 
 // Debug function
 func (ce *CombatEngine) PrintCombatants() {
-	for _, c := range ce.Combatants {
+	ids := ce.getSortedCombatantIDs()
+	for _, id := range ids {
+		c := ce.Combatants[id]
 		if c.IsLair {
 			fmt.Println("Name: Lair")
 			continue
@@ -703,7 +707,9 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 	ce.CombatContext.CharactersInNeedOfHealing, ce.CombatContext.MonstersInNeedOfHealing = ce.calculateEntitiesNeedingHealing()
 	ce.CombatContext.DeadCombatants = ce.getDeadCombatantIDs()
 
-	for _, c := range ce.Combatants {
+	ids := ce.getSortedCombatantIDs()
+	for _, id := range ids {
+		c := ce.Combatants[id]
 		if !c.GetEntity().IsUnconscious() {
 			if c.GetEntity().IsCharacter() {
 				ce.CombatContext.ConsciousCharacterCount++
@@ -713,9 +719,7 @@ func (ce *CombatEngine) updateCombatContext(actorID int) {
 		}
 	}
 
-	// Update state for all combatants
-	ids := ce.getSortedCombatantIDs()
-	for _, id := range ids {
+	for _, id := range ce.getSortedCombatantIDs() {
 		if info, exists := ce.CombatContext.CombatantInfo[id]; exists {
 			info.UpdateState()
 		}
@@ -1003,7 +1007,8 @@ func (ce *CombatEngine) roundEndEvents() error {
 func (ce *CombatEngine) checkVictoryCondition() core.VictoryStatus {
 	var aliveCharacters, aliveMonsters bool
 
-	for id := range ce.Combatants {
+	ids := ce.getSortedCombatantIDs()
+	for _, id := range ids {
 		// Skip lair combatants
 		if ce.Combatants[id].IsLair {
 			continue

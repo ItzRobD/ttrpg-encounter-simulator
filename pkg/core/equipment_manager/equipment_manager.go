@@ -6,6 +6,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"fmt"
+	"sort"
 )
 
 type EquipmentManager struct {
@@ -239,11 +240,17 @@ func (em *EquipmentManager) CanUseVersatile(slot core.WeaponSlot) bool {
 }
 
 // GetAvailableWeaponSlots returns a slice of all available weapon slots that have weapon attack data in the EquipmentManager.
+// The returned slots are sorted by their integer value to ensure deterministic iteration.
 func (em *EquipmentManager) GetAvailableWeaponSlots() []core.WeaponSlot {
 	slots := make([]core.WeaponSlot, 0, len(em.WeaponAttackData))
 	for slot := range em.WeaponAttackData {
 		slots = append(slots, slot)
 	}
+
+	sort.Slice(slots, func(i, j int) bool {
+		return slots[i] < slots[j]
+	})
+
 	return slots
 }
 

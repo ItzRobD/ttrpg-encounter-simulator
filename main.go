@@ -145,7 +145,7 @@ func setupFrank() character.CharacterConfig {
 //}
 
 func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
-	seed := core.Seed{Seed1: 11, Seed2: 23}
+	seed := core.Seed{Seed1: 42, Seed2: 42}
 	config := core.SimulationOptions{
 		Seed:                      seed,
 		UseHPAverageCharacter:     false,

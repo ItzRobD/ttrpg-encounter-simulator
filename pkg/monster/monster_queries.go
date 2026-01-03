@@ -9,6 +9,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"dnd5e-encounter-simulator-backend/.gen/5e-encounter-simulator/public/enum"
@@ -778,8 +779,15 @@ func GetMonsterSpellcastingConfigByID(ctx context.Context, id []int) (map[int]Mo
 			}
 		}
 
-		// Innate spells with usage
-		for spellID, timesPerDay := range temp.InnateSpells {
+		// Innate spells with usage - sort by ID for determinism
+		innateSpellIDs := make([]int, 0, len(temp.InnateSpells))
+		for spellID := range temp.InnateSpells {
+			innateSpellIDs = append(innateSpellIDs, spellID)
+		}
+		sort.Ints(innateSpellIDs)
+
+		for _, spellID := range innateSpellIDs {
+			timesPerDay := temp.InnateSpells[spellID]
 			if spell, exists := allSpells[spellID]; exists {
 				innateSpells = append(innateSpells, spells.InnateSpell{
 					Spell:          spell,

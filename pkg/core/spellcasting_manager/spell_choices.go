@@ -19,7 +19,15 @@ func (scm *SpellcastingManager) GetMostEfficientHealingSpell(targetValue int) (*
 
 	var options []HealingOption
 
-	for _, spellsAtLevel := range pool {
+	// Sort map iteration by level
+	levels := make([]int, 0, len(pool))
+	for lvl := range pool {
+		levels = append(levels, lvl)
+	}
+	sort.Ints(levels)
+
+	for _, lvl := range levels {
+		spellsAtLevel := pool[lvl]
 		for _, spell := range spellsAtLevel {
 			castLevel, formula, avg := scm.getBestCastOptionForSpell(spell)
 
@@ -97,6 +105,11 @@ func (scm *SpellcastingManager) findMostEfficient(options []HealingOption) Heali
 	for _, option := range options[1:] {
 		if option.Efficiency > best.Efficiency {
 			best = option
+		} else if option.Efficiency == best.Efficiency {
+			// Tie-breaker: Name
+			if option.Spell.Name < best.Spell.Name {
+				best = option
+			}
 		}
 	}
 	return best
@@ -112,6 +125,11 @@ func (scm *SpellcastingManager) findMinimalOverheal(options []HealingOption) Hea
 			// If same overheal, prefer higher efficiency
 			if option.Efficiency > best.Efficiency {
 				best = option
+			} else if option.Efficiency == best.Efficiency {
+				// Tie-breaker: Name
+				if option.Spell.Name < best.Spell.Name {
+					best = option
+				}
 			}
 		}
 	}
@@ -128,6 +146,11 @@ func (scm *SpellcastingManager) findBestUnderheal(options []HealingOption) Heali
 			// If same underheal, prefer higher efficiency
 			if option.Efficiency > best.Efficiency {
 				best = option
+			} else if option.Efficiency == best.Efficiency {
+				// Tie-breaker: Name
+				if option.Spell.Name < best.Spell.Name {
+					best = option
+				}
 			}
 		}
 	}
@@ -251,7 +274,17 @@ func (scm *SpellcastingManager) getHighestAverageAvailableAOESpellChoice(t core.
 	var highestFormula *core.CastFormula
 	var highestValue int
 
-	for _, spellsAtLevel := range pool {
+	// Iterate levels in deterministic order
+	levels := make([]int, 0, len(pool))
+	for lvl := range pool {
+		levels = append(levels, lvl)
+	}
+	sort.Ints(levels)
+
+	for _, lvl := range levels {
+		spellsAtLevel := pool[lvl]
+		// spellsAtLevel is already a slice, but we should ensure it's processed deterministically
+		// if multiple spells have the same highestValue.
 		for _, spell := range spellsAtLevel {
 			if !spell.IsAOE {
 				continue
@@ -266,6 +299,12 @@ func (scm *SpellcastingManager) getHighestAverageAvailableAOESpellChoice(t core.
 				highestValue = value
 				highestSpell = spell
 				highestFormula = formula
+			} else if value == highestValue && highestSpell != nil {
+				// Tie-breaker: Name
+				if spell.Name < highestSpell.Name {
+					highestSpell = spell
+					highestFormula = formula
+				}
 			}
 		}
 	}
@@ -491,7 +530,15 @@ func (scm *SpellcastingManager) getHighestAverageAvailableSpellChoice(t core.Spe
 	var highestFormula *core.CastFormula
 	var highestValue int
 
-	for _, spellsAtLevel := range pool {
+	// Iterate levels in deterministic order
+	levels := make([]int, 0, len(pool))
+	for lvl := range pool {
+		levels = append(levels, lvl)
+	}
+	sort.Ints(levels)
+
+	for _, lvl := range levels {
+		spellsAtLevel := pool[lvl]
 		for _, spell := range spellsAtLevel {
 			castLevel, formula, value := scm.getBestCastOptionForSpell(spell)
 			if castLevel == -1 {
@@ -502,6 +549,12 @@ func (scm *SpellcastingManager) getHighestAverageAvailableSpellChoice(t core.Spe
 				highestValue = value
 				highestSpell = spell
 				highestFormula = formula
+			} else if value == highestValue && highestSpell != nil {
+				// Tie-breaker: Name
+				if spell.Name < highestSpell.Name {
+					highestSpell = spell
+					highestFormula = formula
+				}
 			}
 		}
 	}
