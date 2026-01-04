@@ -61,7 +61,7 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 	switch t {
 	case core.AIReqNormalAction:
 		var actionChoice core.ActionType
-		actionChoice, err = m.AI.chooseMonsterActionType()
+		actionChoice, err = m.AI.ChooseMonsterActionType()
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +100,11 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 	if req.Actor == nil {
 		req.Actor = m
 	}
-	events.LogMonsterActionChoiceEvent(m, req.ActionType, m.EventListener)
+	// Logging for tactical action (only if weighted AI is not used, to avoid duplication)
+	if m.AI.combatCtx == nil || !m.AI.combatCtx.Options.UseWeightedAI {
+		events.LogMonsterActionChoiceEvent(m, req.ActionType, nil, nil, 0, m.EventListener)
+	}
+
 	req.ActorID = actorID
 	req.Actor = m
 	return req, nil
@@ -172,7 +176,9 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}
 
 		var effects []core.Effect
+		var attackResults []core.AttackResult
 		for _, res := range results {
+			attackResults = append(attackResults, res)
 			if res.GetIsHit() {
 				effects = append(effects, core.Effect{
 					Type:       core.EffectDamage,
@@ -221,11 +227,12 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}
 
 		return &core.ActionOutcome{
-			ActionType: req.ActionType,
-			TargetID:   req.TargetID,
-			ActorID:    req.ActorID,
-			Effects:    effects,
-			Success:    len(effects) > 0,
+			ActionType:    req.ActionType,
+			TargetID:      req.TargetID,
+			ActorID:       req.ActorID,
+			Effects:       effects,
+			Success:       len(effects) > 0,
+			AttackResults: attackResults,
 		}, nil
 
 	case core.ATLegendaryAction:
@@ -244,7 +251,9 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		m.EntityStateManager.ExpendLegendaryActionPoints(cost)
 
 		var effects []core.Effect
+		var attackResults []core.AttackResult
 		for _, res := range results {
+			attackResults = append(attackResults, res)
 			if res.GetIsHit() {
 				effects = append(effects, core.Effect{
 					Type:       core.EffectDamage,
@@ -293,11 +302,12 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}
 
 		return &core.ActionOutcome{
-			ActionType: req.ActionType,
-			TargetID:   req.TargetID,
-			ActorID:    req.ActorID,
-			Effects:    effects,
-			Success:    len(effects) > 0,
+			ActionType:    req.ActionType,
+			TargetID:      req.TargetID,
+			ActorID:       req.ActorID,
+			Effects:       effects,
+			Success:       len(effects) > 0,
+			AttackResults: attackResults,
 		}, nil
 
 	case core.ATSpell:
@@ -313,6 +323,16 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		}
 
 		var effects []core.Effect
+		var attackResults []core.AttackResult
+		if !req.SpellChoice.Spell.GetHasDC() && !req.SpellChoice.Spell.GetIsAutoHit() {
+			attackResults = append(attackResults, core.AttackResult{
+				IsHit:         res.GetIsHit(),
+				IsCriticalHit: res.GetIsCriticalHit(),
+				AttackRoll:    res.GetAttackRoll(),
+				AttackTotal:   res.GetAttackTotal(),
+				AttackName:    res.SpellName,
+			})
+		}
 		if res.GetIsHit() || req.SpellChoice.Spell.GetIsAutoHit() {
 			if req.SpellChoice.Spell.GetSpellType() == core.STDamage {
 				effects = append(effects, core.Effect{
@@ -354,6 +374,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			IsConcentration: res.IsConcentration,
 			SpellName:       res.SpellName,
 			IsAOE:           res.IsAOE,
+			AttackResults:   attackResults,
 		}, nil
 	case core.ATMonsterHeal:
 		m.EntityStateManager.ExpendAction()

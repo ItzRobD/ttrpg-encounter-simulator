@@ -27,4 +27,11 @@ type SimulationOptions struct {
 	EnableSpecialAbilities        bool
 	MonsterDeathEffectsHitAllies  bool
 	AlwaysUseSneakAttack          bool
+
+	// Premium AI Options
+	UseWeightedAI      bool
+	DebugAI            bool
+	HPVisibilityMode   HPVisibilityMode
+	EnableMonsterNoise bool
+	MonsterNoiseWeight float64
 }

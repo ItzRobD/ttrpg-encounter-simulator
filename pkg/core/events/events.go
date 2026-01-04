@@ -94,9 +94,36 @@ type DragonbornBreathWeaponEvent struct {
 
 func (e *DragonbornBreathWeaponEvent) GetEventType() EventType { return ETDragonbornBreathWeaponEvent }
 
+type DecisionFactor string
+
+const (
+	FactorEmergencyHeal      DecisionFactor = "Ally Critical HP"
+	FactorHighThreat         DecisionFactor = "High Damage Taken"
+	FactorBloodiedTarget     DecisionFactor = "Enemy Bloodied"
+	FactorDeterministicNoise DecisionFactor = "DM Whim (Noise)"
+	FactorOptimalDamage      DecisionFactor = "Max Damage Output"
+	FactorHighHitability     DecisionFactor = "Easy to Hit"
+	FactorLowHitability      DecisionFactor = "Hard to Hit"
+	FactorHighPotency        DecisionFactor = "Dangerous Target (High Stats)"
+	FactorVengeance          DecisionFactor = "Vengeance (Last Attacker)"
+	FactorConcentration      DecisionFactor = "Breaking Concentration"
+	FactorEliteThreat        DecisionFactor = "Elite Enemy (Multiattack)"
+	FactorPotencyNova        DecisionFactor = "High Resource (Elite Target)"
+	FactorCriticalSmite      DecisionFactor = "Critical Hit Smite"
+)
+
+type ActionUtilityScore struct {
+	ActionType core.ActionType
+	TotalScore float64
+	Factors    map[DecisionFactor]float64 // Factor name -> Weighted contribution
+}
+
 type ActionChoiceEvent struct {
 	BaseEvent
 	ActionChoice core.ActionType
+	AllScores    []ActionUtilityScore // Data for the UI to graph all options
+	TopReasons   []DecisionFactor     // Human-readable top 3
+	UtilityScore float64              // Final winning score
 }
 
 func (e *ActionChoiceEvent) GetEventType() EventType { return ETActionChoiceEvent }
@@ -261,7 +288,9 @@ func (e *SavingThrowEvent) GetEventType() EventType { return ETSavingThrowEvent 
 
 type TargetChoiceEvent struct {
 	BaseEvent
-	Target string
+	Target  string
+	Score   float64
+	Factors map[DecisionFactor]float64
 }
 
 func (e *TargetChoiceEvent) GetEventType() EventType { return ETTargetChoiceEvent }

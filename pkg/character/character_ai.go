@@ -6,18 +6,21 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/races"
 	"fmt"
 	"math/rand/v2"
+	"sort"
 )
 
 type CharacterAI struct {
 	parent    *Character
 	combatCtx *core.CombatContext
+	Weights   *core.UtilityWeights
 	rng       *rand.Rand
 }
 
-func NewCharacterAI(c *Character) *CharacterAI {
+func NewCharacterAI(c *Character, weights *core.UtilityWeights) *CharacterAI {
 	return &CharacterAI{
 		parent:    c,
 		combatCtx: nil,
+		Weights:   weights,
 		rng:       c.GetRNG(),
 	}
 }
@@ -25,7 +28,11 @@ func (cai *CharacterAI) UpdateCombatContext(ctx *core.CombatContext) {
 	cai.combatCtx = ctx
 }
 
-func (cai *CharacterAI) chooseDamageSpell() (*core.SpellChoice, error) {
+func (cai *CharacterAI) chooseDamageSpell(target core.Entity) (*core.SpellChoice, error) {
+	if cai.combatCtx != nil && cai.combatCtx.Options.UseWeightedAI {
+		upcast := cai.ShouldExpendResource(target, false)
+		cai.parent.SpellCastingManager.SetForcedUpcast(upcast)
+	}
 	return cai.parent.SpellCastingManager.ChooseSpellByPriority(core.STDamage, cai.parent.EntityStateManager.GetSpellcastingPriority())
 }
 
@@ -71,8 +78,10 @@ func (cai *CharacterAI) chooseDamageActionType() (core.ActionType, error) {
 		return core.ATNoAction, fmt.Errorf("unknown action preference %s", actionPref)
 	}
 
-	// Structured logging: chosen damage action type
-	events.LogCharacterActionChoiceEvent(cai.parent, actionType, cai.parent.GetEventListener())
+	// Structured logging: chosen damage action type (only if weighted AI is not used, to avoid duplication)
+	if !cai.combatCtx.Options.UseWeightedAI {
+		events.LogCharacterActionChoiceEvent(cai.parent, actionType, nil, nil, 0, cai.parent.GetEventListener())
+	}
 	return actionType, nil
 }
 
@@ -92,9 +101,29 @@ func (cai *CharacterAI) chooseFallbackAction(exclude core.ActionType) core.Actio
 	return core.ATUnarmed
 }
 
-func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (core.TargetStatus, int, error) {
+func (cai *CharacterAI) hasValidTargets(targetType core.TargetType) bool {
+	var validTargets map[int]*core.Combatant
+	switch targetType {
+	case core.TTDamage:
+		validTargets = cai.getEnemyTargets()
+	case core.TTHealing:
+		allies := cai.getAllyTargets()
+		validTargets = make(map[int]*core.Combatant)
+		needHealing := cai.combatCtx.CharactersInNeedOfHealing
+		for _, id := range needHealing {
+			if c, ok := allies[id]; ok {
+				validTargets[id] = c
+			}
+		}
+	default:
+		return false
+	}
+	return len(validTargets) > 0
+}
+
+func (cai *CharacterAI) SelectTargetID(targetType core.TargetType) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
 	if cai.combatCtx == nil {
-		return core.TargetInvalidType, -1, fmt.Errorf("combat context not set")
+		return core.TargetInvalidType, -1, 0, nil, fmt.Errorf("combat context not set")
 	}
 
 	var validTargets map[int]*core.Combatant
@@ -111,18 +140,350 @@ func (cai *CharacterAI) selectTargetID(targetType core.TargetType) (core.TargetS
 			}
 		}
 	default:
-		return core.TargetInvalidType, -1, fmt.Errorf("unknown target type")
+		return core.TargetInvalidType, -1, 0, nil, fmt.Errorf("unknown target type")
 	}
 
+	if cai.combatCtx.Options.UseWeightedAI {
+		return cai.selectTargetWeighted(validTargets, targetType)
+	}
+
+	status, id, err := cai.selectTargetSimple(validTargets, targetType)
+	return status, id, 1.0, nil, err
+}
+
+func (cai *CharacterAI) selectTargetSimple(validTargets map[int]*core.Combatant, targetType core.TargetType) (core.TargetStatus, int, error) {
 	status, target, err := core.SelectTargetFromMap(validTargets, cai.parent.EntityStateManager.GetTargetPrioritization(), cai.rng)
 	if err != nil || status != core.TargetOK {
 		return status, -1, err
 	}
 	// Structured logging: chosen target
 	if combatant, ok := validTargets[target]; ok && combatant != nil {
-		events.LogTargetChoiceEvent(cai.parent, combatant.GetEntity(), cai.parent.GetEventListener())
+		events.LogTargetChoiceEvent(cai.parent, combatant.GetEntity(), 1.0, nil, cai.parent.GetEventListener())
 	}
 	return core.TargetOK, target, nil
+}
+
+func (cai *CharacterAI) selectTargetWeighted(validTargets map[int]*core.Combatant, targetType core.TargetType) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
+	if len(validTargets) == 0 {
+		return core.TargetNone, -1, 0, nil, nil
+	}
+
+	avgEnemyDamage := cai.calculateAvgEnemyDamage()
+
+	bestID := -1
+	bestScore := -1e18 // Standard practice for negative infinity initialization
+	var bestFactors map[events.DecisionFactor]float64
+
+	type factorContribution struct {
+		id      int
+		score   float64
+		factors map[events.DecisionFactor]float64
+	}
+	contributions := make(map[int]factorContribution)
+
+	ids := make([]int, 0, len(validTargets))
+	for id := range validTargets {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+
+	for _, id := range ids {
+		combatant := validTargets[id]
+		score := 0.0
+		factors := make(map[events.DecisionFactor]float64)
+
+		if targetType == core.TTDamage {
+			// 1. Hitability
+			hitability := core.CalculateHitabilityFactor(combatant.Entity.GetAC(), cai.parent.GetAttackBonus())
+			contribution := hitability * cai.Weights.TargetFactorWeights.TargetHitability
+			score += contribution
+			factors[events.FactorHighHitability] = contribution
+
+			// 2. Potency
+			potency := core.CalculatePotencyFactor(combatant.Entity.GetAC(), combatant.Entity.GetAttackBonus())
+			contribution = potency * cai.Weights.TargetFactorWeights.TargetPotency
+			score += contribution
+			factors[events.FactorHighPotency] = contribution
+
+			// 3. Vengeance
+			if cai.parent.Info != nil && combatant.Entity.GetInstanceID() == cai.parent.Info.Statistics.LastAttackerID {
+				score += cai.Weights.TargetFactorWeights.Vengeance
+				factors[events.FactorVengeance] = cai.Weights.TargetFactorWeights.Vengeance
+			}
+
+			// 4. Low HP
+			hpStatus := combatant.Entity.GetHPStatus()
+			hpFactor := core.CalculateHPFactor(hpStatus.GetHP(), hpStatus.GetMaxHP(), cai.combatCtx.Options.HPVisibilityMode)
+			contribution = hpFactor * cai.Weights.TargetFactorWeights.LowHP
+			score += contribution
+			factors[events.FactorBloodiedTarget] = contribution
+
+			// 5. Concentration
+			if combatant.Entity.IsConcentrating() {
+				score += cai.Weights.TargetFactorWeights.ConcentrationBreak
+				factors[events.FactorConcentration] = cai.Weights.TargetFactorWeights.ConcentrationBreak
+			}
+
+			// 6. High Threat
+			if cai.combatCtx.MaxDamageSeen > 0 {
+				threat := float64(combatant.Info.Statistics.LastDamageDealt) / float64(cai.combatCtx.MaxDamageSeen)
+				contribution = threat * cai.Weights.TargetFactorWeights.HighThreat
+				score += contribution
+				factors[events.FactorHighThreat] = contribution
+			}
+
+			// 7. Elite Priority
+			if combatant.Entity.GetIsLegendary() {
+				score += cai.Weights.TargetFactorWeights.ElitePriority
+				factors[events.FactorEliteThreat] = cai.Weights.TargetFactorWeights.ElitePriority
+			}
+		} else if targetType == core.TTHealing {
+			// 1. Emergency Heal
+			hpStatus := combatant.Entity.GetHPStatus()
+			emergency := core.CalculateEmergencyHealFactor(hpStatus.GetHP(), avgEnemyDamage)
+			contribution := emergency * cai.Weights.TargetFactorWeights.EmergencyHeal
+			score += contribution
+			factors[events.FactorEmergencyHeal] = contribution
+		}
+
+		contributions[id] = factorContribution{id: id, score: score, factors: factors}
+
+		if score > bestScore {
+			bestScore = score
+			bestID = id
+			bestFactors = factors
+		}
+	}
+
+	if bestID == -1 {
+		return core.TargetNone, -1, 0, nil, nil
+	}
+
+	if cai.combatCtx.Options.DebugAI {
+		fmt.Printf("[DEBUG TARGET] %s selects %s. Total Score: %.2f. Breakdown: ",
+			cai.parent.GetName(), validTargets[bestID].Entity.GetName(), bestScore)
+		// Sort factors for consistent output
+		var factorKeys []events.DecisionFactor
+		for k := range bestFactors {
+			factorKeys = append(factorKeys, k)
+		}
+		sort.Slice(factorKeys, func(i, j int) bool {
+			return factorKeys[i] < factorKeys[j]
+		})
+		for _, k := range factorKeys {
+			fmt.Printf("[%s: %.2f] ", k, bestFactors[k])
+		}
+		fmt.Println()
+	}
+
+	events.LogTargetChoiceEvent(cai.parent, validTargets[bestID].Entity, bestScore, bestFactors, cai.parent.GetEventListener())
+	return core.TargetOK, bestID, bestScore, bestFactors, nil
+}
+
+func (cai *CharacterAI) chooseActionWeighted() (core.ActionType, error) {
+	healUtility := 0.0
+	damageUtility := cai.Weights.ActionWeights[core.ATDamage]
+	if damageUtility == 0 {
+		damageUtility = 1.0
+	}
+	breathUtility := 0.0
+
+	healFactors := make(map[events.DecisionFactor]float64)
+	damageFactors := make(map[events.DecisionFactor]float64)
+	breathFactors := make(map[events.DecisionFactor]float64)
+
+	// Evaluate Damage Utility based on best target
+	tStatus, _, bestDamageScore, bestDamageFactors, _ := cai.SelectTargetID(core.TTDamage)
+	if tStatus == core.TargetOK {
+		damageUtility *= bestDamageScore
+		if cai.combatCtx.Options.UseWeightedAI {
+			fmt.Printf("[DEBUG AI] %s: Damage Base Utility: %.2f, Best Target Score: %.2f, Final Damage Utility: %.2f\n",
+				cai.parent.GetName(), cai.Weights.ActionWeights[core.ATDamage], bestDamageScore, damageUtility)
+		}
+		for f, v := range bestDamageFactors {
+			damageFactors[f] = v * cai.Weights.ActionWeights[core.ATDamage]
+		}
+	} else {
+		damageUtility = 0 // No targets, no damage utility
+	}
+	damageFactors[events.FactorOptimalDamage] = damageUtility
+
+	if cai.parent.IsHealer() {
+		// Evaluate ALL allies for healing utility
+		allies := cai.getAllyTargets()
+		if len(allies) > 0 {
+			// Find ally with highest healing utility
+			bestHealScore := 0.0
+			avgEnemyDamage := cai.calculateAvgEnemyDamage()
+
+			ids := make([]int, 0, len(allies))
+			for id := range allies {
+				ids = append(ids, id)
+			}
+			sort.Ints(ids)
+
+			for _, id := range ids {
+				ally := allies[id]
+				hpStatus := ally.Entity.GetHPStatus()
+				emergency := core.CalculateEmergencyHealFactor(hpStatus.GetHP(), avgEnemyDamage)
+				score := emergency * cai.Weights.TargetFactorWeights.EmergencyHeal
+				if score > bestHealScore {
+					bestHealScore = score
+				}
+			}
+
+			healUtility = cai.Weights.ActionWeights[core.ATHeal] * bestHealScore
+			healFactors[events.FactorEmergencyHeal] = healUtility
+			if cai.combatCtx.Options.UseWeightedAI {
+				fmt.Printf("[DEBUG AI] %s: Heal Base Utility: %.2f, Best Heal Score: %.2f, Final Heal Utility: %.2f\n",
+					cai.parent.GetName(), cai.Weights.ActionWeights[core.ATHeal], bestHealScore, healUtility)
+			}
+		}
+	}
+
+	// Dragonborn Breath Weapon
+	if cai.parent.Race.ID == races.Dragonborn &&
+		!cai.parent.EntityStateManager.GetDBBreathWeaponUsed() &&
+		cai.combatCtx.Options.AllowDragonbornBreathAttack {
+
+		// For now, we use the same best damage score as a proxy for breath weapon quality
+		// In a more advanced sim, we'd check if many targets are in range/AOE.
+		if tStatus == core.TargetOK {
+			breathUtility = cai.Weights.ActionWeights[core.ATDragonbornBreathWeapon]
+			if breathUtility == 0 {
+				breathUtility = 1.0 // Default to same as standard damage if not set
+			}
+			breathUtility *= bestDamageScore
+			breathFactors[events.FactorOptimalDamage] = breathUtility
+			if cai.combatCtx.Options.UseWeightedAI {
+				fmt.Printf("[DEBUG AI] %s: Breath Base Utility: %.2f, Best Target Score: %.2f, Final Breath Utility: %.2f\n",
+					cai.parent.GetName(), cai.Weights.ActionWeights[core.ATDragonbornBreathWeapon], bestDamageScore, breathUtility)
+			}
+		}
+	}
+
+	var chosenAction core.ActionType
+	var finalUtility float64
+	var allScores []events.ActionUtilityScore
+
+	allScores = append(allScores, events.ActionUtilityScore{
+		ActionType: core.ATDamage,
+		TotalScore: damageUtility,
+		Factors:    damageFactors,
+	})
+
+	if cai.parent.IsHealer() {
+		allScores = append(allScores, events.ActionUtilityScore{
+			ActionType: core.ATHeal,
+			TotalScore: healUtility,
+			Factors:    healFactors,
+		})
+	}
+
+	if breathUtility > 0 {
+		allScores = append(allScores, events.ActionUtilityScore{
+			ActionType: core.ATDragonbornBreathWeapon,
+			TotalScore: breathUtility,
+			Factors:    breathFactors,
+		})
+	}
+
+	// Find the highest utility action
+	chosenAction = core.ATDamage
+	finalUtility = damageUtility
+
+	if healUtility > finalUtility {
+		chosenAction = core.ATHeal
+		finalUtility = healUtility
+	}
+
+	if breathUtility > finalUtility {
+		chosenAction = core.ATDragonbornBreathWeapon
+		finalUtility = breathUtility
+	}
+
+	// Determine top reasons
+	topReasons := make([]events.DecisionFactor, 0)
+	var currentFactors map[events.DecisionFactor]float64
+	switch chosenAction {
+	case core.ATHeal:
+		currentFactors = healFactors
+	case core.ATDragonbornBreathWeapon:
+		currentFactors = breathFactors
+	default:
+		currentFactors = damageFactors
+	}
+
+	type factorPair struct {
+		f events.DecisionFactor
+		v float64
+	}
+	pairs := make([]factorPair, 0, len(currentFactors))
+	for f, v := range currentFactors {
+		if v > 0 {
+			pairs = append(pairs, factorPair{f, v})
+		}
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].v > pairs[j].v
+	})
+
+	for i := 0; i < len(pairs) && i < 3; i++ {
+		topReasons = append(topReasons, pairs[i].f)
+	}
+
+	if len(topReasons) == 0 {
+		topReasons = append(topReasons, events.FactorOptimalDamage)
+	}
+
+	events.LogCharacterActionChoiceEvent(cai.parent, chosenAction, allScores, topReasons, finalUtility, cai.parent.GetEventListener())
+
+	return chosenAction, nil
+}
+
+// ShouldExpendResource determines if a high-value resource (like Smite or high-level spell slot)
+// should be used based on target potency and simulation settings.
+func (cai *CharacterAI) ShouldExpendResource(target core.Entity, isCritical bool) bool {
+	if cai.Weights == nil {
+		return false
+	}
+
+	potency := core.CalculatePotencyFactor(target.GetAC(), target.GetAttackBonus())
+	weight := cai.Weights.ResourceExpenditureWeight
+
+	// Critical hits significantly increase the desire to spend resources (the "Big Hit")
+	if isCritical {
+		weight *= 2.0
+	}
+
+	return core.ShouldExpendHighResource(potency, weight)
+}
+
+func (cai *CharacterAI) calculateAvgEnemyDamage() int {
+	totalAvgDamage := 0.0
+	enemyCount := 0
+
+	ids := make([]int, 0, len(cai.combatCtx.CombatantInfo))
+	for id := range cai.combatCtx.CombatantInfo {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+
+	for _, id := range ids {
+		info := cai.combatCtx.CombatantInfo[id]
+		if (cai.parent.IsCharacter() != info.Combatant.Entity.IsCharacter()) && !info.Combatant.Entity.IsDead() {
+			totalAvgDamage += info.Statistics.AverageDamagePerRound
+			enemyCount++
+		}
+	}
+	if enemyCount > 0 {
+		res := int(totalAvgDamage / float64(enemyCount))
+		if res < 1 {
+			return 1
+		}
+		return res
+	}
+	return 10 // Safe default if no active enemies
 }
 
 func (cai *CharacterAI) getEnemyTargets() map[int]*core.Combatant {
@@ -157,15 +518,22 @@ func (cai *CharacterAI) getAllyTargets() map[int]*core.Combatant {
 	return allies
 }
 
-func (cai *CharacterAI) chooseCharacterActionType() (core.ActionType, error) {
+func (cai *CharacterAI) ChooseCharacterActionType() (core.ActionType, error) {
 	if cai.combatCtx == nil {
 		return core.ATNoAction, fmt.Errorf("combat context not set")
 	}
 
+	if cai.parent.EntityStateManager.GetHasUsedAction() {
+		return core.ATNoAction, nil
+	}
+
+	if cai.combatCtx.Options.UseWeightedAI {
+		return cai.chooseActionWeighted()
+	}
+
 	if cai.parent.Race.ID == races.Dragonborn && !cai.parent.EntityStateManager.GetDBBreathWeaponUsed() {
 		// Use breath weapon if there are targets (simple AI logic)
-		tStatus, _, _ := cai.selectTargetID(core.TTDamage)
-		if tStatus == core.TargetOK {
+		if cai.hasValidTargets(core.TTDamage) {
 			return core.ATDragonbornBreathWeapon, nil
 		}
 	}
@@ -180,7 +548,11 @@ func (cai *CharacterAI) chooseCharacterActionType() (core.ActionType, error) {
 }
 
 func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, error) {
-	tStatus, targetID, err := cai.selectTargetID(core.TTHealing)
+	if cai.parent.EntityStateManager.GetHasUsedAction() {
+		return nil, nil
+	}
+
+	tStatus, targetID, _, _, err := cai.SelectTargetID(core.TTHealing)
 	if err != nil {
 		return nil, err
 	}
@@ -200,6 +572,11 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 		events.LogSpellChoiceEvent(cai.parent, healReq.SpellChoice, cai.parent.SpellCastingManager.GetStatus(), cai.parent.GetEventListener())
 	}
 
+	// Logging for tactical action (only if weighted AI is not used, to avoid duplication)
+	if !cai.combatCtx.Options.UseWeightedAI {
+		events.LogCharacterActionChoiceEvent(cai.parent, core.ATHeal, nil, nil, 0, cai.parent.GetEventListener())
+	}
+
 	return &core.AIRequest{
 		Actor:       cai.parent,
 		ActorType:   core.EntityCharacter,
@@ -211,12 +588,16 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 }
 
 func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, error) {
+	if cai.parent.EntityStateManager.GetHasUsedAction() {
+		return nil, nil
+	}
+
 	var req core.AIRequest
 	var choice *core.SpellChoice
 	var useVersatile bool
 	var slot core.WeaponSlot
 
-	tStatus, targetID, err := cai.selectTargetID(core.TTDamage)
+	tStatus, targetID, _, _, err := cai.SelectTargetID(core.TTDamage)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +613,8 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 
 	switch at {
 	case core.ATSpell:
-		choice, err = cai.chooseDamageSpell()
+		target := cai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity()
+		choice, err = cai.chooseDamageSpell(target)
 		if err != nil {
 			return nil, err
 		}
@@ -321,7 +703,7 @@ func (cai *CharacterAI) createCharacterOffhandActionRequest() (*core.AIRequest, 
 		return nil, nil // No offhand
 	}
 
-	tStatus, targetID, err := cai.selectTargetID(core.TTDamage)
+	tStatus, targetID, _, _, err := cai.SelectTargetID(core.TTDamage)
 	if err != nil || tStatus != core.TargetOK {
 		return nil, nil
 	}
@@ -339,13 +721,22 @@ func (cai *CharacterAI) createCharacterOffhandActionRequest() (*core.AIRequest, 
 }
 
 func (cai *CharacterAI) createDragonbornBreathWeaponRequest() (*core.AIRequest, error) {
-	tStatus, targetID, err := cai.selectTargetID(core.TTDamage)
+	if cai.parent.EntityStateManager.GetHasUsedAction() {
+		return nil, nil
+	}
+
+	tStatus, targetID, _, _, err := cai.SelectTargetID(core.TTDamage)
 	if err != nil {
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
 		events.LogCombatEventMessage(cai.parent, "No valid targets for breath weapon", cai.parent.GetEventListener())
 		return nil, nil
+	}
+
+	// Logging for tactical action (only if weighted AI is not used, to avoid duplication)
+	if !cai.combatCtx.Options.UseWeightedAI {
+		events.LogCharacterActionChoiceEvent(cai.parent, core.ATDragonbornBreathWeapon, nil, nil, 0, cai.parent.GetEventListener())
 	}
 
 	req := &core.AIRequest{

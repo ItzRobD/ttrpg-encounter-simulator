@@ -31,6 +31,7 @@ type SpellcastingManager struct {
 	damageSpellCount       int
 	healingSpellCount      int
 	spellcastModifierValue int
+	spellAttackBonus       int
 
 	// Runtime options (set by CombatContext at combat time)
 	simOptions *core.SimulationOptions
@@ -38,6 +39,8 @@ type SpellcastingManager struct {
 	// Monsters only
 	ability core.Ability
 	saveDC  int
+
+	forcedUpcast bool
 }
 
 func NewSpellcastingManager(parent core.Entity, rm *roll_manager.RollManager, casterType core.CasterType, casterLevel int, currentSlots spells.SpellSlots, maxSlots spells.SpellSlots, spellcastModValue int) *SpellcastingManager {
@@ -49,6 +52,7 @@ func NewSpellcastingManager(parent core.Entity, rm *roll_manager.RollManager, ca
 		currentSlots:           currentSlots,
 		maxSlots:               maxSlots,
 		spellcastModifierValue: spellcastModValue,
+		spellAttackBonus:       spellcastModValue + core.GetProficiencyBonus(casterLevel, parent.IsMonster()),
 		healingSpells:          map[int][]*spells.Spell{}, // Key is spell level
 		damageSpells:           map[int][]*spells.Spell{}, // Key is spell level
 		healingSpellsInnate:    map[int][]*spells.InnateSpell{},
@@ -79,6 +83,14 @@ func (scm *SpellcastingManager) GetSaveDC() int {
 
 func (scm *SpellcastingManager) GetSpellcastModifierValue() int {
 	return scm.spellcastModifierValue
+}
+
+func (scm *SpellcastingManager) GetAttackModifier() int {
+	return scm.spellAttackBonus
+}
+
+func (scm *SpellcastingManager) SetForcedUpcast(val bool) {
+	scm.forcedUpcast = val
 }
 
 func (scm *SpellcastingManager) AddKnownSpell(spell *spells.Spell) error {

@@ -82,7 +82,7 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 
 	// Structured logging: chosen action and target
 	events.LogCombatEventMessage(lai.parent, fmt.Sprintf("Lair chooses lair action: %s", action.Name), lai.parent.GetEventListener())
-	events.LogTargetChoiceEvent(lai.parent, target, lai.parent.GetEventListener())
+	events.LogTargetChoiceEvent(lai.parent, target, 1.0, nil, lai.parent.GetEventListener())
 
 	return req, nil
 }

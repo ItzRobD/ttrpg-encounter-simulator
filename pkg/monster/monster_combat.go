@@ -38,10 +38,10 @@ func (m *Monster) createAttackRequest(target core.Entity, actionIndex int, actio
 
 	// Determine ranged vs melee for condition rules from the first attack data
 	adList := m.ActionManager.GetAttackDataFromIndex(actionIndex, actionType)
-	isRanged := false
-	if len(adList) > 0 {
-		isRanged = adList[0].IsRangedWeapon
+	if len(adList) == 0 {
+		return nil, fmt.Errorf("no attack data found for action index %d and type %v", actionIndex, actionType)
 	}
+	isRanged := adList[0].IsRangedWeapon
 	// Compute final advantage using unified core helper
 	advSlice := make([]core.AdvantageType, 0)
 	computedAdv := core.DetermineAttackAdvantageForEntities(m, target, isRanged, core.RollNormal)
@@ -226,10 +226,36 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 	return res, nil
 }
 
+func (m *Monster) GetAttackBonus() int {
+	bestBonus := 0
+
+	// Check actions from ActionManager
+	if m.ActionManager != nil {
+		for _, action := range m.ActionManager.Actions {
+			if action.AttackBonus > bestBonus {
+				bestBonus = action.AttackBonus
+			}
+		}
+	}
+
+	// Check spellcasting
+	if m.MonsterBase.IsSpellcaster && m.SpellCastingManager != nil {
+		bonus := m.SpellCastingManager.GetAttackModifier()
+		if bonus > bestBonus {
+			bestBonus = bonus
+		}
+	}
+
+	return bestBonus
+}
+
 func (m *Monster) UpdateAICombatContext(ctx *core.CombatContext) error {
 	m.AI.UpdateCombatContext(ctx)
 	if m.SpellCastingManager != nil {
 		m.SpellCastingManager.SetSimulationOptions(ctx.Opt())
+	}
+	if info, ok := ctx.CombatantInfo[m.MonsterBase.InstanceID]; ok {
+		m.Info = info
 	}
 	return nil
 }

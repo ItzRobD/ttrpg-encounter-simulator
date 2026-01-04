@@ -51,6 +51,22 @@ func GetMonsterProficiencyBonus(challengeRating float64) (int, error) {
 	return 0, fmt.Errorf("challenge rating not found")
 }
 
+func GetProficiencyBonus(level int, isMonster bool) int {
+	if isMonster {
+		pb, err := GetMonsterProficiencyBonus(float64(level))
+		if err != nil {
+			return 2 // fallback
+		}
+		return pb
+	}
+
+	pb, err := GetCharacterProficiencyBonus(uint8(level))
+	if err != nil {
+		return 2 // fallback
+	}
+	return pb
+}
+
 type AbilityScoreModifier struct {
 	Scores   []int
 	Modifier int

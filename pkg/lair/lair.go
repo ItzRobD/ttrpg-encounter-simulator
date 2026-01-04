@@ -23,6 +23,26 @@ func (l *Lair) Regenerate() {}
 
 func (l *Lair) GetHasTakenTurnInCombat() bool { return true }
 
+func (l *Lair) GetID() int { return -1 } // Lairs usually don't have unique IDs in current tracking
+
+func (l *Lair) GetInstanceID() int { return -1 }
+
+func (l *Lair) SetInstanceID(id int) {
+	// Lairs don't strictly need InstanceIDs for current utility, but implementing interface
+}
+
+func (l *Lair) GetAttackBonus() int {
+	best := 0
+	if l.actionManager != nil {
+		for _, a := range l.actionManager.Actions {
+			if a.AttackData.AttackModifier > best {
+				best = a.AttackData.AttackModifier
+			}
+		}
+	}
+	return best
+}
+
 func NewLair(name string, rng *rand.Rand) *Lair {
 	if name == "" {
 		name = "Lair"

@@ -77,10 +77,15 @@ func (h *UniversalEventHandler) handleDragonbornBreathWeapon(e *DragonbornBreath
 }
 
 func (h *UniversalEventHandler) handleActionChoice(e *ActionChoiceEvent) {
-	fmt.Printf("[Round %d] <Action Choice> %s chooses %s as its action.\n",
+	s := fmt.Sprintf("[Round %d] <Action Choice> %s chooses %s as its action.",
 		e.GetRound(),
 		e.GetActor(),
 		e.ActionChoice)
+
+	if len(e.TopReasons) > 0 {
+		s += fmt.Sprintf(" Utility: %.2f. Top Reasons: %v", e.UtilityScore, e.TopReasons)
+	}
+	fmt.Println(s)
 }
 
 func (h *UniversalEventHandler) handleSpellChoice(e *SpellChoiceEvent) {
@@ -367,10 +372,27 @@ func (h *UniversalEventHandler) handleHPRoll(e *HPRollEvent) {
 }
 
 func (h *UniversalEventHandler) handleTargetChoice(e *TargetChoiceEvent) {
-	fmt.Printf("[Round %d] <Target Choice> %s chooses %s as their target.\n",
+	s := fmt.Sprintf("[Round %d] <Target Choice> %s chooses %s as their target.",
 		e.GetRound(),
 		e.GetActor(),
 		e.Target)
+
+	if e.Score > 1.0 || len(e.Factors) > 0 {
+		s += fmt.Sprintf(" Score: %.2f.", e.Score)
+		if len(e.Factors) > 0 {
+			s += " Factors: ["
+			first := true
+			for f, v := range e.Factors {
+				if !first {
+					s += " "
+				}
+				s += fmt.Sprintf("%s: %.2f", f, v)
+				first = false
+			}
+			s += "]"
+		}
+	}
+	fmt.Println(s)
 }
 
 func (h *UniversalEventHandler) handleSavingThrow(e *SavingThrowEvent) {

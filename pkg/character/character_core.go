@@ -81,7 +81,7 @@ func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReq
 	switch t {
 	case core.AIReqNormalAction:
 		var actionChoice core.ActionType
-		actionChoice, err = c.AI.chooseCharacterActionType()
+		actionChoice, err = c.AI.ChooseCharacterActionType()
 		if err != nil {
 			return nil, err
 		}
@@ -150,7 +150,9 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		}
 
 		var effects []core.Effect
+		var attackResults []core.AttackResult
 		for _, res := range results {
+			attackResults = append(attackResults, res)
 			if res.GetIsHit() {
 				effects = append(effects, core.Effect{
 					Type:           core.EffectDamage,
@@ -167,7 +169,14 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 				// Divine Smite check
 				if req.ActionType == core.ATMelee && req.SimOptions != nil && req.SimOptions.EnableClassFeatures {
 					if c.Class.ClassFeatures.PaladinFeatures != nil && c.Class.ClassFeatures.PaladinFeatures.HasDivineSmite {
-						if req.SimOptions.PaladinAlwaysSmite {
+						useSmite := false
+						if req.SimOptions.UseWeightedAI {
+							useSmite = c.AI.ShouldExpendResource(req.Target, res.IsCriticalHit)
+						} else {
+							useSmite = req.SimOptions.PaladinAlwaysSmite
+						}
+
+						if useSmite {
 							smiteEffect := c.resolveDivineSmite(req.Target, res.IsCriticalHit, req.SimOptions)
 							if smiteEffect != nil {
 								effects = append(effects, *smiteEffect)
@@ -195,11 +204,12 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		}
 
 		return &core.ActionOutcome{
-			ActionType: req.ActionType,
-			TargetID:   req.TargetID,
-			ActorID:    req.ActorID,
-			Effects:    effects,
-			Success:    len(effects) > 0,
+			ActionType:    req.ActionType,
+			TargetID:      req.TargetID,
+			ActorID:       req.ActorID,
+			Effects:       effects,
+			Success:       len(effects) > 0,
+			AttackResults: attackResults,
 		}, nil
 	case core.ATOffhand:
 		c.EntityStateManager.ExpendBonusAction()
@@ -215,7 +225,9 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		}
 
 		var effects []core.Effect
+		var attackResults []core.AttackResult
 		for _, res := range results {
+			attackResults = append(attackResults, res)
 			if res.GetIsHit() {
 				effects = append(effects, core.Effect{
 					Type:           core.EffectDamage,
@@ -232,7 +244,14 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 				// Divine Smite check
 				if req.SimOptions != nil && req.SimOptions.EnableClassFeatures {
 					if c.Class.ClassFeatures.PaladinFeatures != nil && c.Class.ClassFeatures.PaladinFeatures.HasDivineSmite {
-						if req.SimOptions.PaladinAlwaysSmite {
+						useSmite := false
+						if req.SimOptions.UseWeightedAI {
+							useSmite = c.AI.ShouldExpendResource(req.Target, res.IsCriticalHit)
+						} else {
+							useSmite = req.SimOptions.PaladinAlwaysSmite
+						}
+
+						if useSmite {
 							smiteEffect := c.resolveDivineSmite(req.Target, res.IsCriticalHit, req.SimOptions)
 							if smiteEffect != nil {
 								effects = append(effects, *smiteEffect)
@@ -260,11 +279,12 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		}
 
 		return &core.ActionOutcome{
-			ActionType: req.ActionType,
-			TargetID:   req.TargetID,
-			ActorID:    req.ActorID,
-			Effects:    effects,
-			Success:    len(effects) > 0,
+			ActionType:    req.ActionType,
+			TargetID:      req.TargetID,
+			ActorID:       req.ActorID,
+			Effects:       effects,
+			Success:       len(effects) > 0,
+			AttackResults: attackResults,
 		}, nil
 	case core.ATSpell:
 		c.EntityStateManager.ExpendAction()
@@ -279,6 +299,16 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		}
 
 		var effects []core.Effect
+		var attackResults []core.AttackResult
+		if !req.SpellChoice.Spell.GetHasDC() && !req.SpellChoice.Spell.GetIsAutoHit() {
+			attackResults = append(attackResults, core.AttackResult{
+				IsHit:         res.GetIsHit(),
+				IsCriticalHit: res.GetIsCriticalHit(),
+				AttackRoll:    res.GetAttackRoll(),
+				AttackTotal:   res.GetAttackTotal(),
+				AttackName:    res.SpellName,
+			})
+		}
 		if res.GetIsHit() || req.SpellChoice.Spell.GetIsAutoHit() {
 			if req.SpellChoice.Spell.GetSpellType() == core.STDamage {
 				// Special handling for Magic Missile multi-dart logic if needed
@@ -325,6 +355,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			IsConcentration: res.IsConcentration,
 			SpellName:       res.SpellName,
 			IsAOE:           res.IsAOE,
+			AttackResults:   attackResults,
 		}, nil
 	case core.ATDragonbornBreathWeapon:
 		c.EntityStateManager.ExpendAction()

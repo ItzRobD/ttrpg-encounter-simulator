@@ -21,6 +21,9 @@ import (
 
 // Character represents a player or NPC with attributes like name, class, level, and various managers for gameplay systems.
 type Character struct {
+	ID                   int
+	InstanceID           int
+	Info                 *core.CombatantInfo
 	Name                 string
 	Race                 races.Race
 	Class                classes.Class
@@ -54,6 +57,7 @@ type CharacterConfig struct {
 	Resistances         core.DamageResistances
 	FightingStyles      []classes.FightingStyle
 	KnownSpells         []string
+	UtilityWeights      *core.UtilityWeights
 	EntityConfiguration entity_configuration.EntityConfiguration
 }
 
@@ -151,7 +155,7 @@ func NewCharacter(ctx context.Context, charConfig CharacterConfig) (*Character, 
 		char.RollManager.RerollAbilities.HasIndomitable = true
 	}
 	// AI
-	char.AI = NewCharacterAI(&char)
+	char.AI = NewCharacterAI(&char, charConfig.UtilityWeights)
 
 	// Entity State Manager
 	esmConfig := entity_state_manager.EntityStateConfig{
@@ -332,7 +336,7 @@ func NewCharacterWithRNG(ctx context.Context, charConfig CharacterConfig, rng *r
 	if char.Configuration.CombatFeatures.ReRollAbilities.HasIndomitable {
 		char.RollManager.RerollAbilities.HasIndomitable = true
 	}
-	char.AI = NewCharacterAI(&char)
+	char.AI = NewCharacterAI(&char, charConfig.UtilityWeights)
 
 	// Entity State Manager
 	esmConfig := entity_state_manager.EntityStateConfig{
@@ -578,7 +582,7 @@ func (c *Character) GetState() interface{}                           { return c.
 func (c *Character) InitializeHP() error                             { return c.setHP(c.HPConfig) }
 func (c *Character) IsSpellcaster() bool                             { return c.SpellCastingManager.HasAnyKnownSpells() }
 func (c *Character) IsHealer() bool {
-	return c.SpellCastingManager.HasHealingSpells() ||
+	return (c.SpellCastingManager != nil && c.SpellCastingManager.HasHealingSpells()) ||
 		(c.Class.ID == classes.Paladin && c.EntityStateManager.GetPaladinLayingOnHandsPool() > 0)
 }
 func (c *Character) GetRNG() *rand.Rand { return c.RNG }
@@ -600,10 +604,53 @@ func (c *Character) GetDamageSpellCount() int {
 	return c.SpellCastingManager.GetDamageSpellCount()
 }
 
+func (c *Character) GetAttackBonus() int {
+	bestBonus := 0
+
+	// Check weapons
+	if c.EquipmentManager != nil {
+		// Heuristic: Get proficiency bonus + strength/dexterity modifier
+		pb, _ := core.GetCharacterProficiencyBonus(c.Level)
+		strMod, _ := c.getAbilityScoreModifier(core.AbilityStrength)
+		dexMod, _ := c.getAbilityScoreModifier(core.AbilityDexterity)
+
+		bonus := pb + strMod
+		if pb+dexMod > bonus {
+			bonus = pb + dexMod
+		}
+		bestBonus = bonus
+	}
+
+	// Check spellcasting
+	if c.SpellCastingManager != nil {
+		bonus := c.SpellCastingManager.GetAttackModifier()
+		if bonus > bestBonus {
+			bestBonus = bonus
+		}
+	}
+
+	return bestBonus
+}
+
+func (c *Character) GetID() int {
+	return c.ID
+}
+
+func (c *Character) GetInstanceID() int {
+	return c.InstanceID
+}
+
+func (c *Character) SetInstanceID(id int) {
+	c.InstanceID = id
+}
+
 func (c *Character) UpdateAICombatContext(ctx *core.CombatContext) error {
 	c.AI.UpdateCombatContext(ctx)
 	if c.SpellCastingManager != nil {
 		c.SpellCastingManager.SetSimulationOptions(ctx.Opt())
+	}
+	if info, ok := ctx.CombatantInfo[c.InstanceID]; ok {
+		c.Info = info
 	}
 	return nil
 }

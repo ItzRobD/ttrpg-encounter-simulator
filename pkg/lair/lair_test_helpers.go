@@ -125,3 +125,9 @@ func (e *testEntity) GetType() string {
 	}
 	return "Humanoid"
 }
+
+func (e *testEntity) GetHasTakenTurnInCombat() bool { return false }
+func (e *testEntity) GetID() int                    { return 0 }
+func (e *testEntity) GetInstanceID() int            { return 0 }
+func (e *testEntity) SetInstanceID(id int)          {}
+func (e *testEntity) GetAttackBonus() int           { return 0 }

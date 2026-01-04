@@ -388,6 +388,11 @@ func (entityStub) GetType() string                 { return "Humanoid" }
 func (entityStub) IsConcentrating() bool           { return false }
 func (entityStub) BreakConcentration()             {}
 func (entityStub) SetConcentrating(bool, string)   {}
+func (entityStub) GetHasTakenTurnInCombat() bool   { return false }
+func (entityStub) GetID() int                      { return 0 }
+func (entityStub) GetInstanceID() int              { return 0 }
+func (entityStub) SetInstanceID(id int)            {}
+func (entityStub) GetAttackBonus() int             { return 0 }
 
 func TestDetermineAttackAdvantageForEntities(t *testing.T) {
 	tests := []struct {

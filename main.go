@@ -7,6 +7,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/lair"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"dnd5e-encounter-simulator-backend/pkg/races"
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
@@ -37,8 +38,8 @@ func main() {
 	//fmt.Println(s)
 
 	frank := setupFrank()
-	//bob := setupBob()
-	testSimulation([]character.CharacterConfig{frank}, []int{64, 64, 64})
+	bob := setupBob()
+	testSimulation([]character.CharacterConfig{frank, bob}, []int{64})
 }
 
 func setupBob() character.CharacterConfig {
@@ -86,11 +87,28 @@ func setupBob() character.CharacterConfig {
 }
 
 func setupFrank() character.CharacterConfig {
+	weights := &core.UtilityWeights{
+		ActionWeights: map[core.ActionType]float64{
+			core.ATDamage: 1.0,
+			core.ATHeal:   1.5,
+		},
+	}
+	weights.TargetFactorWeights.HighThreat = 0.8
+	weights.TargetFactorWeights.TargetPotency = 0.7
+	weights.TargetFactorWeights.TargetHitability = 0.4
+	weights.TargetFactorWeights.LowHP = 0.6
+	weights.TargetFactorWeights.Vengeance = 0.5
+	weights.TargetFactorWeights.ConcentrationBreak = 0.9
+	weights.TargetFactorWeights.ElitePriority = 0.8
+	weights.TargetFactorWeights.EmergencyHeal = 1.0
+	weights.ResourceExpenditureWeight = 0.7
+
 	charConfig := character.CharacterConfig{
-		Name:    "Frank",
-		ClassID: classes.Wizard,
-		Level:   5,
-		RaceID:  1,
+		Name:           "Frank",
+		ClassID:        classes.Wizard,
+		Level:          5,
+		RaceID:         1,
+		UtilityWeights: weights,
 		AsConfig: core.AbilityScoresConfig{
 			AbilityScores: core.AbilityScores{
 				Strength:     14,
@@ -145,29 +163,91 @@ func setupFrank() character.CharacterConfig {
 //}
 
 func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
+	// Standard Monster Weights (Default)
+	standardMonsterWeights := &core.UtilityWeights{
+		ActionWeights: map[core.ActionType]float64{
+			core.ATMonsterDamage: 1.0,
+			core.ATMonsterHeal:   1.2,
+		},
+	}
+	standardMonsterWeights.TargetFactorWeights.HighThreat = 0.5
+	standardMonsterWeights.TargetFactorWeights.TargetPotency = 0.6
+	standardMonsterWeights.TargetFactorWeights.TargetHitability = 0.8
+	standardMonsterWeights.TargetFactorWeights.LowHP = 0.7
+	standardMonsterWeights.TargetFactorWeights.Vengeance = 0.4
+	standardMonsterWeights.TargetFactorWeights.EmergencyHeal = 1.0
+
 	seed := core.Seed{Seed1: 42, Seed2: 42}
 	config := core.SimulationOptions{
-		Seed:                      seed,
-		UseHPAverageCharacter:     false,
-		UseHPAverageMonster:       false,
-		CanMonstersCrit:           true,
-		CanCharactersCrit:         true,
-		HasIncreasedCrits:         false,
-		UseImprovedCriticals:      false,
-		CharactersAlwaysUpcast:    false,
-		MonstersAlwaysUpcast:      false,
-		AllowCharacterHeals:       true,
-		AllowMonsterHeals:         true,
-		AOEHitsAllEnemies:         true,
-		CharacterHealThresholdPct: 50,
-		MonsterHealThresholdPct:   50,
-		AllowLairActions:          false,
+		Seed:                          seed,
+		UseHPAverageMonster:           false,
+		UseHPAverageCharacter:         false,
+		CanMonstersCrit:               true,
+		CanCharactersCrit:             true,
+		HasIncreasedCrits:             false,
+		UseImprovedCriticals:          false,
+		CharactersAlwaysUpcast:        false,
+		MonstersAlwaysUpcast:          false,
+		AllowCharacterHeals:           true,
+		AllowMonsterHeals:             true,
+		AOEHitsAllEnemies:             true,
+		CharacterHealThresholdPct:     50,
+		MonsterHealThresholdPct:       50,
+		LimitedLegendaryActions:       false,
+		AllowLairActions:              false,
+		AllowDragonbornBreathAttack:   true,
+		EnableClassFeatures:           false,
+		EnableRacialFeatures:          false,
+		BarbarianAlwaysRecklessAttack: false,
+		PaladinAlwaysSmite:            false,
+		PaladinUseHighestSmiteSlot:    false,
+		UseMassiveDamage:              false,
+		EnableSpecialAbilities:        false,
+		MonsterDeathEffectsHitAllies:  false,
+		AlwaysUseSneakAttack:          false,
+		UseWeightedAI:                 true,
+		DebugAI:                       true,
+		HPVisibilityMode:              core.HPVisibilityWhite,
+		EnableMonsterNoise:            true,
+		MonsterNoiseWeight:            0.1,
 	}
 
 	sim := simulation.NewSimulationManager(config, seed)
 
 	ctx := context.Background()
-	// Example lair configuration for local runs (simulates what the API will pass later)
+
+	// Update Character Configs with weights if not set
+	for i := range charCfgs {
+		if charCfgs[i].UtilityWeights == nil {
+			// Fallback weights if Joe or Paul didn't set them
+			charCfgs[i].UtilityWeights = &core.UtilityWeights{
+				ActionWeights: map[core.ActionType]float64{
+					core.ATDamage: 1.0,
+					core.ATHeal:   1.0,
+				},
+			}
+			charCfgs[i].UtilityWeights.TargetFactorWeights.HighThreat = 0.5
+			charCfgs[i].UtilityWeights.TargetFactorWeights.TargetPotency = 0.5
+			charCfgs[i].UtilityWeights.TargetFactorWeights.TargetHitability = 0.5
+			charCfgs[i].UtilityWeights.TargetFactorWeights.LowHP = 0.5
+			charCfgs[i].UtilityWeights.TargetFactorWeights.Vengeance = 0.5
+			charCfgs[i].UtilityWeights.TargetFactorWeights.ConcentrationBreak = 0.5
+			charCfgs[i].UtilityWeights.TargetFactorWeights.ElitePriority = 0.5
+			charCfgs[i].UtilityWeights.TargetFactorWeights.EmergencyHeal = 1.0
+			charCfgs[i].UtilityWeights.ResourceExpenditureWeight = 0.5
+		}
+	}
+
+	// SetupCombatantsFromAPI uses the simulation manager to create entities.
+	// Since we want monsters to have weights, we need to ensure the initialization
+	// path supports passing them.
+	// Currently, SetupCombatantsFromAPI queries DB. For manual testing in main.go
+	// with specific weights for monsters, we might need a small override or
+	// rely on the default monster weights being applied in the engine if we implement that.
+
+	// For now, let's assume the user wants to see the weighted AI in action with
+	// the standard monster weights. I'll modify SetupCombatants to apply these defaults.
+
 	lc := &lair.LairConfig{
 		Enabled:    true,
 		Name:       "Goblin Warrens",
@@ -207,6 +287,16 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 		charCfgs,
 		monsterIds,
 		lc)
+
+	// Since monsters are loaded from DB, we apply standard weights here
+	for _, c := range sim.GetCombatEngine().Combatants {
+		if c.Entity.IsMonster() {
+			if m, ok := c.Entity.(*monster.Monster); ok {
+				m.AI.Weights = standardMonsterWeights
+			}
+		}
+	}
+
 	// Event listeners will also be attached inside RunSimulation after
 	// SetupCombat so the lair (inserted at init 20) gets a listener too.
 	sim.SetupEventListeners()

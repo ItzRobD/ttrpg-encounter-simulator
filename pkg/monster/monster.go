@@ -7,17 +7,20 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
+	"dnd5e-encounter-simulator-backend/pkg/entity_configuration"
 	"fmt"
 	"math/rand/v2"
 )
 
 type Monster struct {
 	MonsterBase
+	Info                *core.CombatantInfo
 	EntityStateManager  *entity_state_manager.EntityStateManager
 	SpellCastingManager *spellcasting_manager.SpellcastingManager
 	RollManager         *roll_manager.RollManager
 	AI                  *MonsterAI
 	ActionManager       *MonsterActionManager
+	Configuration       entity_configuration.EntityConfiguration
 	Seed                core.Seed
 	RNG                 *rand.Rand
 	EventListener       func(event interface{})
@@ -25,6 +28,7 @@ type Monster struct {
 
 type MonsterBase struct {
 	ID                  int
+	InstanceID          int
 	Name                string
 	Size                string
 	Type                MonsterType
@@ -62,6 +66,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 		RollManager:         &roll_manager.RollManager{},
 		AI:                  &MonsterAI{},
 		ActionManager:       &MonsterActionManager{},
+		Configuration:       config.EntityConfiguration,
 		Seed:                seed,
 		RNG:                 rand.New(rand.NewPCG(seed.Seed1, seed.Seed2)),
 	}
@@ -114,7 +119,7 @@ func NewMonster(ctx context.Context, config MonsterConfig) (*Monster, error) {
 	monster.HP.HPSetMethod = config.HPSetMethod
 
 	// AI
-	monster.AI = NewMonsterAI(&monster)
+	monster.AI = NewMonsterAI(&monster, config.UtilityWeights)
 
 	err = monster.setHP(monster.HP)
 	if err != nil {
@@ -133,6 +138,7 @@ func NewMonsterWithRNG(ctx context.Context, config MonsterConfig, rng *rand.Rand
 		RollManager:         &roll_manager.RollManager{},
 		AI:                  &MonsterAI{},
 		ActionManager:       &MonsterActionManager{},
+		Configuration:       config.EntityConfiguration,
 		Seed:                config.Seed,
 		RNG:                 rng,
 	}
@@ -182,7 +188,7 @@ func NewMonsterWithRNG(ctx context.Context, config MonsterConfig, rng *rand.Rand
 	monster.HP.HPSetMethod = config.HPSetMethod
 
 	// AI
-	monster.AI = NewMonsterAI(&monster)
+	monster.AI = NewMonsterAI(&monster, config.UtilityWeights)
 
 	err = monster.setHP(monster.HP)
 	if err != nil {
@@ -325,10 +331,21 @@ func (m *Monster) IsCharacter() bool    { return false }
 func (m *Monster) IsMonster() bool      { return true }
 func (m *Monster) GetIsLegendary() bool { return m.MonsterBase.IsLegendary }
 func (m *Monster) GetRNG() *rand.Rand   { return m.RNG }
-func (m *Monster) GetID() int           { return m.ID }
-func (m *Monster) InitializeHP() error  { return m.setHP(m.HP) }
-func (m *Monster) IsSpellcaster() bool  { return m.MonsterBase.IsSpellcaster }
-func (m *Monster) IsHealer() bool       { return m.SpellCastingManager.HasHealingSpells() }
+func (m *Monster) GetID() int {
+	return m.MonsterBase.ID
+}
+
+func (m *Monster) GetInstanceID() int {
+	return m.MonsterBase.InstanceID
+}
+
+func (m *Monster) SetInstanceID(id int) {
+	m.MonsterBase.InstanceID = id
+}
+
+func (m *Monster) InitializeHP() error { return m.setHP(m.HP) }
+func (m *Monster) IsSpellcaster() bool { return m.MonsterBase.IsSpellcaster }
+func (m *Monster) IsHealer() bool      { return m.SpellCastingManager.HasHealingSpells() }
 func (m *Monster) GetTargetPriority() core.TargetPriority {
 	return m.EntityStateManager.GetTargetPrioritization()
 }

@@ -113,3 +113,10 @@ func SelectTargetFromMap(validTargets map[int]*Combatant, priority TargetPriorit
 	}
 	return TargetOK, targetID, nil
 }
+
+func FormatEntityName(entity Entity) string {
+	if entity == nil {
+		return "Unknown"
+	}
+	return fmt.Sprintf("%s (%d)", entity.GetName(), entity.GetInstanceID())
+}

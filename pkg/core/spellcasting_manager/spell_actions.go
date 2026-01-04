@@ -48,8 +48,8 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 		}
 
 		spellResult := SpellResult{
-			ActorName:       scm.parent.GetName(),
-			TargetName:      req.Target.GetName(),
+			ActorName:       core.FormatEntityName(scm.parent),
+			TargetName:      core.FormatEntityName(req.Target),
 			SpellName:       req.GetSpellCastData().GetSpellChoice().GetSpell().GetName(),
 			SpellLevel:      req.GetSpellCastData().GetSpellChoice().GetSpell().GetLevel(),
 			SpellTotalValue: dmgRollResult.Total,
@@ -87,8 +87,8 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			// Target takes no damage
 
 			spellResult := SpellResult{
-				ActorName:        scm.parent.GetName(),
-				TargetName:       req.Target.GetName(),
+				ActorName:        core.FormatEntityName(scm.parent),
+				TargetName:       core.FormatEntityName(req.Target),
 				SpellName:        req.GetSpellCastData().GetSpellChoice().GetSpell().GetName(),
 				SpellLevel:       req.GetSpellCastData().GetSpellChoice().GetSpell().GetLevel(),
 				SpellTotalValue:  0,
@@ -142,8 +142,8 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 		}
 
 		spellResult := SpellResult{
-			ActorName:        scm.parent.GetName(),
-			TargetName:       req.Target.GetName(),
+			ActorName:        core.FormatEntityName(scm.parent),
+			TargetName:       core.FormatEntityName(req.Target),
 			SpellName:        req.GetSpellCastData().GetSpellChoice().GetSpell().GetName(),
 			SpellLevel:       req.GetSpellCastData().GetSpellChoice().GetSpell().GetLevel(),
 			SpellTotalValue:  dmgRollResult.Total,
@@ -205,8 +205,8 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 		}
 
 		attackResult := SpellResult{
-			ActorName:        scm.parent.GetName(),
-			TargetName:       req.Target.GetName(),
+			ActorName:        core.FormatEntityName(scm.parent),
+			TargetName:       core.FormatEntityName(req.Target),
 			SpellName:        req.GetSpellCastData().GetSpellChoice().GetSpell().GetName(),
 			SpellLevel:       req.GetSpellCastData().GetSpellChoice().GetSpell().GetLevel(),
 			SpellTotalValue:  dmgRollResult.Total,
@@ -234,8 +234,8 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 
 func (scm *SpellcastingManager) castHealingSpell(req *SpellCastRequest) (*SpellResult, error) {
 	res := SpellResult{
-		ActorName:        scm.parent.GetName(),
-		TargetName:       req.Target.GetName(),
+		ActorName:        core.FormatEntityName(scm.parent),
+		TargetName:       core.FormatEntityName(req.Target),
 		SpellName:        req.GetSpellCastData().GetSpellChoice().GetSpell().GetName(),
 		SpellLevel:       req.GetSpellCastData().GetSpellChoice().GetSpell().GetLevel(),
 		SpellTotalValue:  0,

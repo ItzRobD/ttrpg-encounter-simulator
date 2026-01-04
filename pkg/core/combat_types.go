@@ -627,6 +627,9 @@ type CombatContext struct {
 	CurrentRound     int
 	ActingEntityID   int
 
+	// Premium AI global tracking
+	MaxDamageSeen int // Highest damage dealt in a single instance during this combat
+
 	// Combat options
 	Options *SimulationOptions
 }
@@ -661,6 +664,9 @@ type ActionOutcome struct {
 	// Concentration info
 	IsConcentration bool
 	SpellName       string
+
+	// Attack tracking
+	AttackResults []AttackResult
 }
 
 type Effect struct {
@@ -754,6 +760,10 @@ type CombatStatistics struct {
 	TotalHealingReceived int
 	DeathSaveSuccesses   int
 	DeathSaveFailures    int
+
+	// Premium AI Tracking
+	LastAttackerID     int // ID of the last entity to deal damage to this combatant
+	TurnsSinceLastHeal int // Turns since this entity last received healing
 }
 
 type CombatantCapabilities struct {

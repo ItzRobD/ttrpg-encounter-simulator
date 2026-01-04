@@ -64,6 +64,10 @@ func (entityStub) SetConcentrating(bool, string)        {}
 
 func (entityStub) Regenerate()                   {}
 func (entityStub) GetHasTakenTurnInCombat() bool { return false }
+func (entityStub) GetID() int                    { return 0 }
+func (entityStub) GetInstanceID() int            { return 0 }
+func (entityStub) SetInstanceID(int)             {}
+func (entityStub) GetAttackBonus() int           { return 0 }
 
 // Keep only what EquipmentManager needs here
 type EmEntity struct {

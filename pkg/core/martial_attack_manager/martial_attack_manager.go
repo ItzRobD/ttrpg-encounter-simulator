@@ -103,8 +103,8 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) (
 			resistBreakers = append(resistBreakers, ad.ResistBreakers...)
 
 			attackResult := core.AttackResult{
-				ActorName:      mam.parent.GetName(),
-				TargetName:     req.Target.GetName(),
+				ActorName:      core.FormatEntityName(mam.parent),
+				TargetName:     core.FormatEntityName(req.Target),
 				AttackName:     ad.Name,
 				AttackCount:    i,
 				TargetValue:    attackRollResult.TargetValue,

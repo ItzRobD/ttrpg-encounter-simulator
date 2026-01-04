@@ -76,11 +76,17 @@ func (mam *MonsterActionManager) RollRechargeActions() {
 func (mam *MonsterActionManager) GetAttackDataFromIndex(index int, actionType core.ActionType) []core.AttackData {
 	switch actionType {
 	case core.ATMonsterAction:
-		return []core.AttackData{mam.ActionAttackData[index]}
+		if data, ok := mam.ActionAttackData[index]; ok {
+			return []core.AttackData{data}
+		}
 	case core.ATMonsterMultiattack:
-		return mam.MultiAttackData[index].AttackDataBlocks
+		if data, ok := mam.MultiAttackData[index]; ok {
+			return data.AttackDataBlocks
+		}
 	case core.ATLegendaryAction:
-		return []core.AttackData{mam.LegendaryAttackData[index]}
+		if data, ok := mam.LegendaryAttackData[index]; ok {
+			return []core.AttackData{data}
+		}
 	case core.ATMonsterSpecial:
 	}
 	return nil
@@ -185,8 +191,8 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 		}
 
 		attackResult := core.AttackResult{
-			ActorName:      mam.parent.GetName(),
-			TargetName:     req.Target.GetName(),
+			ActorName:      core.FormatEntityName(mam.parent),
+			TargetName:     core.FormatEntityName(req.Target),
 			AttackName:     ad.Name,
 			AttackCount:    idx + 1,
 			TargetValue:    attackRollResult.TargetValue,

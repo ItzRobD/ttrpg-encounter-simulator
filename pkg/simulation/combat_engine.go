@@ -162,6 +162,16 @@ func (ce *CombatEngine) executeMonsterLegendaryAction(aiReq *core.AIRequest) err
 }
 
 func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.ActionOutcome) error {
+	// Update attack statistics
+	if len(outcome.AttackResults) > 0 {
+		actorCombatant, exists := ce.Combatants[outcome.ActorID]
+		if exists {
+			for _, res := range outcome.AttackResults {
+				actorCombatant.Info.Statistics.RecordAttack(res.IsHit, res.IsCriticalHit)
+			}
+		}
+	}
+
 	// Handle concentration start if the action is a concentration spell
 	if outcome.IsConcentration {
 		actorCombatant, exists := ce.Combatants[outcome.ActorID]
@@ -278,11 +288,33 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 						return fmt.Errorf("failed to modify target entity HP: %v", err)
 					}
 
+					// Update statistics and global combat context
+					damageValue := hpModResult.GetDamageTaken()
+					if damageValue > 0 {
+						// Global tracking
+						if ce.CombatContext == nil {
+							ce.initializeCombatContext()
+						}
+						if damageValue > ce.CombatContext.MaxDamageSeen {
+							ce.CombatContext.MaxDamageSeen = damageValue
+						}
+
+						// Actor statistics
+						actorCombatant, actorExists := ce.Combatants[outcome.ActorID]
+						if actorExists {
+							actorCombatant.Info.Statistics.RecordDamageDealt(damageValue, ce.CurrentRound)
+						}
+
+						// Target statistics
+						target.Info.Statistics.RecordDamageTaken(damageValue)
+						target.Info.Statistics.LastAttackerID = outcome.ActorID
+					}
+
 					// Check for death effects
 					if target.GetEntity().IsDead() {
 						if m, ok := target.GetEntity().(*monster.Monster); ok && ce.SimOptions.EnableSpecialAbilities {
 							if m.SpecialAbilities.DeathBurstNumDice > 0 || m.SpecialAbilities.DeathThroesNumDice > 0 {
-								deathReq, _ := m.GetAIRequest(m.GetID(), core.AIReqDeathEffect)
+								deathReq, _ := m.GetAIRequest(m.GetInstanceID(), core.AIReqDeathEffect)
 								if deathReq != nil {
 									deathOutcome, _ := m.ExecuteAIRequest(deathReq)
 									if deathOutcome != nil {
@@ -303,7 +335,7 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 								if m.SpecialAbilities.CorrosiveFormNumDice > 0 || m.SpecialAbilities.FireForm ||
 									m.SpecialAbilities.FireAuraNumDice > 0 || m.SpecialAbilities.HeatedBodyNumDice > 0 {
 
-									retalliationReq, _ := m.GetAIRequest(m.GetID(), core.AIReqRetaliatoryEffect)
+									retalliationReq, _ := m.GetAIRequest(m.GetInstanceID(), core.AIReqRetaliatoryEffect)
 									if retalliationReq != nil {
 										retalliationReq.Target = actor
 										retalliationReq.TargetID = outcome.ActorID
@@ -323,6 +355,20 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 					hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false, ce.SimOptions.UseMassiveDamage, core.DamageNone, false)
 					if err != nil {
 						return fmt.Errorf("failed to modify target entity HP: %v", err)
+					}
+
+					// Update statistics
+					healingValue := hpModResult.GetHealingReceived()
+					if healingValue > 0 {
+						// Actor statistics
+						actorCombatant, actorExists := ce.Combatants[outcome.ActorID]
+						if actorExists {
+							actorCombatant.Info.Statistics.RecordHealingDone(healingValue, ce.CurrentRound)
+						}
+
+						// Target statistics
+						target.Info.Statistics.RecordHealingReceived(healingValue)
+						target.Info.Statistics.TurnsSinceLastHeal = 0
 					}
 				case core.EffectTempHP:
 					v := math.Abs(float64(currentEffect.Value))
@@ -382,7 +428,9 @@ func (ce *CombatEngine) AddCombatant(c *core.Combatant) {
 		ce.Combatants = make(map[int]*core.Combatant)
 	}
 
-	ce.Combatants[len(ce.Combatants)] = c
+	id := len(ce.Combatants)
+	c.GetEntity().SetInstanceID(id)
+	ce.Combatants[id] = c
 }
 
 func (ce *CombatEngine) getSortedCombatantIDs() []int {
@@ -581,34 +629,50 @@ func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 		if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
 			return v, nil
 		}
-		status, aiReq, combatError := ce.executeTurn(combatantID)
-		if combatError != nil {
-			return core.VictoryStatusNone, combatError
-		}
 
-		// Handle non-acting statuses or nil action request
-		if ce.shouldSkipCombatantTurn(status) || aiReq == nil {
-			// If no action is taken (e.g., no valid targets), check victory now to avoid spinning
+		for {
+			status, aiReq, combatError := ce.executeTurn(combatantID)
+			if combatError != nil {
+				return core.VictoryStatusNone, combatError
+			}
+
+			// Record death saves if any were made
+			ce.recordDeathSaves(combatantID, status)
+
+			// Handle non-acting statuses or nil action request
+			if ce.shouldSkipCombatantTurn(status) || aiReq == nil {
+
+				// Even if no action taken, check victory
+				if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+					return v, nil
+				}
+				break
+			}
+
+			// Execute the actions in the turn request
+			combatError = ce.ProcessAIRequest(aiReq)
+			if combatError != nil {
+				return core.VictoryStatusNone, combatError
+			}
+
+			// Immediately check victory after each action
 			if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
 				return v, nil
 			}
-			continue
-		}
 
-		// Execute the actions in the turn request
-		combatError = ce.ProcessAIRequest(aiReq)
-		if combatError != nil {
-			return core.VictoryStatusNone, combatError
-		}
-
-		// Immediately check victory after each action
-		if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
-			return v, nil
+			// Re-update context after each action to reflect changes (e.g. someone might now need healing)
+			ce.updateCombatContext(combatantID)
 		}
 
 		combatError = ce.turnEndEvents(combatantID)
 		if combatError != nil {
 			return core.VictoryStatusNone, fmt.Errorf("failed to execute turn end events for combatant %d: %v", combatantID, combatError)
+		}
+
+		// Update state and statistics at end of turn
+		if c, exists := ce.Combatants[combatantID]; exists && !c.IsLair {
+			c.Info.UpdateState()
+			c.Info.Statistics.TurnsSinceLastHeal++
 		}
 	}
 
@@ -849,21 +913,13 @@ func (ce *CombatEngine) turnStartEvents(combatantID int) error {
 		m.EntityStateManager.SetHasTakenTurnInCombat(true)
 	}
 
-	// Character Specific Events
-	if entity.IsCharacter() {
-		c, ok := entity.(*character.Character)
-		if !ok {
-			return fmt.Errorf("entity is character but type assertion failed")
-		}
-
-		if !c.EntityStateManager.GetIsDead() && !c.EntityStateManager.GetIsUnconscious() {
+	// General Turn Start Events (Refreshing actions for both characters and monsters)
+	if !entity.IsDead() && !entity.IsUnconscious() {
+		if c, ok := entity.(*character.Character); ok {
 			c.EntityStateManager.RefreshActions()
+		} else if m, ok := entity.(*monster.Monster); ok {
+			m.EntityStateManager.RefreshActions()
 		}
-	}
-
-	// Monster Specific Events
-	if entity.IsMonster() {
-		ce.refreshLegendaryActions(combatantID)
 	}
 
 	return nil
@@ -1255,5 +1311,28 @@ func (ce *CombatEngine) applyDeflectMissiles(target core.Entity, effect *core.Ef
 		effect.Value = int(math.Max(0, float64(effect.Value)-float64(dexMod)-float64(roll)-float64(targetChar.Level)))
 		targetChar.EntityStateManager.ExpendReaction()
 		return
+	}
+}
+
+func (ce *CombatEngine) recordDeathSaves(combatantID int, status *core.TurnResult) {
+	if status == nil {
+		return
+	}
+	combatant, exists := ce.Combatants[combatantID]
+	if !exists {
+		return
+	}
+
+	if status.TurnStatuses[core.TurnDeathSaveSuccess] {
+		combatant.Info.Statistics.RecordDeathSave(true)
+	} else if status.TurnStatuses[core.TurnDeathSaveFailed] {
+		combatant.Info.Statistics.RecordDeathSave(false)
+	} else if status.TurnStatuses[core.TurnDeathSaveFailedDouble] {
+		// Natural 1 counts as two failures
+		combatant.Info.Statistics.RecordDeathSave(false)
+		combatant.Info.Statistics.RecordDeathSave(false)
+	} else if status.TurnStatuses[core.TurnRevived] {
+		// Natural 20 counts as a success and revives
+		combatant.Info.Statistics.RecordDeathSave(true)
 	}
 }

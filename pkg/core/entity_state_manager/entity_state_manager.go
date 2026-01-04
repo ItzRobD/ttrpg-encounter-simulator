@@ -38,6 +38,12 @@ func (hpmr HPModificationResult) GetTriggeredConcentrationCheck() bool {
 	return hpmr.TriggeredConcentrationCheck
 }
 func (hpmr HPModificationResult) GetDamageTaken() int { return hpmr.DamageTaken }
+func (hpmr HPModificationResult) GetHealingReceived() int {
+	if hpmr.DidHealHP {
+		return hpmr.ModificationValue
+	}
+	return 0
+}
 
 type EntityStateConfig struct {
 	CurrentHP            int

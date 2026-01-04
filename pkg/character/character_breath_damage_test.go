@@ -57,8 +57,8 @@ func TestExecuteAIRequest_DragonbornBreathWeapon_DamageEvent(t *testing.T) {
 	char.SetEventListener(func(event interface{}) {
 		if e, ok := event.(*events.DamageEvent); ok {
 			damageEventSeen = true
-			if e.Target != target.GetName() {
-				t.Errorf("Expected target %s, got %s", target.GetName(), e.Target)
+			if e.Target != core.FormatEntityName(target) {
+				t.Errorf("Expected target %s, got %s", core.FormatEntityName(target), e.Target)
 			}
 			if len(e.Rolls) == 0 {
 				t.Errorf("Expected rolls, got none")

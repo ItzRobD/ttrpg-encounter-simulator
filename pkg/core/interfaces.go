@@ -149,6 +149,7 @@ type HPModificationResult interface {
 	GetIsMaxHealth() bool
 	GetTriggeredConcentrationCheck() bool
 	GetDamageTaken() int
+	GetHealingReceived() int
 }
 
 type ElusiveEntity interface {

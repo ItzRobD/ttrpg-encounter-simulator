@@ -10,6 +10,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/spellcasting_manager"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
+	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
 	"math/rand/v2"
 	"testing"
@@ -48,9 +49,9 @@ func buildTestCharacter(t *testing.T, as core.AbilityScores, lvl uint8) *charact
 	// Martial manager
 	ch.MartialAttackManager = martial_attack_manager.NewMartialAttackManager(ch, ch.RollManager)
 	// AI
-	ch.AI = character.NewCharacterAI(ch)
-	// Minimal non-nil spellcasting manager to avoid nil deref in AI checks
-	ch.SpellCastingManager = &spellcasting_manager.SpellcastingManager{}
+	ch.AI = character.NewCharacterAI(ch, nil)
+	// Properly initialized spellcasting manager
+	ch.SpellCastingManager = spellcasting_manager.NewSpellcastingManager(ch, ch.RollManager, core.CasterCharacter, int(lvl), spells.SpellSlots{}, spells.SpellSlots{}, 0)
 	return ch
 }
 
@@ -91,7 +92,7 @@ func buildTestMonster(t *testing.T, ac int) *monster.Monster {
 	mamCfg := &monster.MAMConfig{Actions: map[int]monster.Action{1: act}}
 	m.ActionManager = monster.NewMonsterActionManager(m, m.RollManager, mamCfg)
 	// AI
-	m.AI = monster.NewMonsterAI(m)
+	m.AI = monster.NewMonsterAI(m, nil)
 	return m
 }
 
@@ -457,5 +458,266 @@ func TestCombatEngine_LightningAbsorption(t *testing.T) {
 	// Lightning Absorption: 10 HP + 5 absorbed = 15 HP
 	if target.EntityStateManager.GetCurrentHP() != startHP+5 {
 		t.Fatalf("expected healing due to Lightning Absorption, hp=%d want=%d", target.EntityStateManager.GetCurrentHP(), startHP+5)
+	}
+}
+
+func TestCombatEngine_MaxDamageAndStats(t *testing.T) {
+	// Setup
+	opts := &core.SimulationOptions{}
+	ce := NewCombatEngine(opts)
+
+	// Create Actor
+	actor := buildTestCharacter(t, core.AbilityScores{Strength: 16}, 1)
+	actorCombatant := core.NewCombatantWithInfo(actor)
+	actor.SetInstanceID(0)
+	ce.AddCombatant(actorCombatant)
+
+	// Create Target
+	target := buildTestMonster(t, 10)
+	targetCombatant := core.NewCombatantWithInfo(target)
+	target.SetInstanceID(1)
+	ce.AddCombatant(targetCombatant)
+
+	ce.SetupCombat()
+
+	// 1. Verify MaxDamageSeen update
+	effect := core.Effect{
+		Type:       core.EffectDamage,
+		Value:      15,
+		DamageType: core.DamageSlashing,
+	}
+	outcome := &core.ActionOutcome{
+		ActorID:  actor.GetInstanceID(),
+		TargetID: target.GetInstanceID(),
+		Effects:  []core.Effect{effect},
+	}
+
+	err := ce.processActionResults(actor, outcome)
+	if err != nil {
+		t.Fatalf("Failed to process action results: %v", err)
+	}
+
+	if ce.CombatContext.MaxDamageSeen != 15 {
+		t.Errorf("Expected MaxDamageSeen to be 15, got %d", ce.CombatContext.MaxDamageSeen)
+	}
+
+	// 2. Verify Statistics updates
+	if actorCombatant.Info.Statistics.TotalDamageDealt != 15 {
+		t.Errorf("Expected TotalDamageDealt to be 15, got %d", actorCombatant.Info.Statistics.TotalDamageDealt)
+	}
+	if targetCombatant.Info.Statistics.TotalDamageTaken != 15 {
+		t.Errorf("Expected TotalDamageTaken to be 15, got %d", targetCombatant.Info.Statistics.TotalDamageTaken)
+	}
+	if targetCombatant.Info.Statistics.LastAttackerID != actor.GetInstanceID() {
+		t.Errorf("Expected LastAttackerID to be %d, got %d", actor.GetInstanceID(), targetCombatant.Info.Statistics.LastAttackerID)
+	}
+
+	// 3. Verify turn end state update
+	// Mock turn end for actor
+	ce.CurrentRound = 1
+	err = ce.turnEndEvents(actor.GetInstanceID())
+	if err != nil {
+		t.Fatalf("Failed turn end events: %v", err)
+	}
+
+	// In SimulateRound we added the state update
+	// Let's call it manually or simulate a round part
+	ce.Combatants[actor.GetInstanceID()].Info.UpdateState()
+	ce.Combatants[actor.GetInstanceID()].Info.Statistics.TurnsSinceLastHeal++
+
+	if actorCombatant.Info.Statistics.TurnsSinceLastHeal != 1 {
+		t.Errorf("Expected TurnsSinceLastHeal to be 1, got %d", actorCombatant.Info.Statistics.TurnsSinceLastHeal)
+	}
+}
+
+func TestCombatEngine_HealingStats(t *testing.T) {
+	// Setup
+	opts := &core.SimulationOptions{}
+	ce := NewCombatEngine(opts)
+
+	actor := buildTestCharacter(t, core.AbilityScores{Wisdom: 16}, 1)
+	actorCombatant := core.NewCombatantWithInfo(actor)
+	actor.SetInstanceID(0)
+	ce.AddCombatant(actorCombatant)
+
+	target := buildTestCharacter(t, core.AbilityScores{Constitution: 16}, 1)
+	// Give target some damage
+	target.EntityStateManager.ModifyHP(-10, false, false, false, core.DamageSlashing, false)
+	targetCombatant := core.NewCombatantWithInfo(target)
+	target.SetInstanceID(1)
+	ce.AddCombatant(targetCombatant)
+
+	ce.SetupCombat()
+
+	effect := core.Effect{
+		Type:  core.EffectHealing,
+		Value: 5,
+	}
+	outcome := &core.ActionOutcome{
+		ActorID:  actor.GetInstanceID(),
+		TargetID: target.GetInstanceID(),
+		Effects:  []core.Effect{effect},
+	}
+
+	err := ce.processActionResults(actor, outcome)
+	if err != nil {
+		t.Fatalf("Failed to process action results: %v", err)
+	}
+
+	if actorCombatant.Info.Statistics.TotalHealingDone != 5 {
+		t.Errorf("Expected TotalHealingDone to be 5, got %d", actorCombatant.Info.Statistics.TotalHealingDone)
+	}
+	if targetCombatant.Info.Statistics.TotalHealingReceived != 5 {
+		t.Errorf("Expected TotalHealingReceived to be 5, got %d", targetCombatant.Info.Statistics.TotalHealingReceived)
+	}
+	if targetCombatant.Info.Statistics.TurnsSinceLastHeal != 0 {
+		t.Errorf("Expected TurnsSinceLastHeal to be 0 after healing, got %d", targetCombatant.Info.Statistics.TurnsSinceLastHeal)
+	}
+}
+
+func TestCombatEngine_AttackStatistics(t *testing.T) {
+	// Setup
+	opts := &core.SimulationOptions{}
+	ce := NewCombatEngine(opts)
+
+	// Create Actor (guaranteed to hit if we use AC 0)
+	actor := buildTestCharacter(t, core.AbilityScores{Strength: 20}, 1)
+	actorCombatant := core.NewCombatantWithInfo(actor)
+	actor.SetInstanceID(0)
+	ce.AddCombatant(actorCombatant)
+
+	// Create Target
+	target := buildTestMonster(t, 10)
+	target.MonsterBase.AC = 0 // Ensure hit
+	targetCombatant := core.NewCombatantWithInfo(target)
+	target.SetInstanceID(1)
+	ce.AddCombatant(targetCombatant)
+
+	ce.SetupCombat()
+
+	// 1. Melee Hit
+	outcome := &core.ActionOutcome{
+		ActionType: core.ATMelee,
+		ActorID:    0,
+		TargetID:   1,
+		AttackResults: []core.AttackResult{
+			{IsHit: true, IsCriticalHit: false},
+		},
+	}
+	ce.processActionResults(actor, outcome)
+
+	if actorCombatant.Info.Statistics.AttacksMade != 1 {
+		t.Errorf("Expected AttacksMade to be 1, got %d", actorCombatant.Info.Statistics.AttacksMade)
+	}
+	if actorCombatant.Info.Statistics.AttacksHit != 1 {
+		t.Errorf("Expected AttacksHit to be 1, got %d", actorCombatant.Info.Statistics.AttacksHit)
+	}
+
+	// 2. Miss
+	outcome = &core.ActionOutcome{
+		ActionType: core.ATMelee,
+		ActorID:    0,
+		TargetID:   1,
+		AttackResults: []core.AttackResult{
+			{IsHit: false, IsCriticalHit: false},
+		},
+	}
+	ce.processActionResults(actor, outcome)
+
+	if actorCombatant.Info.Statistics.AttacksMade != 2 {
+		t.Errorf("Expected AttacksMade to be 2, got %d", actorCombatant.Info.Statistics.AttacksMade)
+	}
+	if actorCombatant.Info.Statistics.AttacksMissed != 1 {
+		t.Errorf("Expected AttacksMissed to be 1, got %d", actorCombatant.Info.Statistics.AttacksMissed)
+	}
+
+	// 3. Critical Hit
+	outcome = &core.ActionOutcome{
+		ActionType: core.ATMelee,
+		ActorID:    0,
+		TargetID:   1,
+		AttackResults: []core.AttackResult{
+			{IsHit: true, IsCriticalHit: true},
+		},
+	}
+	ce.processActionResults(actor, outcome)
+
+	if actorCombatant.Info.Statistics.AttacksMade != 3 {
+		t.Errorf("Expected AttacksMade to be 3, got %d", actorCombatant.Info.Statistics.AttacksMade)
+	}
+	if actorCombatant.Info.Statistics.AttacksHit != 2 {
+		t.Errorf("Expected AttacksHit to be 2, got %d", actorCombatant.Info.Statistics.AttacksHit)
+	}
+	if actorCombatant.Info.Statistics.CriticalHits != 1 {
+		t.Errorf("Expected CriticalHits to be 1, got %d", actorCombatant.Info.Statistics.CriticalHits)
+	}
+}
+
+func TestCombatEngine_DeathSaveStatistics(t *testing.T) {
+	// Setup
+	opts := &core.SimulationOptions{}
+	ce := NewCombatEngine(opts)
+
+	// Create Character
+	actor := buildTestCharacter(t, core.AbilityScores{Constitution: 10}, 1)
+	actorCombatant := core.NewCombatantWithInfo(actor)
+	actor.SetInstanceID(0)
+	ce.AddCombatant(actorCombatant)
+
+	// Set character to unconscious but not stable
+	actor.EntityStateManager.ModifyHP(-100, false, false, false, core.DamageSlashing, false)
+	if !actor.EntityStateManager.GetIsUnconscious() {
+		t.Fatalf("Character should be unconscious")
+	}
+
+	ce.SetupCombat()
+
+	// Mocking some rolls for death saves
+	// 1. Success
+	status := &core.TurnResult{
+		TurnStatuses: map[core.TurnStatus]bool{
+			core.TurnDeathSaveSuccess: true,
+		},
+	}
+	ce.recordDeathSaves(0, status)
+
+	if actorCombatant.Info.Statistics.DeathSaveSuccesses != 1 {
+		t.Errorf("Expected DeathSaveSuccesses to be 1, got %d", actorCombatant.Info.Statistics.DeathSaveSuccesses)
+	}
+
+	// 2. Failure
+	status = &core.TurnResult{
+		TurnStatuses: map[core.TurnStatus]bool{
+			core.TurnDeathSaveFailed: true,
+		},
+	}
+	ce.recordDeathSaves(0, status)
+
+	if actorCombatant.Info.Statistics.DeathSaveFailures != 1 {
+		t.Errorf("Expected DeathSaveFailures to be 1, got %d", actorCombatant.Info.Statistics.DeathSaveFailures)
+	}
+
+	// 3. Natural 1 (Double Failure)
+	status = &core.TurnResult{
+		TurnStatuses: map[core.TurnStatus]bool{
+			core.TurnDeathSaveFailedDouble: true,
+		},
+	}
+	ce.recordDeathSaves(0, status)
+
+	if actorCombatant.Info.Statistics.DeathSaveFailures != 3 {
+		t.Errorf("Expected DeathSaveFailures to be 3 (1+2), got %d", actorCombatant.Info.Statistics.DeathSaveFailures)
+	}
+
+	// 4. Natural 20 (Revived - counts as Success)
+	status = &core.TurnResult{
+		TurnStatuses: map[core.TurnStatus]bool{
+			core.TurnRevived: true,
+		},
+	}
+	ce.recordDeathSaves(0, status)
+
+	if actorCombatant.Info.Statistics.DeathSaveSuccesses != 2 {
+		t.Errorf("Expected DeathSaveSuccesses to be 2 (1+1), got %d", actorCombatant.Info.Statistics.DeathSaveSuccesses)
 	}
 }

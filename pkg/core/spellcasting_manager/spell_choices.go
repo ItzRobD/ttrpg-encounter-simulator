@@ -615,6 +615,9 @@ func (scm *SpellcastingManager) getBestCastOptionForSpell(spell *spells.Spell) (
 // canUpcastNow checks SimulationOptions and parent type to decide if the caster
 // should attempt to upcast spells when selecting a cast level.
 func (scm *SpellcastingManager) canUpcastNow() bool {
+	if scm.forcedUpcast {
+		return true
+	}
 	if scm.simOptions == nil || scm.parent == nil {
 		return false
 	}

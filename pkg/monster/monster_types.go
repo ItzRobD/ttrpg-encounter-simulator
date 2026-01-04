@@ -2,22 +2,25 @@ package monster
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/entity_configuration"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"strings"
 )
 
 type MonsterConfig struct {
-	Base               MonsterBase
-	Actions            map[int]Action
-	Multiattacks       map[int][]Multiattack
-	LegendaryActions   map[int]LegendaryAction
-	SpecialAbilities   SpecialAbilities
-	Resistances        core.DamageResistances
-	DamageBreakers     []core.ResistBreaker
-	spellcastingConfig MonsterSpellcastingConfig
-	HPSetMethod        core.HPSetMethod
-	Seed               core.Seed
+	Base                MonsterBase
+	Actions             map[int]Action
+	Multiattacks        map[int][]Multiattack
+	LegendaryActions    map[int]LegendaryAction
+	SpecialAbilities    SpecialAbilities
+	Resistances         core.DamageResistances
+	DamageBreakers      []core.ResistBreaker
+	spellcastingConfig  MonsterSpellcastingConfig
+	HPSetMethod         core.HPSetMethod
+	UtilityWeights      *core.UtilityWeights
+	Seed                core.Seed
+	EntityConfiguration entity_configuration.EntityConfiguration
 }
 
 type MonsterSpellcastingConfig struct {
