@@ -81,3 +81,117 @@ func TestSimulationManager_SetupCombatantsFromAPI_EmptyInputs(t *testing.T) {
 		t.Fatalf("SetupCombatantsFromAPI unexpected fatal error: %v", err)
 	}
 }
+
+func TestRunMultiSimulation_Basic(t *testing.T) {
+	// We'll skip the API/DB part by using a custom setup if possible,
+	// but RunMultiSimulation is hardcoded to use SetupCombatantsFromAPIWithLair.
+	// For a unit test, we might want a version that takes pre-configured combatants,
+	// but the requirement was about the front-end requesting multiple runs,
+	// which usually implies starting from configs.
+
+	// Since SetupCombatantsFromAPIWithLair depends on the database,
+	// and we don't have a mock DB easily available here without more setup,
+	// let's see if we can at least test the concurrency logic with a mockable path.
+
+	// Actually, let's look at SetupCombatantsFromAPI in simulation_manager.go
+	// It calls setupManager.SetupCombatants(characterConfigs, monsterIDs)
+
+	// For now, let's try a test that would fail if it tried to hit the DB,
+	// or better, let's add a variant of RunMultiSimulation that is more testable
+	// or just accept that this specific integration test needs a DB.
+
+	// Alternatively, I can test it by passing empty configs and seeing it fail as expected,
+	// or passing valid but "offline" configs if character.NewCharacterWithRNG doesn't need DB.
+
+	ctx := context.Background()
+	req := MultiSimulationRequest{
+		NumRuns:   3,
+		MaxRounds: 10,
+		BaseOptions: core.SimulationOptions{
+			Seed: core.Seed{Seed1: 1, Seed2: 2},
+		},
+		// Empty configs will cause SetupCombatants to return an error "no valid combatants"
+	}
+
+	result, err := RunMultiSimulation(ctx, req)
+	if err == nil {
+		t.Fatal("Expected error due to no combatants, but got nil")
+	}
+	if result != nil {
+		t.Fatal("Expected nil result on error")
+	}
+}
+
+func TestRunMultiSimulation_WithLogs(t *testing.T) {
+	ctx := context.Background()
+	req := MultiSimulationRequest{
+		NumRuns:     2,
+		MaxRounds:   5,
+		IncludeLogs: true,
+		BaseOptions: core.SimulationOptions{
+			Seed: core.Seed{Seed1: 1, Seed2: 2},
+		},
+	}
+
+	setup := func(sm *SimulationManager) error {
+		ch := buildTestCharacter(t, core.AbilityScores{Strength: 16, Dexterity: 14}, 1)
+		equipSword(t, ch, core.WSPrimary)
+		mon := buildTestMonster(t, 10)
+		ce := sm.GetCombatEngine()
+		c1, c2 := buildCombatants(ch, mon)
+		ce.AddCombatant(c1)
+		ce.AddCombatant(c2)
+		sm.InitializeCombatants()
+		return nil
+	}
+
+	result, err := RunMultiSimulationWithSetup(ctx, req, setup)
+	if err != nil {
+		t.Fatalf("RunMultiSimulationWithSetup failed: %v", err)
+	}
+
+	if len(result.IndividualResults) != 2 {
+		t.Errorf("expected 2 individual results, got %d", len(result.IndividualResults))
+	}
+
+	for _, res := range result.IndividualResults {
+		if len(res.Logs) == 0 {
+			t.Errorf("expected logs for run %d, but got none", res.RunID)
+		}
+	}
+}
+
+func TestRunMultiSimulation_NoLogs(t *testing.T) {
+	ctx := context.Background()
+	req := MultiSimulationRequest{
+		NumRuns:     2,
+		MaxRounds:   5,
+		IncludeLogs: false,
+		BaseOptions: core.SimulationOptions{
+			Seed: core.Seed{Seed1: 1, Seed2: 2},
+		},
+	}
+
+	setup := func(sm *SimulationManager) error {
+		ch := buildTestCharacter(t, core.AbilityScores{Strength: 16, Dexterity: 14}, 1)
+		equipSword(t, ch, core.WSPrimary)
+		mon := buildTestMonster(t, 10)
+		ce := sm.GetCombatEngine()
+		c1, c2 := buildCombatants(ch, mon)
+		ce.AddCombatant(c1)
+		ce.AddCombatant(c2)
+		sm.InitializeCombatants()
+		return nil
+	}
+
+	result, err := RunMultiSimulationWithSetup(ctx, req, setup)
+	if err != nil {
+		t.Fatalf("RunMultiSimulationWithSetup failed: %v", err)
+	}
+
+	for _, res := range result.IndividualResults {
+		if len(res.Logs) != 0 {
+			t.Errorf("expected no logs for run %d, but got %d events", res.RunID, len(res.Logs))
+		}
+	}
+}

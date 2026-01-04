@@ -19,6 +19,36 @@ type SimulationManager struct {
 	finalResult  core.VictoryStatus
 }
 
+// MultiSimulationRequest defines the parameters for running multiple simulations.
+type MultiSimulationRequest struct {
+	BaseOptions      core.SimulationOptions
+	CharacterConfigs []character.CharacterConfig
+	MonsterIDs       []int
+	LairConfig       *lair.LairConfig
+	NumRuns          int
+	MaxRounds        int
+	IncludeLogs      bool // If true, full event logs will be included in the results.
+}
+
+// MultiSimulationResult aggregates the results of multiple simulation runs.
+type MultiSimulationResult struct {
+	TotalRuns          int                          `json:"total_runs"`
+	CharacterVictories int                          `json:"character_victories"`
+	MonsterVictories   int                          `json:"monster_victories"`
+	OtherVictories     int                          `json:"other_victories"`
+	AverageRounds      float64                      `json:"average_rounds"`
+	IndividualResults  []IndividualSimulationResult `json:"individual_results,omitempty"`
+}
+
+// IndividualSimulationResult holds data for a single simulation run within a multi-run.
+type IndividualSimulationResult struct {
+	RunID         int                  `json:"run_id"`
+	VictoryStatus core.VictoryStatus   `json:"victory_status"`
+	Rounds        int                  `json:"rounds"`
+	Seed          core.Seed            `json:"seed"`
+	Logs          []events.CombatEvent `json:"logs,omitempty"`
+}
+
 func NewSimulationManager(options core.SimulationOptions, seed core.Seed) *SimulationManager {
 	var s SimulationManager
 	// Determine the master seed: prefer explicit seed param, else options.Seed, else fixed default
@@ -75,6 +105,107 @@ func (s *SimulationManager) PrintSimulationLog() {
 
 func (s *SimulationManager) GetCombatEngine() *CombatEngine {
 	return s.combatEngine
+}
+
+// RunMultiSimulation executes multiple simulations in parallel and returns an aggregated result.
+func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*MultiSimulationResult, error) {
+	return RunMultiSimulationWithSetup(ctx, req, nil)
+}
+
+// RunMultiSimulationWithSetup allows providing an optional setup function for testing purposes.
+// If setup is nil, it uses the default DB-based setup.
+func RunMultiSimulationWithSetup(ctx context.Context, req MultiSimulationRequest, setup func(sm *SimulationManager) error) (*MultiSimulationResult, error) {
+	if req.NumRuns <= 0 {
+		return nil, fmt.Errorf("number of runs must be greater than 0")
+	}
+
+	resultsChan := make(chan IndividualSimulationResult, req.NumRuns)
+	errChan := make(chan error, req.NumRuns)
+
+	// We use a master RNG to generate seeds for each run to ensure they are different but reproducible if the master seed is fixed.
+	masterSeed := req.BaseOptions.Seed
+	if masterSeed.Seed1 == 0 && masterSeed.Seed2 == 0 {
+		masterSeed = core.Seed{Seed1: uint64(rand.Int64()), Seed2: uint64(rand.Int64())}
+	}
+	masterRNG := rand.New(rand.NewPCG(masterSeed.Seed1, masterSeed.Seed2))
+
+	for i := 0; i < req.NumRuns; i++ {
+		runSeed := core.Seed{Seed1: masterRNG.Uint64(), Seed2: masterRNG.Uint64()}
+
+		go func(runID int, seed core.Seed) {
+			// Each goroutine gets its own SimulationManager
+			opts := req.BaseOptions
+			opts.Seed = seed
+			sm := NewSimulationManager(opts, seed)
+
+			if setup != nil {
+				if err := setup(sm); err != nil {
+					errChan <- fmt.Errorf("run %d setup failed: %w", runID, err)
+					return
+				}
+			} else {
+				// Setup combatants
+				// Note: SetupCombatantsFromAPI uses the DB, so we need to ensure the DB connection is thread-safe.
+				// In Go, sql.DB is thread-safe.
+				_, err := sm.SetupCombatantsFromAPIWithLair(ctx, req.CharacterConfigs, req.MonsterIDs, req.LairConfig)
+				if err != nil {
+					errChan <- fmt.Errorf("run %d setup failed: %w", runID, err)
+					return
+				}
+
+				sm.InitializeCombatants()
+			}
+
+			err := sm.RunSimulation(req.MaxRounds)
+			if err != nil {
+				errChan <- fmt.Errorf("run %d execution failed: %w", runID, err)
+				return
+			}
+
+			res := IndividualSimulationResult{
+				RunID:         runID,
+				VictoryStatus: sm.GetFinalResult(),
+				Rounds:        sm.GetCombatEngine().CurrentRound,
+				Seed:          seed,
+			}
+			if req.IncludeLogs {
+				res.Logs = sm.simLog
+			}
+			resultsChan <- res
+		}(i, runSeed)
+	}
+
+	multiResult := &MultiSimulationResult{
+		TotalRuns:         req.NumRuns,
+		IndividualResults: make([]IndividualSimulationResult, 0, req.NumRuns),
+	}
+
+	var totalRounds int
+	for i := 0; i < req.NumRuns; i++ {
+		select {
+		case res := <-resultsChan:
+			multiResult.IndividualResults = append(multiResult.IndividualResults, res)
+			totalRounds += res.Rounds
+			switch res.VictoryStatus {
+			case core.VictoryStatusCharacters:
+				multiResult.CharacterVictories++
+			case core.VictoryStatusMonsters:
+				multiResult.MonsterVictories++
+			default:
+				multiResult.OtherVictories++
+			}
+		case err := <-errChan:
+			return nil, err
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+
+	if multiResult.TotalRuns > 0 {
+		multiResult.AverageRounds = float64(totalRounds) / float64(multiResult.TotalRuns)
+	}
+
+	return multiResult, nil
 }
 
 // RunSimulation executes a combat simulation for a given maximum number of rounds and returns an error if the simulation fails.
