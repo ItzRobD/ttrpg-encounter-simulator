@@ -160,7 +160,11 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 		}
 
 		// Structured logging: action about to be executed
-		events.LogCombatEventMessage(mam.parent, fmt.Sprintf("Monster action '%s' against %s", ad.Name, req.Target.GetName()), mam.parent.GetEventListener())
+		if len(req.AttackData) == 1 {
+			events.LogCombatEventMessage(mam.parent, fmt.Sprintf("%s (%d) action '%s' against %s", mam.parent.GetName(), req.Target.GetInstanceID(), ad.Name, req.Target.GetName()), mam.parent.GetEventListener())
+		} else if idx == 0 {
+			events.LogCombatEventMessage(mam.parent, fmt.Sprintf("%s (%d) multiattack against %s", mam.parent.GetName(), req.Target.GetInstanceID(), req.Target.GetName()), mam.parent.GetEventListener())
+		}
 		// Attack Roll
 		attackMod := ad.AttackModifier
 		cT := 20

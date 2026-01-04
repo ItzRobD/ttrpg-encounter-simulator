@@ -72,13 +72,18 @@ func (mai *MonsterAI) createMonsterLegendaryActionRequest() (*core.AIRequest, er
 		return nil, fmt.Errorf("monster has no legendary action points")
 	}
 
-	tStatus, targetID, _, _, err := mai.SelectTargetID(core.TTDamage)
+	tStatus, targetID, _, _, err := mai.SelectTargetIDWithLogging(core.TTDamage, false)
 	if err != nil {
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
 		events.LogCombatEventMessage(mai.parent, "No valid targets", mai.parent.GetEventListener())
 		return nil, nil
+	}
+
+	// Now that we've decided to use a legendary action, we can log the target choice
+	if combatant, ok := mai.combatCtx.CombatantInfo[targetID]; ok {
+		events.LogTargetChoiceEvent(mai.parent, combatant.Combatant.GetEntity(), 1.0, nil, mai.parent.GetEventListener())
 	}
 
 	actionChoiceID := -1
@@ -443,6 +448,10 @@ func (mai *MonsterAI) buildAIRequest(actionIndex int, targetID int, spellChoice 
 }
 
 func (mai *MonsterAI) SelectTargetID(targetType core.TargetType) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
+	return mai.SelectTargetIDWithLogging(targetType, true)
+}
+
+func (mai *MonsterAI) SelectTargetIDWithLogging(targetType core.TargetType, shouldLog bool) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
 	if mai.combatCtx == nil {
 		return core.TargetInvalidType, -1, 0, nil, fmt.Errorf("combat context not set")
 	}
@@ -465,27 +474,29 @@ func (mai *MonsterAI) SelectTargetID(targetType core.TargetType) (core.TargetSta
 	}
 
 	if mai.combatCtx.Options.UseWeightedAI {
-		return mai.selectTargetWeighted(validTargets, targetType)
+		return mai.selectTargetWeighted(validTargets, targetType, shouldLog)
 	}
 
-	status, id, err := mai.selectTargetSimple(validTargets, targetType)
+	status, id, err := mai.selectTargetSimple(validTargets, targetType, shouldLog)
 	return status, id, 1.0, nil, err
 }
 
-func (mai *MonsterAI) selectTargetSimple(validTargets map[int]*core.Combatant, targetType core.TargetType) (core.TargetStatus, int, error) {
+func (mai *MonsterAI) selectTargetSimple(validTargets map[int]*core.Combatant, targetType core.TargetType, shouldLog bool) (core.TargetStatus, int, error) {
 	status, target, err := core.SelectTargetFromMap(validTargets, mai.parent.EntityStateManager.GetTargetPrioritization(), mai.rng)
 	if err != nil || status != core.TargetOK {
 		return status, -1, err
 	}
 
-	if combatant, ok := validTargets[target]; ok && combatant != nil {
-		events.LogTargetChoiceEvent(mai.parent, combatant.GetEntity(), 1.0, nil, mai.parent.GetEventListener())
+	if shouldLog {
+		if combatant, ok := validTargets[target]; ok && combatant != nil {
+			events.LogTargetChoiceEvent(mai.parent, combatant.GetEntity(), 1.0, nil, mai.parent.GetEventListener())
+		}
 	}
 
 	return core.TargetOK, target, nil
 }
 
-func (mai *MonsterAI) selectTargetWeighted(validTargets map[int]*core.Combatant, targetType core.TargetType) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
+func (mai *MonsterAI) selectTargetWeighted(validTargets map[int]*core.Combatant, targetType core.TargetType, shouldLog bool) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
 	if len(validTargets) == 0 {
 		return core.TargetNone, -1, 0, nil, nil
 	}
@@ -605,7 +616,9 @@ func (mai *MonsterAI) selectTargetWeighted(validTargets map[int]*core.Combatant,
 		fmt.Println()
 	}
 
-	events.LogTargetChoiceEvent(mai.parent, validTargets[bestID].Entity, bestScore, bestFactors, mai.parent.GetEventListener())
+	if shouldLog {
+		events.LogTargetChoiceEvent(mai.parent, validTargets[bestID].Entity, bestScore, bestFactors, mai.parent.GetEventListener())
+	}
 	return core.TargetOK, bestID, bestScore, bestFactors, nil
 }
 
@@ -620,10 +633,10 @@ func (mai *MonsterAI) chooseActionWeighted() (core.ActionType, error) {
 	damageFactors := make(map[events.DecisionFactor]float64)
 
 	// Evaluate Damage Utility based on best target
-	tStatus, _, bestDamageScore, bestDamageFactors, _ := mai.SelectTargetID(core.TTDamage)
+	tStatus, _, bestDamageScore, bestDamageFactors, _ := mai.SelectTargetIDWithLogging(core.TTDamage, false)
 	if tStatus == core.TargetOK {
 		damageUtility *= bestDamageScore
-		if mai.combatCtx.Options.UseWeightedAI {
+		if mai.combatCtx.Options.DebugAI {
 			fmt.Printf("[DEBUG AI] %s: Damage Base Utility: %.2f, Best Target Score: %.2f, Final Damage Utility: %.2f\n",
 				mai.parent.GetName(), mai.Weights.ActionWeights[core.ATMonsterDamage], bestDamageScore, damageUtility)
 		}
@@ -640,29 +653,15 @@ func (mai *MonsterAI) chooseActionWeighted() (core.ActionType, error) {
 		// Evaluate ALL allies for healing utility
 		allies := mai.getAllyTargets()
 		if len(allies) > 0 {
-			bestHealScore := 0.0
-			avgEnemyDamage := mai.calculateAvgEnemyDamage()
-
-			ids := make([]int, 0, len(allies))
-			for id := range allies {
-				ids = append(ids, id)
-			}
-			sort.Ints(ids)
-
-			for _, id := range ids {
-				ally := allies[id]
-				hpStatus := ally.Entity.GetHPStatus()
-				emergency := core.CalculateEmergencyHealFactor(hpStatus.GetHP(), avgEnemyDamage)
-				score := emergency * mai.Weights.TargetFactorWeights.EmergencyHeal
-				if score > bestHealScore {
-					bestHealScore = score
+			// Find best healing target without logging yet
+			tStatus, _, bestHealScore, _, _ := mai.SelectTargetIDWithLogging(core.TTHealing, false)
+			if tStatus == core.TargetOK {
+				healUtility = mai.Weights.ActionWeights[core.ATMonsterHeal] * bestHealScore
+				healFactors[events.FactorEmergencyHeal] = healUtility
+				if mai.combatCtx.Options.DebugAI {
+					fmt.Printf("[DEBUG AI] %s: Heal Base Utility: %.2f, Best Heal Score: %.2f, Final Heal Utility: %.2f\n",
+						mai.parent.GetName(), mai.Weights.ActionWeights[core.ATMonsterHeal], bestHealScore, healUtility)
 				}
-			}
-			healUtility = mai.Weights.ActionWeights[core.ATMonsterHeal] * bestHealScore
-			healFactors[events.FactorEmergencyHeal] = healUtility
-			if mai.combatCtx.Options.UseWeightedAI {
-				fmt.Printf("[DEBUG AI] %s: Heal Base Utility: %.2f, Best Heal Score: %.2f, Final Heal Utility: %.2f\n",
-					mai.parent.GetName(), mai.Weights.ActionWeights[core.ATMonsterHeal], bestHealScore, healUtility)
 			}
 		}
 	}

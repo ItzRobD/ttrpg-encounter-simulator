@@ -206,7 +206,7 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 		MonsterDeathEffectsHitAllies:  false,
 		AlwaysUseSneakAttack:          false,
 		UseWeightedAI:                 true,
-		DebugAI:                       true,
+		DebugAI:                       false,
 		HPVisibilityMode:              core.HPVisibilityWhite,
 		EnableMonsterNoise:            true,
 		MonsterNoiseWeight:            0.1,

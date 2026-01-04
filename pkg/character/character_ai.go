@@ -296,7 +296,7 @@ func (cai *CharacterAI) chooseActionWeighted() (core.ActionType, error) {
 	tStatus, _, bestDamageScore, bestDamageFactors, _ := cai.SelectTargetID(core.TTDamage)
 	if tStatus == core.TargetOK {
 		damageUtility *= bestDamageScore
-		if cai.combatCtx.Options.UseWeightedAI {
+		if cai.combatCtx.Options.DebugAI {
 			fmt.Printf("[DEBUG AI] %s: Damage Base Utility: %.2f, Best Target Score: %.2f, Final Damage Utility: %.2f\n",
 				cai.parent.GetName(), cai.Weights.ActionWeights[core.ATDamage], bestDamageScore, damageUtility)
 		}
@@ -334,7 +334,7 @@ func (cai *CharacterAI) chooseActionWeighted() (core.ActionType, error) {
 
 			healUtility = cai.Weights.ActionWeights[core.ATHeal] * bestHealScore
 			healFactors[events.FactorEmergencyHeal] = healUtility
-			if cai.combatCtx.Options.UseWeightedAI {
+			if cai.combatCtx.Options.DebugAI {
 				fmt.Printf("[DEBUG AI] %s: Heal Base Utility: %.2f, Best Heal Score: %.2f, Final Heal Utility: %.2f\n",
 					cai.parent.GetName(), cai.Weights.ActionWeights[core.ATHeal], bestHealScore, healUtility)
 			}
@@ -355,7 +355,7 @@ func (cai *CharacterAI) chooseActionWeighted() (core.ActionType, error) {
 			}
 			breathUtility *= bestDamageScore
 			breathFactors[events.FactorOptimalDamage] = breathUtility
-			if cai.combatCtx.Options.UseWeightedAI {
+			if cai.combatCtx.Options.DebugAI {
 				fmt.Printf("[DEBUG AI] %s: Breath Base Utility: %.2f, Best Target Score: %.2f, Final Breath Utility: %.2f\n",
 					cai.parent.GetName(), cai.Weights.ActionWeights[core.ATDragonbornBreathWeapon], bestDamageScore, breathUtility)
 			}
