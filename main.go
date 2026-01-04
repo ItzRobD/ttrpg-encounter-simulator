@@ -286,6 +286,7 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 	sim.SetupCombatantsFromAPIWithLair(ctx,
 		charCfgs,
 		monsterIds,
+		nil,
 		lc)
 
 	// Since monsters are loaded from DB, we apply standard weights here

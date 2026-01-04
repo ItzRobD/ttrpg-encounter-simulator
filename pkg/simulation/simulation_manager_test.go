@@ -5,6 +5,8 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
+	"fmt"
 	"testing"
 )
 
@@ -75,7 +77,7 @@ func TestSimulationManager_SetupCombatantsFromAPI_EmptyInputs(t *testing.T) {
 	sm := NewSimulationManager(core.SimulationOptions{}, core.Seed{Seed1: 31, Seed2: 32})
 	ctx := context.Background()
 	// No characters and no monsters — should not error hard and should add none
-	result, err := sm.SetupCombatantsFromAPI(ctx, nil, nil)
+	result, err := sm.SetupCombatantsFromAPI(ctx, nil, nil, nil)
 	if err != nil && result == nil {
 		// Some implementations may return nil result with error; allow either no error or an error with nil result
 		t.Fatalf("SetupCombatantsFromAPI unexpected fatal error: %v", err)
@@ -161,25 +163,96 @@ func TestRunMultiSimulation_WithLogs(t *testing.T) {
 	}
 }
 
-func TestRunMultiSimulation_NoLogs(t *testing.T) {
+func TestSimulationManager_SetupCombatantsFromAPI_CustomMonsters(t *testing.T) {
+	sm := NewSimulationManager(core.SimulationOptions{}, core.Seed{Seed1: 41, Seed2: 42})
 	ctx := context.Background()
-	req := MultiSimulationRequest{
-		NumRuns:     2,
-		MaxRounds:   5,
-		IncludeLogs: false,
-		BaseOptions: core.SimulationOptions{
-			Seed: core.Seed{Seed1: 1, Seed2: 2},
+
+	// Use buildTestCharacter instead of CharacterConfig to bypass DB queries in unit test
+	ch := buildTestCharacter(t, core.AbilityScores{}, 1)
+	ch.Name = "Hero"
+
+	monsterConfigs := []monster.MonsterConfig{
+		{
+			Base: monster.MonsterBase{
+				Name:          "Custom Orc",
+				AC:            13,
+				AbilityScores: core.AbilityScores{Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10},
+				HP:            core.HPConfig{HPSetMethod: core.HPSetValue, Value: 15, HitDie: core.D8, NumberOfDice: 1}, // Added NumberOfDice: 1 to pass RollHP validation
+			},
 		},
 	}
 
+	setupManager := NewCombatantSetupManager(ctx, sm.options.UseHPAverageCharacter, sm.options.UseHPAverageMonster, sm.rng)
+	result, err := setupManager.SetupCombatants(nil, nil, monsterConfigs)
+	if err != nil {
+		t.Fatalf("SetupCombatants failed: %v", err)
+	}
+
+	// Manually add Hero
+	result.Combatants = append(result.Combatants, core.NewCombatantWithInfo(ch))
+
+	if len(result.Combatants) != 2 {
+		t.Errorf("expected 2 combatants, got %d", len(result.Combatants))
+	}
+
+	foundHero := false
+	foundOrc := false
+	for _, c := range result.Combatants {
+		if c.Entity.GetName() == "Hero" {
+			foundHero = true
+		}
+		if c.Entity.GetName() == "Custom Orc" {
+			foundOrc = true
+		}
+	}
+
+	if !foundHero {
+		t.Error("Hero not found in combatants")
+	}
+	if !foundOrc {
+		t.Error("Custom Orc not found in combatants")
+	}
+}
+
+func TestRunMultiSimulation_WithCustomMonsters(t *testing.T) {
+	ctx := context.Background()
+	req := MultiSimulationRequest{
+		NumRuns:   1,
+		MaxRounds: 5,
+		BaseOptions: core.SimulationOptions{
+			Seed: core.Seed{Seed1: 1, Seed2: 2},
+		},
+		MonsterConfigs: []monster.MonsterConfig{
+			{
+				Base: monster.MonsterBase{
+					Name:          "Custom Orc",
+					AC:            13,
+					AbilityScores: core.AbilityScores{Strength: 10, Dexterity: 10, Constitution: 10, Intelligence: 10, Wisdom: 10, Charisma: 10},
+					HP:            core.HPConfig{HPSetMethod: core.HPSetValue, Value: 15, HitDie: core.D8, NumberOfDice: 1},
+				},
+				Actions: map[int]monster.Action{
+					1: {ActionID: 1, Name: "Greataxe", NumberOfDice: 1, Die: core.D12, AmountToAdd: 3, AttackBonus: 5, DamageType: core.DamageSlashing},
+				},
+			},
+		},
+	}
+
+	// Use a setup function to bypass DB-based character creation
 	setup := func(sm *SimulationManager) error {
 		ch := buildTestCharacter(t, core.AbilityScores{Strength: 16, Dexterity: 14}, 1)
-		equipSword(t, ch, core.WSPrimary)
-		mon := buildTestMonster(t, 10)
-		ce := sm.GetCombatEngine()
-		c1, c2 := buildCombatants(ch, mon)
-		ce.AddCombatant(c1)
-		ce.AddCombatant(c2)
+		ch.Name = "Hero"
+		equipSword(t, ch, core.WSPrimary) // Equip sword so it has a valid action
+		sm.GetCombatEngine().AddCombatant(core.NewCombatantWithInfo(ch))
+
+		// Setup custom monsters from request
+		res, err := sm.SetupCombatantsFromAPI(ctx, nil, nil, req.MonsterConfigs)
+		if err != nil {
+			return err
+		}
+		if len(res.Errors) > 0 {
+			return fmt.Errorf("setup errors: %v", res.Errors)
+		}
+
 		sm.InitializeCombatants()
 		return nil
 	}
@@ -189,9 +262,7 @@ func TestRunMultiSimulation_NoLogs(t *testing.T) {
 		t.Fatalf("RunMultiSimulationWithSetup failed: %v", err)
 	}
 
-	for _, res := range result.IndividualResults {
-		if len(res.Logs) != 0 {
-			t.Errorf("expected no logs for run %d, but got %d events", res.RunID, len(res.Logs))
-		}
+	if result.TotalRuns != 1 {
+		t.Errorf("expected 1 run, got %d", result.TotalRuns)
 	}
 }

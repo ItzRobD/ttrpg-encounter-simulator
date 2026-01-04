@@ -36,7 +36,7 @@ func NewCombatantSetupManager(ctx context.Context, useHPAverageCharacters bool, 
 	}
 }
 
-func (csm *CombatantSetupManager) SetupCombatants(characterConfigs []character.CharacterConfig, monsterIDs []int) (*SetupResult, error) {
+func (csm *CombatantSetupManager) SetupCombatants(characterConfigs []character.CharacterConfig, monsterIDs []int, monsterConfigs []monster.MonsterConfig) (*SetupResult, error) {
 	result := &SetupResult{
 		Combatants: make([]*core.Combatant, 0),
 		Errors:     make([]SetupError, 0),
@@ -47,10 +47,15 @@ func (csm *CombatantSetupManager) SetupCombatants(characterConfigs []character.C
 	result.Combatants = append(result.Combatants, characters...)
 	result.Errors = append(result.Errors, charErrors...)
 
-	// Setup monsters
+	// Setup monsters from IDs
 	monsters, monsterErrors := csm.createMonsters(monsterIDs)
 	result.Combatants = append(result.Combatants, monsters...)
 	result.Errors = append(result.Errors, monsterErrors...)
+
+	// Setup monsters from configs
+	customMonsters, customMonsterErrors := csm.createMonstersFromConfigs(monsterConfigs)
+	result.Combatants = append(result.Combatants, customMonsters...)
+	result.Errors = append(result.Errors, customMonsterErrors...)
 
 	// If we have no valid combatants, return error
 	if len(result.Combatants) == 0 {
@@ -58,6 +63,31 @@ func (csm *CombatantSetupManager) SetupCombatants(characterConfigs []character.C
 	}
 
 	return result, nil
+}
+
+func (csm *CombatantSetupManager) createMonstersFromConfigs(configs []monster.MonsterConfig) ([]*core.Combatant, []SetupError) {
+	var combatants []*core.Combatant
+	var errors []SetupError
+
+	for _, config := range configs {
+		if csm.useHPAverageMonsters {
+			config.HPSetMethod = core.HPSetAverage
+		} else {
+			config.HPSetMethod = core.HPSetRoll
+		}
+		m, err := monster.NewMonsterWithRNG(csm.ctx, config, csm.rng)
+		if err != nil {
+			errors = append(errors, SetupError{
+				Type:    "monster",
+				ID:      config.Base.Name,
+				Message: fmt.Sprintf("Failed to create monster %s: %v", config.Base.Name, err),
+			})
+			continue
+		}
+		combatants = append(combatants, core.NewCombatantWithInfo(m))
+	}
+
+	return combatants, errors
 }
 
 func (csm *CombatantSetupManager) createCharacters(configs []character.CharacterConfig) ([]*core.Combatant, []SetupError) {

@@ -6,6 +6,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/lair"
+	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
 	"math/rand/v2"
 )
@@ -24,6 +25,7 @@ type MultiSimulationRequest struct {
 	BaseOptions      core.SimulationOptions
 	CharacterConfigs []character.CharacterConfig
 	MonsterIDs       []int
+	MonsterConfigs   []monster.MonsterConfig
 	LairConfig       *lair.LairConfig
 	NumRuns          int
 	MaxRounds        int
@@ -58,7 +60,7 @@ func NewSimulationManager(options core.SimulationOptions, seed core.Seed) *Simul
 	}
 	if master.Seed1 == 0 && master.Seed2 == 0 {
 		// Fixed default for reproducibility if caller provides no seed
-		master = core.Seed{Seed1: 0xC0FFEE, Seed2: 0xBEEF}
+		master = core.Seed{Seed1: 0xD20, Seed2: 0xD1CE}
 	}
 	s.rng = rand.New(rand.NewPCG(master.Seed1, master.Seed2))
 
@@ -147,7 +149,7 @@ func RunMultiSimulationWithSetup(ctx context.Context, req MultiSimulationRequest
 				// Setup combatants
 				// Note: SetupCombatantsFromAPI uses the DB, so we need to ensure the DB connection is thread-safe.
 				// In Go, sql.DB is thread-safe.
-				_, err := sm.SetupCombatantsFromAPIWithLair(ctx, req.CharacterConfigs, req.MonsterIDs, req.LairConfig)
+				_, err := sm.SetupCombatantsFromAPIWithLair(ctx, req.CharacterConfigs, req.MonsterIDs, req.MonsterConfigs, req.LairConfig)
 				if err != nil {
 					errChan <- fmt.Errorf("run %d setup failed: %w", runID, err)
 					return
@@ -251,10 +253,10 @@ func (s *SimulationManager) InitializeCombatants() {
 	}
 }
 
-func (s *SimulationManager) SetupCombatantsFromAPI(ctx context.Context, characterConfigs []character.CharacterConfig, monsterIDs []int) (*SetupResult, error) {
+func (s *SimulationManager) SetupCombatantsFromAPI(ctx context.Context, characterConfigs []character.CharacterConfig, monsterIDs []int, monsterConfigs []monster.MonsterConfig) (*SetupResult, error) {
 	setupManager := NewCombatantSetupManager(ctx, s.options.UseHPAverageCharacter, s.options.UseHPAverageMonster, s.rng)
 
-	result, err := setupManager.SetupCombatants(characterConfigs, monsterIDs)
+	result, err := setupManager.SetupCombatants(characterConfigs, monsterIDs, monsterConfigs)
 	if err != nil {
 		return result, err
 	}
@@ -277,8 +279,8 @@ func (s *SimulationManager) SetupCombatantsFromAPI(ctx context.Context, characte
 // SetupCombatantsFromAPIWithLair allows providing an optional lair configuration.
 // When s.options.AllowLairActions is true and lairCfg.Enabled is true, a lair combatant
 // is constructed and added with initiative 20.
-func (s *SimulationManager) SetupCombatantsFromAPIWithLair(ctx context.Context, characterConfigs []character.CharacterConfig, monsterIDs []int, lairCfg *lair.LairConfig) (*SetupResult, error) {
-	res, err := s.SetupCombatantsFromAPI(ctx, characterConfigs, monsterIDs)
+func (s *SimulationManager) SetupCombatantsFromAPIWithLair(ctx context.Context, characterConfigs []character.CharacterConfig, monsterIDs []int, monsterConfigs []monster.MonsterConfig, lairCfg *lair.LairConfig) (*SetupResult, error) {
+	res, err := s.SetupCombatantsFromAPI(ctx, characterConfigs, monsterIDs, monsterConfigs)
 	if err != nil {
 		return res, err
 	}
