@@ -154,7 +154,8 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 	isStrDexSave := ability == core.AbilityStrength || ability == core.AbilityDexterity
 
 	autoFailResult := func() core.RollResult {
-		result := roll_manager.RollResult{
+		result := &roll_manager.RollResult{
+			ID:             core.NewUUIDv7(),
 			DiceRollType:   core.DiceRollSavingThrow,
 			NumberOfDice:   0,
 			Die:            0,
@@ -167,9 +168,9 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 			TargetValue:    targetValue,
 		}
 		if m.EntityStateManager.GetLegendaryResistanceUses() > 0 {
-			m.useLegendaryResistance(&result)
+			m.useLegendaryResistance(result)
 		}
-		m.LogEvent(events.ETRollEvent, &result)
+		m.LogEvent(events.ETRollEvent, result)
 		return result
 	}
 
@@ -217,10 +218,6 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 	res, err := m.RollManager.RollSavingThrow(opts)
 	if err != nil {
 		return nil, err
-	}
-
-	if !res.IsSuccess && m.EntityStateManager.GetLegendaryResistanceUses() > 0 {
-		m.useLegendaryResistance(res)
 	}
 
 	return res, nil
@@ -377,6 +374,7 @@ func (m *Monster) resolveMartialAdvantage(isCritical bool, simOptions *core.Simu
 	if isCritical && simOptions.UseImprovedCriticals {
 		total, rolls := m.RollManager.RollExtraMaxDice(numDice, core.D6)
 		res = &roll_manager.RollResult{
+			ID:             core.NewUUIDv7(),
 			DiceRollType:   core.DiceRollDamage,
 			NumberOfDice:   len(rolls),
 			Die:            core.D6,
@@ -396,13 +394,20 @@ func (m *Monster) resolveMartialAdvantage(isCritical bool, simOptions *core.Simu
 	}
 
 	m.EntityStateManager.SetHasUsedMartialAdvantage(true)
-	events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Martial Advantage", fmt.Sprintf("%s deals extra damage from Martial Advantage!", m.GetName()), "", res.Total, m.EventListener)
+	m.LogEvent(events.ETRollEvent, res)
+	m.LogEvent(events.ETSpecialAbilityEvent, &events.SpecialAbilityData{
+		AbilityName: "Martial Advantage",
+		Description: fmt.Sprintf("%s deals extra damage from Martial Advantage!", m.GetName()),
+		TargetName:  "",
+		Value:       res.Total,
+	})
 
 	return &core.Effect{
-		Type:       core.EffectDamage,
-		Value:      res.Total,
-		BaseValue:  res.Total,
-		DamageType: core.DamageSlashing, // Extra damage is usually of the same type as the attack, simplified to Slashing
+		Type:         core.EffectDamage,
+		Value:        res.Total,
+		BaseValue:    res.Total,
+		DamageType:   core.DamageSlashing, // Extra damage is usually of the same type as the attack, simplified to Slashing
+		SourceRollID: res.GetID(),
 	}
 }
 
@@ -431,6 +436,7 @@ func (m *Monster) resolveDivineEminence(isCritical bool, simOptions *core.Simula
 	if isCritical && simOptions.UseImprovedCriticals {
 		total, rolls := m.RollManager.RollExtraMaxDice(numDice, core.D6)
 		res = &roll_manager.RollResult{
+			ID:             core.NewUUIDv7(),
 			DiceRollType:   core.DiceRollDamage,
 			NumberOfDice:   len(rolls),
 			Die:            core.D6,
@@ -449,13 +455,20 @@ func (m *Monster) resolveDivineEminence(isCritical bool, simOptions *core.Simula
 		return nil
 	}
 
-	events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Divine Eminence", fmt.Sprintf("%s deals extra radiant damage from Divine Eminence!", m.GetName()), "", res.Total, m.EventListener)
+	m.LogEvent(events.ETRollEvent, res)
+	m.LogEvent(events.ETSpecialAbilityEvent, &events.SpecialAbilityData{
+		AbilityName: "Divine Eminence",
+		Description: fmt.Sprintf("%s deals extra radiant damage from Divine Eminence!", m.GetName()),
+		TargetName:  "",
+		Value:       res.Total,
+	})
 
 	return &core.Effect{
-		Type:       core.EffectDamage,
-		Value:      res.Total,
-		BaseValue:  res.Total,
-		DamageType: core.DamageRadiant,
+		Type:         core.EffectDamage,
+		Value:        res.Total,
+		BaseValue:    res.Total,
+		DamageType:   core.DamageRadiant,
+		SourceRollID: res.GetID(),
 	}
 }
 
@@ -490,6 +503,7 @@ func (m *Monster) resolveSneakAttack(params core.SneakAttackParams, simOptions *
 	if params.IsCritical && simOptions.UseImprovedCriticals {
 		total, rolls := m.RollManager.RollExtraMaxDice(numDice, core.D6)
 		res = &roll_manager.RollResult{
+			ID:             core.NewUUIDv7(),
 			DiceRollType:   core.DiceRollDamage,
 			NumberOfDice:   len(rolls),
 			Die:            core.D6,
@@ -509,12 +523,19 @@ func (m *Monster) resolveSneakAttack(params core.SneakAttackParams, simOptions *
 	}
 
 	m.EntityStateManager.SetHasUsedSneakAttack(true)
-	events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Sneak Attack", fmt.Sprintf("%s deals extra damage from Sneak Attack!", m.GetName()), "", res.Total, m.EventListener)
+	m.LogEvent(events.ETRollEvent, res)
+	m.LogEvent(events.ETSpecialAbilityEvent, &events.SpecialAbilityData{
+		AbilityName: "Sneak Attack",
+		Description: fmt.Sprintf("%s deals extra damage from Sneak Attack!", m.GetName()),
+		TargetName:  "",
+		Value:       res.Total,
+	})
 
 	return &core.Effect{
-		Type:       core.EffectDamage,
-		Value:      res.Total,
-		BaseValue:  res.Total,
-		DamageType: params.DamageType,
+		Type:         core.EffectDamage,
+		Value:        res.Total,
+		BaseValue:    res.Total,
+		DamageType:   params.DamageType,
+		SourceRollID: res.GetID(),
 	}
 }

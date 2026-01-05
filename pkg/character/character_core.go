@@ -167,6 +167,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 					BaseValue:      res.GetDamageResult().GetTotal(),
 					DamageType:     res.GetDamageType(),
 					ResistBreakers: res.ResistBreakers,
+					SourceRollID:   res.GetDamageResult().GetID(),
 					AttackCtx: &core.AttackContext{
 						IsRanged:   res.IsRanged,
 						IsCritical: res.IsCriticalHit,
@@ -242,6 +243,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 					BaseValue:      res.GetDamageResult().GetTotal(),
 					DamageType:     res.GetDamageType(),
 					ResistBreakers: res.ResistBreakers,
+					SourceRollID:   res.GetDamageResult().GetID(),
 					AttackCtx: &core.AttackContext{
 						IsRanged:   false,
 						IsCritical: res.IsCriticalHit,
@@ -324,10 +326,11 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 				// However, if we want to be accurate to "multi-target logic", we should consider it.
 
 				effects = append(effects, core.Effect{
-					Type:       core.EffectDamage,
-					Value:      res.GetSpellTotalValue(),
-					BaseValue:  res.ValueRoll.GetTotal(),
-					DamageType: res.GetDamageType(),
+					Type:         core.EffectDamage,
+					Value:        res.GetSpellTotalValue(),
+					BaseValue:    res.ValueRoll.GetTotal(),
+					DamageType:   res.GetDamageType(),
+					SourceRollID: res.ValueRoll.GetID(),
 					SaveCtx: &core.SaveContext{
 						Ability:   res.SpellSaveAbility,
 						TargetDC:  res.TargetDCValue,
@@ -344,8 +347,9 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 				})
 			} else if req.SpellChoice.Spell.GetSpellType() == core.STHealing {
 				effects = append(effects, core.Effect{
-					Type:  core.EffectHealing,
-					Value: res.GetSpellTotalValue(),
+					Type:         core.EffectHealing,
+					Value:        res.GetSpellTotalValue(),
+					SourceRollID: res.ValueRoll.GetID(),
 					SpellCtx: &core.SpellContext{
 						SpellLevel: req.SpellChoice.Formula.CastLevel,
 					},
@@ -408,8 +412,21 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 
 		// Log breath weapon attack event
 		// TODO: Is this duplicated with the weighted ai
-		events.LogDragonbornBreathWeaponEvent(c.GetCurrentEventContext(), c, req.Target, damage.GetTotal(), c.Race.DragonbornFeatures.DamageType.String(), dc, saveAbility.String(), saveRes.GetIsSuccess(), saveRes.GetTotal(), c.EventListener)
-		events.LogDamageEvent(c.GetCurrentEventContext(), c, req.Target, c.Race.DragonbornFeatures.DamageType.String(), damage.GetTotal(), damage.GetFinalRolls(), c.EventListener)
+		c.LogEvent(events.ETDragonbornBreathWeaponEvent, &events.DragonbornBreathWeaponData{
+			Target:      req.Target,
+			DamageTotal: damage.GetTotal(),
+			DamageType:  c.Race.DragonbornFeatures.DamageType.String(),
+			DC:          dc,
+			SaveAbility: saveAbility.String(),
+			SaveSuccess: saveRes.GetIsSuccess(),
+			SaveResult:  saveRes.GetTotal(),
+		})
+		c.LogEvent(events.ETDamageEvent, &events.DamageData{
+			Target:     req.Target,
+			DamageType: c.Race.DragonbornFeatures.DamageType.String(),
+			Damage:     damage.GetTotal(),
+			Rolls:      damage.GetFinalRolls(),
+		})
 
 		c.EntityStateManager.SetDBBreathWeaponUsed(true)
 
@@ -455,7 +472,10 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			c.EntityStateManager.ModifyPaladinLayingOnHandsPool(-hReq.AbilityValue)
 			healingValue = hReq.AbilityValue
 
-			events.LogLayOnHandsHealEvent(c.GetCurrentEventContext(), c, hReq.Target, healingValue, c.EventListener)
+			c.LogEvent(events.ETHealEvent, &events.LayOnHandsHealData{
+				Subject: hReq.Target,
+				Value:   healingValue,
+			})
 		} else if hReq.Source == core.HealSourceSpell {
 			// Existing Spell Logic
 			scReq, err := c.CreateSpellCastRequest(hReq.Target, *hReq.SpellChoice, hReq.Advantage, req.SimOptions)
@@ -578,6 +598,7 @@ func (c *Character) resolveDivineSmite(target core.Entity, isCrit bool, simOptio
 		if simOptions.UseImprovedCriticals {
 			dmgRollTotal, dmgRolls := c.RollManager.RollExtraMaxDice(numDice, core.D8)
 			res = &roll_manager.RollResult{
+				ID:             core.NewUUIDv7(),
 				DiceRollType:   core.DiceRollDamage,
 				Die:            core.D8,
 				Name:           "Divine Smite",
@@ -616,12 +637,14 @@ func (c *Character) resolveDivineSmite(target core.Entity, isCrit bool, simOptio
 	}
 
 	// 5. Log & Return
-	events.LogCombatEventMessage(c.GetCurrentEventContext(), c, fmt.Sprintf("Divine Smite! (Level %d slot)", slotLevel), c.EventListener)
+	c.LogEvent(events.ECombatEventMessage, fmt.Sprintf("Divine Smite! (Level %d slot)", slotLevel))
 	c.LogEvent(events.ETRollEvent, res)
 
 	return &core.Effect{
-		Type:       core.EffectDamage,
-		Value:      res.GetTotal(),
-		DamageType: core.DamageRadiant,
+		Type:         core.EffectDamage,
+		Value:        res.GetTotal(),
+		BaseValue:    res.GetTotal(),
+		DamageType:   core.DamageRadiant,
+		SourceRollID: res.GetID(),
 	}
 }

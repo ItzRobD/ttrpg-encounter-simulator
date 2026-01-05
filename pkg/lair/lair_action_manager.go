@@ -135,7 +135,7 @@ func (lam *LairActionManager) ProcessAttackRequest(req *core.AttackRequest) ([]c
 			DamageRoll:    dmgRollResult,
 			DamageType:    ad.DamageType,
 		}
-		events.LogMeleeAttackEvent(lam.parent.GetCurrentEventContext(), lam.parent, &ar, lam.parent.GetEventListener())
+		lam.parent.LogEvent(events.ETAttackEvent, &ar)
 		results = append(results, ar)
 	}
 	return results, nil
@@ -201,7 +201,13 @@ func (lam *LairActionManager) ExecuteAdvanced(actionIndex int, primaryTarget cor
 			}
 			// Log DC event (basic)
 			// Using generic spell DC event structure with lair name
-			events.LogSpellDCEvent(lam.parent.GetCurrentEventContext(), lam.parent, t, &spells.Spell{Name: a.Name, Level: 0}, a.DCValue, saveRes.GetTotal(), saveRes.GetIsSuccess(), lam.parent.GetEventListener())
+			lam.parent.LogEvent(events.ETSpellDCEvent, &events.SpellDCData{
+				Target: t,
+				Spell:  &spells.Spell{Name: a.Name, Level: 0},
+				DC:     a.DCValue,
+				Save:   saveRes.GetTotal(),
+				IsHit:  saveRes.GetIsSuccess(),
+			})
 
 			applied := dmgRoll.Total
 			if saveRes.GetIsSuccess() {

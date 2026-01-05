@@ -66,10 +66,11 @@ func NewSimulationManager(options core.SimulationOptions, seed core.Seed) *Simul
 
 	dispatcher := events.NewEventDispatcher()
 	dispatcher.RegisterHandler(&events.UniversalEventHandler{})
-	//dispatcher.RegisterHandler(&events.TimelineHandler{})
+	dispatcher.RegisterHandler(&events.TimelineHandler{})
 	s.options = options
 	s.dispatcher = dispatcher
 	s.combatEngine = NewCombatEngine(&s.options)
+	s.combatEngine.EventContext = core.NewEventContext()
 	return &s
 }
 
@@ -108,6 +109,15 @@ func (s *SimulationManager) PrintSimulationLog() {
 
 func (s *SimulationManager) GetCombatEngine() *CombatEngine {
 	return s.combatEngine
+}
+
+func (s *SimulationManager) GetTimeline() []events.TimelineEvent {
+	for _, h := range s.dispatcher.GetHandlers() {
+		if th, ok := h.(*events.TimelineHandler); ok {
+			return th.Timeline
+		}
+	}
+	return nil
 }
 
 // RunMultiSimulation executes multiple simulations in parallel and returns an aggregated result.

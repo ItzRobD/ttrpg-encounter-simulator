@@ -19,6 +19,10 @@ func (d *EventDispatcher) RegisterHandler(handler EventHandler) {
 	d.handlers = append(d.handlers, handler)
 }
 
+func (d *EventDispatcher) GetHandlers() []EventHandler {
+	return d.handlers
+}
+
 func (d *EventDispatcher) DispatchEvent(event CombatEvent) {
 	for _, listener := range d.handlers {
 		if listener != nil {

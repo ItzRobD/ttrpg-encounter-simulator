@@ -129,7 +129,11 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 					if rErr != nil {
 						return rErr
 					}
-					events.LogDamageModifiedEvent(actor.GetCurrentEventContext(), actor, target.GetEntity(), res, actor.GetEventListener())
+					actor.LogEvent(events.ETDamageModifiedEvent, &events.DamageModifiedData{
+						Subject:      target.GetEntity(),
+						Res:          res,
+						SourceRollID: currentEffect.SourceRollID,
+					})
 					hpModResult, err = target.GetEntity().ModifyHP(res.FinalValue, false, false, ce.SimOptions.UseMassiveDamage, currentEffect.DamageType, currentEffect.AttackCtx != nil && currentEffect.AttackCtx.IsCritical)
 					if err != nil {
 						return fmt.Errorf("failed to modify target entity HP: %v", err)
@@ -228,7 +232,11 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 				}
 
 				// Log after each effect's HP modification for clarity
-				events.LogHPModifiedEvent(actor.GetCurrentEventContext(), actor, target.GetEntity(), hpModResult, actor.GetEventListener())
+				actor.LogEvent(events.ETHPModifiedEvent, &events.HPModifiedData{
+					Subject:      target.GetEntity(),
+					Res:          hpModResult,
+					SourceRollID: currentEffect.SourceRollID,
+				})
 
 				// Handle concentration check if triggered
 				if hpModResult.GetTriggeredConcentrationCheck() {

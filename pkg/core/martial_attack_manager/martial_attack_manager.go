@@ -119,9 +119,40 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) (
 				AdvantageUsed:  attackRollResult.Advantage,
 			}
 
-			// TODO: Attack roll - Child of action (current parent id)
-			events.LogMeleeAttackEvent(mam.parent.GetCurrentEventContext(), mam.parent, &attackResult, mam.parent.GetEventListener())
-			results = append(results, attackResult)
+			// 1. Log Attack (This generates the Attack's currentID)
+			mam.parent.LogEvent(events.ETAttackEvent, &attackResult)
+
+			// 2. Advance Scope: The Attack becomes the parent for subsequent events (like damage)
+			ctx := mam.parent.GetCurrentEventContext()
+			if ctx != nil {
+				actionID := ctx.GetParentID() // Store current action ID
+				ctx.AdvanceScope()
+
+				// 3. Roll damage (Internalized logging in RollDamage now uses the new ParentID)
+				rollOpts = roll_manager.NewRollOptions()
+				rollOpts.RollType = core.DiceRollDamage
+				dmgRollResult, err = mam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, rollOpts)
+				if err != nil {
+					return nil, err
+				}
+
+				// Update result with the damage roll (though it's already logged internally)
+				attackResult.DamageRoll = dmgRollResult
+				results = append(results, attackResult)
+
+				// 4. Restore Action ID for the next attack in multi-attack sequence
+				ctx.SetParentID(actionID)
+			} else {
+				// Fallback if no context (e.g. in some tests)
+				rollOpts = roll_manager.NewRollOptions()
+				rollOpts.RollType = core.DiceRollDamage
+				dmgRollResult, err = mam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, rollOpts)
+				if err != nil {
+					return nil, err
+				}
+				attackResult.DamageRoll = dmgRollResult
+				results = append(results, attackResult)
+			}
 		}
 	}
 

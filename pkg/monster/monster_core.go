@@ -109,7 +109,12 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 	}
 	// Logging for tactical action (only if weighted AI is not used, to avoid duplication)
 	if m.AI.combatCtx == nil || !m.AI.combatCtx.Options.UseWeightedAI {
-		events.LogMonsterActionChoiceEvent(m.GetCurrentEventContext(), m, req.ActionType, nil, nil, 0, m.EventListener)
+		m.LogEvent(events.ETActionChoiceEvent, &events.ActionChoiceData{
+			Choice:       req.ActionType,
+			AllScores:    nil,
+			TopReasons:   nil,
+			UtilityScore: 0,
+		})
 	}
 
 	req.ActorID = actorID
@@ -150,7 +155,12 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 				activeDice := m.SpecialAbilities.DivineEminenceNumDice + (slotToExpend - 1)
 				m.EntityStateManager.SetDivineEminenceDice(activeDice)
 
-				events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Divine Eminence Activation", fmt.Sprintf("%s activates Divine Eminence (expended level %d slot, %d dice)!", m.Name, slotToExpend, activeDice), "", slotToExpend, m.EventListener)
+				m.LogEvent(events.ETSpecialAbilityEvent, &events.SpecialAbilityData{
+					AbilityName: "Divine Eminence Activation",
+					Description: fmt.Sprintf("%s activates Divine Eminence (expended level %d slot, %d dice)!", m.Name, slotToExpend, activeDice),
+					TargetName:  "",
+					Value:       slotToExpend,
+				})
 			}
 		}
 		return &core.ActionOutcome{
@@ -188,10 +198,11 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 			attackResults = append(attackResults, res)
 			if res.GetIsHit() {
 				effects = append(effects, core.Effect{
-					Type:       core.EffectDamage,
-					Value:      res.GetDamageResult().GetTotal(),
-					BaseValue:  res.GetDamageResult().GetTotal(),
-					DamageType: res.GetDamageType(),
+					Type:         core.EffectDamage,
+					Value:        res.GetDamageResult().GetTotal(),
+					BaseValue:    res.GetDamageResult().GetTotal(),
+					DamageType:   res.GetDamageType(),
+					SourceRollID: res.GetDamageResult().GetID(),
 					AttackCtx: &core.AttackContext{
 						IsRanged:   res.IsRanged,
 						IsCritical: res.IsCriticalHit,
@@ -343,10 +354,11 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 		if res.GetIsHit() || req.SpellChoice.Spell.GetIsAutoHit() {
 			if req.SpellChoice.Spell.GetSpellType() == core.STDamage {
 				effects = append(effects, core.Effect{
-					Type:       core.EffectDamage,
-					Value:      res.GetSpellTotalValue(),
-					BaseValue:  res.ValueRoll.GetTotal(),
-					DamageType: res.GetDamageType(),
+					Type:         core.EffectDamage,
+					Value:        res.GetSpellTotalValue(),
+					BaseValue:    res.ValueRoll.GetTotal(),
+					DamageType:   res.GetDamageType(),
+					SourceRollID: res.ValueRoll.GetID(),
 					SaveCtx: &core.SaveContext{
 						Ability:   res.SpellSaveAbility,
 						TargetDC:  res.TargetDCValue,
@@ -363,8 +375,9 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 				})
 			} else if req.SpellChoice.Spell.GetSpellType() == core.STHealing {
 				effects = append(effects, core.Effect{
-					Type:  core.EffectHealing,
-					Value: res.GetSpellTotalValue(),
+					Type:         core.EffectHealing,
+					Value:        res.GetSpellTotalValue(),
+					SourceRollID: res.ValueRoll.GetID(),
 					SpellCtx: &core.SpellContext{
 						SpellLevel: req.SpellChoice.Formula.CastLevel,
 					},

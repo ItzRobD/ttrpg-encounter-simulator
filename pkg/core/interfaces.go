@@ -93,6 +93,8 @@ type SpellCastRequest interface {
 }
 
 type RollResult interface {
+	GetID() string
+	SetID(id string)
 	GetDiceRollType() DiceRollType
 	GetNumberOfDice() int
 	GetDiceType() string

@@ -16,9 +16,9 @@ func (l *Lair) LogEvent(eventType interface{}, data interface{}) {
 	switch t := eventType.(type) {
 	case events.EventType:
 		switch t {
-		case events.ETRollEvent:
+		case events.ETRollEvent, events.ETRollInitiative:
 			if res, ok := data.(*roll_manager.RollResult); ok {
-				events.LogDiceRollEvent(ctx, l, *res, listener)
+				events.LogDiceRollEvent(ctx, l, res, listener)
 			}
 		case events.ETAttackEvent:
 			if res, ok := data.(*core.AttackResult); ok {
@@ -61,7 +61,7 @@ func (l *Lair) LogEvent(eventType interface{}, data interface{}) {
 			}
 		case events.ETHPModifiedEvent:
 			if d, ok := data.(*events.HPModifiedData); ok {
-				events.LogHPModifiedEvent(ctx, l, d.Subject, d.Res, listener)
+				events.LogHPModifiedEvent(ctx, l, d.Subject, d.Res, d.SourceRollID, listener)
 			}
 		case events.ETSavingThrowEvent:
 			if d, ok := data.(*events.SavingThrowData); ok {
@@ -77,7 +77,7 @@ func (l *Lair) LogEvent(eventType interface{}, data interface{}) {
 			}
 		case events.ETDamageModifiedEvent:
 			if d, ok := data.(*events.DamageModifiedData); ok {
-				events.LogDamageModifiedEvent(ctx, l, d.Subject, d.Res, listener)
+				events.LogDamageModifiedEvent(ctx, l, d.Subject, d.Res, d.SourceRollID, listener)
 			}
 		case events.ETDragonbornBreathWeaponEvent:
 			if d, ok := data.(*events.DragonbornBreathWeaponData); ok {

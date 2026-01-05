@@ -268,7 +268,7 @@ func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int, isSpe
 	isStrDexSave := ability == core.AbilityStrength || ability == core.AbilityDexterity
 
 	autoFailResult := func() core.RollResult {
-		result := roll_manager.RollResult{
+		result := &roll_manager.RollResult{
 			DiceRollType:   core.DiceRollSavingThrow,
 			NumberOfDice:   0,
 			Die:            0,
@@ -280,7 +280,7 @@ func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int, isSpe
 			IsSuccess:      false,
 			TargetValue:    targetValue,
 		}
-		c.LogEvent(events.ETRollEvent, &result)
+		c.LogEvent(events.ETRollEvent, result)
 		return result
 	}
 
@@ -352,6 +352,7 @@ func (c *Character) resolveSneakAttack(params core.SneakAttackParams, simOptions
 	if params.IsCritical && simOptions.UseImprovedCriticals {
 		total, rolls := c.RollManager.RollExtraMaxDice(numDice, core.D6)
 		res = &roll_manager.RollResult{
+			ID:             core.NewUUIDv7(),
 			DiceRollType:   core.DiceRollDamage,
 			NumberOfDice:   len(rolls),
 			Die:            core.D6,
@@ -371,12 +372,19 @@ func (c *Character) resolveSneakAttack(params core.SneakAttackParams, simOptions
 	}
 
 	c.EntityStateManager.SetHasUsedSneakAttack(true)
-	events.LogSpecialAbilityEvent(c.GetCurrentEventContext(), c, "Sneak Attack", fmt.Sprintf("%s deals extra damage from Sneak Attack!", c.GetName()), "", res.Total, c.EventListener)
+	c.LogEvent(events.ETRollEvent, res)
+	c.LogEvent(events.ETSpecialAbilityEvent, &events.SpecialAbilityData{
+		AbilityName: "Sneak Attack",
+		Description: fmt.Sprintf("%s deals extra damage from Sneak Attack!", c.GetName()),
+		TargetName:  "",
+		Value:       res.Total,
+	})
 
 	return &core.Effect{
-		Type:       core.EffectDamage,
-		Value:      res.Total,
-		BaseValue:  res.Total,
-		DamageType: params.DamageType,
+		Type:         core.EffectDamage,
+		Value:        res.Total,
+		BaseValue:    res.Total,
+		DamageType:   params.DamageType,
+		SourceRollID: res.GetID(),
 	}
 }

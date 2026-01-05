@@ -681,6 +681,7 @@ type Effect struct {
 	SaveCtx        *SaveContext
 	AttackCtx      *AttackContext
 	SpellCtx       *SpellContext
+	SourceRollID   string
 }
 
 type SpellContext struct {
@@ -993,6 +994,7 @@ func NewEventContext() *EventContext {
 func (ctx *EventContext) GetSequenceID() string { return ctx.sequenceID }
 func (ctx *EventContext) GenerateSequenceID()   { ctx.sequenceID = NewUUIDv7() }
 func (ctx *EventContext) GetParentID() string   { return ctx.parentID }
+func (ctx *EventContext) SetParentID(id string) { ctx.parentID = id }
 func (ctx *EventContext) GenerateParentID()     { ctx.parentID = NewUUIDv7() }
 func (ctx *EventContext) GetCurrentID() string  { return ctx.currentID }
 func (ctx *EventContext) GenerateCurrentID()    { ctx.currentID = NewUUIDv7() }

@@ -28,6 +28,7 @@ const (
 	ETDamageModifiedEvent         EventType = "damagedmodified"
 	ETDragonbornBreathWeaponEvent EventType = "dragonbornbreathweapon"
 	ETSpecialAbilityEvent         EventType = "specialability"
+	ETRollInitiative              EventType = "initiative"
 )
 
 type CombatEvent interface {
@@ -39,8 +40,11 @@ type CombatEvent interface {
 	SetActor(entity core.Entity)
 	SetTimestamp(time.Time)
 	GetID() string
+	SetID(id string)
 	Context() *core.EventContext
+	SetContext(ctx *core.EventContext)
 	GetEventType() EventType
+	MakeNewEventID()
 }
 
 type BaseEvent struct {
@@ -48,7 +52,7 @@ type BaseEvent struct {
 	Timestamp time.Time
 	ctx       *core.EventContext
 	actor     core.Entity
-	id        string
+	ID        string `json:"id"`
 }
 
 func (b *BaseEvent) GetRound() int {
@@ -73,13 +77,13 @@ func (b *BaseEvent) SetActor(actor core.Entity) {
 	b.actor = actor
 }
 func (b *BaseEvent) GetID() string {
-	return b.id
+	return b.ID
 }
 func (b *BaseEvent) SetID(id string) {
-	b.id = id
+	b.ID = id
 }
 func (b *BaseEvent) MakeNewEventID() {
-	b.id = core.NewUUIDv7()
+	b.ID = core.NewUUIDv7()
 }
 func (b *BaseEvent) SetContext(ctx *core.EventContext) {
 	b.ctx = ctx
@@ -243,6 +247,7 @@ type DamageModifiedEvent struct {
 	WasModified      bool
 	ResistanceType   core.ResistanceType
 	ResistanceBroken bool
+	SourceRollID     string
 }
 
 func (e *DamageModifiedEvent) GetEventType() EventType { return ETDamageModifiedEvent }
@@ -261,6 +266,7 @@ type HPModifiedEvent struct {
 	DidHPDamage       bool
 	IsUnconscious     bool
 	IsMaxHealth       bool
+	SourceRollID      string
 }
 
 func (e *HPModifiedEvent) GetEventType() EventType { return ETHPModifiedEvent }
@@ -289,7 +295,12 @@ type DiceRollEvent struct {
 	Name         string // Used for recharges only
 }
 
-func (e *DiceRollEvent) GetEventType() EventType { return ETRollEvent }
+func (e *DiceRollEvent) GetEventType() EventType {
+	if e.RollType == core.DiceRollInitiative {
+		return ETRollInitiative
+	}
+	return ETRollEvent
+}
 
 type HPRollEvent struct {
 	BaseEvent

@@ -161,9 +161,9 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 
 		// Structured logging: action about to be executed
 		if len(req.AttackData) == 1 {
-			events.LogCombatEventMessage(mam.parent.GetCurrentEventContext(), mam.parent, fmt.Sprintf("%s (%d) action '%s' against %s", mam.parent.GetName(), req.Target.GetInstanceID(), ad.Name, req.Target.GetName()), mam.parent.GetEventListener())
+			mam.parent.LogEvent(events.ECombatEventMessage, fmt.Sprintf("%s (%d) action '%s' against %s", mam.parent.GetName(), req.Target.GetInstanceID(), ad.Name, req.Target.GetName()))
 		} else if idx == 0 {
-			events.LogCombatEventMessage(mam.parent.GetCurrentEventContext(), mam.parent, fmt.Sprintf("%s (%d) multiattack against %s", mam.parent.GetName(), req.Target.GetInstanceID(), req.Target.GetName()), mam.parent.GetEventListener())
+			mam.parent.LogEvent(events.ECombatEventMessage, fmt.Sprintf("%s (%d) multiattack against %s", mam.parent.GetName(), req.Target.GetInstanceID(), req.Target.GetName()))
 		}
 		// Attack Roll
 		attackMod := ad.AttackModifier
@@ -184,16 +184,6 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 			return nil, err
 		}
 
-		// Damage roll
-		rollOpts = roll_manager.NewRollOptions()
-		rollOpts.Modifier = ad.DamageModifier
-		rollOpts.RollType = core.DiceRollDamage
-
-		dmgRollResult, err := mam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, rollOpts)
-		if err != nil {
-			return nil, err
-		}
-
 		attackResult := core.AttackResult{
 			ActorName:      core.FormatEntityName(mam.parent),
 			TargetName:     core.FormatEntityName(req.Target),
@@ -204,14 +194,50 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 			IsCriticalHit:  attackRollResult.IsCritical,
 			AttackTotal:    attackRollResult.Total,
 			AttackRoll:     attackRollResult.FinalRollValue,
-			DamageRoll:     dmgRollResult,
 			DamageType:     ad.DamageType,
 			ResistBreakers: ad.ResistBreakers,
 			IsRanged:       ad.IsRangedWeapon,
 		}
 
-		events.LogMeleeAttackEvent(mam.parent.GetCurrentEventContext(), mam.parent, &attackResult, mam.parent.GetEventListener())
-		results = append(results, attackResult)
+		// 1. Log Attack (This generates the Attack's currentID)
+		mam.parent.LogEvent(events.ETAttackEvent, &attackResult)
+
+		// 2. Advance Scope: The Attack becomes the parent for subsequent events (like damage)
+		ctx := mam.parent.GetCurrentEventContext()
+		if ctx != nil {
+			actionID := ctx.GetParentID() // Store current action ID
+			ctx.AdvanceScope()
+
+			// 3. Damage roll (Internalized logging in RollDamage now uses the new ParentID)
+			rollOpts = roll_manager.NewRollOptions()
+			rollOpts.Modifier = ad.DamageModifier
+			rollOpts.RollType = core.DiceRollDamage
+
+			dmgRollResult, err := mam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, rollOpts)
+			if err != nil {
+				return nil, err
+			}
+
+			// Update result with the damage roll
+			attackResult.DamageRoll = dmgRollResult
+			results = append(results, attackResult)
+
+			// 4. Restore Action ID for the next attack
+			ctx.SetParentID(actionID)
+		} else {
+			// Fallback if no context
+			rollOpts = roll_manager.NewRollOptions()
+			rollOpts.Modifier = ad.DamageModifier
+			rollOpts.RollType = core.DiceRollDamage
+
+			dmgRollResult, err := mam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, rollOpts)
+			if err != nil {
+				return nil, err
+			}
+
+			attackResult.DamageRoll = dmgRollResult
+			results = append(results, attackResult)
+		}
 	}
 
 	return results, nil

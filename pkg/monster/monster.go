@@ -393,8 +393,17 @@ func (m *Monster) Regenerate() {
 		if err != nil {
 			return
 		}
-		events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Regeneration", fmt.Sprintf("%s uses Regeneration.", m.Name), "", m.SpecialAbilities.RegenerationValue, m.EventListener)
-		events.LogHPModifiedEvent(m.GetCurrentEventContext(), m, m, res, m.EventListener)
+		m.LogEvent(events.ETSpecialAbilityEvent, &events.SpecialAbilityData{
+			AbilityName: "Regeneration",
+			Description: fmt.Sprintf("%s uses Regeneration.", m.Name),
+			TargetName:  "",
+			Value:       m.SpecialAbilities.RegenerationValue,
+		})
+		m.LogEvent(events.ETHPModifiedEvent, &events.HPModifiedData{
+			Subject:      m,
+			Res:          res,
+			SourceRollID: "",
+		})
 	}
 }
 

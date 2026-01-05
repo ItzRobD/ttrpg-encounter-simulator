@@ -83,13 +83,17 @@ func (mai *MonsterAI) createMonsterLegendaryActionRequest() (*core.AIRequest, er
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(mai.parent.GetCurrentEventContext(), mai.parent, "No valid targets", mai.parent.GetEventListener())
+		mai.parent.LogEvent(events.ECombatEventMessage, "No valid targets")
 		return nil, nil
 	}
 
 	// Now that we've decided to use a legendary action, we can log the target choice
 	if combatant, ok := mai.combatCtx.CombatantInfo[targetID]; ok {
-		events.LogTargetChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, combatant.Combatant.GetEntity(), 1.0, nil, mai.parent.GetEventListener())
+		mai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
+			Target:  combatant.Combatant.GetEntity(),
+			Score:   1.0,
+			Factors: nil,
+		})
 	}
 
 	actionChoiceID := -1
@@ -169,7 +173,10 @@ func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) 
 
 	if healReq.Source == core.HealSourceSpell {
 		// Log spell choice event
-		events.LogSpellChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, healReq.SpellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
+		mai.parent.LogEvent(events.ETSpellChoiceEvent, &events.SpellChoiceData{
+			Choice: healReq.SpellChoice,
+			Status: mai.parent.SpellCastingManager.GetStatus(),
+		})
 	}
 
 	return &core.AIRequest{
@@ -237,7 +244,10 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 				spellChoice, err = mai.chooseSpell(target)
 				if err == nil {
 					// Log spell choice event
-					events.LogSpellChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, spellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
+					mai.parent.LogEvent(events.ETSpellChoiceEvent, &events.SpellChoiceData{
+						Choice: spellChoice,
+						Status: mai.parent.SpellCastingManager.GetStatus(),
+					})
 					return mai.buildAIRequest(-1, targetID, spellChoice, core.ATSpell)
 				}
 				// If chooseSpell fails (no slots/spells), fallback to multiattack
@@ -259,7 +269,10 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 			fmt.Println(err)
 		} else {
 			// Log spell choice event
-			events.LogSpellChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, spellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
+			mai.parent.LogEvent(events.ETSpellChoiceEvent, &events.SpellChoiceData{
+				Choice: spellChoice,
+				Status: mai.parent.SpellCastingManager.GetStatus(),
+			})
 			return mai.buildAIRequest(-1, targetID, spellChoice, core.ATSpell)
 		}
 	}
@@ -495,7 +508,11 @@ func (mai *MonsterAI) selectTargetSimple(validTargets map[int]*core.Combatant, t
 
 	if shouldLog {
 		if combatant, ok := validTargets[target]; ok && combatant != nil {
-			events.LogTargetChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, combatant.GetEntity(), 1.0, nil, mai.parent.GetEventListener())
+			mai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
+				Target:  combatant.GetEntity(),
+				Score:   1.0,
+				Factors: nil,
+			})
 		}
 	}
 
@@ -623,7 +640,11 @@ func (mai *MonsterAI) selectTargetWeighted(validTargets map[int]*core.Combatant,
 	}
 
 	if shouldLog {
-		events.LogTargetChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, validTargets[bestID].Entity, bestScore, bestFactors, mai.parent.GetEventListener())
+		mai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
+			Target:  validTargets[bestID].Entity,
+			Score:   bestScore,
+			Factors: bestFactors,
+		})
 	}
 	return core.TargetOK, bestID, bestScore, bestFactors, nil
 }
@@ -727,7 +748,12 @@ func (mai *MonsterAI) chooseActionWeighted() (core.ActionType, error) {
 		topReasons = append(topReasons, events.FactorOptimalDamage)
 	}
 
-	events.LogMonsterActionChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, chosenAction, allScores, topReasons, finalUtility, mai.parent.GetEventListener())
+	mai.parent.LogEvent(events.ETActionChoiceEvent, &events.ActionChoiceData{
+		Choice:       chosenAction,
+		AllScores:    allScores,
+		TopReasons:   topReasons,
+		UtilityScore: finalUtility,
+	})
 
 	return chosenAction, nil
 }

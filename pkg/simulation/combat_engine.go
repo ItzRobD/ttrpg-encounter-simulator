@@ -428,7 +428,9 @@ func (ce *CombatEngine) executeTurn(combatantID int) (*core.TurnResult, *core.AI
 
 	// Update Combatant's Event ctx
 	ce.EventContext.GenerateParentID() // Create a new parent ID to act as the action ID
-	entity.PushEventContext(ce.EventContext)
+	for _, c := range ce.Combatants {
+		c.GetEntity().PushEventContext(ce.EventContext)
+	}
 
 	// Tell entity to process its turn
 	// This will determine if it can act. If not, log; if so create ai request

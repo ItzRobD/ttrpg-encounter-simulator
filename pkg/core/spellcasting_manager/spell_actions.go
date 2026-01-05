@@ -63,8 +63,20 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			IsConcentration: req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 		}
 
-		// TODO: Spell attack - child of action (parent id)
-		events.LogSpellAttackEvent(scm.parent.GetCurrentEventContext(), scm.parent, &spellResult, scm.parent.GetEventListener())
+		// 1. Log Spell Cast/Attack (generates currentID)
+		scm.parent.LogEvent(events.ETSpellAttackEvent, &spellResult)
+
+		// 2. Advance Scope: Damage/Effects should be children of the spell cast
+		ctx := scm.parent.GetCurrentEventContext()
+		if ctx != nil {
+			actionID := ctx.GetParentID()
+			ctx.AdvanceScope()
+
+			// (No explicit damage log here as it's already in spellResult or would be handled by ModifyHP)
+
+			// 3. Restore Action ID
+			ctx.SetParentID(actionID)
+		}
 
 		return &spellResult, nil
 	}
@@ -109,7 +121,20 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 				IsConcentration:  req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 			}
 
-			events.LogSpellAttackEvent(scm.parent.GetCurrentEventContext(), scm.parent, &spellResult, scm.parent.GetEventListener())
+			// 1. Log Spell Cast (generates currentID)
+			scm.parent.LogEvent(events.ETSpellAttackEvent, &spellResult)
+
+			// 2. Advance Scope: Effects (if any) should be children
+			ctx := scm.parent.GetCurrentEventContext()
+			if ctx != nil {
+				actionID := ctx.GetParentID()
+				ctx.AdvanceScope()
+
+				// ... subsequent logic could log more events ...
+
+				// 3. Restore Action ID
+				ctx.SetParentID(actionID)
+			}
 
 			return &spellResult, nil
 		}
@@ -171,7 +196,18 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			spellResult.SpellTotalValue = dmgRollResult.Total
 		}
 
-		events.LogSpellAttackEvent(scm.parent.GetCurrentEventContext(), scm.parent, &spellResult, scm.parent.GetEventListener())
+		// 1. Log Spell Cast (generates currentID)
+		scm.parent.LogEvent(events.ETSpellAttackEvent, &spellResult)
+
+		// 2. Advance Scope
+		ctx := scm.parent.GetCurrentEventContext()
+		if ctx != nil {
+			actionID := ctx.GetParentID()
+			ctx.AdvanceScope()
+
+			// 3. Restore Action ID
+			ctx.SetParentID(actionID)
+		}
 
 		return &spellResult, nil
 	case false:
@@ -225,7 +261,18 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			IsConcentration:  req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 		}
 
-		events.LogSpellAttackEvent(scm.parent.GetCurrentEventContext(), scm.parent, &attackResult, scm.parent.GetEventListener())
+		// 1. Log Spell Attack (generates currentID)
+		scm.parent.LogEvent(events.ETSpellAttackEvent, &attackResult)
+
+		// 2. Advance Scope
+		ctx := scm.parent.GetCurrentEventContext()
+		if ctx != nil {
+			actionID := ctx.GetParentID()
+			ctx.AdvanceScope()
+
+			// 3. Restore Action ID
+			ctx.SetParentID(actionID)
+		}
 
 		return &attackResult, nil
 	default:
@@ -267,7 +314,7 @@ func (scm *SpellcastingManager) castHealingSpell(req *SpellCastRequest) (*SpellR
 	res.SpellTotalValue = healRollResult.Total
 	res.ValueRoll = healRollResult
 
-	events.LogSpellHealEvent(scm.parent.GetCurrentEventContext(), scm.parent, &res, scm.parent.GetEventListener())
+	scm.parent.LogEvent(events.ETHealEvent, &res)
 
 	return &res, nil
 }

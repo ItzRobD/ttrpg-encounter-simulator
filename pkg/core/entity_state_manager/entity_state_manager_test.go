@@ -29,6 +29,8 @@ func (r dsRoll) GetIsNaturalOne() bool                     { return r.nat1 }
 func (r dsRoll) GetIsSuccess() bool                        { return r.success }
 func (r dsRoll) GetTargetValue() int                       { return 10 }
 func (r dsRoll) GetName() string                           { return "" }
+func (r dsRoll) GetID() string                             { return "" }
+func (r dsRoll) SetID(id string)                           {}
 
 type mockBarbarian struct {
 	testhelpers.EmEntity
@@ -87,6 +89,8 @@ func (r rollResultStub) GetIsNaturalOne() bool                     { return fals
 func (r rollResultStub) GetIsSuccess() bool                        { return r.success }
 func (r rollResultStub) GetTargetValue() int                       { return 0 }
 func (r rollResultStub) GetRerollEvents() []map[string]interface{} { return nil }
+func (r rollResultStub) GetID() string                             { return "" }
+func (r rollResultStub) SetID(id string)                           {}
 
 func TestNewEntityStateManager_ClampsAndDefaults(t *testing.T) {
 	parent := testhelpers.NewEmEntity(5, core.AbilityScores{}, nil)

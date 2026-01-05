@@ -55,7 +55,7 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 		}
 	}
 	if len(candidates) == 0 {
-		events.LogCombatEventMessage(lai.parent.GetCurrentEventContext(), lai.parent, "No valid lair targets", lai.parent.GetEventListener())
+		lai.parent.LogEvent(events.ECombatEventMessage, "No valid lair targets")
 		return nil, nil
 	}
 
@@ -66,7 +66,7 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(lai.parent.GetCurrentEventContext(), lai.parent, "No valid lair targets", lai.parent.GetEventListener())
+		lai.parent.LogEvent(events.ECombatEventMessage, "No valid lair targets")
 		return nil, nil
 	}
 	target := candidates[targetID].GetEntity()
@@ -83,8 +83,12 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 	}
 
 	// Structured logging: chosen action and target
-	events.LogCombatEventMessage(lai.parent.GetCurrentEventContext(), lai.parent, fmt.Sprintf("Lair chooses lair action: %s", action.Name), lai.parent.GetEventListener())
-	events.LogTargetChoiceEvent(lai.parent.GetCurrentEventContext(), lai.parent, target, 1.0, nil, lai.parent.GetEventListener())
+	lai.parent.LogEvent(events.ECombatEventMessage, fmt.Sprintf("Lair chooses lair action: %s", action.Name))
+	lai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
+		Target:  target,
+		Score:   1.0,
+		Factors: nil,
+	})
 
 	return req, nil
 }

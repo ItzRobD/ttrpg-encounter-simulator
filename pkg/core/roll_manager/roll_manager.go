@@ -62,6 +62,7 @@ type RerollAbilities struct {
 }
 
 type RollResult struct {
+	ID             string
 	DiceRollType   core.DiceRollType
 	NumberOfDice   int
 	Die            core.DiceType
@@ -84,21 +85,23 @@ type RollResult struct {
 	Name         string // Used for recharge only
 }
 
-func (rr RollResult) GetDiceRollType() core.DiceRollType { return rr.DiceRollType }
-func (rr RollResult) GetNumberOfDice() int               { return rr.NumberOfDice }
-func (rr RollResult) GetDiceType() string                { return rr.Die.String() }
-func (rr RollResult) GetFinalRollValue() int             { return rr.FinalRollValue }
-func (rr RollResult) GetFinalRolls() []int               { return rr.FinalRolls }
-func (rr RollResult) GetModifier() int                   { return rr.Modifier }
-func (rr RollResult) GetTotal() int                      { return rr.Total }
-func (rr RollResult) GetAdvantage() string               { return rr.Advantage.String() }
-func (rr RollResult) GetOriginalRolls() []int            { return rr.OriginalRolls }
-func (rr RollResult) GetWasRerolled() bool               { return rr.WasRerolled }
-func (rr RollResult) GetIsCritical() bool                { return rr.IsCritical }
-func (rr RollResult) GetIsNaturalOne() bool              { return rr.IsNaturalOne }
-func (rr RollResult) GetIsSuccess() bool                 { return rr.IsSuccess }
-func (rr RollResult) GetTargetValue() int                { return rr.TargetValue }
-func (rr RollResult) GetRerollEvents() []map[string]interface{} {
+func (rr *RollResult) GetID() string                      { return rr.ID }
+func (rr *RollResult) SetID(id string)                    { rr.ID = id }
+func (rr *RollResult) GetDiceRollType() core.DiceRollType { return rr.DiceRollType }
+func (rr *RollResult) GetNumberOfDice() int               { return rr.NumberOfDice }
+func (rr *RollResult) GetDiceType() string                { return rr.Die.String() }
+func (rr *RollResult) GetFinalRollValue() int             { return rr.FinalRollValue }
+func (rr *RollResult) GetFinalRolls() []int               { return rr.FinalRolls }
+func (rr *RollResult) GetModifier() int                   { return rr.Modifier }
+func (rr *RollResult) GetTotal() int                      { return rr.Total }
+func (rr *RollResult) GetAdvantage() string               { return rr.Advantage.String() }
+func (rr *RollResult) GetOriginalRolls() []int            { return rr.OriginalRolls }
+func (rr *RollResult) GetWasRerolled() bool               { return rr.WasRerolled }
+func (rr *RollResult) GetIsCritical() bool                { return rr.IsCritical }
+func (rr *RollResult) GetIsNaturalOne() bool              { return rr.IsNaturalOne }
+func (rr *RollResult) GetIsSuccess() bool                 { return rr.IsSuccess }
+func (rr *RollResult) GetTargetValue() int                { return rr.TargetValue }
+func (rr *RollResult) GetRerollEvents() []map[string]interface{} {
 	var r []map[string]interface{}
 	for _, event := range rr.RerollEvents {
 		m := make(map[string]interface{})
@@ -241,7 +244,7 @@ func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) 
 	res.DiceRollType = options.RollType
 
 	// Log initiative roll
-	rm.parent.LogEvent(events.ETRollEvent, res)
+	rm.parent.LogEvent(events.ETRollInitiative, res)
 
 	return res, nil
 }

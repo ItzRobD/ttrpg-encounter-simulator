@@ -8,11 +8,16 @@ import (
 type TimelineType string
 
 const (
-	TimelineChoiceType TimelineType = "choice"
-	TimelineAttackType TimelineType = "attack"
-	TimelineSaveType   TimelineType = "savingthrow"
-	TimelineDamageType TimelineType = "damageroll"
-	TimelineEffectType TimelineType = "effect"
+	TimelineChoiceType         TimelineType = "choice"
+	TimelineAttackType         TimelineType = "attack"
+	TimelineSaveType           TimelineType = "savingthrow"
+	TimelineDamageType         TimelineType = "damageroll"
+	TimelineEffectType         TimelineType = "effect"
+	TimelineHPModifiedType     TimelineType = "hpmodified"
+	TimelineDamageModifiedType TimelineType = "damagemodified"
+	TimelineHealType           TimelineType = "heal"
+	TimelineDeathType          TimelineType = "death"
+	TimelineUnconsciousType    TimelineType = "unconscious"
 )
 
 type TimelineEntity struct {
@@ -39,21 +44,23 @@ type TimelineChoice struct {
 }
 
 type TimelineAttack struct {
-	Actor    TimelineEntity
-	Target   TimelineEntity
-	DiceRoll core.RollResult
+	Actor      TimelineEntity
+	Target     TimelineEntity
+	AttackType string // "melee" or "spell"
+	DiceRoll   interface{}
 }
 
 type TimelineSavingThrow struct {
 	Actor    TimelineEntity
+	Target   TimelineEntity
 	DC       int
-	DiceRoll core.RollResult
+	DiceRoll interface{}
 }
 
-type TimelineDamage struct {
+type TimelineRoll struct {
 	Actor  TimelineEntity
 	Target TimelineEntity
-	Damage core.RollResult
+	Roll   interface{}
 }
 
 type TimelineEffect struct {
@@ -70,6 +77,10 @@ type TimelineEffect struct {
 	SourceRollID string
 	// Metadata for the UI (e.g., "Half damage (Save Success)", "Resistant")
 	Note string
+
+	// Added fields for better UI representation
+	OriginalHP int
+	FinalHP    int
 }
 
 type TimelineScores struct {

@@ -11,7 +11,9 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/races"
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"dnd5e-encounter-simulator-backend/pkg/weapon"
+	"encoding/json"
 	"fmt"
+	"os"
 )
 
 // Legacy note: Main is used for local/manual runs. Core TODOs are tracked in todo-triage.md.
@@ -303,10 +305,24 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 	sim.SetupEventListeners()
 	//sim.InitializeCombatants()
 
-	err := sim.RunSimulation(24)
+	err := sim.RunSimulation(2)
 	if err != nil {
 		fmt.Println(err)
 	}
 	sim.GetCombatEngine().PrintCombatTracker()
 	//sim.PrintSimulationLog()
+
+	// Export Timeline to JSON
+	timeline := sim.GetTimeline()
+	jsonData, err := json.MarshalIndent(timeline, "", "  ")
+	if err != nil {
+		fmt.Printf("Error marshaling timeline: %v\n", err)
+		return
+	}
+	err = os.WriteFile("timeline_output.json", jsonData, 0644)
+	if err != nil {
+		fmt.Printf("Error writing timeline file: %v\n", err)
+		return
+	}
+	fmt.Println("Timeline exported to timeline_output.json")
 }

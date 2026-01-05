@@ -36,6 +36,8 @@ func (r testRollResult) GetIsCritical() bool                       { return r.cr
 func (r testRollResult) GetIsNaturalOne() bool                     { return r.nat1 }
 func (r testRollResult) GetIsSuccess() bool                        { return r.success }
 func (r testRollResult) GetTargetValue() int                       { return r.targetValue }
+func (r testRollResult) GetID() string                             { return "" }
+func (r testRollResult) SetID(id string)                           {}
 
 // testEntity provides a minimal core.Entity for lair tests.
 type testEntity struct {

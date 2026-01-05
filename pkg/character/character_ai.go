@@ -86,7 +86,12 @@ func (cai *CharacterAI) chooseDamageActionType() (core.ActionType, error) {
 
 	// Structured logging: chosen damage action type (only if weighted AI is not used, to avoid duplication)
 	if !cai.combatCtx.Options.UseWeightedAI {
-		events.LogCharacterActionChoiceEvent(cai.parent.GetCurrentEventContext(), cai.parent, actionType, nil, nil, 0, cai.parent.GetEventListener())
+		cai.parent.LogEvent(events.ETActionChoiceEvent, &events.ActionChoiceData{
+			Choice:       actionType,
+			AllScores:    nil,
+			TopReasons:   nil,
+			UtilityScore: 0,
+		})
 	}
 	return actionType, nil
 }
@@ -164,7 +169,11 @@ func (cai *CharacterAI) selectTargetSimple(validTargets map[int]*core.Combatant,
 	}
 	// Structured logging: chosen target
 	if combatant, ok := validTargets[target]; ok && combatant != nil {
-		events.LogTargetChoiceEvent(cai.parent.GetCurrentEventContext(), cai.parent, combatant.GetEntity(), 1.0, nil, cai.parent.GetEventListener())
+		cai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
+			Target:  combatant.GetEntity(),
+			Score:   1.0,
+			Factors: nil,
+		})
 	}
 	return core.TargetOK, target, nil
 }
@@ -282,7 +291,11 @@ func (cai *CharacterAI) selectTargetWeighted(validTargets map[int]*core.Combatan
 		fmt.Println()
 	}
 
-	events.LogTargetChoiceEvent(cai.parent.GetCurrentEventContext(), cai.parent, validTargets[bestID].Entity, bestScore, bestFactors, cai.parent.GetEventListener())
+	cai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
+		Target:  validTargets[bestID].Entity,
+		Score:   bestScore,
+		Factors: bestFactors,
+	})
 	return core.TargetOK, bestID, bestScore, bestFactors, nil
 }
 
@@ -442,7 +455,12 @@ func (cai *CharacterAI) chooseActionWeighted() (core.ActionType, error) {
 		topReasons = append(topReasons, events.FactorOptimalDamage)
 	}
 
-	events.LogCharacterActionChoiceEvent(cai.parent.GetCurrentEventContext(), cai.parent, chosenAction, allScores, topReasons, finalUtility, cai.parent.GetEventListener())
+	cai.parent.LogEvent(events.ETActionChoiceEvent, &events.ActionChoiceData{
+		Choice:       chosenAction,
+		AllScores:    allScores,
+		TopReasons:   topReasons,
+		UtilityScore: finalUtility,
+	})
 
 	return chosenAction, nil
 }
@@ -563,7 +581,7 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(cai.parent.GetCurrentEventContext(), cai.parent, "No valid healing targets", cai.parent.GetEventListener())
+		cai.parent.LogEvent(events.ECombatEventMessage, "No valid healing targets")
 		return nil, nil
 	}
 
@@ -575,12 +593,20 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 
 	if healReq.Source == core.HealSourceSpell {
 		// Log spell choice event
-		events.LogSpellChoiceEvent(cai.parent.GetCurrentEventContext(), cai.parent, healReq.SpellChoice, cai.parent.SpellCastingManager.GetStatus(), cai.parent.GetEventListener())
+		cai.parent.LogEvent(events.ETSpellChoiceEvent, &events.SpellChoiceData{
+			Choice: healReq.SpellChoice,
+			Status: cai.parent.SpellCastingManager.GetStatus(),
+		})
 	}
 
 	// Logging for tactical action (only if weighted AI is not used, to avoid duplication)
 	if !cai.combatCtx.Options.UseWeightedAI {
-		events.LogCharacterActionChoiceEvent(cai.parent.GetCurrentEventContext(), cai.parent, core.ATHeal, nil, nil, 0, cai.parent.GetEventListener())
+		cai.parent.LogEvent(events.ETActionChoiceEvent, &events.ActionChoiceData{
+			Choice:       core.ATHeal,
+			AllScores:    nil,
+			TopReasons:   nil,
+			UtilityScore: 0,
+		})
 	}
 
 	return &core.AIRequest{
@@ -608,7 +634,7 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(cai.parent.GetCurrentEventContext(), cai.parent, "No valid targets", cai.parent.GetEventListener())
+		cai.parent.LogEvent(events.ECombatEventMessage, "No valid targets")
 		return nil, nil
 	}
 
@@ -626,7 +652,10 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 		}
 
 		// Log spell choice event
-		events.LogSpellChoiceEvent(cai.parent.GetCurrentEventContext(), cai.parent, choice, cai.parent.SpellCastingManager.GetStatus(), cai.parent.GetEventListener())
+		cai.parent.LogEvent(events.ETSpellChoiceEvent, &events.SpellChoiceData{
+			Choice: choice,
+			Status: cai.parent.SpellCastingManager.GetStatus(),
+		})
 	case core.ATMelee:
 		slot = core.WSPrimary
 		em := cai.parent.EquipmentManager
@@ -736,13 +765,18 @@ func (cai *CharacterAI) createDragonbornBreathWeaponRequest() (*core.AIRequest, 
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(cai.parent.GetCurrentEventContext(), cai.parent, "No valid targets for breath weapon", cai.parent.GetEventListener())
+		cai.parent.LogEvent(events.ECombatEventMessage, "No valid targets for breath weapon")
 		return nil, nil
 	}
 
 	// Logging for tactical action (only if weighted AI is not used, to avoid duplication)
 	if !cai.combatCtx.Options.UseWeightedAI {
-		events.LogCharacterActionChoiceEvent(cai.parent.GetCurrentEventContext(), cai.parent, core.ATDragonbornBreathWeapon, nil, nil, 0, cai.parent.GetEventListener())
+		cai.parent.LogEvent(events.ETActionChoiceEvent, &events.ActionChoiceData{
+			Choice:       core.ATDragonbornBreathWeapon,
+			AllScores:    nil,
+			TopReasons:   nil,
+			UtilityScore: 0,
+		})
 	}
 
 	req := &core.AIRequest{
