@@ -81,7 +81,7 @@ func (lam *LairActionManager) RollRechargeActions() {
 		if res.IsSuccess {
 			lam.rechargeOK[idx] = true
 		}
-		events.LogDiceRollEvent(lam.parent.GetCurrentEventContext(), lam.parent, res, lam.parent.GetEventListener())
+		lam.parent.LogEvent(events.ETRollEvent, res)
 	}
 }
 
@@ -136,9 +136,6 @@ func (lam *LairActionManager) ProcessAttackRequest(req *core.AttackRequest) ([]c
 			DamageType:    ad.DamageType,
 		}
 		events.LogMeleeAttackEvent(lam.parent.GetCurrentEventContext(), lam.parent, &ar, lam.parent.GetEventListener())
-		if attackRollResult.IsSuccess {
-			events.LogDiceRollEvent(lam.parent.GetCurrentEventContext(), lam.parent, dmgRollResult, lam.parent.GetEventListener())
-		}
 		results = append(results, ar)
 	}
 	return results, nil
@@ -192,7 +189,6 @@ func (lam *LairActionManager) ExecuteAdvanced(actionIndex int, primaryTarget cor
 		if err != nil {
 			return nil, nil, err
 		}
-		events.LogDiceRollEvent(lam.parent.GetCurrentEventContext(), lam.parent, dmgRoll, lam.parent.GetEventListener())
 
 		for _, t := range targets {
 			var simOpts *core.SimulationOptions

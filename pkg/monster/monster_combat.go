@@ -169,7 +169,7 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 		if m.EntityStateManager.GetLegendaryResistanceUses() > 0 {
 			m.useLegendaryResistance(&result)
 		}
-		events.LogDiceRollEvent(m.GetCurrentEventContext(), m, &result, m.EventListener)
+		m.LogEvent(events.ETRollEvent, &result)
 		return result
 	}
 
@@ -278,7 +278,7 @@ func (m *Monster) useLegendaryResistance(res *roll_manager.RollResult) {
 	res.WasRerolled = true
 	m.EntityStateManager.ExpendLegendaryResistanceUse()
 
-	events.LogCombatEventMessage(m, fmt.Sprintf("%s uses Legendary Resistance to succeed on the saving throw!", m.GetName()), m.EventListener)
+	events.LogCombatEventMessage(m.GetCurrentEventContext(), m, fmt.Sprintf("%s uses Legendary Resistance to succeed on the saving throw!", m.GetName()), m.EventListener)
 }
 
 func (m *Monster) hasPackTacticsAdvantage() bool {

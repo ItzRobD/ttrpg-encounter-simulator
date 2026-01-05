@@ -66,7 +66,7 @@ func NewSimulationManager(options core.SimulationOptions, seed core.Seed) *Simul
 
 	dispatcher := events.NewEventDispatcher()
 	dispatcher.RegisterHandler(&events.UniversalEventHandler{})
-	dispatcher.RegisterHandler(&events.TimelineHandler{})
+	//dispatcher.RegisterHandler(&events.TimelineHandler{})
 	s.options = options
 	s.dispatcher = dispatcher
 	s.combatEngine = NewCombatEngine(&s.options)

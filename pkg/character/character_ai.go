@@ -563,7 +563,7 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(cai.parent, "No valid healing targets", cai.parent.GetEventListener())
+		events.LogCombatEventMessage(cai.parent.GetCurrentEventContext(), cai.parent, "No valid healing targets", cai.parent.GetEventListener())
 		return nil, nil
 	}
 
@@ -608,7 +608,7 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(cai.parent, "No valid targets", cai.parent.GetEventListener())
+		events.LogCombatEventMessage(cai.parent.GetCurrentEventContext(), cai.parent, "No valid targets", cai.parent.GetEventListener())
 		return nil, nil
 	}
 
@@ -736,7 +736,7 @@ func (cai *CharacterAI) createDragonbornBreathWeaponRequest() (*core.AIRequest, 
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(cai.parent, "No valid targets for breath weapon", cai.parent.GetEventListener())
+		events.LogCombatEventMessage(cai.parent.GetCurrentEventContext(), cai.parent, "No valid targets for breath weapon", cai.parent.GetEventListener())
 		return nil, nil
 	}
 

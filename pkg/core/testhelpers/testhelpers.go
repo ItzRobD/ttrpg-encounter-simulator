@@ -69,6 +69,11 @@ func (entityStub) GetInstanceID() int            { return 0 }
 func (entityStub) SetInstanceID(int)             {}
 func (entityStub) GetAttackBonus() int           { return 0 }
 
+func (entityStub) PushEventContext(ctx *core.EventContext)    {}
+func (entityStub) GetCurrentEventContext() *core.EventContext { return nil }
+func (entityStub) LogEvent(eventType interface{}, data interface{}) {
+}
+
 // Keep only what EquipmentManager needs here
 type EmEntity struct {
 	entityStub

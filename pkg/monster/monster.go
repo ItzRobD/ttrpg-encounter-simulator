@@ -260,7 +260,7 @@ func (m *Monster) setHP(config core.HPConfig) error {
 			FinalRollValue: config.Value,
 			Total:          config.Value,
 		}
-		events.LogDiceRollEvent(m.GetCurrentEventContext(), m, &hpRoll, m.EventListener)
+		m.LogEvent(events.ETRollEvent, &hpRoll)
 		m.EntityStateManager.SetHPValues(hp)
 
 		return nil
@@ -277,7 +277,7 @@ func (m *Monster) setHP(config core.HPConfig) error {
 			FinalRollValue: config.HPAverage,
 			Total:          config.HPAverage,
 		}
-		events.LogDiceRollEvent(m.GetCurrentEventContext(), m, &hpRoll, m.EventListener)
+		m.LogEvent(events.ETRollEvent, &hpRoll)
 		m.EntityStateManager.SetHPValues(hp)
 
 		return nil

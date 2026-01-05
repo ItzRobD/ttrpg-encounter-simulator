@@ -69,7 +69,7 @@ func (mam *MonsterActionManager) RollRechargeActions() {
 			mam.parent.EntityStateManager.RechargeRechargeAction(idx)
 		}
 
-		events.LogDiceRollEvent(mam.parent.GetCurrentEventContext(), mam.parent, res, mam.parent.GetEventListener())
+		mam.parent.LogEvent(events.ETRollEvent, res)
 	}
 }
 
@@ -161,9 +161,9 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 
 		// Structured logging: action about to be executed
 		if len(req.AttackData) == 1 {
-			events.LogCombatEventMessage(mam.parent, fmt.Sprintf("%s (%d) action '%s' against %s", mam.parent.GetName(), req.Target.GetInstanceID(), ad.Name, req.Target.GetName()), mam.parent.GetEventListener())
+			events.LogCombatEventMessage(mam.parent.GetCurrentEventContext(), mam.parent, fmt.Sprintf("%s (%d) action '%s' against %s", mam.parent.GetName(), req.Target.GetInstanceID(), ad.Name, req.Target.GetName()), mam.parent.GetEventListener())
 		} else if idx == 0 {
-			events.LogCombatEventMessage(mam.parent, fmt.Sprintf("%s (%d) multiattack against %s", mam.parent.GetName(), req.Target.GetInstanceID(), req.Target.GetName()), mam.parent.GetEventListener())
+			events.LogCombatEventMessage(mam.parent.GetCurrentEventContext(), mam.parent, fmt.Sprintf("%s (%d) multiattack against %s", mam.parent.GetName(), req.Target.GetInstanceID(), req.Target.GetName()), mam.parent.GetEventListener())
 		}
 		// Attack Roll
 		attackMod := ad.AttackModifier
@@ -211,9 +211,6 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 		}
 
 		events.LogMeleeAttackEvent(mam.parent.GetCurrentEventContext(), mam.parent, &attackResult, mam.parent.GetEventListener())
-		if attackRollResult.IsSuccess {
-			events.LogDiceRollEvent(mam.parent.GetCurrentEventContext(), mam.parent, dmgRollResult, mam.parent.GetEventListener())
-		}
 		results = append(results, attackResult)
 	}
 

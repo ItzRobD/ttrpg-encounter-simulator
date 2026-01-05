@@ -216,7 +216,7 @@ func (rm *RollManager) RollD20(options RollOptions, shouldLogEvent bool) (*RollR
 
 	// Log all events
 	if shouldLogEvent {
-		events.LogDiceRollEvent(rm.parent.GetCurrentEventContext(), rm.parent, &res, rm.parent.GetEventListener())
+		rm.parent.LogEvent(events.ETRollEvent, &res)
 	}
 
 	return &res, nil
@@ -241,7 +241,7 @@ func (rm *RollManager) RollInitiative(options RollOptions) (*RollResult, error) 
 	res.DiceRollType = options.RollType
 
 	// Log initiative roll
-	events.LogDiceRollEvent(rm.parent.GetCurrentEventContext(), rm.parent, res, rm.parent.GetEventListener())
+	rm.parent.LogEvent(events.ETRollEvent, res)
 
 	return res, nil
 }
@@ -345,7 +345,8 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 	// Finalize total to include modifier after any rerolls/adjustments
 	res.Total = res.FinalRollValue + res.Modifier
 
-	// logging takes place in the calling function
+	// Log damage roll
+	rm.parent.LogEvent(events.ETRollEvent, &res)
 
 	return &res, nil
 }
@@ -413,7 +414,7 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 	res.Total = res.FinalRollValue + res.Modifier
 
 	// log rolls
-	events.LogDiceRollEvent(rm.parent.GetCurrentEventContext(), rm.parent, &res, rm.parent.GetEventListener())
+	rm.parent.LogEvent(events.ETRollEvent, &res)
 
 	return &res, nil
 }
@@ -447,7 +448,7 @@ func (rm *RollManager) RollSavingThrow(options RollOptions) (*RollResult, error)
 	rm.calculateSuccess(res, options)
 
 	// Log the roll
-	events.LogDiceRollEvent(rm.parent.GetCurrentEventContext(), rm.parent, res, rm.parent.GetEventListener())
+	rm.parent.LogEvent(events.ETRollEvent, res)
 
 	return res, nil
 }
@@ -478,7 +479,7 @@ func (rm *RollManager) RollAbilityCheck(ability core.Ability, options RollOption
 	rm.calculateSuccess(res, options)
 
 	// Log ability check roll
-	events.LogDiceRollEvent(rm.parent.GetCurrentEventContext(), rm.parent, res, rm.parent.GetEventListener())
+	rm.parent.LogEvent(events.ETRollEvent, res)
 
 	return res, nil
 }
@@ -503,7 +504,7 @@ func (rm *RollManager) RollHP(config core.HPConfig) (*RollResult, error) {
 		res = rm.rollMonsterHP(config)
 	}
 
-	events.LogDiceRollEvent(rm.parent.GetCurrentEventContext(), rm.parent, &res, rm.parent.GetEventListener())
+	rm.parent.LogEvent(events.ETRollEvent, &res)
 
 	return &res, nil
 }

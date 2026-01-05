@@ -996,6 +996,10 @@ func (ctx *EventContext) GetParentID() string   { return ctx.parentID }
 func (ctx *EventContext) GenerateParentID()     { ctx.parentID = NewUUIDv7() }
 func (ctx *EventContext) GetCurrentID() string  { return ctx.currentID }
 func (ctx *EventContext) GenerateCurrentID()    { ctx.currentID = NewUUIDv7() }
+func (ctx *EventContext) AdvanceScope() {
+	ctx.parentID = ctx.currentID
+	ctx.GenerateCurrentID()
+}
 
 // NewUUIDv7 generates and returns a new UUID version 7 as a string.
 func NewUUIDv7() string {

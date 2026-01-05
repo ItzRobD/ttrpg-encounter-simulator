@@ -136,3 +136,7 @@ func (e *testEntity) GetID() int                    { return 0 }
 func (e *testEntity) GetInstanceID() int            { return 0 }
 func (e *testEntity) SetInstanceID(id int)          {}
 func (e *testEntity) GetAttackBonus() int           { return 0 }
+
+func (e *testEntity) LogEvent(eventType interface{}, data interface{}) {}
+func (e *testEntity) PushEventContext(ctx *core.EventContext)          {}
+func (e *testEntity) GetCurrentEventContext() *core.EventContext       { return nil }

@@ -59,6 +59,7 @@ type Entity interface {
 	GetEntityType() EntityType
 	PushEventContext(ctx *EventContext)
 	GetCurrentEventContext() *EventContext
+	LogEvent(eventType interface{}, data interface{})
 }
 
 type Combatant struct {

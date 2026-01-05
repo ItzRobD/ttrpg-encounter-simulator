@@ -165,7 +165,7 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 								if deathReq != nil {
 									deathOutcome, _ := m.ExecuteAIRequest(deathReq)
 									if deathOutcome != nil {
-										events.LogCombatEventMessage(m, fmt.Sprintf("%s triggers %s!", m.GetName(), deathOutcome.SpellName), m.GetEventListener())
+										events.LogCombatEventMessage(m.GetCurrentEventContext(), m, fmt.Sprintf("%s triggers %s!", m.GetName(), deathOutcome.SpellName), m.GetEventListener())
 										// Process death effect recursively
 										ce.processActionResults(m, deathOutcome)
 									}
@@ -188,7 +188,7 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 										retalliationReq.TargetID = outcome.ActorID
 										retalOutcome, _ := m.ExecuteAIRequest(retalliationReq)
 										if retalOutcome != nil {
-											events.LogCombatEventMessage(m, fmt.Sprintf("%s triggers retaliatory %s against %s!", m.GetName(), retalOutcome.SpellName, actor.GetName()), m.GetEventListener())
+											events.LogCombatEventMessage(m.GetCurrentEventContext(), m, fmt.Sprintf("%s triggers retaliatory %s against %s!", m.GetName(), retalOutcome.SpellName, actor.GetName()), m.GetEventListener())
 											// Process retaliatory effect
 											ce.processActionResults(m, retalOutcome)
 										}
@@ -241,9 +241,9 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 
 					if !saveResult.GetIsSuccess() {
 						target.Info.BreakConcentration()
-						events.LogCombatEventMessage(target.GetEntity(), "Failed concentration check. Concentration broken.", target.GetEntity().GetEventListener())
+						events.LogCombatEventMessage(target.GetEntity().GetCurrentEventContext(), target.GetEntity(), "Failed concentration check. Concentration broken.", target.GetEntity().GetEventListener())
 					} else {
-						events.LogCombatEventMessage(target.GetEntity(), "Succeeded concentration check. Concentration maintained.", target.GetEntity().GetEventListener())
+						events.LogCombatEventMessage(target.GetEntity().GetCurrentEventContext(), target.GetEntity(), "Succeeded concentration check. Concentration maintained.", target.GetEntity().GetEventListener())
 					}
 				}
 

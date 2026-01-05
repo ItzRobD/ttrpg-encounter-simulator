@@ -22,6 +22,84 @@ func LogCharacterActionChoiceEvent(ctx *core.EventContext, actor core.Entity, ch
 	}
 }
 
+type ActionChoiceData struct {
+	Choice       core.ActionType
+	AllScores    []ActionUtilityScore
+	TopReasons   []DecisionFactor
+	UtilityScore float64
+}
+
+type DragonbornBreathWeaponData struct {
+	Target      core.Entity
+	DamageTotal int
+	DamageType  string
+	DC          int
+	SaveAbility string
+	SaveSuccess bool
+	SaveResult  int
+}
+
+type DamageData struct {
+	Target     core.Entity
+	DamageType string
+	Damage     int
+	Rolls      []int
+}
+
+type SpellChoiceData struct {
+	Choice *core.SpellChoice
+	Status *spells.SpellcastingManagerStatus
+}
+
+type SpellDCData struct {
+	Target core.Entity
+	Spell  *spells.Spell
+	DC     int
+	Save   int
+	IsHit  bool
+}
+
+type LayOnHandsHealData struct {
+	Subject core.Entity
+	Value   int
+}
+
+type DamageModifiedData struct {
+	Subject core.Entity
+	Res     core.DamageModificationResult
+}
+
+type HPModifiedData struct {
+	Subject core.Entity
+	Res     core.HPModificationResult
+}
+
+type HPRollData struct {
+	RollSum int
+	Rolls   []int
+	ToAdd   int
+}
+
+type SavingThrowData struct {
+	Result   int
+	Roll     int
+	Modifier int
+	Success  bool
+}
+
+type TargetChoiceData struct {
+	Target  core.Entity
+	Score   float64
+	Factors map[DecisionFactor]float64
+}
+
+type SpecialAbilityData struct {
+	AbilityName string
+	Description string
+	TargetName  string
+	Value       int
+}
+
 func LogMonsterActionChoiceEvent(ctx *core.EventContext, actor core.Entity, choice core.ActionType, allScores []ActionUtilityScore, topReasons []DecisionFactor, utilityScore float64, listener func(event interface{})) {
 	event := &ActionChoiceEvent{
 		ActionChoice: choice,
@@ -339,6 +417,28 @@ func LogCombatEventMessage(ctx *core.EventContext, actor core.Entity, message st
 	event := &CombatEventMessage{
 		Message: message,
 	}
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
+
+	if listener != nil {
+		listener(event)
+	}
+}
+
+func LogDeathEvent(ctx *core.EventContext, actor core.Entity, listener func(event interface{})) {
+	event := &DeathEvent{}
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
+
+	if listener != nil {
+		listener(event)
+	}
+}
+
+func LogUnconsciousEvent(ctx *core.EventContext, actor core.Entity, listener func(event interface{})) {
+	event := &UnconsciousEvent{}
 	event.SetActor(actor)
 	event.SetTimestamp(time.Now())
 	event.SetContext(ctx)

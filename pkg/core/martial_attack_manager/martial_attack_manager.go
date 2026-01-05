@@ -121,10 +121,6 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) (
 
 			// TODO: Attack roll - Child of action (current parent id)
 			events.LogMeleeAttackEvent(mam.parent.GetCurrentEventContext(), mam.parent, &attackResult, mam.parent.GetEventListener())
-			if attackRollResult.IsSuccess {
-				// TODO: Damage roll - child of attack roll (current id)
-				events.LogDiceRollEvent(mam.parent.GetCurrentEventContext(), mam.parent, dmgRollResult, mam.parent.GetEventListener())
-			}
 			results = append(results, attackResult)
 		}
 	}

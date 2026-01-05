@@ -37,9 +37,9 @@ func main() {
 	//}
 	//fmt.Println(s)
 
-	frank := setupFrank()
+	//frank := setupFrank()
 	bob := setupBob()
-	testSimulation([]character.CharacterConfig{frank, bob}, []int{64})
+	testSimulation([]character.CharacterConfig{bob}, []int{2})
 }
 
 func setupBob() character.CharacterConfig {

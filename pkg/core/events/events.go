@@ -335,6 +335,8 @@ type CombatEventMessage struct {
 	Message string
 }
 
+func (e *CombatEventMessage) GetEventType() EventType { return ECombatEventMessage }
+
 type CombatLogger interface {
 	LogEvent(event CombatEvent)
 }

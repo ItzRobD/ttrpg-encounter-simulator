@@ -83,7 +83,7 @@ func (mai *MonsterAI) createMonsterLegendaryActionRequest() (*core.AIRequest, er
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(mai.parent, "No valid targets", mai.parent.GetEventListener())
+		events.LogCombatEventMessage(mai.parent.GetCurrentEventContext(), mai.parent, "No valid targets", mai.parent.GetEventListener())
 		return nil, nil
 	}
 
@@ -157,7 +157,7 @@ func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) 
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(mai.parent, "No valid healing targets", mai.parent.GetEventListener())
+		events.LogCombatEventMessage(mai.parent.GetCurrentEventContext(), mai.parent, "No valid healing targets", mai.parent.GetEventListener())
 		return nil, nil
 	}
 
@@ -188,7 +188,7 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(mai.parent, "No valid targets", mai.parent.GetEventListener())
+		events.LogCombatEventMessage(mai.parent.GetCurrentEventContext(), mai.parent, "No valid targets", mai.parent.GetEventListener())
 		return nil, nil
 	}
 	target := mai.combatCtx.CombatantInfo[targetID].Combatant.GetEntity()

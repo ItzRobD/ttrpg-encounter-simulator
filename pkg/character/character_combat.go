@@ -280,7 +280,7 @@ func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int, isSpe
 			IsSuccess:      false,
 			TargetValue:    targetValue,
 		}
-		events.LogDiceRollEvent(c.GetCurrentEventContext(), c, &result, c.EventListener)
+		c.LogEvent(events.ETRollEvent, &result)
 		return result
 	}
 

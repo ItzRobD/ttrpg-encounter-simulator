@@ -65,7 +65,7 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 			c.EntityStateManager.SetUnconscious(false)
 			c.EntityStateManager.AddCondition(core.ConditionProne)
 			ucResult.Conditions = []core.Condition{core.ConditionProne}
-			events.LogCombatEventMessage(c, "Revived from 0 HP: now Prone", c.EventListener)
+			events.LogCombatEventMessage(c.GetCurrentEventContext(), c, "Revived from 0 HP: now Prone", c.EventListener)
 			return ucResult, aiReq, nil
 		}
 		return ucResult, nil, err
@@ -617,7 +617,7 @@ func (c *Character) resolveDivineSmite(target core.Entity, isCrit bool, simOptio
 
 	// 5. Log & Return
 	events.LogCombatEventMessage(c.GetCurrentEventContext(), c, fmt.Sprintf("Divine Smite! (Level %d slot)", slotLevel), c.EventListener)
-	events.LogDiceRollEvent(c.GetCurrentEventContext(), c, res, c.EventListener)
+	c.LogEvent(events.ETRollEvent, res)
 
 	return &core.Effect{
 		Type:       core.EffectDamage,

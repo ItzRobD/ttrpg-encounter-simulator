@@ -514,7 +514,7 @@ func (c *Character) setHP(config core.HPConfig) error {
 			FinalRollValue: config.Value,
 			Total:          config.Value,
 		}
-		events.LogDiceRollEvent(c.GetCurrentEventContext(), c, &hpRoll, c.EventListener)
+		c.LogEvent(events.ETRollEvent, &hpRoll)
 		c.EntityStateManager.SetHPValues(hp)
 
 		return nil
@@ -533,7 +533,7 @@ func (c *Character) setHP(config core.HPConfig) error {
 			Modifier:       config.Modifier,
 			Total:          config.HPAverage,
 		}
-		events.LogDiceRollEvent(c.GetCurrentEventContext(), c, &hpRoll, c.EventListener)
+		c.LogEvent(events.ETRollEvent, &hpRoll)
 		c.EntityStateManager.SetHPValues(hp)
 
 		return nil
@@ -660,6 +660,9 @@ func (c *Character) PushEventContext(ctx *core.EventContext) {
 }
 
 func (c *Character) GetCurrentEventContext() *core.EventContext {
+	if c.AI == nil {
+		return nil
+	}
 	return c.AI.eventCtx
 }
 

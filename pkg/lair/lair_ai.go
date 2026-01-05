@@ -55,7 +55,7 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 		}
 	}
 	if len(candidates) == 0 {
-		events.LogCombatEventMessage(lai.parent, "No valid lair targets", lai.parent.GetEventListener())
+		events.LogCombatEventMessage(lai.parent.GetCurrentEventContext(), lai.parent, "No valid lair targets", lai.parent.GetEventListener())
 		return nil, nil
 	}
 
@@ -66,7 +66,7 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 		return nil, err
 	}
 	if tStatus == core.TargetNone {
-		events.LogCombatEventMessage(lai.parent, "No valid lair targets", lai.parent.GetEventListener())
+		events.LogCombatEventMessage(lai.parent.GetCurrentEventContext(), lai.parent, "No valid lair targets", lai.parent.GetEventListener())
 		return nil, nil
 	}
 	target := candidates[targetID].GetEntity()
