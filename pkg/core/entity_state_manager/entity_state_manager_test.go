@@ -36,6 +36,11 @@ type mockBarbarian struct {
 	lastDC     int
 }
 
+func (m *mockBarbarian) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (m *mockBarbarian) Regenerate() {
 	//TODO implement me
 	panic("implement me")
@@ -50,6 +55,11 @@ type mockMonster struct {
 	testhelpers.EmEntity
 	saveResult core.RollResult
 	lastDC     int
+}
+
+func (m *mockMonster) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (m *mockMonster) Regenerate() {}

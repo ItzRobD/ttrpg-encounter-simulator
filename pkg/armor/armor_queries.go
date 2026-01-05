@@ -9,10 +9,10 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 )
 
-// getArmorIDByName retrieves the ID of an armor item from the database using its name.
+// getArmorIDByName retrieves the id of an armor item from the database using its name.
 // ctx is the context for managing request-scoped values, deadlines, and cancellation.
-// name represents the name of the armor for which the ID needs to be fetched.
-// Returns the armor ID as an integer and an error if the operation fails.
+// name represents the name of the armor for which the id needs to be fetched.
+// Returns the armor id as an integer and an error if the operation fails.
 func getArmorIDByName(ctx context.Context, name string) (int, error) {
 	var id int
 	stmt := SELECT(
@@ -25,7 +25,7 @@ func getArmorIDByName(ctx context.Context, name string) (int, error) {
 	query, args := stmt.Sql()
 	row, err := database.QueryRow(ctx, query, args...)
 	if err != nil {
-		return id, fmt.Errorf("error getting armor ID by name: %w", err)
+		return id, fmt.Errorf("error getting armor id by name: %w", err)
 	}
 	err = row.Scan(&id)
 	if err != nil {
@@ -35,7 +35,7 @@ func getArmorIDByName(ctx context.Context, name string) (int, error) {
 	return id, nil
 }
 
-// getArmorByID retrieves an armor item from the database using the provided ID.
+// getArmorByID retrieves an armor item from the database using the provided id.
 // ctx is the context for managing request-scoped values, deadlines, and cancellation.
 // id specifies the unique identifier of the armor to fetch.
 // Returns an Armor object and an error if the operation fails.
@@ -67,7 +67,7 @@ func getArmorByID(ctx context.Context, id int) (Armor, error) {
 
 // QueryArmorData retrieves armor data based on the provided query parameters.
 // ctx is the context for managing request-scoped values, deadlines, and cancellation.
-// params specifies the query parameters, including armor ID or name.
+// params specifies the query parameters, including armor id or name.
 // Returns an Armor object if successful, or an error if the operation fails.
 func QueryArmorData(ctx context.Context, params ArmorQueryParams) (Armor, error) {
 	var armorResult Armor

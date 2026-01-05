@@ -247,6 +247,11 @@ type characterTargetStub struct {
 	targetStub
 }
 
+func (s *characterTargetStub) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *characterTargetStub) IsMonster() bool   { return false }
 func (s *characterTargetStub) IsCharacter() bool { return true }
 func (s *characterTargetStub) GetHPStatus() core.HPStatus {

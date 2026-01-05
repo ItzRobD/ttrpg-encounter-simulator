@@ -514,7 +514,7 @@ func (c *Character) setHP(config core.HPConfig) error {
 			FinalRollValue: config.Value,
 			Total:          config.Value,
 		}
-		events.LogDiceRollEvent(c, &hpRoll, c.EventListener)
+		events.LogDiceRollEvent(c.GetCurrentEventContext(), c, &hpRoll, c.EventListener)
 		c.EntityStateManager.SetHPValues(hp)
 
 		return nil
@@ -533,7 +533,7 @@ func (c *Character) setHP(config core.HPConfig) error {
 			Modifier:       config.Modifier,
 			Total:          config.HPAverage,
 		}
-		events.LogDiceRollEvent(c, &hpRoll, c.EventListener)
+		events.LogDiceRollEvent(c.GetCurrentEventContext(), c, &hpRoll, c.EventListener)
 		c.EntityStateManager.SetHPValues(hp)
 
 		return nil
@@ -655,6 +655,14 @@ func (c *Character) UpdateAICombatContext(ctx *core.CombatContext) error {
 	return nil
 }
 
+func (c *Character) PushEventContext(ctx *core.EventContext) {
+	c.AI.UpdateEventContext(ctx)
+}
+
+func (c *Character) GetCurrentEventContext() *core.EventContext {
+	return c.AI.eventCtx
+}
+
 func (c *Character) CanTakeActions() bool { return c.EntityStateManager.CanTakeActions() }
 func (c *Character) GetConditions() core.EntityConditions {
 	return c.EntityStateManager.GetConditions()
@@ -690,6 +698,10 @@ func (c *Character) Regenerate() {
 
 func (c *Character) GetHasTakenTurnInCombat() bool {
 	return c.EntityStateManager.GetHasTakenTurnInCombat()
+}
+
+func (c *Character) GetEntityType() core.EntityType {
+	return core.EntityCharacter
 }
 
 var _ core.Entity = &Character{}

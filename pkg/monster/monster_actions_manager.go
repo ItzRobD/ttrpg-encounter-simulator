@@ -20,7 +20,7 @@ type MonsterActionManager struct {
 	// Precomputed
 	ActionAttackData    map[int]core.AttackData // actionID -> AttackData
 	MultiAttackData     map[int]MultiattackData // option index -> complete action
-	LegendaryAttackData map[int]core.AttackData // Legendary action ID -> Attack Data
+	LegendaryAttackData map[int]core.AttackData // Legendary action id -> Attack Data
 	SpecialAbilities    *SpecialAbilities
 }
 
@@ -69,7 +69,7 @@ func (mam *MonsterActionManager) RollRechargeActions() {
 			mam.parent.EntityStateManager.RechargeRechargeAction(idx)
 		}
 
-		events.LogDiceRollEvent(mam.parent, res, mam.parent.GetEventListener())
+		events.LogDiceRollEvent(mam.parent.GetCurrentEventContext(), mam.parent, res, mam.parent.GetEventListener())
 	}
 }
 
@@ -210,9 +210,9 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 			IsRanged:       ad.IsRangedWeapon,
 		}
 
-		events.LogMeleeAttackEvent(mam.parent, &attackResult, mam.parent.GetEventListener())
+		events.LogMeleeAttackEvent(mam.parent.GetCurrentEventContext(), mam.parent, &attackResult, mam.parent.GetEventListener())
 		if attackRollResult.IsSuccess {
-			events.LogDiceRollEvent(mam.parent, dmgRollResult, mam.parent.GetEventListener())
+			events.LogDiceRollEvent(mam.parent.GetCurrentEventContext(), mam.parent, dmgRollResult, mam.parent.GetEventListener())
 		}
 		results = append(results, attackResult)
 	}

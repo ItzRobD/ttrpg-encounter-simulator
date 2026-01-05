@@ -6,37 +6,39 @@ import (
 	"time"
 )
 
-func LogCharacterActionChoiceEvent(actor core.Entity, choice core.ActionType, allScores []ActionUtilityScore, topReasons []DecisionFactor, utilityScore float64, listener func(event interface{})) {
+func LogCharacterActionChoiceEvent(ctx *core.EventContext, actor core.Entity, choice core.ActionType, allScores []ActionUtilityScore, topReasons []DecisionFactor, utilityScore float64, listener func(event interface{})) {
 	event := &ActionChoiceEvent{
 		ActionChoice: choice,
 		AllScores:    allScores,
 		TopReasons:   topReasons,
 		UtilityScore: utilityScore,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
 	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogMonsterActionChoiceEvent(actor core.Entity, choice core.ActionType, allScores []ActionUtilityScore, topReasons []DecisionFactor, utilityScore float64, listener func(event interface{})) {
+func LogMonsterActionChoiceEvent(ctx *core.EventContext, actor core.Entity, choice core.ActionType, allScores []ActionUtilityScore, topReasons []DecisionFactor, utilityScore float64, listener func(event interface{})) {
 	event := &ActionChoiceEvent{
 		ActionChoice: choice,
 		AllScores:    allScores,
 		TopReasons:   topReasons,
 		UtilityScore: utilityScore,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
 	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogMeleeAttackEvent(actor core.Entity, attackResult *core.AttackResult, listener func(event interface{})) {
+func LogMeleeAttackEvent(ctx *core.EventContext, actor core.Entity, attackResult *core.AttackResult, listener func(event interface{})) {
 	event := &MeleeAttackEvent{
 		Target:         attackResult.GetTargetName(),
 		AttackName:     attackResult.GetAttackName(),
@@ -50,14 +52,16 @@ func LogMeleeAttackEvent(actor core.Entity, attackResult *core.AttackResult, lis
 		DamageTotal:    attackResult.GetDamageResult().GetTotal(),
 		DamageType:     attackResult.GetDamageType().String(),
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogDragonbornBreathWeaponEvent(actor core.Entity, target core.Entity, damageTotal int, damageType string, dc int, saveAbility string, saveSuccess bool, saveResult int, listener func(event interface{})) {
+func LogDragonbornBreathWeaponEvent(ctx *core.EventContext, actor core.Entity, target core.Entity, damageTotal int, damageType string, dc int, saveAbility string, saveSuccess bool, saveResult int, listener func(event interface{})) {
 	event := &DragonbornBreathWeaponEvent{
 		Target:             core.FormatEntityName(target),
 		DamageTotal:        damageTotal,
@@ -67,7 +71,9 @@ func LogDragonbornBreathWeaponEvent(actor core.Entity, target core.Entity, damag
 		SavingThrowSuccess: saveSuccess,
 		SavingThrowResult:  saveResult,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
@@ -78,33 +84,37 @@ func LogDragonbornBreathWeaponEvent(actor core.Entity, target core.Entity, damag
 //	event := &
 //}
 
-func LogDamageEvent(actor core.Entity, target core.Entity, damageType string, damage int, rolls []int, listener func(event interface{})) {
+func LogDamageEvent(ctx *core.EventContext, actor core.Entity, target core.Entity, damageType string, damage int, rolls []int, listener func(event interface{})) {
 	event := &DamageEvent{
 		Target:     core.FormatEntityName(target),
 		Amount:     damage,
 		DamageType: damageType,
 		Rolls:      rolls,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogSpellChoiceEvent(actor core.Entity, choice *core.SpellChoice, status *spells.SpellcastingManagerStatus, listener func(event interface{})) {
+func LogSpellChoiceEvent(ctx *core.EventContext, actor core.Entity, choice *core.SpellChoice, status *spells.SpellcastingManagerStatus, listener func(event interface{})) {
 	event := &SpellChoiceEvent{
 		SpellChoice:   choice,
 		ManagerStatus: status,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogSpellAttackEvent(actor core.Entity, res core.SpellResult, listener func(event interface{})) {
+func LogSpellAttackEvent(ctx *core.EventContext, actor core.Entity, res core.SpellResult, listener func(event interface{})) {
 	var damageTotal int
 	if res.GetValueResult() != nil {
 		damageTotal = res.GetValueResult().GetTotal()
@@ -130,14 +140,16 @@ func LogSpellAttackEvent(actor core.Entity, res core.SpellResult, listener func(
 		SavingThrowSuccess: res.GetSpellSaveSuccess(),
 		SavingThrowResult:  res.GetSpellSaveTotal(),
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogSpellDCEvent(actor core.Entity, target core.Entity, spell *spells.Spell, dc int, save int, isHit bool, listener func(event interface{})) {
+func LogSpellDCEvent(ctx *core.EventContext, actor core.Entity, target core.Entity, spell *spells.Spell, dc int, save int, isHit bool, listener func(event interface{})) {
 	event := &SpellDCEvent{
 		Target:      core.FormatEntityName(target),
 		SpellChoice: spell,
@@ -145,14 +157,16 @@ func LogSpellDCEvent(actor core.Entity, target core.Entity, spell *spells.Spell,
 		SavingThrow: save,
 		Success:     isHit,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogSpellHealEvent(actor core.Entity, res core.SpellResult, listener func(event interface{})) {
+func LogSpellHealEvent(ctx *core.EventContext, actor core.Entity, res core.SpellResult, listener func(event interface{})) {
 	event := &HealEvent{
 		Target:     res.GetTargetName(),
 		Name:       res.GetSpellName(),
@@ -161,14 +175,16 @@ func LogSpellHealEvent(actor core.Entity, res core.SpellResult, listener func(ev
 		HealTotal:  res.GetValueResult().GetTotal(),
 		HealRolls:  res.GetValueResult().GetFinalRolls(),
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogLayOnHandsHealEvent(actor core.Entity, subject core.Entity, value int, listener func(event interface{})) {
+func LogLayOnHandsHealEvent(ctx *core.EventContext, actor core.Entity, subject core.Entity, value int, listener func(event interface{})) {
 	event := &HealEvent{
 		Target:     core.FormatEntityName(subject),
 		Name:       "Lay on Hands",
@@ -177,14 +193,16 @@ func LogLayOnHandsHealEvent(actor core.Entity, subject core.Entity, value int, l
 		HealTotal:  value,
 		HealRolls:  []int{value},
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogDamageModifiedEvent(actor core.Entity, subject core.Entity, res core.DamageModificationResult, listener func(event interface{})) {
+func LogDamageModifiedEvent(ctx *core.EventContext, actor core.Entity, subject core.Entity, res core.DamageModificationResult, listener func(event interface{})) {
 	event := &DamageModifiedEvent{
 		BaseEvent:        BaseEvent{},
 		SubjectName:      core.FormatEntityName(subject),
@@ -194,14 +212,16 @@ func LogDamageModifiedEvent(actor core.Entity, subject core.Entity, res core.Dam
 		ResistanceType:   res.ResistanceType,
 		ResistanceBroken: res.ResistanceBroken,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogHPModifiedEvent(actor core.Entity, subject core.Entity, res core.HPModificationResult, listener func(event interface{})) {
+func LogHPModifiedEvent(ctx *core.EventContext, actor core.Entity, subject core.Entity, res core.HPModificationResult, listener func(event interface{})) {
 	event := &HPModifiedEvent{
 		BaseEvent:         BaseEvent{},
 		SubjectName:       core.FormatEntityName(subject),
@@ -217,27 +237,31 @@ func LogHPModifiedEvent(actor core.Entity, subject core.Entity, res core.HPModif
 		IsUnconscious:     res.GetIsUnconscious(),
 		IsMaxHealth:       res.GetIsMaxHealth(),
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogHPRollEvent(actor core.Entity, rollSum int, rolls []int, toAdd int, listener func(event interface{})) {
+func LogHPRollEvent(ctx *core.EventContext, actor core.Entity, rollSum int, rolls []int, toAdd int, listener func(event interface{})) {
 	event := &HPRollEvent{
 		Value:    rollSum,
 		Rolls:    rolls,
 		Modifier: toAdd,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogDiceRollEvent(actor core.Entity, res core.RollResult, listener func(event interface{})) {
+func LogDiceRollEvent(ctx *core.EventContext, actor core.Entity, res core.RollResult, listener func(event interface{})) {
 	event := &DiceRollEvent{
 		RollType:       res.GetDiceRollType(),
 		NumberOfDice:   res.GetNumberOfDice(),
@@ -255,60 +279,69 @@ func LogDiceRollEvent(actor core.Entity, res core.RollResult, listener func(even
 		IsSuccess:      res.GetIsSuccess(),
 		TargetValue:    res.GetTargetValue(),
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogSavingThrowEvent(actor core.Entity, result int, roll int, modifier int, success bool, listener func(event interface{})) {
+func LogSavingThrowEvent(ctx *core.EventContext, actor core.Entity, result int, roll int, modifier int, success bool, listener func(event interface{})) {
 	event := &SavingThrowEvent{
-		Actor:    core.FormatEntityName(actor),
 		Result:   result,
 		Roll:     roll,
 		Modifier: modifier,
 		Success:  success,
 	}
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogTargetChoiceEvent(actor core.Entity, target core.Entity, score float64, factors map[DecisionFactor]float64, listener func(event interface{})) {
+func LogTargetChoiceEvent(ctx *core.EventContext, actor core.Entity, target core.Entity, score float64, factors map[DecisionFactor]float64, listener func(event interface{})) {
 	event := &TargetChoiceEvent{
 		Target:  core.FormatEntityName(target),
 		Score:   score,
 		Factors: factors,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogSpecialAbilityEvent(actor core.Entity, abilityName string, description string, targetName string, value int, listener func(event interface{})) {
+func LogSpecialAbilityEvent(ctx *core.EventContext, actor core.Entity, abilityName string, description string, targetName string, value int, listener func(event interface{})) {
 	event := &SpecialAbilityEvent{
 		AbilityName: abilityName,
 		Description: description,
 		Target:      targetName,
 		Value:       value,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
 	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)
 	}
 }
 
-func LogCombatEventMessage(actor core.Entity, message string, listener func(event interface{})) {
+func LogCombatEventMessage(ctx *core.EventContext, actor core.Entity, message string, listener func(event interface{})) {
 	event := &CombatEventMessage{
 		Message: message,
 	}
-	event.SetActor(core.FormatEntityName(actor))
+	event.SetActor(actor)
+	event.SetTimestamp(time.Now())
+	event.SetContext(ctx)
 
 	if listener != nil {
 		listener(event)

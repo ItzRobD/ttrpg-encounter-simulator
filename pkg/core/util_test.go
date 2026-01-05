@@ -309,6 +309,11 @@ type mockEntity struct {
 	elusive    bool
 }
 
+func (m *mockEntity) GetEntityType() EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (m *mockEntity) Regenerate() {
 	//TODO implement me
 	panic("implement me")

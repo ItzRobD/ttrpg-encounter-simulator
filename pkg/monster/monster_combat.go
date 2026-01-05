@@ -169,7 +169,7 @@ func (m *Monster) MakeSavingThrow(ability core.Ability, targetValue int, isSpell
 		if m.EntityStateManager.GetLegendaryResistanceUses() > 0 {
 			m.useLegendaryResistance(&result)
 		}
-		events.LogDiceRollEvent(m, &result, m.EventListener)
+		events.LogDiceRollEvent(m.GetCurrentEventContext(), m, &result, m.EventListener)
 		return result
 	}
 
@@ -258,6 +258,14 @@ func (m *Monster) UpdateAICombatContext(ctx *core.CombatContext) error {
 		m.Info = info
 	}
 	return nil
+}
+
+func (m *Monster) PushEventContext(ctx *core.EventContext) {
+	m.AI.UpdateEventContext(ctx)
+}
+
+func (m *Monster) GetCurrentEventContext() *core.EventContext {
+	return m.AI.eventCtx
 }
 
 // useLegendaryResistance allows a Monster to succeed a failed roll by modifying the RollResult and expending a use.
@@ -388,7 +396,7 @@ func (m *Monster) resolveMartialAdvantage(isCritical bool, simOptions *core.Simu
 	}
 
 	m.EntityStateManager.SetHasUsedMartialAdvantage(true)
-	events.LogSpecialAbilityEvent(m, "Martial Advantage", fmt.Sprintf("%s deals extra damage from Martial Advantage!", m.GetName()), "", res.Total, m.EventListener)
+	events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Martial Advantage", fmt.Sprintf("%s deals extra damage from Martial Advantage!", m.GetName()), "", res.Total, m.EventListener)
 
 	return &core.Effect{
 		Type:       core.EffectDamage,
@@ -441,7 +449,7 @@ func (m *Monster) resolveDivineEminence(isCritical bool, simOptions *core.Simula
 		return nil
 	}
 
-	events.LogSpecialAbilityEvent(m, "Divine Eminence", fmt.Sprintf("%s deals extra radiant damage from Divine Eminence!", m.GetName()), "", res.Total, m.EventListener)
+	events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Divine Eminence", fmt.Sprintf("%s deals extra radiant damage from Divine Eminence!", m.GetName()), "", res.Total, m.EventListener)
 
 	return &core.Effect{
 		Type:       core.EffectDamage,
@@ -501,7 +509,7 @@ func (m *Monster) resolveSneakAttack(params core.SneakAttackParams, simOptions *
 	}
 
 	m.EntityStateManager.SetHasUsedSneakAttack(true)
-	events.LogSpecialAbilityEvent(m, "Sneak Attack", fmt.Sprintf("%s deals extra damage from Sneak Attack!", m.GetName()), "", res.Total, m.EventListener)
+	events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Sneak Attack", fmt.Sprintf("%s deals extra damage from Sneak Attack!", m.GetName()), "", res.Total, m.EventListener)
 
 	return &core.Effect{
 		Type:       core.EffectDamage,

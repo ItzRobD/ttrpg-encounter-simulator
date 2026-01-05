@@ -18,6 +18,7 @@ const (
 type MonsterAI struct {
 	parent             *Monster
 	combatCtx          *core.CombatContext
+	eventCtx           *core.EventContext
 	Weights            *core.UtilityWeights
 	rng                *rand.Rand
 	isLegendary        bool
@@ -46,6 +47,7 @@ func NewMonsterAI(m *Monster, weights *core.UtilityWeights) *MonsterAI {
 	return &MonsterAI{
 		parent:             m,
 		combatCtx:          nil,
+		eventCtx:           nil,
 		Weights:            weights,
 		rng:                m.GetRNG(),
 		isLegendary:        m.IsLegendary,
@@ -57,6 +59,10 @@ func NewMonsterAI(m *Monster, weights *core.UtilityWeights) *MonsterAI {
 
 func (mai *MonsterAI) UpdateCombatContext(ctx *core.CombatContext) {
 	mai.combatCtx = ctx
+}
+
+func (mai *MonsterAI) UpdateEventContext(ctx *core.EventContext) {
+	mai.eventCtx = ctx
 }
 
 func (mai *MonsterAI) GetCombatContext() *core.CombatContext {
@@ -83,7 +89,7 @@ func (mai *MonsterAI) createMonsterLegendaryActionRequest() (*core.AIRequest, er
 
 	// Now that we've decided to use a legendary action, we can log the target choice
 	if combatant, ok := mai.combatCtx.CombatantInfo[targetID]; ok {
-		events.LogTargetChoiceEvent(mai.parent, combatant.Combatant.GetEntity(), 1.0, nil, mai.parent.GetEventListener())
+		events.LogTargetChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, combatant.Combatant.GetEntity(), 1.0, nil, mai.parent.GetEventListener())
 	}
 
 	actionChoiceID := -1
@@ -163,7 +169,7 @@ func (mai *MonsterAI) createMonsterHealActionRequest() (*core.AIRequest, error) 
 
 	if healReq.Source == core.HealSourceSpell {
 		// Log spell choice event
-		events.LogSpellChoiceEvent(mai.parent, healReq.SpellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
+		events.LogSpellChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, healReq.SpellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
 	}
 
 	return &core.AIRequest{
@@ -231,7 +237,7 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 				spellChoice, err = mai.chooseSpell(target)
 				if err == nil {
 					// Log spell choice event
-					events.LogSpellChoiceEvent(mai.parent, spellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
+					events.LogSpellChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, spellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
 					return mai.buildAIRequest(-1, targetID, spellChoice, core.ATSpell)
 				}
 				// If chooseSpell fails (no slots/spells), fallback to multiattack
@@ -253,7 +259,7 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 			fmt.Println(err)
 		} else {
 			// Log spell choice event
-			events.LogSpellChoiceEvent(mai.parent, spellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
+			events.LogSpellChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, spellChoice, mai.parent.SpellCastingManager.GetStatus(), mai.parent.GetEventListener())
 			return mai.buildAIRequest(-1, targetID, spellChoice, core.ATSpell)
 		}
 	}
@@ -489,7 +495,7 @@ func (mai *MonsterAI) selectTargetSimple(validTargets map[int]*core.Combatant, t
 
 	if shouldLog {
 		if combatant, ok := validTargets[target]; ok && combatant != nil {
-			events.LogTargetChoiceEvent(mai.parent, combatant.GetEntity(), 1.0, nil, mai.parent.GetEventListener())
+			events.LogTargetChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, combatant.GetEntity(), 1.0, nil, mai.parent.GetEventListener())
 		}
 	}
 
@@ -617,7 +623,7 @@ func (mai *MonsterAI) selectTargetWeighted(validTargets map[int]*core.Combatant,
 	}
 
 	if shouldLog {
-		events.LogTargetChoiceEvent(mai.parent, validTargets[bestID].Entity, bestScore, bestFactors, mai.parent.GetEventListener())
+		events.LogTargetChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, validTargets[bestID].Entity, bestScore, bestFactors, mai.parent.GetEventListener())
 	}
 	return core.TargetOK, bestID, bestScore, bestFactors, nil
 }
@@ -721,7 +727,7 @@ func (mai *MonsterAI) chooseActionWeighted() (core.ActionType, error) {
 		topReasons = append(topReasons, events.FactorOptimalDamage)
 	}
 
-	events.LogMonsterActionChoiceEvent(mai.parent, chosenAction, allScores, topReasons, finalUtility, mai.parent.GetEventListener())
+	events.LogMonsterActionChoiceEvent(mai.parent.GetCurrentEventContext(), mai.parent, chosenAction, allScores, topReasons, finalUtility, mai.parent.GetEventListener())
 
 	return chosenAction, nil
 }

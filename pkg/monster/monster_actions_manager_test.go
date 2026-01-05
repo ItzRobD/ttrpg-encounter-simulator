@@ -11,6 +11,11 @@ import (
 // target stub that only controls AC
 type targetStub struct{ core.Entity }
 
+func (t targetStub) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t targetStub) Regenerate() {
 	//TODO implement me
 	panic("implement me")

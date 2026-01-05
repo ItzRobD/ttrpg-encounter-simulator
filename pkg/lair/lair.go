@@ -17,6 +17,11 @@ type Lair struct {
 	ai            *LairAI
 	listener      func(event interface{})
 	combatCtx     *core.CombatContext
+	eventCtx      *core.EventContext
+}
+
+func (l *Lair) GetEntityType() core.EntityType {
+	return core.EntityLair
 }
 
 func (l *Lair) Regenerate() {}
@@ -137,6 +142,12 @@ func (l *Lair) UpdateAICombatContext(ctx *core.CombatContext) error {
 	l.ai.UpdateCombatContext(ctx)
 	return nil
 }
+func (l *Lair) PushEventContext(ctx *core.EventContext) {
+	l.eventCtx = ctx
+	l.ai.UpdateEventContext(ctx)
+}
+
+func (l *Lair) GetCurrentEventContext() *core.EventContext { return l.eventCtx }
 
 func (l *Lair) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIRequest, error) {
 	switch t {

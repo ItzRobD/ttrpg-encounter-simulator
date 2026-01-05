@@ -125,7 +125,7 @@ func (csm *CombatantSetupManager) createMonsters(ids []int) ([]*core.Combatant, 
 			errors = append(errors, SetupError{
 				Type:    "monster",
 				ID:      fmt.Sprintf("%d", id),
-				Message: fmt.Sprintf("Failed to query monster data for ID %d: %v", id, err),
+				Message: fmt.Sprintf("Failed to query monster data for id %d: %v", id, err),
 			})
 		}
 		return combatants, errors
@@ -166,7 +166,7 @@ func (csm *CombatantSetupManager) createMonsters(ids []int) ([]*core.Combatant, 
 			errors = append(errors, SetupError{
 				Type:    "monster",
 				ID:      fmt.Sprintf("%d", requestedID),
-				Message: fmt.Sprintf("Monster with ID %d not found", requestedID),
+				Message: fmt.Sprintf("Monster with id %d not found", requestedID),
 			})
 		}
 	}

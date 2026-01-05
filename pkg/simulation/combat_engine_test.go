@@ -388,9 +388,9 @@ func TestCombatEngine_ProcessActionResults_AOEHitsAllEnemies(t *testing.T) {
 	cTgt1 := core.NewCombatantWithInfo(tgt1)
 	cTgt2 := core.NewCombatantWithInfo(tgt2)
 
-	ce.AddCombatant(cAtt)  // ID 0
-	ce.AddCombatant(cTgt1) // ID 1
-	ce.AddCombatant(cTgt2) // ID 2
+	ce.AddCombatant(cAtt)  // id 0
+	ce.AddCombatant(cTgt1) // id 1
+	ce.AddCombatant(cTgt2) // id 2
 
 	outcome := &core.ActionOutcome{
 		ActionType: core.ATSpell,
@@ -466,7 +466,7 @@ func TestCombatEngine_MaxDamageAndStats(t *testing.T) {
 	opts := &core.SimulationOptions{}
 	ce := NewCombatEngine(opts)
 
-	// Create Actor
+	// Create actor
 	actor := buildTestCharacter(t, core.AbilityScores{Strength: 16}, 1)
 	actorCombatant := core.NewCombatantWithInfo(actor)
 	actor.SetInstanceID(0)
@@ -580,7 +580,7 @@ func TestCombatEngine_AttackStatistics(t *testing.T) {
 	opts := &core.SimulationOptions{}
 	ce := NewCombatEngine(opts)
 
-	// Create Actor (guaranteed to hit if we use AC 0)
+	// Create actor (guaranteed to hit if we use AC 0)
 	actor := buildTestCharacter(t, core.AbilityScores{Strength: 20}, 1)
 	actorCombatant := core.NewCombatantWithInfo(actor)
 	actor.SetInstanceID(0)

@@ -296,7 +296,7 @@ func DetermineAttackAdvantage(actorConditions EntityConditions, targetConditions
 	generic := DetermineAttackAdvantageFromConditions(actorConditions, targetConditions)
 	parts = append(parts, generic)
 
-	// 3) Context-sensitive rules
+	// 3) ctx-sensitive rules
 	if actorConditions != nil {
 		if actorConditions.Has(ConditionBlinded) {
 			parts = append(parts, RollDisadvantage)

@@ -11,6 +11,11 @@ import (
 // Reuse target stub with AC=0 for guaranteed hits
 type targetZeroAC struct{ core.Entity }
 
+func (t targetZeroAC) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t targetZeroAC) Regenerate() {
 	//TODO implement me
 	panic("implement me")

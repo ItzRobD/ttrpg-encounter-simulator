@@ -59,27 +59,27 @@ func (h *UniversalEventHandler) handleMeleeAttack(e *MeleeAttackEvent) {
 	var s string
 	if e.CriticalHit {
 		s = fmt.Sprintf("[Round %d] <Martial Critical Hit> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Target: %d. Success: %t. Damage: %d %s\n",
-			e.GetRound(), e.AttackCount, e.GetActor(), e.Target, e.AttackName, e.AttackRoll, e.AttackRoll, e.AttackModifier, e.TargetValue, e.Success, e.DamageTotal, e.DamageType)
+			e.GetRound(), e.AttackCount, e.GetActorName(), e.Target, e.AttackName, e.AttackRoll, e.AttackRoll, e.AttackModifier, e.TargetValue, e.Success, e.DamageTotal, e.DamageType)
 	} else if !e.Success {
 		s = fmt.Sprintf("[Round %d] <Martial Miss> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Target: %d. Success: %t\n",
-			e.GetRound(), e.AttackCount, e.GetActor(), e.Target, e.AttackName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.TargetValue, e.Success)
+			e.GetRound(), e.AttackCount, e.GetActorName(), e.Target, e.AttackName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.TargetValue, e.Success)
 	} else {
 		s = fmt.Sprintf("[Round %d] <Martial Attack> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Target: %d. Success: %t. Damage: %d %s\n",
-			e.GetRound(), e.AttackCount, e.GetActor(), e.Target, e.AttackName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.TargetValue, e.Success, e.DamageTotal, e.DamageType)
+			e.GetRound(), e.AttackCount, e.GetActorName(), e.Target, e.AttackName, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.TargetValue, e.Success, e.DamageTotal, e.DamageType)
 	}
 	fmt.Print(s)
 }
 
 func (h *UniversalEventHandler) handleDragonbornBreathWeapon(e *DragonbornBreathWeaponEvent) {
 	s := fmt.Sprintf("[Round %d] <Dragonborn Breath Weapon> %s uses breath weapon against %s. DC: %d, %s save: %d. Success: %t. Damage: %d %s\n",
-		e.GetRound(), e.GetActor(), e.Target, e.DC, e.SaveAbility, e.SavingThrowResult, e.SavingThrowSuccess, e.DamageTotal, e.DamageType)
+		e.GetRound(), e.GetActorName(), e.Target, e.DC, e.SaveAbility, e.SavingThrowResult, e.SavingThrowSuccess, e.DamageTotal, e.DamageType)
 	fmt.Print(s)
 }
 
 func (h *UniversalEventHandler) handleActionChoice(e *ActionChoiceEvent) {
 	s := fmt.Sprintf("[Round %d] <Action Choice> %s chooses %s as its action.",
 		e.GetRound(),
-		e.GetActor(),
+		e.GetActorName(),
 		e.ActionChoice)
 
 	if len(e.TopReasons) > 0 {
@@ -91,7 +91,7 @@ func (h *UniversalEventHandler) handleActionChoice(e *ActionChoiceEvent) {
 func (h *UniversalEventHandler) handleSpellChoice(e *SpellChoiceEvent) {
 	fmt.Printf("[Round %d] <Spell Choice> %s chooses to cast %s at level %d. Formula: %dd%d + %d. Damage type: %s\n",
 		e.GetRound(),
-		e.GetActor(),
+		e.GetActorName(),
 		e.SpellChoice.Spell.GetName(),
 		e.SpellChoice.Formula.CastLevel,
 		e.SpellChoice.Formula.NumberOfDice,
@@ -106,7 +106,7 @@ func (h *UniversalEventHandler) handleSpellAttack(e *SpellAttackEvent) {
 	case true:
 		s = fmt.Sprintf("[Round %d] <Spell DC Attack> %s attacks %s with %s at level %d. DC is: %d. %s Saving throw: %d. Save success: %t.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.Target,
 			e.SpellName,
 			e.SpellLevel,
@@ -130,13 +130,13 @@ func (h *UniversalEventHandler) handleSpellAttack(e *SpellAttackEvent) {
 	case false:
 		if e.CriticalHit {
 			s = fmt.Sprintf("[Round %d] <Spell Critical Hit> %s attacks %s with %s at level %d. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
-				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.SpellLevel, e.AttackRoll, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
+				e.GetRound(), e.GetActorName(), e.Target, e.SpellName, e.SpellLevel, e.AttackRoll, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
 		} else if !e.Success {
 			s = fmt.Sprintf("[Round %d] <Spell Miss> %s attacks %s with %s at level %d. %d to hit, %d + %d. Success: %t\n",
-				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.SpellLevel, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success)
+				e.GetRound(), e.GetActorName(), e.Target, e.SpellName, e.SpellLevel, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success)
 		} else {
 			s = fmt.Sprintf("[Round %d] <Spell Attack> %s attacks %s with %s at level %d. %d to hit, %d + %d. Success: %t. Damage: %d %s\n",
-				e.GetRound(), e.GetActor(), e.Target, e.SpellName, e.SpellLevel, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
+				e.GetRound(), e.GetActorName(), e.Target, e.SpellName, e.SpellLevel, e.AttackTotal, e.AttackRoll, e.AttackModifier, e.Success, e.DamageTotal, e.DamageType)
 		}
 	}
 
@@ -146,7 +146,7 @@ func (h *UniversalEventHandler) handleSpellAttack(e *SpellAttackEvent) {
 func (h *UniversalEventHandler) handleSpellDC(e *SpellDCEvent) {
 	fmt.Printf("[Round %d] <Spell DC Attack> %s attacks %s with %s. DC is: %d. Saving throw: %d. Success: %t\n",
 		e.GetRound(),
-		e.GetActor(),
+		e.GetActorName(),
 		e.Target,
 		e.SpellChoice.Name,
 		e.DC,
@@ -157,7 +157,7 @@ func (h *UniversalEventHandler) handleSpellDC(e *SpellDCEvent) {
 func (h *UniversalEventHandler) handleDamage(e *DamageEvent) {
 	fmt.Printf("[Round %d] <Damage> %s Does %d damage to %s. Rolls: %v\n",
 		e.GetRound(),
-		e.GetActor(),
+		e.GetActorName(),
 		e.Amount,
 		e.Target,
 		e.Rolls)
@@ -169,7 +169,7 @@ func (h *UniversalEventHandler) handleHeal(e *HealEvent) {
 	case true:
 		s = fmt.Sprintf("[Round %d] <Heal> %s heals %s using %s at level %d for %d hp, rolls: %v.\n",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.Target,
 			e.Name,
 			e.SpellLevel,
@@ -178,7 +178,7 @@ func (h *UniversalEventHandler) handleHeal(e *HealEvent) {
 	case false:
 		s = fmt.Sprintf("[Round %d] <Heal> %s heals %s using %s for %d hp, rolls: %v.\n",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.Target,
 			e.Name,
 			e.HealTotal,
@@ -188,7 +188,7 @@ func (h *UniversalEventHandler) handleHeal(e *HealEvent) {
 	if e.Name == "Lay on Hands" {
 		s = fmt.Sprintf("[Round %d] <Heal> %s uses Lay on Hands on %s for %d hp.\n",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.Target,
 			e.HealTotal)
 	}
@@ -199,13 +199,13 @@ func (h *UniversalEventHandler) handleHeal(e *HealEvent) {
 func (h *UniversalEventHandler) handleDeath(e *DeathEvent) {
 	fmt.Printf("[Round %d] <Death> %s has died.\n",
 		e.GetRound(),
-		e.GetActor())
+		e.GetActorName())
 }
 
 func (h *UniversalEventHandler) handleHPModified(e *HPModifiedEvent) {
 	fmt.Printf("[Round %d] <HP Modified> %s modified %s's hp by %d. New hp: %d, IsUnconscious: %t\n",
 		e.GetRound(),
-		e.GetActor(),
+		e.GetActorName(),
 		e.SubjectName,
 		e.ModificationValue,
 		e.NewHP,
@@ -215,7 +215,7 @@ func (h *UniversalEventHandler) handleHPModified(e *HPModifiedEvent) {
 func (h *UniversalEventHandler) handleDamageModified(e *DamageModifiedEvent) {
 	fmt.Printf("[Round %d] <Damage Modified> %s on %s. Original: %d, Final: %d, Modified: %t, Resistance: %s, Broken: %t\n",
 		e.GetRound(),
-		e.GetActor(),
+		e.GetActorName(),
 		e.SubjectName,
 		e.OriginalValue,
 		e.FinalValue,
@@ -227,7 +227,7 @@ func (h *UniversalEventHandler) handleDamageModified(e *DamageModifiedEvent) {
 func (h *UniversalEventHandler) handleUnconscious(e *UnconsciousEvent) {
 	fmt.Printf("[Round %d] <Unconscious> %s is unconscious.\n",
 		e.GetRound(),
-		e.GetActor())
+		e.GetActorName())
 }
 
 func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
@@ -236,7 +236,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollGeneral:
 		s = fmt.Sprintf("[Round %d] <Roll> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
@@ -247,7 +247,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollInitiative:
 		s = fmt.Sprintf("[Round %d] <initiative> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
@@ -258,7 +258,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollSavingThrow:
 		s = fmt.Sprintf("[Round %d] <Saving Throw> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, DC: %d, Success: %t.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
@@ -274,7 +274,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollAbilityCheck:
 		s = fmt.Sprintf("[Round %d] <AbilityUsed Check> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
@@ -287,7 +287,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollHP:
 		s = fmt.Sprintf("[Round %d] <HP roll> %s rolls for %s. Dice: %dd%s, Final rolls: %v, Modifier: %d, Total: %d.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
@@ -297,7 +297,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollHPAvgUsed:
 		s = fmt.Sprintf("[Round %d] <HP roll> %s used average values for hp. Dice: %dd%s, Total: %d, Modifier: %d,",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.NumberOfDice,
 			e.Die,
 			e.Total,
@@ -305,12 +305,12 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollHPValueUsed:
 		s = fmt.Sprintf("[Round %d] <HP roll> %s used direct values for hp. Total: %d.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.Total)
 	case core.DiceRollAttack:
 		s = fmt.Sprintf("[Round %d] <Attack Roll> %s rolls for %s. Dice: %dd%s, Total: %d, Final rolls: %v, Advantage: %s, Modifier: %d, Target Value: %d, Success: %t.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
@@ -324,7 +324,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 		// Clarify that Total includes the modifier; show dice subtotal separately
 		s = fmt.Sprintf("[Round %d] <Damage Roll> %s rolls for %s. Dice: %dd%s, DiceTotal: %d, Final Rolls: %v, Modifier: %d, Total: %d.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
@@ -335,7 +335,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollHealing:
 		s = fmt.Sprintf("[Round %d] <Healing Roll> %s rolls for %s. Dice: %dd%s, DiceTotal: %d, Final Rolls: %v, Modifier: %d, Total: %d.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.RollType,
 			e.NumberOfDice,
 			e.Die,
@@ -346,7 +346,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 	case core.DiceRollRecharge:
 		s = fmt.Sprintf("[Round %d] <Recharge roll> %s rolls to recharge ability: %s. Total: %d. Succcess: %t.",
 			e.GetRound(),
-			e.GetActor(),
+			e.GetActorName(),
 			e.Name,
 			e.Total,
 			e.IsSuccess)
@@ -365,7 +365,7 @@ func (h *UniversalEventHandler) handleDiceRoll(e *DiceRollEvent) {
 func (h *UniversalEventHandler) handleHPRoll(e *HPRollEvent) {
 	fmt.Printf("[Round %d] <HP Roll> %s rolls %d, rolls: %v, amount to add: %d\n",
 		e.GetRound(),
-		e.GetActor(),
+		e.GetActorName(),
 		e.Value,
 		e.Rolls,
 		e.Modifier)
@@ -374,7 +374,7 @@ func (h *UniversalEventHandler) handleHPRoll(e *HPRollEvent) {
 func (h *UniversalEventHandler) handleTargetChoice(e *TargetChoiceEvent) {
 	s := fmt.Sprintf("[Round %d] <Target Choice> %s chooses %s as their target.",
 		e.GetRound(),
-		e.GetActor(),
+		e.GetActorName(),
 		e.Target)
 
 	if e.Score > 1.0 || len(e.Factors) > 0 {
@@ -398,7 +398,7 @@ func (h *UniversalEventHandler) handleTargetChoice(e *TargetChoiceEvent) {
 func (h *UniversalEventHandler) handleSavingThrow(e *SavingThrowEvent) {
 	fmt.Printf("[Round %d] <Saving Throw> %s rolls saving throw. Result: %d, roll: %d, modifier: %d, success: %t\n",
 		e.GetRound(),
-		e.GetActor(),
+		e.GetActorName(),
 		e.Result,
 		e.Roll,
 		e.Modifier,

@@ -145,9 +145,9 @@ func setupFrank() character.CharacterConfig {
 	return charConfig
 }
 
-//func setupMonsters(ctx context.Context, ids []int) ([]core.Combatant, error) {
+//func setupMonsters(ctx context.ctx, ids []int) ([]core.Combatant, error) {
 //	var combatants []core.Combatant
-//	cfg, err := monster.QueryMonsterConfigData(ctx, monster.MonsterQueryParams{ID: ids})
+//	cfg, err := monster.QueryMonsterConfigData(ctx, monster.MonsterQueryParams{id: ids})
 //	if err != nil {
 //		return nil, err
 //	}

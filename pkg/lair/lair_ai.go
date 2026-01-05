@@ -9,11 +9,13 @@ import (
 type LairAI struct {
 	parent    *Lair
 	combatCtx *core.CombatContext
+	eventCtx  *core.EventContext
 }
 
 func NewLairAI(l *Lair) *LairAI { return &LairAI{parent: l} }
 
 func (lai *LairAI) UpdateCombatContext(ctx *core.CombatContext) { lai.combatCtx = ctx }
+func (lai *LairAI) UpdateEventContext(ctx *core.EventContext)   { lai.eventCtx = ctx }
 
 // BuildLairActionRequest chooses the first available action (respecting recharge)
 // and selects a target according to that action's TargetSide/TargetPolicy.
@@ -81,8 +83,8 @@ func (lai *LairAI) BuildLairActionRequest() (*core.AIRequest, error) {
 	}
 
 	// Structured logging: chosen action and target
-	events.LogCombatEventMessage(lai.parent, fmt.Sprintf("Lair chooses lair action: %s", action.Name), lai.parent.GetEventListener())
-	events.LogTargetChoiceEvent(lai.parent, target, 1.0, nil, lai.parent.GetEventListener())
+	events.LogCombatEventMessage(lai.parent.GetCurrentEventContext(), lai.parent, fmt.Sprintf("Lair chooses lair action: %s", action.Name), lai.parent.GetEventListener())
+	events.LogTargetChoiceEvent(lai.parent.GetCurrentEventContext(), lai.parent, target, 1.0, nil, lai.parent.GetEventListener())
 
 	return req, nil
 }

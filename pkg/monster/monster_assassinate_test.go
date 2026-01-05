@@ -42,6 +42,11 @@ type assassinateTargetStub struct {
 	hasTakenTurn bool
 }
 
+func (s *assassinateTargetStub) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *assassinateTargetStub) GetHasTakenTurnInCombat() bool {
 	return s.hasTakenTurn
 }

@@ -12,8 +12,8 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 )
 
-// getRaceIDByName retrieves the ID of a race from the database based on its name.
-// It accepts a context and the race name as inputs, returning the race ID or an error if the operation fails.
+// getRaceIDByName retrieves the id of a race from the database based on its name.
+// It accepts a context and the race name as inputs, returning the race id or an error if the operation fails.
 func getRaceIDByName(ctx context.Context, name string) (uint8, error) {
 	var id uint8
 	stmt := SELECT(

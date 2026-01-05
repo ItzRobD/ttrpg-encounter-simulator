@@ -14,18 +14,28 @@ type emEntityRNG struct {
 	rng *rand.Rand
 }
 
+func (e emEntityRNG) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (e emEntityRNG) Regenerate() {
 	//TODO implement me
 	panic("implement me")
 }
 
 func (e emEntityRNG) GetRNG() *rand.Rand { return e.rng }
-func (e emEntityRNG) GetName() string    { return "Actor" }
+func (e emEntityRNG) GetName() string    { return "actor" }
 
 // targetStub embeds EmEntity and overrides AC/Name
 type targetStub struct {
 	testhelpers.EmEntity
 	ac int
+}
+
+func (t targetStub) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (t targetStub) Regenerate() {

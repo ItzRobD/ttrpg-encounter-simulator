@@ -32,17 +32,23 @@ const (
 
 type CombatEvent interface {
 	GetRound() int
-	GetActor() string
+	GetActor() core.Entity
+	GetActorName() string
 	GetTimestamp() time.Time
 	SetRound(int)
-	SetActor(string)
+	SetActor(entity core.Entity)
 	SetTimestamp(time.Time)
+	GetID() string
+	Context() *core.EventContext
+	GetEventType() EventType
 }
 
 type BaseEvent struct {
 	Round     int
 	Timestamp time.Time
-	Actor     string
+	ctx       *core.EventContext
+	actor     core.Entity
+	id        string
 }
 
 func (b *BaseEvent) GetRound() int {
@@ -51,8 +57,11 @@ func (b *BaseEvent) GetRound() int {
 func (b *BaseEvent) GetTimestamp() time.Time {
 	return b.Timestamp
 }
-func (b *BaseEvent) GetActor() string {
-	return b.Actor
+func (b *BaseEvent) GetActor() core.Entity {
+	return b.actor
+}
+func (b *BaseEvent) GetActorName() string {
+	return b.actor.GetName()
 }
 func (b *BaseEvent) SetRound(round int) {
 	b.Round = round
@@ -60,8 +69,23 @@ func (b *BaseEvent) SetRound(round int) {
 func (b *BaseEvent) SetTimestamp(timestamp time.Time) {
 	b.Timestamp = timestamp
 }
-func (b *BaseEvent) SetActor(actor string) {
-	b.Actor = actor
+func (b *BaseEvent) SetActor(actor core.Entity) {
+	b.actor = actor
+}
+func (b *BaseEvent) GetID() string {
+	return b.id
+}
+func (b *BaseEvent) SetID(id string) {
+	b.id = id
+}
+func (b *BaseEvent) MakeNewEventID() {
+	b.id = core.NewUUIDv7()
+}
+func (b *BaseEvent) SetContext(ctx *core.EventContext) {
+	b.ctx = ctx
+}
+func (b *BaseEvent) Context() *core.EventContext {
+	return b.ctx
 }
 
 type MeleeAttackEvent struct {
@@ -121,9 +145,10 @@ type ActionUtilityScore struct {
 type ActionChoiceEvent struct {
 	BaseEvent
 	ActionChoice core.ActionType
-	AllScores    []ActionUtilityScore // Data for the UI to graph all options
-	TopReasons   []DecisionFactor     // Human-readable top 3
-	UtilityScore float64              // Final winning score
+	AllScores    []ActionUtilityScore       // Data for the UI to graph all options
+	TopReasons   []DecisionFactor           // Human-readable top 3
+	UtilityScore float64                    // Final winning score
+	Factors      map[DecisionFactor]float64 // All factors
 }
 
 func (e *ActionChoiceEvent) GetEventType() EventType { return ETActionChoiceEvent }
@@ -277,7 +302,6 @@ func (e *HPRollEvent) GetEventType() EventType { return ETHPRollEvent }
 
 type SavingThrowEvent struct {
 	BaseEvent
-	Actor    string
 	Result   int
 	Roll     int
 	Modifier int

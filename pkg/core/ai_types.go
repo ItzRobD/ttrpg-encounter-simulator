@@ -38,6 +38,7 @@ type AIRequest struct {
 	Request            AIRequestType
 	SimOptions         *SimulationOptions
 	LayingOnHandsValue int
+	EventParentID      string
 }
 
 func (r *AIRequest) Validate() error {

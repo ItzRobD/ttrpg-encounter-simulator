@@ -78,6 +78,11 @@ type EmEntity struct {
 	classID uint8
 }
 
+func (e EmEntity) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewEmEntity(lvl float64, as core.AbilityScores, class *uint8) EmEntity {
 	if class == nil {
 		return EmEntity{lvl: lvl, as: as, Monster: false, classID: 0}

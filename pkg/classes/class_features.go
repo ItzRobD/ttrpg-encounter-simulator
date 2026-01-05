@@ -67,7 +67,7 @@ type RogueFeatures struct {
 	HasElusive           bool // no incoming advantage while not incapacitated
 }
 
-// SetupFeatures initializes and updates class-specific features for a given class ID and level.
+// SetupFeatures initializes and updates class-specific features for a given class id and level.
 func (f *ClassFeatures) SetupFeatures(classID ClassID, level uint8) {
 	switch classID {
 	case Barbarian:

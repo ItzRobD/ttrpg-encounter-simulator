@@ -10,7 +10,7 @@ import (
 )
 
 func TestWeightedAI_DynamicUtilityScaling(t *testing.T) {
-	// 1. Setup Actor (Wizard)
+	// 1. Setup actor (Wizard)
 	weights := &core.UtilityWeights{
 		ActionWeights: map[core.ActionType]float64{
 			core.ATDamage: 1.0,
@@ -44,7 +44,7 @@ func TestWeightedAI_DynamicUtilityScaling(t *testing.T) {
 	targetB.InitializeHP()
 	targetB.ModifyHP(-90, false, false, false, core.DamageFire, false) // 10/100 HP
 
-	// 3. Setup Combat Context
+	// 3. Setup Combat ctx
 	ctx := &core.CombatContext{
 		CombatantInfo: make(map[int]*core.CombatantInfo),
 		Options: &core.SimulationOptions{
@@ -70,10 +70,10 @@ func TestWeightedAI_DynamicUtilityScaling(t *testing.T) {
 	_, bestID, score2, _, _ := actor.AI.SelectTargetID(core.TTDamage)
 	action2, _ := actor.AI.chooseActionWeighted()
 
-	fmt.Printf("[TEST] Scenario 2: Best Target ID: %d, Score: %.2f, Action: %s\n", bestID, score2, action2)
+	fmt.Printf("[TEST] Scenario 2: Best Target id: %d, Score: %.2f, Action: %s\n", bestID, score2, action2)
 
 	if bestID != 2 {
-		t.Errorf("Expected WoundedTarget (ID 2) to be chosen, got %d", bestID)
+		t.Errorf("Expected WoundedTarget (id 2) to be chosen, got %d", bestID)
 	}
 	if score2 <= score1 {
 		t.Errorf("Expected wounded target score (%.2f) to be higher than healthy target score (%.2f)", score2, score1)

@@ -10,6 +10,7 @@ type EntityType string
 const (
 	EntityCharacter EntityType = "character"
 	EntityMonster   EntityType = "monster"
+	EntityLair      EntityType = "lair"
 	EntityUnknown   EntityType = "unknown"
 )
 

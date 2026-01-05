@@ -227,8 +227,8 @@ func TestQuerySpellData_DB(t *testing.T) {
 		checkSpell   func(*testing.T, map[int]Spell)
 	}{
 		{
-			name:         "Query Fireball by ID",
-			params:       SpellQueryParams{ID: []int{119}}, // Fireball ID (adjust if different in your DB)
+			name:         "Query Fireball by id",
+			params:       SpellQueryParams{ID: []int{119}}, // Fireball id (adjust if different in your DB)
 			expectSpells: 1,
 			checkSpell: func(t *testing.T, spells map[int]Spell) {
 				for _, spell := range spells {
@@ -245,7 +245,7 @@ func TestQuerySpellData_DB(t *testing.T) {
 			},
 		},
 		{
-			name:         "Query multiple spells by ID",
+			name:         "Query multiple spells by id",
 			params:       SpellQueryParams{ID: []int{119, 2}}, // Fireball + Acid Splash
 			expectSpells: 2,
 			checkSpell: func(t *testing.T, spells map[int]Spell) {

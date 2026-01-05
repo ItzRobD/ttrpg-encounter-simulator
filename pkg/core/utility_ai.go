@@ -16,7 +16,7 @@ type UtilityWeights struct {
 	TargetFactorWeights struct {
 		HighThreat         float64 // Based on LastDamageDealt (The "Big Hit")
 		TargetPotency      float64 // Based on Target's inherent stats (AC, Attack Bonus)
-		TargetHitability   float64 // Based on Chance to Hit (AC vs Actor Attack Bonus)
+		TargetHitability   float64 // Based on Chance to Hit (AC vs actor Attack Bonus)
 		Vengeance          float64 // Targeting the last entity that hit this actor
 		LowHP              float64 // Based on visibility mode
 		CasterPriority     float64 // Prioritizing spellcasters

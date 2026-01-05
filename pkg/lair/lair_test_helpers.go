@@ -47,6 +47,11 @@ type testEntity struct {
 	rng       *rand.Rand
 }
 
+func (e *testEntity) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (e *testEntity) Regenerate() {
 	//TODO implement me
 	panic("implement me")

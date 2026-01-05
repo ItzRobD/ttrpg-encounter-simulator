@@ -2,13 +2,9 @@ package simulation
 
 import (
 	"dnd5e-encounter-simulator-backend/pkg/character"
-	"dnd5e-encounter-simulator-backend/pkg/classes"
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg/core/entity_state_manager"
-	"dnd5e-encounter-simulator-backend/pkg/core/events"
 	"dnd5e-encounter-simulator-backend/pkg/monster"
 	"fmt"
-	"math"
 	"slices"
 	"sort"
 )
@@ -19,6 +15,7 @@ type CombatEngine struct {
 	Combatants       map[int]*core.Combatant
 	TurnOrder        []int
 	CombatContext    *core.CombatContext
+	EventContext     *core.EventContext
 	SimOptions       *core.SimulationOptions
 	tieBreakRolls    map[int]int
 }
@@ -30,397 +27,9 @@ func NewCombatEngine(simOptions *core.SimulationOptions) *CombatEngine {
 		Combatants:       make(map[int]*core.Combatant),
 		TurnOrder:        nil,
 		CombatContext:    nil,
+		EventContext:     nil,
 		SimOptions:       simOptions,
 	}
-}
-
-func (ce *CombatEngine) ProcessAIRequest(req *core.AIRequest) error {
-	ce.attachOptionsToAIRequest(req)
-	switch req.ActionType {
-	case core.ATMelee, core.ATRanged:
-		return ce.executeWeaponAttack(req)
-	case core.ATSpell:
-		return ce.executeSpellCast(req)
-	case core.ATHeal, core.ATMonsterHeal:
-		return ce.executeHeal(req)
-		//case core.ATUnarmed:
-		//	return ce.executeUnarmedAttack(req)
-	case core.ATDragonbornBreathWeapon:
-		outcome, err := req.Actor.ExecuteAIRequest(req)
-		if err != nil {
-			return err
-		}
-		return ce.processActionResults(req.Actor, outcome)
-	case core.ATMonsterAction:
-		return ce.executeMonsterAction(req)
-	case core.ATMonsterMultiattack:
-		return ce.executeMonsterMultiattack(req)
-	case core.ATLegendaryAction:
-		return ce.executeMonsterLegendaryAction(req)
-	case core.ATLairAction:
-		// Lair actions are executed by the Lair entity but follow the same
-		// generic "actor executes request, engine processes effects" path.
-		outcome, err := req.Actor.ExecuteAIRequest(req)
-		if err != nil {
-			return err
-		}
-		return ce.processActionResults(req.Actor, outcome)
-	default:
-		return fmt.Errorf("unknown action type: %v", req.ActionType)
-	}
-
-}
-
-func (ce *CombatEngine) attachOptionsToAIRequest(aiReq *core.AIRequest) {
-	aiReq.SimOptions = ce.SimOptions
-}
-
-func (ce *CombatEngine) executeWeaponAttack(aiReq *core.AIRequest) error {
-	// If weapon slot is not specified, use primary slot
-	if aiReq.WeaponSlot == "" {
-		aiReq.WeaponSlot = core.WSPrimary
-	}
-
-	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
-	if err != nil {
-		return err
-	}
-
-	actionErr := ce.processActionResults(aiReq.Actor, outcome)
-	if actionErr != nil {
-		return actionErr
-	}
-
-	// get actor state manager
-	actorESM, ok := aiReq.Actor.GetState().(*entity_state_manager.EntityStateManager)
-	if !ok || actorESM == nil {
-		return fmt.Errorf("actor state manager is nil or wrong type")
-	}
-
-	if !actorESM.GetHasUsedBonusAction() {
-		offhandReq, ohErr := aiReq.Actor.GetAIRequest(aiReq.ActorID, core.AIReqOffhandAttack)
-		if ohErr != nil {
-			return ohErr
-		}
-
-		if offhandReq != nil {
-			ohOutcome, ohOutcomeErr := aiReq.Actor.ExecuteAIRequest(offhandReq)
-			if ohOutcomeErr != nil {
-				return ohOutcomeErr
-			}
-			if ohResError := ce.processActionResults(aiReq.Actor, ohOutcome); ohResError != nil {
-				return ohResError
-			}
-			actorESM.ExpendBonusAction()
-		}
-	}
-
-	return nil
-}
-
-func (ce *CombatEngine) executeSpellCast(aiReq *core.AIRequest) error {
-	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
-	if err != nil {
-		return err
-	}
-	return ce.processActionResults(aiReq.Actor, outcome)
-}
-
-func (ce *CombatEngine) executeHeal(aiReq *core.AIRequest) error {
-	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
-	if err != nil {
-		return err
-	}
-	return ce.processActionResults(aiReq.Actor, outcome)
-}
-
-func (ce *CombatEngine) executeMonsterAction(aiReq *core.AIRequest) error {
-	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
-	if err != nil {
-		return err
-	}
-
-	return ce.processActionResults(aiReq.Actor, outcome)
-}
-
-func (ce *CombatEngine) executeMonsterMultiattack(aiReq *core.AIRequest) error {
-	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
-	if err != nil {
-		return err
-	}
-
-	return ce.processActionResults(aiReq.Actor, outcome)
-}
-
-func (ce *CombatEngine) executeMonsterLegendaryAction(aiReq *core.AIRequest) error {
-	outcome, err := aiReq.Actor.ExecuteAIRequest(aiReq)
-	if err != nil {
-		return err
-	}
-
-	return ce.processActionResults(aiReq.Actor, outcome)
-}
-
-func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.ActionOutcome) error {
-	// Update attack statistics
-	if len(outcome.AttackResults) > 0 {
-		actorCombatant, exists := ce.Combatants[outcome.ActorID]
-		if exists {
-			for _, res := range outcome.AttackResults {
-				actorCombatant.Info.Statistics.RecordAttack(res.IsHit, res.IsCriticalHit)
-			}
-		}
-	}
-
-	// Handle concentration start if the action is a concentration spell
-	if outcome.IsConcentration {
-		actorCombatant, exists := ce.Combatants[outcome.ActorID]
-		if exists {
-			// Determine targets - for now we just use the primary target of the action
-			// In the future, this could be expanded for AOE concentration spells
-			targets := []int{outcome.TargetID}
-			// Duration is usually 10 rounds (1 minute) for most combat spells, but we should ideally get it from the spell
-			// For now, default to 10 rounds as a placeholder if not specified.
-			// Most concentration spells in this system are likely 1 minute.
-			duration := 10
-
-			// We need the current round
-			currentRound := ce.CurrentRound
-
-			actorCombatant.Info.StartConcentration(outcome.SpellName, targets, duration, currentRound)
-		}
-	}
-
-	// Identify targets for the action
-	targetIDs := []int{outcome.TargetID}
-	if outcome.IsAOE {
-		if ce.SimOptions.AOEHitsAllEnemies || outcome.ActionType == core.ATMonsterDeathEffect {
-			targetIDs = []int{}
-			ids := ce.getSortedCombatantIDs()
-			for _, id := range ids {
-				combatant := ce.Combatants[id]
-				if combatant.Entity.IsDead() {
-					continue
-				}
-				// For death effects, we hit everyone EXCEPT the dying actor (who is already dead/processed)
-				if outcome.ActionType == core.ATMonsterDeathEffect {
-					if id != outcome.ActorID {
-						// Check if we should only hit enemies
-						if !ce.SimOptions.MonsterDeathEffectsHitAllies {
-							if actor.IsMonster() && combatant.Entity.IsMonster() {
-								continue
-							}
-							if actor.IsCharacter() && combatant.Entity.IsCharacter() {
-								continue
-							}
-						}
-						targetIDs = append(targetIDs, id)
-					}
-					continue
-				}
-
-				// Standard AOE hits all enemies
-				if actor.IsCharacter() && combatant.Entity.IsMonster() {
-					targetIDs = append(targetIDs, id)
-				} else if actor.IsMonster() && combatant.Entity.IsCharacter() {
-					targetIDs = append(targetIDs, id)
-				}
-			}
-		}
-	}
-
-	for _, targetID := range targetIDs {
-		target, exists := ce.Combatants[targetID]
-		if !exists {
-			continue // Should not happen for primary target, but possible for AOE if someone died mid-process
-		}
-
-		if len(outcome.Effects) > 0 {
-			var hpModResult core.HPModificationResult
-			var err error
-			for _, effect := range outcome.Effects {
-				currentEffect := effect
-				if targetID != outcome.TargetID && currentEffect.SaveCtx != nil {
-					// Re-evaluate saving throw for secondary targets
-					saveRes, err := target.GetEntity().MakeSavingThrow(
-						currentEffect.SaveCtx.Ability,
-						currentEffect.SaveCtx.TargetDC,
-						true,
-						currentEffect.DamageType,
-						ce.SimOptions)
-					if err != nil {
-						return fmt.Errorf("failed to make saving throw for AOE target: %v", err)
-					}
-
-					// Update currentEffect based on new save result
-					if saveRes.GetIsSuccess() {
-						if currentEffect.SaveCtx.OnSuccess == core.DCOnSuccessHalf {
-							currentEffect.Value = currentEffect.BaseValue / 2
-						} else if currentEffect.SaveCtx.OnSuccess == core.DCOnSuccessNone {
-							currentEffect.Value = 0
-						}
-						// If OnSuccessOther, we might need more logic, but current system uses None/Half mostly
-					} else {
-						currentEffect.Value = currentEffect.BaseValue
-					}
-				}
-
-				// Pre-processing effects that might change the type or value before standard logic
-				ce.applyLimitedMagicImmunity(target.GetEntity(), &currentEffect)
-				ce.applyLightningAbsorption(target.GetEntity(), &currentEffect)
-
-				switch currentEffect.Type {
-				case core.EffectDamage:
-					ce.applyDeflectMissiles(target.GetEntity(), &currentEffect)
-					ce.applyUncannyDodgeToEffect(target.GetEntity(), &currentEffect)
-					ce.applyEvasionToEffect(target.GetEntity(), &currentEffect)
-					res, rErr := ce.computeDamageValueAfterResistances(
-						target.GetEntity(),
-						currentEffect.DamageType,
-						currentEffect.ResistBreakers,
-						-currentEffect.Value)
-					if rErr != nil {
-						return rErr
-					}
-					events.LogDamageModifiedEvent(actor, target.GetEntity(), res, actor.GetEventListener())
-					hpModResult, err = target.GetEntity().ModifyHP(res.FinalValue, false, false, ce.SimOptions.UseMassiveDamage, currentEffect.DamageType, currentEffect.AttackCtx != nil && currentEffect.AttackCtx.IsCritical)
-					if err != nil {
-						return fmt.Errorf("failed to modify target entity HP: %v", err)
-					}
-
-					// Update statistics and global combat context
-					damageValue := hpModResult.GetDamageTaken()
-					if damageValue > 0 {
-						// Global tracking
-						if ce.CombatContext == nil {
-							ce.initializeCombatContext()
-						}
-						if damageValue > ce.CombatContext.MaxDamageSeen {
-							ce.CombatContext.MaxDamageSeen = damageValue
-						}
-
-						// Actor statistics
-						actorCombatant, actorExists := ce.Combatants[outcome.ActorID]
-						if actorExists {
-							actorCombatant.Info.Statistics.RecordDamageDealt(damageValue, ce.CurrentRound)
-						}
-
-						// Target statistics
-						target.Info.Statistics.RecordDamageTaken(damageValue)
-						target.Info.Statistics.LastAttackerID = outcome.ActorID
-					}
-
-					// Check for death effects
-					if target.GetEntity().IsDead() {
-						if m, ok := target.GetEntity().(*monster.Monster); ok && ce.SimOptions.EnableSpecialAbilities {
-							if m.SpecialAbilities.DeathBurstNumDice > 0 || m.SpecialAbilities.DeathThroesNumDice > 0 {
-								deathReq, _ := m.GetAIRequest(m.GetInstanceID(), core.AIReqDeathEffect)
-								if deathReq != nil {
-									deathOutcome, _ := m.ExecuteAIRequest(deathReq)
-									if deathOutcome != nil {
-										events.LogCombatEventMessage(m, fmt.Sprintf("%s triggers %s!", m.GetName(), deathOutcome.SpellName), m.GetEventListener())
-										// Process death effect recursively
-										ce.processActionResults(m, deathOutcome)
-									}
-								}
-							}
-						}
-					} else {
-						// Check for retaliatory effects (Corrosive Form, Fire Form, Heated Body)
-						// Triggers if hit by a melee attack within 5ft.
-						// Our system doesn't explicitly track range in distance units yet, but we have isRanged in AttackContext.
-						// Assume all melee hits are within 5ft for these purposes.
-						if m, ok := target.GetEntity().(*monster.Monster); ok && ce.SimOptions.EnableSpecialAbilities {
-							if currentEffect.AttackCtx != nil && !currentEffect.AttackCtx.IsRanged {
-								if m.SpecialAbilities.CorrosiveFormNumDice > 0 || m.SpecialAbilities.FireForm ||
-									m.SpecialAbilities.FireAuraNumDice > 0 || m.SpecialAbilities.HeatedBodyNumDice > 0 {
-
-									retalliationReq, _ := m.GetAIRequest(m.GetInstanceID(), core.AIReqRetaliatoryEffect)
-									if retalliationReq != nil {
-										retalliationReq.Target = actor
-										retalliationReq.TargetID = outcome.ActorID
-										retalOutcome, _ := m.ExecuteAIRequest(retalliationReq)
-										if retalOutcome != nil {
-											events.LogCombatEventMessage(m, fmt.Sprintf("%s triggers retaliatory %s against %s!", m.GetName(), retalOutcome.SpellName, actor.GetName()), m.GetEventListener())
-											// Process retaliatory effect
-											ce.processActionResults(m, retalOutcome)
-										}
-									}
-								}
-							}
-						}
-					}
-				case core.EffectHealing:
-					v := math.Abs(float64(currentEffect.Value))
-					hpModResult, err = target.GetEntity().ModifyHP(int(v), false, false, ce.SimOptions.UseMassiveDamage, core.DamageNone, false)
-					if err != nil {
-						return fmt.Errorf("failed to modify target entity HP: %v", err)
-					}
-
-					// Update statistics
-					healingValue := hpModResult.GetHealingReceived()
-					if healingValue > 0 {
-						// Actor statistics
-						actorCombatant, actorExists := ce.Combatants[outcome.ActorID]
-						if actorExists {
-							actorCombatant.Info.Statistics.RecordHealingDone(healingValue, ce.CurrentRound)
-						}
-
-						// Target statistics
-						target.Info.Statistics.RecordHealingReceived(healingValue)
-						target.Info.Statistics.TurnsSinceLastHeal = 0
-					}
-				case core.EffectTempHP:
-					v := math.Abs(float64(currentEffect.Value))
-					hpModResult, err = target.GetEntity().ModifyHP(int(v), true, false, ce.SimOptions.UseMassiveDamage, core.DamageNone, false)
-					if err != nil {
-						return fmt.Errorf("failed to modify target entity HP: %v", err)
-					}
-				case core.EffectCondition:
-					return fmt.Errorf("effects of type %v are not supported", core.EffectCondition)
-				}
-
-				// Log after each effect's HP modification for clarity
-				events.LogHPModifiedEvent(actor, target.GetEntity(), hpModResult, actor.GetEventListener())
-
-				// Handle concentration check if triggered
-				if hpModResult.GetTriggeredConcentrationCheck() {
-					damageTaken := hpModResult.GetDamageTaken()
-					dc := max(10, damageTaken/2)
-					saveResult, err := target.GetEntity().MakeSavingThrow(core.AbilityConstitution, dc, false, core.DamageNone, ce.SimOptions)
-					if err != nil {
-						return fmt.Errorf("failed to make concentration check: %v", err)
-					}
-
-					if !saveResult.GetIsSuccess() {
-						target.Info.BreakConcentration()
-						events.LogCombatEventMessage(target.GetEntity(), "Failed concentration check. Concentration broken.", target.GetEntity().GetEventListener())
-					} else {
-						events.LogCombatEventMessage(target.GetEntity(), "Succeeded concentration check. Concentration maintained.", target.GetEntity().GetEventListener())
-					}
-				}
-
-				// Persist any state changes immediately
-				ce.Combatants[targetID] = target
-
-				// If target is down or dead, check victory
-				if target.GetEntity().IsDead() || target.GetEntity().IsUnconscious() {
-					if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
-						return nil
-					}
-				}
-
-				// Early victory check after each effect
-				if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
-					return nil
-				}
-			}
-			// Final state persist
-			ce.Combatants[targetID] = target
-		}
-	}
-
-	return nil
 }
 
 func (ce *CombatEngine) AddCombatant(c *core.Combatant) {
@@ -487,7 +96,7 @@ func (ce *CombatEngine) SetupCombat() error {
 	return ce.setupCombatTracker()
 }
 
-// setupCombatTracker initializes and sorts the combat tracker based on initiative, dexterity, and ID order of combatants.
+// setupCombatTracker initializes and sorts the combat tracker based on initiative, dexterity, and id order of combatants.
 func (ce *CombatEngine) setupCombatTracker() error {
 	ce.TurnOrder = ce.getSortedCombatantIDs()
 
@@ -529,7 +138,7 @@ func (ce *CombatEngine) setupCombatTracker() error {
 			return tbI > tbJ
 		}
 
-		// Final tie-breaker: ID
+		// Final tie-breaker: id
 		return idxI < idxJ
 	})
 
@@ -564,6 +173,7 @@ func (ce *CombatEngine) RunCombat(maxRounds int) (core.VictoryStatus, error) {
 	}
 
 	ce.initializeCombatContext()
+	ce.initializeEventContext()
 	// Actions should occur starting at Round 1.
 	// Round 0 is reserved for setup logs like initiative and HP initialization.
 	for round := 1; round <= maxRounds; round++ {
@@ -598,6 +208,9 @@ func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 				ce.updateCombatContext(combatantID)
 				// Ensure the lair entity receives the fresh combat context before acting
 				_ = ce.Combatants[combatantID].GetEntity().UpdateAICombatContext(ce.CombatContext)
+				// Ensure the lair entity receives the fresh event context before acting
+				ce.Combatants[combatantID].GetEntity().PushEventContext(ce.EventContext)
+
 				status, aiReq, combatErr := ce.Combatants[combatantID].GetEntity().ProcessTurn(combatantID, core.TurnTypeNormal)
 				if combatErr != nil {
 					return core.VictoryStatusNone, combatErr
@@ -631,9 +244,10 @@ func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 		}
 
 		for {
-			status, aiReq, combatError := ce.executeTurn(combatantID)
-			if combatError != nil {
-				return core.VictoryStatusNone, combatError
+			// Event ctx lifecycle - executeTurn updates parent ID for the action id
+			status, aiReq, turnError := ce.executeTurn(combatantID)
+			if turnError != nil {
+				return core.VictoryStatusNone, turnError
 			}
 
 			// Record death saves if any were made
@@ -650,9 +264,9 @@ func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 			}
 
 			// Execute the actions in the turn request
-			combatError = ce.ProcessAIRequest(aiReq)
-			if combatError != nil {
-				return core.VictoryStatusNone, combatError
+			turnError = ce.ProcessAIRequest(aiReq)
+			if turnError != nil {
+				return core.VictoryStatusNone, turnError
 			}
 
 			// Immediately check victory after each action
@@ -690,15 +304,6 @@ func (ce *CombatEngine) SimulateRound() (core.VictoryStatus, error) {
 	return core.VictoryStatusNone, nil
 }
 
-func (ce *CombatEngine) isLegendaryCreature(id int) bool {
-	if ce.CombatContext.LegendaryCreatures == nil {
-		return false
-	}
-	_, exists := ce.CombatContext.LegendaryCreatures[id]
-	return exists
-}
-
-// Debug function
 func (ce *CombatEngine) PrintCombatTracker() {
 	order := 0
 	for _, index := range ce.TurnOrder {
@@ -735,121 +340,6 @@ func (ce *CombatEngine) processAttackResults(attackResults []core.AttackResult) 
 	return nil
 }
 
-// initializeCombatContext initializes the combat context by setting up combatants, rounds, and relevant configuration values.
-func (ce *CombatEngine) initializeCombatContext() {
-	if ce.CombatContext == nil {
-		ce.CombatContext = core.NewCombatContext(ce.SimOptions)
-	}
-	ce.CombatContext.CurrentRound = ce.CurrentRound
-	ce.CombatContext.TurnOrder = ce.TurnOrder
-
-	ce.CombatContext.CombatantInfo = make(map[int]*core.CombatantInfo)
-
-	ids := ce.getSortedCombatantIDs()
-	for _, id := range ids {
-		combatant := ce.Combatants[id]
-		// Skip lair combatants (they have no entity)
-		if combatant.IsLair {
-			continue
-		}
-
-		ce.CombatContext.CombatantInfo[id] = combatant.Info
-
-		// Track legendary creatures
-		if combatant.Entity.IsMonster() && combatant.Entity.GetIsLegendary() {
-			ce.CombatContext.LegendaryCreatures[id] = true
-		}
-	}
-}
-
-func (ce *CombatEngine) updateCombatContext(actorID int) {
-	ce.CombatContext.CurrentRound = ce.CurrentRound
-	ce.CombatContext.ActingEntityID = actorID
-	ce.CombatContext.ConsciousCharacterCount = 0
-	ce.CombatContext.ConsciousMonsterCount = 0
-
-	ce.CombatContext.CharactersInNeedOfHealing, ce.CombatContext.MonstersInNeedOfHealing = ce.calculateEntitiesNeedingHealing()
-	ce.CombatContext.DeadCombatants = ce.getDeadCombatantIDs()
-
-	ids := ce.getSortedCombatantIDs()
-	for _, id := range ids {
-		c := ce.Combatants[id]
-		if !c.GetEntity().IsUnconscious() {
-			if c.GetEntity().IsCharacter() {
-				ce.CombatContext.ConsciousCharacterCount++
-			} else {
-				ce.CombatContext.ConsciousMonsterCount++
-			}
-		}
-	}
-
-	for _, id := range ce.getSortedCombatantIDs() {
-		if info, exists := ce.CombatContext.CombatantInfo[id]; exists {
-			info.UpdateState()
-		}
-	}
-}
-
-// calculateEntitiesNeedingHealing identifies entities needing healing and returns their IDs grouped as characters and monsters.
-// It evaluates thresholds based on entity type and excludes lair combatants and unconscious entities from consideration.
-// Returns a slice of character IDs and a slice of monster IDs.
-func (ce *CombatEngine) calculateEntitiesNeedingHealing() ([]int, []int) {
-	charNeedHealing := make([]int, 0)
-	monNeedHealing := make([]int, 0)
-
-	ids := ce.getSortedCombatantIDs()
-	for _, id := range ids {
-		combatant := ce.Combatants[id]
-		// Skip lair combatants
-		if combatant.IsLair {
-			continue
-		}
-
-		entity := combatant.GetEntity()
-
-		// Calculate HP percentage
-		var threshold int
-		if entity.IsCharacter() {
-			threshold = ce.CombatContext.Options.CharacterHealThresholdPct
-		} else {
-			threshold = ce.CombatContext.Options.MonsterHealThresholdPct
-		}
-
-		// Entity needs healing if below threshold and not dead
-		if entity.GetHPStatus().GetHPPct() <= threshold && !entity.IsDead() {
-			if entity.IsCharacter() {
-				charNeedHealing = append(charNeedHealing, id)
-			} else {
-				monNeedHealing = append(monNeedHealing, id)
-			}
-		}
-	}
-
-	return charNeedHealing, monNeedHealing
-}
-
-func (ce *CombatEngine) getDeadCombatantIDs() []int {
-	deadCombatants := make([]int, 0)
-
-	ids := ce.getSortedCombatantIDs()
-	for _, id := range ids {
-		combatant := ce.Combatants[id]
-		// Skip lair combatants
-		if combatant.IsLair {
-			continue
-		}
-
-		entity := combatant.GetEntity()
-
-		if entity.IsDead() {
-			deadCombatants = append(deadCombatants, id)
-		}
-	}
-
-	return deadCombatants
-}
-
-// refreshLegendaryActions resets the legendary action count for all legendary creatures in the combat context.
 func (ce *CombatEngine) refreshLegendaryActions(combatantID int) {
 	if len(ce.CombatContext.LegendaryCreatures) == 0 {
 		return
@@ -899,6 +389,7 @@ func (ce *CombatEngine) rollRechargeAbilities() error {
 }
 
 func (ce *CombatEngine) turnStartEvents(combatantID int) error {
+	ce.EventContext.GenerateSequenceID()
 	combatant := ce.Combatants[combatantID]
 	entity := combatant.GetEntity()
 
@@ -929,11 +420,15 @@ func (ce *CombatEngine) executeTurn(combatantID int) (*core.TurnResult, *core.AI
 	combatant := ce.Combatants[combatantID]
 	entity := combatant.GetEntity()
 
-	// Update Combatant's AI Context
+	// Update Combatant's AI ctx
 	err := entity.UpdateAICombatContext(ce.CombatContext)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Update Combatant's Event ctx
+	ce.EventContext.GenerateParentID() // Create a new parent ID to act as the action ID
+	entity.PushEventContext(ce.EventContext)
 
 	// Tell entity to process its turn
 	// This will determine if it can act. If not, log; if so create ai request
@@ -985,7 +480,7 @@ func (ce *CombatEngine) executeLegendaryAction(actingCombatantID int) error {
 		}
 	}
 
-	// Sort by initiative (descending), then by dex, then by ID
+	// Sort by initiative (descending), then by dex, then by id
 	slices.SortFunc(legCreatureIDs, func(a, b int) int {
 		initA := ce.Combatants[a].GetInitiative()
 		initB := ce.Combatants[b].GetInitiative()
@@ -1006,7 +501,7 @@ func (ce *CombatEngine) executeLegendaryAction(actingCombatantID int) error {
 			return dexB - dexA
 		}
 
-		// Final tie-breaker: ID
+		// Final tie-breaker: id
 		return a - b
 	})
 
@@ -1058,281 +553,4 @@ func (ce *CombatEngine) roundEndEvents() error {
 	//		Ongoing damage?
 	// 		Regeneration?
 	return nil
-}
-
-func (ce *CombatEngine) checkVictoryCondition() core.VictoryStatus {
-	var aliveCharacters, aliveMonsters bool
-
-	ids := ce.getSortedCombatantIDs()
-	for _, id := range ids {
-		// Skip lair combatants
-		if ce.Combatants[id].IsLair {
-			continue
-		}
-
-		entity := ce.Combatants[id].GetEntity()
-		// Treat unconscious as not alive for victory purposes
-		if entity.IsDead() || entity.IsUnconscious() {
-			continue
-		}
-		if entity.IsCharacter() {
-			aliveCharacters = true
-		} else if entity.IsMonster() {
-			aliveMonsters = true
-		}
-
-		if aliveCharacters && aliveMonsters {
-			return core.VictoryStatusNone
-		}
-	}
-
-	if !aliveCharacters {
-		return core.VictoryStatusMonsters
-	}
-	if !aliveMonsters {
-		return core.VictoryStatusCharacters
-	}
-	return core.VictoryStatusNone
-}
-
-func (ce *CombatEngine) computeDamageValueAfterResistances(target core.Entity, dt core.DamageType, b []core.ResistBreaker, value int) (core.DamageModificationResult, error) {
-	if target == nil {
-		return core.DamageModificationResult{}, fmt.Errorf("target is nil")
-	}
-
-	targetESM, ok := target.GetState().(*entity_state_manager.EntityStateManager)
-	if !ok || targetESM == nil {
-		return core.DamageModificationResult{}, fmt.Errorf("target state manager is nil or wrong type")
-	}
-
-	targetResistances := targetESM.GetResistances()
-	isPetrified := targetESM.GetConditions().Has(core.ConditionPetrified)
-	if isPetrified {
-		targetResistances = core.GetConditionEffects(core.ConditionPetrified).TemporaryResistance
-	}
-
-	result := core.DamageModificationResult{
-		OriginalValue:  value,
-		FinalValue:     value,
-		ResistanceType: core.ResistanceNone,
-	}
-
-	if targetResistances == nil {
-		return result, fmt.Errorf("target resistances are nil")
-	}
-
-	// Safe lookup: default to ResistanceNone when key is missing
-	resistance := targetResistances.GetResistanceType(dt)
-	result.ResistanceType = resistance
-
-	// Resistance can only be broken if the attacker actually provides at least one breaker
-	// and those breakers satisfy the target's breaker requirements for this damage type.
-	brokenRes := len(b) > 0 && targetResistances.DamageTypeContainsAllBreakers(dt, b)
-	result.ResistanceBroken = brokenRes
-	result.ResistanceType = resistance
-
-	switch resistance {
-	case core.ResistanceNone:
-		break
-	case core.ResistanceVulnerable:
-		if !brokenRes {
-			result.FinalValue *= 2
-		}
-	case core.ResistanceResistant:
-		if !brokenRes {
-			result.FinalValue /= 2
-		}
-	case core.ResistanceImmune:
-		if !brokenRes {
-			result.FinalValue = 0
-		}
-	default:
-		// Provide richer diagnostics to help identify unexpected values
-		return core.DamageModificationResult{}, fmt.Errorf(
-			"unknown resistance type for %s: damageType=%s, rawType=%q",
-			target.GetName(), dt.String(), resistance,
-		)
-	}
-
-	result.WasModified = result.FinalValue != value
-
-	return result, nil
-}
-
-func (ce *CombatEngine) applyLimitedMagicImmunity(target core.Entity, effect *core.Effect) {
-	if effect.SpellCtx == nil {
-		return
-	}
-
-	if m, ok := target.(*monster.Monster); ok {
-		if ce.SimOptions != nil && ce.SimOptions.EnableSpecialAbilities {
-			if m.SpecialAbilities.LimitedMagicImmunityLevel > 0 {
-				if effect.SpellCtx.SpellLevel <= m.SpecialAbilities.LimitedMagicImmunityLevel {
-					effect.Value = 0
-				}
-			}
-		}
-	}
-}
-
-func (ce *CombatEngine) applyLightningAbsorption(target core.Entity, effect *core.Effect) {
-	if effect.Type != core.EffectDamage || effect.DamageType != core.DamageLightning {
-		return
-	}
-
-	if m, ok := target.(*monster.Monster); ok {
-		if ce.SimOptions != nil && ce.SimOptions.EnableSpecialAbilities {
-			if m.SpecialAbilities.LightningAbsorption {
-				// Convert damage to healing
-				effect.Type = core.EffectHealing
-				// Value remains the same (it was damage value, now it's healing value)
-				events.LogSpecialAbilityEvent(m, "Lightning Absorption", fmt.Sprintf("%s absorbs lightning damage and is healed!", m.GetName()), "", effect.Value, m.GetEventListener())
-			}
-		}
-	}
-}
-
-// applyEvasionToEffect applies the evasion feature effects for rogues and monks, modifying the effect value based on saving throws.
-func (ce *CombatEngine) applyEvasionToEffect(target core.Entity, effect *core.Effect) {
-	switch t := target.(type) {
-	case *character.Character:
-		// Require a valid saving throw context and that it is a Dexterity save
-		if effect == nil || effect.SaveCtx == nil || effect.SaveCtx.Ability != core.AbilityDexterity {
-			return
-		}
-
-		// Only apply when class features are enabled (if options provided)
-		if ce.SimOptions != nil && !ce.SimOptions.EnableClassFeatures {
-			return
-		}
-
-		// Only Rogues/Monks have access to Evasion in this model
-		if !(t.Class.ID == classes.Rogue || t.Class.ID == classes.Monk) {
-			return // Ignore non-rogue/monk targets
-		}
-		hasEvasion := false
-
-		switch t.Class.ID {
-		case classes.Rogue:
-			hasEvasion = t.Class.ClassFeatures.RogueFeatures.HasEvasion
-		case classes.Monk:
-			hasEvasion = t.Class.ClassFeatures.MonkFeatures.HasEvasion
-		default:
-			return // Ignore non-rogue/monk targets
-		}
-
-		if !hasEvasion {
-			return // Don't apply evasion if target doesn't have access
-		}
-
-		if effect.SaveCtx.Success && effect.SaveCtx.OnSuccess == core.DCOnSuccessHalf {
-			effect.Value = 0 // Feature reduces damage to zero
-		} else if !effect.SaveCtx.Success {
-			effect.Value /= 2
-		}
-	case *monster.Monster:
-		if effect == nil || effect.SaveCtx == nil || effect.SaveCtx.Ability != core.AbilityDexterity {
-			return
-		}
-
-		if ce.SimOptions != nil && !ce.SimOptions.EnableSpecialAbilities {
-			return
-		}
-		if !t.SpecialAbilities.Evasion {
-			return
-		}
-
-		if effect.SaveCtx.Success && effect.SaveCtx.OnSuccess == core.DCOnSuccessHalf {
-			effect.Value = 0 // Feature reduces damage to zero
-		} else if !effect.SaveCtx.Success {
-			effect.Value /= 2
-		}
-	default:
-		return
-	}
-}
-
-func (ce *CombatEngine) applyUncannyDodgeToEffect(target core.Entity, effect *core.Effect) {
-	targetChar, ok := target.(*character.Character)
-	if !ok {
-		return // Ignore non-character targets
-	}
-
-	// Require a valid saving throw context and that it is a Dexterity save
-	if effect == nil {
-		return
-	}
-
-	// Only apply when class features are enabled (if options provided)
-	if ce.SimOptions != nil && !ce.SimOptions.EnableClassFeatures {
-		return
-	}
-
-	if targetChar.Class.ID != classes.Rogue {
-		return
-	}
-
-	if targetChar.Class.ClassFeatures.RogueFeatures.HasUncannyDodge &&
-		!targetChar.EntityStateManager.GetHasUsedReaction() {
-		effect.Value /= 2
-		targetChar.EntityStateManager.ExpendReaction()
-		return
-	}
-}
-
-func (ce *CombatEngine) applyDeflectMissiles(target core.Entity, effect *core.Effect) {
-	targetChar, ok := target.(*character.Character)
-	if !ok {
-		return // Ignore non-character targets
-	}
-
-	// Require a valid saving throw context and that it is a Dexterity save
-	if effect == nil {
-		return
-	}
-
-	// Only apply when class features are enabled (if options provided)
-	if ce.SimOptions != nil && !ce.SimOptions.EnableClassFeatures {
-		return
-	}
-
-	if targetChar.Class.ID != classes.Monk {
-		return
-	}
-
-	if targetChar.Class.ClassFeatures.MonkFeatures != nil &&
-		targetChar.Class.ClassFeatures.MonkFeatures.HasDeflectMissiles &&
-		effect.AttackCtx.IsRanged {
-		dexMod, err := targetChar.GetAbilityScoreModifier(core.AbilityDexterity)
-		if err != nil {
-			return
-		}
-		roll := targetChar.RollManager.RollDie(core.D10)
-		effect.Value = int(math.Max(0, float64(effect.Value)-float64(dexMod)-float64(roll)-float64(targetChar.Level)))
-		targetChar.EntityStateManager.ExpendReaction()
-		return
-	}
-}
-
-func (ce *CombatEngine) recordDeathSaves(combatantID int, status *core.TurnResult) {
-	if status == nil {
-		return
-	}
-	combatant, exists := ce.Combatants[combatantID]
-	if !exists {
-		return
-	}
-
-	if status.TurnStatuses[core.TurnDeathSaveSuccess] {
-		combatant.Info.Statistics.RecordDeathSave(true)
-	} else if status.TurnStatuses[core.TurnDeathSaveFailed] {
-		combatant.Info.Statistics.RecordDeathSave(false)
-	} else if status.TurnStatuses[core.TurnDeathSaveFailedDouble] {
-		// Natural 1 counts as two failures
-		combatant.Info.Statistics.RecordDeathSave(false)
-		combatant.Info.Statistics.RecordDeathSave(false)
-	} else if status.TurnStatuses[core.TurnRevived] {
-		// Natural 20 counts as a success and revives
-		combatant.Info.Statistics.RecordDeathSave(true)
-	}
 }

@@ -10,7 +10,7 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 )
 
-// getWeaponIDByName retrieves the ID of a weapon based on its name from the database or returns an error if not found.
+// getWeaponIDByName retrieves the id of a weapon based on its name from the database or returns an error if not found.
 func getWeaponIDByName(ctx context.Context, name string) (int, error) {
 	var id int
 	stmt := SELECT(
@@ -32,7 +32,7 @@ func getWeaponIDByName(ctx context.Context, name string) (int, error) {
 	return id, nil
 }
 
-// getWeaponByID retrieves a weapon by its ID from the database and returns the weapon or an error if any issues occur.
+// getWeaponByID retrieves a weapon by its id from the database and returns the weapon or an error if any issues occur.
 func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 	var weaponResult Weapon
 	var weaponProperties Properties
@@ -78,8 +78,8 @@ func getWeaponByID(ctx context.Context, id int) (Weapon, error) {
 	return weaponResult, nil
 }
 
-// QueryWeaponData retrieves detailed weapon data based on either weapon ID or name provided in the query parameters.
-// Returns a Weapon struct and an error if the query fails or neither name nor ID is provided in the params.
+// QueryWeaponData retrieves detailed weapon data based on either weapon id or name provided in the query parameters.
+// Returns a Weapon struct and an error if the query fails or neither name nor id is provided in the params.
 func QueryWeaponData(ctx context.Context, params WeaponQueryParams) (Weapon, error) {
 	var weaponResult Weapon
 	var err error

@@ -26,6 +26,10 @@ type Monster struct {
 	EventListener       func(event interface{})
 }
 
+func (m *Monster) GetEntityType() core.EntityType {
+	return core.EntityMonster
+}
+
 type MonsterBase struct {
 	ID                  int
 	InstanceID          int
@@ -256,7 +260,7 @@ func (m *Monster) setHP(config core.HPConfig) error {
 			FinalRollValue: config.Value,
 			Total:          config.Value,
 		}
-		events.LogDiceRollEvent(m, &hpRoll, m.EventListener)
+		events.LogDiceRollEvent(m.GetCurrentEventContext(), m, &hpRoll, m.EventListener)
 		m.EntityStateManager.SetHPValues(hp)
 
 		return nil
@@ -273,7 +277,7 @@ func (m *Monster) setHP(config core.HPConfig) error {
 			FinalRollValue: config.HPAverage,
 			Total:          config.HPAverage,
 		}
-		events.LogDiceRollEvent(m, &hpRoll, m.EventListener)
+		events.LogDiceRollEvent(m.GetCurrentEventContext(), m, &hpRoll, m.EventListener)
 		m.EntityStateManager.SetHPValues(hp)
 
 		return nil
@@ -389,8 +393,8 @@ func (m *Monster) Regenerate() {
 		if err != nil {
 			return
 		}
-		events.LogSpecialAbilityEvent(m, "Regeneration", fmt.Sprintf("%s uses Regeneration.", m.Name), "", m.SpecialAbilities.RegenerationValue, m.EventListener)
-		events.LogHPModifiedEvent(m, m, res, m.EventListener)
+		events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Regeneration", fmt.Sprintf("%s uses Regeneration.", m.Name), "", m.SpecialAbilities.RegenerationValue, m.EventListener)
+		events.LogHPModifiedEvent(m.GetCurrentEventContext(), m, m, res, m.EventListener)
 	}
 }
 

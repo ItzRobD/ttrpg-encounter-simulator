@@ -81,7 +81,7 @@ func (lam *LairActionManager) RollRechargeActions() {
 		if res.IsSuccess {
 			lam.rechargeOK[idx] = true
 		}
-		events.LogDiceRollEvent(lam.parent, res, lam.parent.GetEventListener())
+		events.LogDiceRollEvent(lam.parent.GetCurrentEventContext(), lam.parent, res, lam.parent.GetEventListener())
 	}
 }
 
@@ -135,9 +135,9 @@ func (lam *LairActionManager) ProcessAttackRequest(req *core.AttackRequest) ([]c
 			DamageRoll:    dmgRollResult,
 			DamageType:    ad.DamageType,
 		}
-		events.LogMeleeAttackEvent(lam.parent, &ar, lam.parent.GetEventListener())
+		events.LogMeleeAttackEvent(lam.parent.GetCurrentEventContext(), lam.parent, &ar, lam.parent.GetEventListener())
 		if attackRollResult.IsSuccess {
-			events.LogDiceRollEvent(lam.parent, dmgRollResult, lam.parent.GetEventListener())
+			events.LogDiceRollEvent(lam.parent.GetCurrentEventContext(), lam.parent, dmgRollResult, lam.parent.GetEventListener())
 		}
 		results = append(results, ar)
 	}
@@ -192,7 +192,7 @@ func (lam *LairActionManager) ExecuteAdvanced(actionIndex int, primaryTarget cor
 		if err != nil {
 			return nil, nil, err
 		}
-		events.LogDiceRollEvent(lam.parent, dmgRoll, lam.parent.GetEventListener())
+		events.LogDiceRollEvent(lam.parent.GetCurrentEventContext(), lam.parent, dmgRoll, lam.parent.GetEventListener())
 
 		for _, t := range targets {
 			var simOpts *core.SimulationOptions
@@ -205,7 +205,7 @@ func (lam *LairActionManager) ExecuteAdvanced(actionIndex int, primaryTarget cor
 			}
 			// Log DC event (basic)
 			// Using generic spell DC event structure with lair name
-			events.LogSpellDCEvent(lam.parent, t, &spells.Spell{Name: a.Name, Level: 0}, a.DCValue, saveRes.GetTotal(), saveRes.GetIsSuccess(), lam.parent.GetEventListener())
+			events.LogSpellDCEvent(lam.parent.GetCurrentEventContext(), lam.parent, t, &spells.Spell{Name: a.Name, Level: 0}, a.DCValue, saveRes.GetTotal(), saveRes.GetIsSuccess(), lam.parent.GetEventListener())
 
 			applied := dmgRoll.Total
 			if saveRes.GetIsSuccess() {

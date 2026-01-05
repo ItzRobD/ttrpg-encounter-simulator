@@ -15,6 +15,11 @@ import (
 // target with controllable AC using the lightweight entity fake
 type targetZeroAC struct{ testhelpers.EmEntity }
 
+func (t targetZeroAC) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t targetZeroAC) Regenerate() {
 	//TODO implement me
 	panic("implement me")

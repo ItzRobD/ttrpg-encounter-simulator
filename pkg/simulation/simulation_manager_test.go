@@ -48,7 +48,7 @@ func TestSimulationManager_SetupEventListeners_AttachesAndLogs(t *testing.T) {
 
 	// Emit a dice roll event via the entity's listener and verify it ends up in sim log
 	rr := &roll_manager.RollResult{DiceRollType: core.DiceRollInitiative, NumberOfDice: 1, Die: core.D20, FinalRollValue: 10, Total: 12}
-	events.LogDiceRollEvent(ch, rr, ch.GetEventListener())
+	events.LogDiceRollEvent(ch.GetCurrentEventContext(), ch, rr, ch.GetEventListener())
 
 	if len(sm.simLog) == 0 { // package test has access to private field
 		t.Fatalf("expected at least one event in simulation log after listener emit")

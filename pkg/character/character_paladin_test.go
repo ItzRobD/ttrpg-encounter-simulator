@@ -17,6 +17,11 @@ type mockTarget struct {
 	ac         int
 }
 
+func (t mockTarget) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t mockTarget) Regenerate() {
 	//TODO implement me
 	panic("implement me")

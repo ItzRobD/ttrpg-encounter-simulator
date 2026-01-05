@@ -11,6 +11,11 @@ import (
 
 type targetWithSavingThrow struct{ testhelpers.EmEntity }
 
+func (t targetWithSavingThrow) GetEntityType() core.EntityType {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t targetWithSavingThrow) Regenerate() {
 	//TODO implement me
 	panic("implement me")

@@ -280,7 +280,7 @@ func (c *Character) MakeSavingThrow(ability core.Ability, targetValue int, isSpe
 			IsSuccess:      false,
 			TargetValue:    targetValue,
 		}
-		events.LogDiceRollEvent(c, &result, c.EventListener)
+		events.LogDiceRollEvent(c.GetCurrentEventContext(), c, &result, c.EventListener)
 		return result
 	}
 
@@ -371,7 +371,7 @@ func (c *Character) resolveSneakAttack(params core.SneakAttackParams, simOptions
 	}
 
 	c.EntityStateManager.SetHasUsedSneakAttack(true)
-	events.LogSpecialAbilityEvent(c, "Sneak Attack", fmt.Sprintf("%s deals extra damage from Sneak Attack!", c.GetName()), "", res.Total, c.EventListener)
+	events.LogSpecialAbilityEvent(c.GetCurrentEventContext(), c, "Sneak Attack", fmt.Sprintf("%s deals extra damage from Sneak Attack!", c.GetName()), "", res.Total, c.EventListener)
 
 	return &core.Effect{
 		Type:       core.EffectDamage,

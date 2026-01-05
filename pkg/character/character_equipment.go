@@ -13,7 +13,7 @@ func (c *Character) setupEquipmentFromConfig(ctx context.Context, config Equipme
 	if config.ArmorID > 0 {
 		a, err := armor.QueryArmorData(ctx, armor.ArmorQueryParams{ID: config.ArmorID})
 		if err != nil {
-			return fmt.Errorf("failed to get armor ID %d: %w", config.ArmorID, err)
+			return fmt.Errorf("failed to get armor id %d: %w", config.ArmorID, err)
 		}
 		c.EquipmentManager.SetArmor(a)
 	}
@@ -22,7 +22,7 @@ func (c *Character) setupEquipmentFromConfig(ctx context.Context, config Equipme
 	for _, wConfig := range config.PrimarySlot {
 		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: wConfig.WeaponID})
 		if err != nil {
-			return fmt.Errorf("failed to get w ID %d for primary slot: %w", wConfig.WeaponID, err)
+			return fmt.Errorf("failed to get w id %d for primary slot: %w", wConfig.WeaponID, err)
 		}
 
 		if wConfig.Modifiers != nil {
@@ -39,7 +39,7 @@ func (c *Character) setupEquipmentFromConfig(ctx context.Context, config Equipme
 	for _, wConfig := range config.SecondarySlot {
 		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: wConfig.WeaponID})
 		if err != nil {
-			return fmt.Errorf("failed to get w ID %d for secondary slot: %w", wConfig.WeaponID, err)
+			return fmt.Errorf("failed to get w id %d for secondary slot: %w", wConfig.WeaponID, err)
 		}
 
 		if wConfig.Modifiers != nil {
@@ -56,7 +56,7 @@ func (c *Character) setupEquipmentFromConfig(ctx context.Context, config Equipme
 	for _, wConfig := range config.RangedSlot {
 		w, err := weapon.QueryWeaponData(ctx, weapon.WeaponQueryParams{ID: wConfig.WeaponID})
 		if err != nil {
-			return fmt.Errorf("failed to get w ID %d for ranged slot: %w", wConfig.WeaponID, err)
+			return fmt.Errorf("failed to get w id %d for ranged slot: %w", wConfig.WeaponID, err)
 		}
 
 		if wConfig.Modifiers != nil {

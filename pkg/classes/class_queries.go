@@ -14,7 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// getClassIDByName queries the database to find the class ID corresponding to the given class name.
+// getClassIDByName queries the database to find the class id corresponding to the given class name.
 func getClassIDByName(ctx context.Context, name string) (uint8, error) {
 	var id uint8
 	stmt := SELECT(
@@ -37,7 +37,7 @@ func getClassIDByName(ctx context.Context, name string) (uint8, error) {
 	return id, nil
 }
 
-// getClassByID retrieves a Class by its ID from the database using a context and an integer ID as inputs.
+// getClassByID retrieves a Class by its id from the database using a context and an integer id as inputs.
 // It returns the Class struct and an error if the query or scan operation fails.
 func getClassByID(ctx context.Context, id uint8) (Class, error) {
 	var classResult Class
@@ -62,7 +62,7 @@ func getClassByID(ctx context.Context, id uint8) (Class, error) {
 	return classResult, nil
 }
 
-// getClassSpellSlotsByID retrieves spell slots of a class by its ID, returning a nested map of level and slots per level.
+// getClassSpellSlotsByID retrieves spell slots of a class by its id, returning a nested map of level and slots per level.
 func getClassSpellSlotsByID(ctx context.Context, id int) (map[int]map[int]int, error) {
 	var spellSlots map[int]map[int]int
 	stmt := SELECT(
@@ -114,7 +114,7 @@ func getClassSpellSlotsByID(ctx context.Context, id int) (map[int]map[int]int, e
 	return spellSlots, nil
 }
 
-// QueryClassData retrieves a Class based on the provided query parameters (ID or Name) and fetches its spellcasting mod.
+// QueryClassData retrieves a Class based on the provided query parameters (id or Name) and fetches its spellcasting mod.
 func QueryClassData(ctx context.Context, params ClassQueryParams) (Class, error) {
 	var classResult Class
 	var err error
@@ -285,7 +285,7 @@ func getNumberOfSneakAttackDiceFromLevel(ctx context.Context, level uint8) (int,
 	return numberOfDice, nil
 }
 
-// getSpellModByClassID retrieves the spellcasting modifier for a character class based on its class ID.
+// getSpellModByClassID retrieves the spellcasting modifier for a character class based on its class id.
 // Returns a core.Ability and an error if the operation fails.
 func getSpellModByClassID(ctx context.Context, classID uint8) (core.Ability, error) {
 	if classID < 0 || classID > 13 {
@@ -315,8 +315,8 @@ func getSpellModByClassID(ctx context.Context, classID uint8) (core.Ability, err
 	return core.AbilityNone, nil
 }
 
-// GetHitDieByClassID retrieves the hit die value for a given class ID from the database.
-// Returns the hit die as an integer or an error if the query fails or the class ID is invalid.
+// GetHitDieByClassID retrieves the hit die value for a given class id from the database.
+// Returns the hit die as an integer or an error if the query fails or the class id is invalid.
 func GetHitDieByClassID(ctx context.Context, classID int) (int, error) {
 	if classID < 0 || classID > 13 {
 		return 0, fmt.Errorf("invalid class id provided: %d", classID)
@@ -339,7 +339,7 @@ func GetHitDieByClassID(ctx context.Context, classID int) (int, error) {
 	return die, nil
 }
 
-// GetSpellSlotsByLevelAndClassID retrieves the spell slots for a given character level and class ID.
+// GetSpellSlotsByLevelAndClassID retrieves the spell slots for a given character level and class id.
 // Returns a SpellSlots structure and an error if inputs are invalid or a database query fails.
 func GetSpellSlotsByLevelAndClassID(ctx context.Context, level uint8, classID uint8) (spells.SpellSlots, error) {
 	if level <= 0 || level > 20 {

@@ -25,6 +25,7 @@ func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnRe
 		if aiReq != nil {
 			result.TurnStatuses[core.TurnActionReady] = true
 		}
+
 		return result, aiReq, nil
 	}
 
@@ -41,8 +42,11 @@ func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnRe
 			if err != nil {
 				return nil, nil, fmt.Errorf("error getting AI request: %s", err)
 			}
-			ucResult.TurnStatuses[core.TurnActionReady] = true
+			if aiReq != nil {
+				ucResult.TurnStatuses[core.TurnActionReady] = true
+			}
 			ucResult.Conditions = nil
+
 			return ucResult, aiReq, nil
 		}
 		return ucResult, nil, err
@@ -64,6 +68,9 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 		actionChoice, err = m.AI.ChooseMonsterActionType()
 		if err != nil {
 			return nil, err
+		}
+		if actionChoice == core.ATNoAction {
+			return nil, nil
 		}
 		if actionChoice == core.ATMonsterHeal {
 			req, err = m.AI.createMonsterHealActionRequest()
@@ -102,7 +109,7 @@ func (m *Monster) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReque
 	}
 	// Logging for tactical action (only if weighted AI is not used, to avoid duplication)
 	if m.AI.combatCtx == nil || !m.AI.combatCtx.Options.UseWeightedAI {
-		events.LogMonsterActionChoiceEvent(m, req.ActionType, nil, nil, 0, m.EventListener)
+		events.LogMonsterActionChoiceEvent(m.GetCurrentEventContext(), m, req.ActionType, nil, nil, 0, m.EventListener)
 	}
 
 	req.ActorID = actorID
@@ -143,7 +150,7 @@ func (m *Monster) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, er
 				activeDice := m.SpecialAbilities.DivineEminenceNumDice + (slotToExpend - 1)
 				m.EntityStateManager.SetDivineEminenceDice(activeDice)
 
-				events.LogSpecialAbilityEvent(m, "Divine Eminence Activation", fmt.Sprintf("%s activates Divine Eminence (expended level %d slot, %d dice)!", m.Name, slotToExpend, activeDice), "", slotToExpend, m.EventListener)
+				events.LogSpecialAbilityEvent(m.GetCurrentEventContext(), m, "Divine Eminence Activation", fmt.Sprintf("%s activates Divine Eminence (expended level %d slot, %d dice)!", m.Name, slotToExpend, activeDice), "", slotToExpend, m.EventListener)
 			}
 		}
 		return &core.ActionOutcome{

@@ -63,7 +63,8 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			IsConcentration: req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 		}
 
-		events.LogSpellAttackEvent(scm.parent, &spellResult, scm.parent.GetEventListener())
+		// TODO: Spell attack - child of action (parent id)
+		events.LogSpellAttackEvent(scm.parent.GetCurrentEventContext(), scm.parent, &spellResult, scm.parent.GetEventListener())
 
 		return &spellResult, nil
 	}
@@ -108,7 +109,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 				IsConcentration:  req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 			}
 
-			events.LogSpellAttackEvent(scm.parent, &spellResult, scm.parent.GetEventListener())
+			events.LogSpellAttackEvent(scm.parent.GetCurrentEventContext(), scm.parent, &spellResult, scm.parent.GetEventListener())
 
 			return &spellResult, nil
 		}
@@ -170,7 +171,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			spellResult.SpellTotalValue = dmgRollResult.Total
 		}
 
-		events.LogSpellAttackEvent(scm.parent, &spellResult, scm.parent.GetEventListener())
+		events.LogSpellAttackEvent(scm.parent.GetCurrentEventContext(), scm.parent, &spellResult, scm.parent.GetEventListener())
 
 		return &spellResult, nil
 	case false:
@@ -224,7 +225,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			IsConcentration:  req.GetSpellCastData().GetSpellChoice().GetSpell().GetIsConcentration(),
 		}
 
-		events.LogSpellAttackEvent(scm.parent, &attackResult, scm.parent.GetEventListener())
+		events.LogSpellAttackEvent(scm.parent.GetCurrentEventContext(), scm.parent, &attackResult, scm.parent.GetEventListener())
 
 		return &attackResult, nil
 	default:
@@ -266,7 +267,7 @@ func (scm *SpellcastingManager) castHealingSpell(req *SpellCastRequest) (*SpellR
 	res.SpellTotalValue = healRollResult.Total
 	res.ValueRoll = healRollResult
 
-	events.LogSpellHealEvent(scm.parent, &res, scm.parent.GetEventListener())
+	events.LogSpellHealEvent(scm.parent.GetCurrentEventContext(), scm.parent, &res, scm.parent.GetEventListener())
 
 	return &res, nil
 }

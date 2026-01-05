@@ -3,6 +3,8 @@ package core
 import (
 	"fmt"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type DamageModificationResult struct {
@@ -22,7 +24,7 @@ const (
 )
 
 // TargetStatus indicates the result of a target selection attempt.
-// TargetOK: a valid target ID was chosen
+// TargetOK: a valid target id was chosen
 // TargetNone: there were no valid targets to choose from
 // TargetInvalidType: the selection strategy or inputs were invalid
 type TargetStatus int
@@ -697,6 +699,7 @@ type AttackContext struct {
 	IsCritical bool
 }
 
+// EffectType represents the classification of an effect, such as damage, healing, condition, or temporary hit points.
 type EffectType string
 
 const (
@@ -762,7 +765,7 @@ type CombatStatistics struct {
 	DeathSaveFailures    int
 
 	// Premium AI Tracking
-	LastAttackerID     int // ID of the last entity to deal damage to this combatant
+	LastAttackerID     int // id of the last entity to deal damage to this combatant
 	TurnsSinceLastHeal int // Turns since this entity last received healing
 }
 
@@ -971,4 +974,31 @@ func (cc *CombatantCapabilities) UseRangedAttack() {
 // UseLegendaryAction consumes a legendary action
 func (cc *CombatantCapabilities) UseLegendaryAction() {
 	cc.HasUsedLegendaryActions = true
+}
+
+type EventContext struct {
+	sequenceID string
+	parentID   string
+	currentID  string
+}
+
+func NewEventContext() *EventContext {
+	return &EventContext{
+		sequenceID: "",
+		parentID:   "",
+		currentID:  "",
+	}
+}
+
+func (ctx *EventContext) GetSequenceID() string { return ctx.sequenceID }
+func (ctx *EventContext) GenerateSequenceID()   { ctx.sequenceID = NewUUIDv7() }
+func (ctx *EventContext) GetParentID() string   { return ctx.parentID }
+func (ctx *EventContext) GenerateParentID()     { ctx.parentID = NewUUIDv7() }
+func (ctx *EventContext) GetCurrentID() string  { return ctx.currentID }
+func (ctx *EventContext) GenerateCurrentID()    { ctx.currentID = NewUUIDv7() }
+
+// NewUUIDv7 generates and returns a new UUID version 7 as a string.
+func NewUUIDv7() string {
+	u, _ := uuid.NewV7()
+	return u.String()
 }

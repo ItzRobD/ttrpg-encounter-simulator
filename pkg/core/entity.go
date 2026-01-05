@@ -52,10 +52,13 @@ type Entity interface {
 	SetConcentrating(val bool, spellName string)
 	Regenerate()
 	GetHasTakenTurnInCombat() bool
-	GetID() int           // Returns the database row ID
-	GetInstanceID() int   // Returns the unique instance ID for this simulation
-	SetInstanceID(id int) // Sets the unique instance ID for this simulation
+	GetID() int           // Returns the database row id
+	GetInstanceID() int   // Returns the unique instance id for this simulation
+	SetInstanceID(id int) // Sets the unique instance id for this simulation
 	GetAttackBonus() int
+	GetEntityType() EntityType
+	PushEventContext(ctx *EventContext)
+	GetCurrentEventContext() *EventContext
 }
 
 type Combatant struct {

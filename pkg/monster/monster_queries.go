@@ -779,7 +779,7 @@ func GetMonsterSpellcastingConfigByID(ctx context.Context, id []int) (map[int]Mo
 			}
 		}
 
-		// Innate spells with usage - sort by ID for determinism
+		// Innate spells with usage - sort by id for determinism
 		innateSpellIDs := make([]int, 0, len(temp.InnateSpells))
 		for spellID := range temp.InnateSpells {
 			innateSpellIDs = append(innateSpellIDs, spellID)
@@ -811,7 +811,7 @@ func GetMonsterSpellcastingConfigByID(ctx context.Context, id []int) (map[int]Mo
 	return configMap, nil
 }
 
-//func getMonsterActionManagerConfig(ctx context.Context, id int) (*monster_action_manager.MAMConfig, error) {
+//func getMonsterActionManagerConfig(ctx context.ctx, id int) (*monster_action_manager.MAMConfig, error) {
 //	var err error
 //	var config monster_action_manager.MAMConfig
 //

@@ -38,6 +38,7 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 		if aiReq != nil {
 			result.TurnStatuses[core.TurnActionReady] = true
 		}
+
 		return result, aiReq, nil
 	}
 
@@ -57,7 +58,9 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 			if err != nil {
 				return nil, nil, fmt.Errorf("error getting AI request: %s", err)
 			}
-			ucResult.TurnStatuses[core.TurnActionReady] = true
+			if aiReq != nil {
+				ucResult.TurnStatuses[core.TurnActionReady] = true
+			}
 			// On revive: clear Unconscious, set Prone to true so ranged/melee modifiers apply correctly
 			c.EntityStateManager.SetUnconscious(false)
 			c.EntityStateManager.AddCondition(core.ConditionProne)
@@ -84,6 +87,10 @@ func (c *Character) GetAIRequest(actorID int, t core.AIRequestType) (*core.AIReq
 		actionChoice, err = c.AI.ChooseCharacterActionType()
 		if err != nil {
 			return nil, err
+		}
+
+		if actionChoice == core.ATNoAction {
+			return nil, nil
 		}
 
 		switch actionChoice {
@@ -400,8 +407,9 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 		}
 
 		// Log breath weapon attack event
-		events.LogDragonbornBreathWeaponEvent(c, req.Target, damage.GetTotal(), c.Race.DragonbornFeatures.DamageType.String(), dc, saveAbility.String(), saveRes.GetIsSuccess(), saveRes.GetTotal(), c.EventListener)
-		events.LogDamageEvent(c, req.Target, c.Race.DragonbornFeatures.DamageType.String(), damage.GetTotal(), damage.GetFinalRolls(), c.EventListener)
+		// TODO: Is this duplicated with the weighted ai
+		events.LogDragonbornBreathWeaponEvent(c.GetCurrentEventContext(), c, req.Target, damage.GetTotal(), c.Race.DragonbornFeatures.DamageType.String(), dc, saveAbility.String(), saveRes.GetIsSuccess(), saveRes.GetTotal(), c.EventListener)
+		events.LogDamageEvent(c.GetCurrentEventContext(), c, req.Target, c.Race.DragonbornFeatures.DamageType.String(), damage.GetTotal(), damage.GetFinalRolls(), c.EventListener)
 
 		c.EntityStateManager.SetDBBreathWeaponUsed(true)
 
@@ -447,7 +455,7 @@ func (c *Character) ExecuteAIRequest(req *core.AIRequest) (*core.ActionOutcome, 
 			c.EntityStateManager.ModifyPaladinLayingOnHandsPool(-hReq.AbilityValue)
 			healingValue = hReq.AbilityValue
 
-			events.LogLayOnHandsHealEvent(c, hReq.Target, healingValue, c.EventListener)
+			events.LogLayOnHandsHealEvent(c.GetCurrentEventContext(), c, hReq.Target, healingValue, c.EventListener)
 		} else if hReq.Source == core.HealSourceSpell {
 			// Existing Spell Logic
 			scReq, err := c.CreateSpellCastRequest(hReq.Target, *hReq.SpellChoice, hReq.Advantage, req.SimOptions)
@@ -608,8 +616,8 @@ func (c *Character) resolveDivineSmite(target core.Entity, isCrit bool, simOptio
 	}
 
 	// 5. Log & Return
-	events.LogCombatEventMessage(c, fmt.Sprintf("Divine Smite! (Level %d slot)", slotLevel), c.EventListener)
-	events.LogDiceRollEvent(c, res, c.EventListener)
+	events.LogCombatEventMessage(c.GetCurrentEventContext(), c, fmt.Sprintf("Divine Smite! (Level %d slot)", slotLevel), c.EventListener)
+	events.LogDiceRollEvent(c.GetCurrentEventContext(), c, res, c.EventListener)
 
 	return &core.Effect{
 		Type:       core.EffectDamage,
