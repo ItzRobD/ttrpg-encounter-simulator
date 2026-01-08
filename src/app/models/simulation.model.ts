@@ -1,0 +1,60 @@
+export interface CombatantReference {
+  name: string;
+  instanceId: number;
+  type: 'character' | 'monster' | '';
+}
+
+export interface RollResult {
+  round: number;
+  timestamp: string;
+  id: string;
+  rollType: string;
+  numberOfDice: number;
+  die: string;
+  finalRollValue: number;
+  finalRolls: number[];
+  modifier: number;
+  total: number;
+  advantage: 'Normal' | 'Advantage' | 'Disadvantage';
+  isCritical: boolean;
+  isNaturalOne: boolean;
+  isSuccess: boolean;
+  targetValue: number;
+}
+
+export interface EventData {
+  actor?: CombatantReference;
+  target?: CombatantReference;
+  roll?: RollResult;
+  diceRoll?: any; // Used in 'attack' and 'savingthrow' types
+  choiceType?: string;
+  choice?: string | null;
+  scores?: {
+    utilityScore: number;
+    factors: { [key: string]: number } | null;
+    topReasons: string[] | null;
+  };
+  value?: number;
+  originalHP?: number;
+  finalHP?: number;
+  note?: string;
+}
+
+export interface SimulationEvent {
+  round: number;
+  timestamp: string;
+  id: string;
+  sequenceId: string; // Groups events into a "Turn"
+  parentId: string;   // Defines hierarchy (e.g. Attack -> Damage)
+  type: 'initiative' | 'choice' | 'attack' | 'damageroll' | 'savingthrow' | 'hpmodified' | 'damagemodified';
+  data: EventData;
+}
+
+/**
+ * Processed structure for the TreeTable/Timeline
+ */
+export interface TimelineNode {
+  data: SimulationEvent;
+  children?: TimelineNode[];
+  expanded?: boolean;
+}
