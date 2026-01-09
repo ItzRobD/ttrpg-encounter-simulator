@@ -1,0 +1,71 @@
+<div class="layout-wrapper flex flex-column md:flex-row min-h-screen">
+  <p-drawer [(visible)]="visible" header="D&D Simulator">
+    <div class="flex flex-column gap-2">
+      <a
+        routerLink="/"
+        routerLinkActive="font-bold"
+        class="p-3 text-900 border-round hover:surface-100 transition-colors"
+        (click)="visible = false"
+      >
+        <i class="pi pi-bolt mr-2"></i>Simulator
+      </a>
+      <a
+        routerLink="/bestiary"
+        routerLinkActive="font-bold"
+        class="p-3 text-900 border-round hover:surface-100 transition-colors"
+        (click)="visible = false"
+      >
+        <i class="pi pi-book mr-2"></i>Bestiary
+      </a>
+      <a
+        routerLink="/history"
+        routerLinkActive="font-bold"
+        class="p-3 text-900 border-round hover:surface-100 transition-colors"
+        (click)="visible = false"
+      >
+        <i class="pi pi-history mr-2"></i>History
+      </a>
+    </div>
+  </p-drawer>
+  <aside class="hidden md:flex flex-column surface-card border-right-1 surface-border w-15rem">
+    <div class="h-4rem p-4 border-bottom-1 surface-border flex align-items-center">
+      <span class="text-xl font-bold">D&D Sim</span>
+    </div>
+    <nav class="flex-1 p-3 flex flex-column gap-2">
+      <a
+        routerLink="/"
+        [routerLinkActiveOptions]="{ exact: true }"
+        routerLinkActive="surface-200"
+        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline"
+      >
+        <i class="pi pi-bolt mr-2"></i>Simulator
+      </a>
+      <a
+        routerLink="/bestiary"
+        routerLinkActive="surface-200"
+        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline"
+      >
+        <i class="pi pi-book mr-2"></i>Bestiary
+      </a>
+      <a
+        routerLink="/history"
+        routerLinkActive="surface-200"
+        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline"
+      >
+        <i class="pi pi-history mr-2"></i>History
+      </a>
+    </nav>
+  </aside>
+  <div class="flex-1 flex flex-column">
+    <header class="h-4rem surface-card border-bottom-1 surface-border flex align-items-center px-4">
+      <p-button
+        icon="pi pi-bars"
+        (click)="visible = true"
+        class="md:hidden mr-3"
+        [text]="true"
+      ></p-button>
+      <span class="text-lg font-medium md:hidden">D&D Sim</span>
+    </header>
+    <main class="p-4 flex-1 overflow-auto surface-ground"><router-outlet></router-outlet></main>
+  </div>
+</div>
