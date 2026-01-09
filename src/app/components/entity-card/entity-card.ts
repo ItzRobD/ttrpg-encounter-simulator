@@ -20,7 +20,7 @@ import {
   getAbilityScoresOrder,
   getModifier,
 } from '../../shared/utils/dnd-utils';
-import { KeyValuePipe } from '@angular/common';
+import { ProgressBar } from 'primeng/progressbar';
 @Component({
   selector: 'app-entity-card',
   standalone: true,
@@ -31,7 +31,7 @@ import { KeyValuePipe } from '@angular/common';
     AccordionPanel,
     AccordionHeader,
     AccordionContent,
-    KeyValuePipe,
+    ProgressBar,
   ],
   templateUrl: './entity-card.html',
   styleUrl: './entity-card.css',
@@ -45,6 +45,23 @@ export class EntityCard {
       .filter(([_, active]) => active)
       .map(([condition]) => condition)
       .sort();
+  });
+  protected readonly hpPercent = computed(() => {
+    const e = this.entity();
+    if (!e) return 0;
+    return Math.min(100, Math.floor((e.state.currentHP / e.state.maxHP) * 100));
+  });
+  protected readonly tempHpPercent = computed(() => {
+    const e = this.entity();
+    if (!e || e.state.tempHP <= 0) return 0;
+    // We calculate temp HP relative to Max HP to see how much of the bar it should occupy
+    return Math.floor((e.state.tempHP / e.state.maxHP) * 100);
+  });
+  protected readonly hpColor = computed(() => {
+    const percent = this.hpPercent();
+    if (percent > 50) return '#22c55e'; // Green 500
+    if (percent > 20) return '#eab308'; // Yellow 500
+    return '#ef4444'; // Red 500
   });
   protected expanded = false;
   constructor() {
@@ -72,13 +89,13 @@ export class EntityCard {
         charisma: false,
       },
       state: {
-        currentHP: 45,
-        maxHP: 50,
-        tempHP: 5,
+        currentHP: 40,
+        maxHP: 63,
+        tempHP: 12,
         hitDie: 10,
         conditions: {
           blinded: false,
-          charmed: false,
+          charmed: true,
           deafened: false,
           frightened: false,
           grappled: false,

@@ -19,15 +19,34 @@
                 }
               </div>
             </div>
-            <div class="flex flex-column pr-4">
-              <span>
-                HP: {{ e.state.currentHP }}
-                @if (e.state.tempHP > 0) {
-                  (+{{ e.state.tempHP }})
-                }
-                / {{ e.state.maxHP }}
-              </span>
-              <span> AC: 14 </span>
+            <div class="flex gap-4 pr-4 align-items-start">
+              <div class="flex flex-column gap-1">
+                <span class="text-sm font-bold white-space-nowrap">
+                  HP: {{ e.state.currentHP }}
+                  @if (e.state.tempHP > 0) {
+                    (+{{ e.state.tempHP }})
+                  }
+                  / {{ e.state.maxHP }}
+                </span>
+                <div class="relative overflow-hidden border-round" style="height: 6px; width: 140px; background-color: var(--p-surface-200);">
+                  <!-- Base HP Bar -->
+                  <div
+                    class="absolute top-0 left-0 h-full transition-all transition-duration-300"
+                    [style.width.%]="hpPercent()"
+                    [style.backgroundColor]="hpColor()"
+                  ></div>
+                  <!-- Temp HP Bar (Blue Overlay) -->
+                  <div
+                    class="absolute top-0 h-full transition-all transition-duration-300"
+                    [style.left.%]="hpPercent()"
+                    [style.width.%]="tempHpPercent()"
+                    style="background-color: #3b82f6; opacity: 0.8;"
+                  ></div>
+                </div>
+              </div>
+              <div class="flex flex-column pt-0">
+                <span class="text-sm font-bold white-space-nowrap">AC: 14</span>
+              </div>
             </div>
           </div>
         </p-accordion-header>
