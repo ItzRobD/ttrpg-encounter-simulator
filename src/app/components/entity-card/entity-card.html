@@ -1,0 +1,68 @@
+<p-card class="p-fluid border-1 surface-border">
+  @if (entity(); as e) {
+    <p-accordion value="0">
+      <p-accordion-panel value="0">
+        <p-accordion-header>
+          <div class="flex justify-content-between align-items-center w-full">
+            <div class="flex flex-column">
+              <span class="font-bold"> {{ e.name }} </span>
+              <span class="text-sm text-500">
+                @if ('class' in e) {
+                  Level {{ e.level }} {{ e.race }} {{ e.class }}
+                } @else {
+                  CR {{ e.cr }} {{ e.type }}
+                }
+              </span>
+              <div class="flex flex-wrap gap-1 mt-1">
+                @for (condition of activeConditions(); track condition) {
+                  <p-tag [value]="condition" severity="warn" styleClass="text-[10px]"></p-tag>
+                }
+              </div>
+            </div>
+            <div class="flex flex-column pr-4">
+              <span>
+                HP: {{ e.state.currentHP }}
+                @if (e.state.tempHP > 0) {
+                  (+{{ e.state.tempHP }})
+                }
+                / {{ e.state.maxHP }}
+              </span>
+              <span> AC: 14 </span>
+            </div>
+          </div>
+        </p-accordion-header>
+        <p-accordion-content class="border-top-1 pt-2">
+          <div class="flex flex-column align-items-center gap-2">
+            <span class="text-lg font-bold">Ability Scores</span>
+            <div class="grid w-full px-4">
+              @for (entry of getAbilityScoreEntries(e.abilityScores); track entry.key) {
+                <div class="col-4 p-1">
+                  <div
+                    class="flex flex-column align-items-center border-1 border-round surface-border p-1"
+                  >
+                    <div class="flex align-items-center gap-1">
+                      <span class="text-xs font-bold uppercase text-600">{{
+                        entry.shortName
+                      }}</span>
+                      <i
+                        [class]="e.abilityScoreProficiency[entry.key] ? 'pi pi-star-fill' : 'pi pi-star'"
+                        [style.color]="e.abilityScoreProficiency[entry.key] ? 'var(--primary-color)' : 'var(--text-color-secondary)'"
+                        style="font-size: 0.5rem;"
+                      ></i>
+                    </div>
+                    <div class="flex align-items-center gap-1">
+                      <span class="text-xl font-semibold leading-none">{{ entry.value }}</span>
+                      <span class="text-xs text-500 leading-none"
+                        >({{ formatModifier(entry.modifier) }})</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+    </p-accordion>
+  }
+</p-card>

@@ -55,6 +55,17 @@
               "extractLicenses": false,
               "sourceMap": true
             },
+            "development": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.local.ts"
+                }
+              ],
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
             "dev": {
               "fileReplacements": [
                 {
@@ -73,7 +84,7 @@
               "buildTarget": "dnd5e-encounter-simulator-frontend:build:production"
             },
             "development": {
-              "buildTarget": "dnd5e-encounter-simulator-frontend:build:development"
+              "buildTarget": "dnd5e-encounter-simulator-frontend:build:local"
             }
           },
           "defaultConfiguration": "development"

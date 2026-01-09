@@ -40,14 +40,25 @@ export interface EventData {
   note?: string;
 }
 
+export type EventType =
+  | 'initiative'
+  | 'choice'
+  | 'attack'
+  | 'damageroll'
+  | 'savingthrow'
+  | 'hpmodified'
+  | 'damagemodified'
+  | 'round'
+  | 'turn';
+
 export interface SimulationEvent {
   round: number;
-  timestamp: string;
   id: string;
-  sequenceId: string; // Groups events into a "Turn"
-  parentId: string;   // Defines hierarchy (e.g. Attack -> Damage)
-  type: 'initiative' | 'choice' | 'attack' | 'damageroll' | 'savingthrow' | 'hpmodified' | 'damagemodified';
+  type: EventType;
   data: EventData;
+  timestamp?: string;
+  sequenceId?: string; // Groups events into a "Turn"
+  parentId?: string;   // Defines hierarchy (e.g. Attack -> Damage)
 }
 
 /**
