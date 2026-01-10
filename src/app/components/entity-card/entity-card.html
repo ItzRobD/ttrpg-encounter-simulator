@@ -9,10 +9,12 @@
             <div class="flex flex-column align-items-center sm:align-items-start">
               <span class="font-bold text-center sm:text-left"> {{ e.name }} </span>
               <span class="text-sm text-500 text-center sm:text-left">
-                @if ('class' in e) {
-                  Level {{ e.level }} {{ e.race }} {{ e.class }}
-                } @else {
-                  CR {{ e.cr }} {{ e.type }}
+                @if (isCharacter(e)) {
+                  @let char = asCharacter(e);
+                  Level {{ char.level }} {{ char.race }} {{ char.class }}
+                } @else if (isMonster(e)) {
+                  @let monster = asMonster(e);
+                  CR {{ monster.cr }} {{ monster.type }}
                 }
               </span>
               <div
@@ -270,11 +272,12 @@
               </p-accordion-header>
               <p-accordion-content>
                 <div class="col-12 p-1 border-1 border-round surface-border mt-2">
-                  @if ('class' in e) {
+                  @if (isCharacter(e)) {
+                    @let char = asCharacter(e);
                     <!-- Character Equipment -->
                     <div class="flex flex-column gap-1 w-full">
                       @for (slotKey of weaponSlots; track slotKey) {
-                        @if (e.equipment.weapons[slotKey]; as weapon) {
+                        @if (char.equipment.weapons[slotKey]; as weapon) {
                           <p-card
                             class="w-full"
                             [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
@@ -283,18 +286,19 @@
                               <i class="pi pi-shield text-primary"></i>
                               <span class="text-sm">
                                 <strong>{{ slotKey | titlecase }}:</strong>
-                                {{ formatWeaponData(e, weapon) }}
+                                {{ formatWeaponData(char, weapon) }}
                               </span>
                             </div>
                           </p-card>
                         }
                       }
                     </div>
-                  } @else {
+                  } @else if (isMonster(e)) {
+                    @let monster = asMonster(e);
                     <!-- Monster Actions -->
                     <div class="flex flex-column gap-1 w-full">
                       <!-- Multiattacks -->
-                      @for (multi of e.monsterActions.multiattacks; track $index) {
+                      @for (multi of monster.monsterActions.multiattacks; track $index) {
                         <p-card
                           class="w-full"
                           [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
@@ -302,14 +306,14 @@
                           <div class="flex align-items-center gap-2">
                             <i class="pi pi-bolt text-primary"></i>
                             <span class="text-sm">
-                              {{ formatMultiattack(e.name, multi, e.monsterActions.actions) }}
+                              {{ formatMultiattack(monster.name, multi, monster.monsterActions.actions) }}
                             </span>
                           </div>
                         </p-card>
                       }
 
                       <!-- Individual Actions -->
-                      @for (action of e.monsterActions.actions; track action.actionId) {
+                      @for (action of monster.monsterActions.actions; track action.actionId) {
                         <p-card
                           class="w-full"
                           [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
@@ -318,7 +322,7 @@
                             <i class="pi pi-shield text-primary"></i>
                             <span class="text-sm">
                               <strong>{{ action.name }}</strong>
-                              @if (e.monsterActions.rechargeActions[action.actionId]; as recharge) {
+                              @if (monster.monsterActions.rechargeActions[action.actionId]; as recharge) {
                                 Recharge: {{ recharge }}
                               }
                               {{ formatMonsterAction(action) }}
@@ -333,47 +337,50 @@
             </p-accordion-panel>
 
             <!-- Legendary Actions Panel -->
-            @if (!('class' in e) && e.monsterActions.legendaryActions.length > 0) {
-              <p-accordion-panel value="3">
-                <p-accordion-header>
-                  <div class="grid w-full align-items-center">
-                    <div class="col-4">
-                      <span class="text-sm font-bold uppercase text-600">{{
-                        legendaryActionsHeaderText().label
-                      }}</span>
+            @if (isMonster(e)) {
+              @let monster = asMonster(e);
+              @if (monster.monsterActions.legendaryActions.length > 0) {
+                <p-accordion-panel value="3">
+                  <p-accordion-header>
+                    <div class="grid w-full align-items-center">
+                      <div class="col-4">
+                        <span class="text-sm font-bold uppercase text-600">{{
+                          legendaryActionsHeaderText().label
+                        }}</span>
+                      </div>
+                      <div class="col-8">
+                        <span class="text-xs text-700 font-medium">{{
+                          legendaryActionsHeaderText().list
+                        }}</span>
+                      </div>
                     </div>
-                    <div class="col-8">
-                      <span class="text-xs text-700 font-medium">{{
-                        legendaryActionsHeaderText().list
-                      }}</span>
+                  </p-accordion-header>
+                  <p-accordion-content>
+                    <div class="col-12 p-1 border-1 border-round surface-border mt-2">
+                      <div class="flex flex-column gap-1">
+                        @for (action of monster.monsterActions.legendaryActions; track action.actionId) {
+                          <p-card
+                            class="w-full"
+                            [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
+                          >
+                            <div class="flex align-items-center gap-2">
+                              <i class="pi pi-star text-primary"></i>
+                              <span class="text-sm">
+                                <strong>{{ action.name }}</strong>
+                                @if (action.die !== DiceType.D0) {
+                                  {{ formatMonsterAction(action) }}
+                                } @else if (action.description) {
+                                  . {{ action.description }}
+                                }
+                              </span>
+                            </div>
+                          </p-card>
+                        }
+                      </div>
                     </div>
-                  </div>
-                </p-accordion-header>
-                <p-accordion-content>
-                  <div class="col-12 p-1 border-1 border-round surface-border mt-2">
-                    <div class="flex flex-column gap-1">
-                      @for (action of e.monsterActions.legendaryActions; track action.actionId) {
-                        <p-card
-                          class="w-full"
-                          [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
-                        >
-                          <div class="flex align-items-center gap-2">
-                            <i class="pi pi-star text-primary"></i>
-                            <span class="text-sm">
-                              <strong>{{ action.name }}</strong>
-                              @if (action.die !== DiceType.D0) {
-                                {{ formatMonsterAction(action) }}
-                              } @else if (action.description) {
-                                . {{ action.description }}
-                              }
-                            </span>
-                          </div>
-                        </p-card>
-                      }
-                    </div>
-                  </div>
-                </p-accordion-content>
-              </p-accordion-panel>
+                  </p-accordion-content>
+                </p-accordion-panel>
+              }
             }
           </p-accordion>
 
