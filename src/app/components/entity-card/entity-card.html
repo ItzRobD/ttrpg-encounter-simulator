@@ -19,13 +19,25 @@
                 class="flex flex-wrap justify-content-center sm:justify-content-start gap-1 mt-1"
               >
                 @for (condition of activeConditions(); track condition) {
-                  <p-tag value="{{ condition | titlecase }}" severity="warn"></p-tag>
+                  <p-tag
+                    value="{{ condition | titlecase }}"
+                    severity="warn"
+                    [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"
+                  ></p-tag>
                 }
                 @if (e.state.isStable) {
-                  <p-tag value="Stable" severity="success"></p-tag>
+                  <p-tag
+                    value="Stable"
+                    severity="success"
+                    [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"
+                  ></p-tag>
                 }
                 @if (e.state.isDead) {
-                  <p-tag value="Dead" severity="danger"></p-tag>
+                  <p-tag
+                    value="Dead"
+                    severity="danger"
+                    [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"
+                  ></p-tag>
                 }
               </div>
             </div>

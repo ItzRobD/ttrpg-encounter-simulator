@@ -389,8 +389,8 @@ export class EntityCard {
         rechargeActions: { 3: 5 },
       },
     };
-    this.entity.set(dummyMonster);
-    // this.entity.set(dummyCharacter);
+    // this.entity.set(dummyMonster);
+    this.entity.set(dummyCharacter);
   }
 
   protected readonly getModifier = getModifier;
