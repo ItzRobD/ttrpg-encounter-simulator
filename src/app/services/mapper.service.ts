@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { SimulationEvent, TimelineNode } from '../models';
+import { EventType, SimulationEvent, TimelineNode } from '../models';
 
 @Injectable({
   providedIn: 'root',
@@ -89,7 +89,7 @@ export class MapperService {
         const roundNode: TimelineNode = {
           data: {
             round: event.round,
-            type: 'round',
+            type: EventType.Round,
             id: `round-${event.round}`,
             data: { note: `Round ${event.round}` },
           },
@@ -107,7 +107,7 @@ export class MapperService {
           const turnNode: TimelineNode = {
             data: {
               round: event.round,
-              type: 'turn',
+              type: EventType.Turn,
               id: event.sequenceId,
               sequenceId: event.sequenceId,
               data: {

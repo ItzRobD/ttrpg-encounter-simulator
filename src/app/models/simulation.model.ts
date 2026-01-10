@@ -37,19 +37,23 @@ export interface EventData {
   value?: number;
   originalHP?: number;
   finalHP?: number;
+  originalTempHP?: number;
+  finalTempHP?: number;
   note?: string;
 }
 
-export type EventType =
-  | 'initiative'
-  | 'choice'
-  | 'attack'
-  | 'damageroll'
-  | 'savingthrow'
-  | 'hpmodified'
-  | 'damagemodified'
-  | 'round'
-  | 'turn';
+
+export enum EventType {
+  Initiative = 'initiative',
+  Choice = 'choice',
+  Attack = 'attack',
+  DamageRoll = 'damageroll',
+  SavingThrow = 'savingthrow',
+  HPModified = 'hpmodified',
+  DamageModified = 'damagemodified',
+  Round = 'round',
+  Turn = 'turn',
+}
 
 export interface SimulationEvent {
   round: number;
