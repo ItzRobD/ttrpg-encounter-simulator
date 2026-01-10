@@ -1,6 +1,6 @@
 <p-card class="p-fluid border-1 surface-border">
   @if (entity(); as e) {
-    <p-accordion value="0">
+    <p-accordion>
       <p-accordion-panel value="0">
         <p-accordion-header>
           <div
@@ -70,161 +70,172 @@
           </div>
         </p-accordion-header>
         <p-accordion-content class="pt-2">
-          <div class="flex flex-column align-items-center gap-2">
-            <span class="text-lg font-bold">Ability Scores & Status</span>
-            <div class="grid w-full px-2">
-              <!-- Ability Scores -->
-              <div class="col-12">
-                <div class="grid">
-                  @for (entry of getAbilityScoreEntries(e.abilityScores); track entry.key) {
-                    <div class="col-4 sm:col-2 p-1">
-                      <div
-                        class="flex flex-column align-items-center border-1 border-round surface-border p-1"
-                      >
-                        <div class="flex align-items-center gap-1">
-                          <span class="text-xs font-bold uppercase text-600">{{
-                            entry.shortName
-                          }}</span>
-                          <i
-                            [class]="
-                              e.abilityScoreProficiency[entry.key]
-                                ? 'pi pi-star-fill'
-                                : 'pi pi-star'
-                            "
-                            [style.color]="
-                              e.abilityScoreProficiency[entry.key]
-                                ? 'var(--p-primary-color)'
-                                : 'var(--p-text-muted-color)'
-                            "
-                            style="font-size: 0.5rem"
-                          ></i>
-                        </div>
-                        <div class="flex align-items-center gap-1">
-                          <span class="text-xl font-semibold leading-none">{{ entry.value }}</span>
-                          <span class="text-xs text-500 leading-none"
-                            >({{ formatModifier(entry.modifier) }})</span
+          <p-accordion [multiple]="true" [value]="saActiveValue()" (valueChange)="saActiveValue.set($event)">
+            <!-- Statistics Panel -->
+            <p-accordion-panel value="0">
+              <p-accordion-header>
+                <span class="text-sm font-bold uppercase text-600">Statistics</span>
+              </p-accordion-header>
+              <p-accordion-content>
+                <div class="grid w-full pt-2">
+                  <!-- Ability Scores -->
+                  <div class="col-12">
+                    <div class="grid">
+                      @for (entry of getAbilityScoreEntries(e.abilityScores); track entry.key) {
+                        <div class="col-4 sm:col-2 p-1">
+                          <div
+                            class="flex flex-column align-items-center border-1 border-round surface-border p-1"
                           >
+                            <div class="flex align-items-center gap-1">
+                              <span class="text-xs font-bold uppercase text-600">{{
+                                entry.shortName
+                              }}</span>
+                              <i
+                                [class]="
+                                  e.abilityScoreProficiency[entry.key]
+                                    ? 'pi pi-star-fill'
+                                    : 'pi pi-star'
+                                "
+                                [style.color]="
+                                  e.abilityScoreProficiency[entry.key]
+                                    ? 'var(--p-primary-color)'
+                                    : 'var(--p-text-muted-color)'
+                                "
+                                style="font-size: 0.5rem"
+                              ></i>
+                            </div>
+                            <div class="flex align-items-center gap-1">
+                              <span class="text-xl font-semibold leading-none">{{
+                                entry.value
+                              }}</span>
+                              <span class="text-xs text-500 leading-none"
+                                >({{ formatModifier(entry.modifier) }})</span
+                              >
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Death Saves -->
+                  @if ('class' in e) {
+                    <div class="col-12 p-1">
+                      <div
+                        class="flex align-items-center justify-content-between border-1 border-round surface-border p-2 px-3"
+                      >
+                        <span class="text-xs font-bold uppercase text-600">Death Saves</span>
+                        <div class="flex gap-4">
+                          <!-- Successes -->
+                          <div class="flex align-items-center gap-2">
+                            <i class="pi pi-check-circle text-green-500 text-xs"></i>
+                            <div class="flex gap-1">
+                              @for (i of [1, 2, 3]; track i) {
+                                <i
+                                  class="pi pi-circle-fill"
+                                  [style.color]="
+                                    e.state.deathSaves.successes >= i
+                                      ? 'var(--p-green-500)'
+                                      : 'var(--p-surface-200)'
+                                  "
+                                  style="font-size: 0.6rem"
+                                ></i>
+                              }
+                            </div>
+                          </div>
+                          <!-- Failures -->
+                          <div class="flex align-items-center gap-2">
+                            <i class="pi pi-times-circle text-red-500 text-xs"></i>
+                            <div class="flex gap-1">
+                              @for (i of [1, 2, 3]; track i) {
+                                <i
+                                  class="pi pi-circle-fill"
+                                  [style.color]="
+                                    e.state.deathSaves.failures >= i
+                                      ? 'var(--p-red-500)'
+                                      : 'var(--p-surface-200)'
+                                  "
+                                  style="font-size: 0.6rem"
+                                ></i>
+                              }
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   }
                 </div>
-              </div>
 
-              <!-- Death Saves -->
-              @if ('class' in e) {
-                <div class="col-12 p-1">
+                <div class="flex flex-column align-items-left gap-2 px-1">
+                  <!-- Resistances Section -->
                   <div
-                    class="flex align-items-center justify-content-between border-1 border-round surface-border p-2 px-3"
+                    class="flex flex-column gap-1 w-full mt-2 p-2 border-round border-left-2 border-primary"
+                    [style.background]="
+                      'linear-gradient(to right, var(--p-surface-100) ' +
+                      (gradientStop() || '50%') +
+                      ', transparent)'
+                    "
                   >
-                    <span class="text-xs font-bold uppercase text-600">Death Saves</span>
-                    <div class="flex gap-4">
-                      <!-- Successes -->
-                      <div class="flex align-items-center gap-2">
-                        <i class="pi pi-check-circle text-green-500 text-xs"></i>
-                        <div class="flex gap-1">
-                          @for (i of [1, 2, 3]; track i) {
-                            <i
-                              class="pi pi-circle-fill"
-                              [style.color]="
-                                e.state.deathSaves.successes >= i
-                                  ? 'var(--p-green-500)'
-                                  : 'var(--p-surface-200)'
-                              "
-                              style="font-size: 0.6rem"
-                            ></i>
+                    @if (resistances().length > 0) {
+                      <div class="flex flex-wrap align-items-center gap-1">
+                        <span class="text-xs font-bold uppercase text-primary">Resistances:</span>
+                        <span class="text-xs text-700 font-medium">
+                          @for (res of resistances(); track res; let isLast = $last) {
+                            {{ res | titlecase }}{{ isLast ? '' : ', ' }}
                           }
-                        </div>
+                        </span>
                       </div>
-                      <!-- Failures -->
-                      <div class="flex align-items-center gap-2">
-                        <i class="pi pi-times-circle text-red-500 text-xs"></i>
-                        <div class="flex gap-1">
-                          @for (i of [1, 2, 3]; track i) {
-                            <i
-                              class="pi pi-circle-fill"
-                              [style.color]="
-                                e.state.deathSaves.failures >= i
-                                  ? 'var(--p-red-500)'
-                                  : 'var(--p-surface-200)'
-                              "
-                              style="font-size: 0.6rem"
-                            ></i>
+                    }
+                    @if (immunities().length > 0) {
+                      <div class="flex flex-wrap align-items-center gap-1">
+                        <span class="text-xs font-bold uppercase text-primary">Immunities:</span>
+                        <span class="text-xs text-700 font-medium">
+                          @for (res of immunities(); track res; let isLast = $last) {
+                            {{ res | titlecase }}{{ isLast ? '' : ', ' }}
                           }
-                        </div>
+                        </span>
                       </div>
-                    </div>
+                    }
+                    @if (vulnerabilities().length > 0) {
+                      <div class="flex flex-wrap align-items-center gap-1">
+                        <span class="text-xs font-bold uppercase text-red-600"
+                          >Vulnerabilities:</span
+                        >
+                        <span class="text-xs text-700 font-medium">
+                          @for (res of vulnerabilities(); track res; let isLast = $last) {
+                            {{ res | titlecase }}{{ isLast ? '' : ', ' }}
+                          }
+                        </span>
+                      </div>
+                    }
                   </div>
                 </div>
-              }
-            </div>
-          </div>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <div class="flex flex-column align-items-left gap-2 px-3">
-            <!-- Resistances Section -->
-            <div
-              class="flex flex-column gap-1 w-full mt-2 p-2 border-round border-left-2 border-primary"
-              [style.background]="
-                'linear-gradient(to right, var(--p-surface-100) ' +
-                (gradientStop() || '50%') +
-                ', transparent)'
-              "
-            >
-              @if (resistances().length > 0) {
-                <div class="flex flex-wrap align-items-center gap-1">
-                  <span class="text-xs font-bold uppercase text-primary">Resistances:</span>
-                  <span class="text-xs text-700 font-medium">
-                    @for (res of resistances(); track res; let isLast = $last) {
-                      {{ res | titlecase }}{{ isLast ? '' : ', ' }}
-                    }
-                  </span>
-                </div>
-              }
-              @if (immunities().length > 0) {
-                <div class="flex flex-wrap align-items-center gap-1">
-                  <span class="text-xs font-bold uppercase text-primary">Immunities:</span>
-                  <span class="text-xs text-700 font-medium">
-                    @for (res of immunities(); track res; let isLast = $last) {
-                      {{ res | titlecase }}{{ isLast ? '' : ', ' }}
-                    }
-                  </span>
-                </div>
-              }
-              @if (vulnerabilities().length > 0) {
-                <div class="flex flex-wrap align-items-center gap-1">
-                  <span class="text-xs font-bold uppercase text-red-600">Vulnerabilities:</span>
-                  <span class="text-xs text-700 font-medium">
-                    @for (res of vulnerabilities(); track res; let isLast = $last) {
-                      {{ res | titlecase }}{{ isLast ? '' : ', ' }}
-                    }
-                  </span>
-                </div>
-              }
-            </div>
-          </div>
-
-          @if (specialAbilities().length > 0) {
-            <p-accordion
-              class="w-full"
-              [dt]="{ headerPadding: '0.5rem 1rem', contentPadding: '0.5rem 1rem' }"
-              [value]="saActiveValue()"
-              (valueChange)="saActiveValue.set($event)"
-            >
-              <p-accordion-panel [value]="0">
+            <!-- Special Abilities Panel -->
+            @if (specialAbilities().length > 0) {
+              <p-accordion-panel value="2">
                 <p-accordion-header>
-                  <div class="text-xs font-bold text-600">
-                    <span class="uppercase">{{ saHeaderText().label }}</span>
-                    <span class="font-medium">{{ saHeaderText().list }}</span>
+                  <div class="grid w-full align-items-center">
+                    <div class="col-4">
+                      <span class="text-sm font-bold uppercase text-600">{{
+                        saHeaderText().label
+                      }}</span>
+                    </div>
+                    <div class="col-8">
+                      <span class="text-xs text-700 font-medium">{{ saHeaderText().list }}</span>
+                    </div>
                   </div>
                 </p-accordion-header>
                 <p-accordion-content>
-                  <div class="grid mt-1">
+                  <div class="grid gap-0 mt-2">
                     @for (ability of specialAbilities(); track ability) {
                       <div class="col-6 p-1">
                         <div
                           class="flex align-items-center gap-2 p-2 border-1 border-round surface-border bg-surface-50 h-full"
                         >
-                          <i class="pi pi-sparkles text-primary" style="font-size: 0.75rem"></i>
+                          <i class="pi pi-sparkles text-primary" style="font-size: 0.7rem"></i>
                           <span class="text-xs font-medium">{{ ability }}</span>
                         </div>
                       </div>
@@ -232,63 +243,131 @@
                   </div>
                 </p-accordion-content>
               </p-accordion-panel>
-            </p-accordion>
-          }
+            }
 
-          <div class="flex flex-column align-items-center gap-2 mt-2">
-            <span class="text-lg font-bold">{{ 'class' in e ? 'Equipment' : 'Attacks' }}</span>
-            <div class="col-12 p-1 border-1 border-round surface-border">
-              @if ('class' in e) {
-                <!-- Character Equipment -->
-                <div class="flex flex-column gap-1 w-full">
-                  @for (slotKey of weaponSlots; track slotKey) {
-                    @if (e.equipment.weapons[slotKey]; as weapon) {
-                      <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
-                        <div class="flex align-items-center gap-2">
-                          <i class="pi pi-shield text-primary"></i>
-                          <span class="text-sm">
-                            <strong>{{ slotKey | titlecase }}:</strong>
-                            {{ formatWeaponData(e, weapon) }}
-                          </span>
-                        </div>
-                      </p-card>
-                    }
+            <!-- Attacks / Equipment Panel -->
+            <p-accordion-panel value="1">
+              <p-accordion-header>
+                <div class="grid w-full align-items-center">
+                  <div class="col-4">
+                    <span class="text-sm font-bold uppercase text-600">{{
+                      actionsHeaderText().label
+                    }}</span>
+                  </div>
+                  <div class="col-8">
+                    <span class="text-xs text-700 font-medium">{{ actionsHeaderText().list }}</span>
+                  </div>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+                <div class="col-12 p-1 border-1 border-round surface-border mt-2">
+                  @if ('class' in e) {
+                    <!-- Character Equipment -->
+                    <div class="flex flex-column gap-1 w-full">
+                      @for (slotKey of weaponSlots; track slotKey) {
+                        @if (e.equipment.weapons[slotKey]; as weapon) {
+                          <p-card
+                            class="w-full"
+                            [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
+                          >
+                            <div class="flex align-items-center gap-2">
+                              <i class="pi pi-shield text-primary"></i>
+                              <span class="text-sm">
+                                <strong>{{ slotKey | titlecase }}:</strong>
+                                {{ formatWeaponData(e, weapon) }}
+                              </span>
+                            </div>
+                          </p-card>
+                        }
+                      }
+                    </div>
+                  } @else {
+                    <!-- Monster Actions -->
+                    <div class="flex flex-column gap-1 w-full">
+                      <!-- Multiattacks -->
+                      @for (multi of e.monsterActions.multiattacks; track $index) {
+                        <p-card
+                          class="w-full"
+                          [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
+                        >
+                          <div class="flex align-items-center gap-2">
+                            <i class="pi pi-bolt text-primary"></i>
+                            <span class="text-sm">
+                              {{ formatMultiattack(e.name, multi, e.monsterActions.actions) }}
+                            </span>
+                          </div>
+                        </p-card>
+                      }
+
+                      <!-- Individual Actions -->
+                      @for (action of e.monsterActions.actions; track action.actionId) {
+                        <p-card
+                          class="w-full"
+                          [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
+                        >
+                          <div class="flex align-items-center gap-2">
+                            <i class="pi pi-shield text-primary"></i>
+                            <span class="text-sm">
+                              <strong>{{ action.name }}</strong>
+                              @if (e.monsterActions.rechargeActions[action.actionId]; as recharge) {
+                                Recharge: {{ recharge }}
+                              }
+                              {{ formatMonsterAction(action) }}
+                            </span>
+                          </div>
+                        </p-card>
+                      }
+                    </div>
                   }
                 </div>
-              } @else {
-                <!-- Monster Actions -->
-                <div class="flex flex-column gap-1 w-full">
-                  <!-- Multiattacks -->
-                  @for (multi of e.monsterActions.multiattacks; track $index) {
-                    <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
-                      <div class="flex align-items-center gap-2">
-                        <i class="pi pi-bolt text-primary"></i>
-                        <span class="text-sm">
-                          {{ formatMultiattack(e.name, multi, e.monsterActions.actions) }}
-                        </span>
-                      </div>
-                    </p-card>
-                  }
+              </p-accordion-content>
+            </p-accordion-panel>
 
-                  <!-- Individual Actions -->
-                  @for (action of e.monsterActions.actions; track action.actionId) {
-                    <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
-                      <div class="flex align-items-center gap-2">
-                        <i class="pi pi-crosshairs text-primary"></i>
-                        <span class="text-sm">
-                          <strong>{{ action.name }}</strong>
-                          @if (e.monsterActions.rechargeActions[action.actionId]; as recharge) {
-                            Recharge: {{ recharge }}
-                          }
-                          {{ formatMonsterAction(action) }}
-                        </span>
-                      </div>
-                    </p-card>
-                  }
-                </div>
-              }
-            </div>
-          </div>
+            <!-- Legendary Actions Panel -->
+            @if (!('class' in e) && e.monsterActions.legendaryActions.length > 0) {
+              <p-accordion-panel value="3">
+                <p-accordion-header>
+                  <div class="grid w-full align-items-center">
+                    <div class="col-4">
+                      <span class="text-sm font-bold uppercase text-600">{{
+                        legendaryActionsHeaderText().label
+                      }}</span>
+                    </div>
+                    <div class="col-8">
+                      <span class="text-xs text-700 font-medium">{{
+                        legendaryActionsHeaderText().list
+                      }}</span>
+                    </div>
+                  </div>
+                </p-accordion-header>
+                <p-accordion-content>
+                  <div class="col-12 p-1 border-1 border-round surface-border mt-2">
+                    <div class="flex flex-column gap-1">
+                      @for (action of e.monsterActions.legendaryActions; track action.actionId) {
+                        <p-card
+                          class="w-full"
+                          [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
+                        >
+                          <div class="flex align-items-center gap-2">
+                            <i class="pi pi-star text-primary"></i>
+                            <span class="text-sm">
+                              <strong>{{ action.name }}</strong>
+                              @if (action.die !== DiceType.D0) {
+                                {{ formatMonsterAction(action) }}
+                              } @else if (action.description) {
+                                . {{ action.description }}
+                              }
+                            </span>
+                          </div>
+                        </p-card>
+                      }
+                    </div>
+                  </div>
+                </p-accordion-content>
+              </p-accordion-panel>
+            }
+          </p-accordion>
+
         </p-accordion-content>
       </p-accordion-panel>
     </p-accordion>

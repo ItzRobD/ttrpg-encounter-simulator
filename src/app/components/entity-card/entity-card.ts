@@ -49,6 +49,7 @@ import { FormsModule } from '@angular/forms';
   styleUrl: './entity-card.css',
 })
 export class EntityCard {
+  protected readonly DiceType = DiceType;
   public readonly gradientStop = input<string>('50%');
   protected readonly entity = signal<Character | Monster | undefined>(undefined);
   protected readonly activeConditions = computed(() => {
@@ -107,17 +108,75 @@ export class EntityCard {
     return getSpecialAbilityNames(e.specialAbilities);
   });
 
-  protected readonly saActiveValue = signal<string | number | string[] | number[] | null | undefined>(undefined);
+  protected readonly actionNames = computed(() => {
+    const e = this.entity();
+    if (!e) return [];
+    if ('class' in e) {
+      return Object.entries(e.equipment.weapons)
+        .filter(([_, weapon]) => !!weapon)
+        .map(([_, weapon]) => weapon!.name);
+    } else {
+      const names = e.monsterActions.actions.map((a) => a.name);
+      if (e.monsterActions.multiattacks.length > 0) {
+        names.unshift('Multiattack');
+      }
+      return names;
+    }
+  });
+
+  protected readonly legendaryActionNames = computed(() => {
+    const e = this.entity();
+    if (!e || 'class' in e) return [];
+    return e.monsterActions.legendaryActions.map((a) => a.name);
+  });
+
+  protected readonly saActiveValue = signal<string | number | string[] | number[] | null | undefined>(
+    undefined,
+  );
+
+  private isPanelExpanded(panelValue: string | number): boolean {
+    const active = this.saActiveValue();
+    if (!active) return false;
+    if (Array.isArray(active)) {
+      return (active as (string | number)[]).includes(panelValue.toString()) ||
+             (active as (string | number)[]).includes(Number(panelValue));
+    }
+    return active.toString() === panelValue.toString();
+  }
 
   protected readonly saHeaderText = computed(() => {
-    const isExpanded = this.saActiveValue() === 0;
-    if (isExpanded) {
+    const names = this.specialAbilityNames();
+    const isExpanded = this.isPanelExpanded('2');
+
+    if (isExpanded || names.length === 0) {
       return { label: 'Special Abilities', list: '' };
     }
-    const names = this.specialAbilityNames();
-    if (names.length === 0) return { label: 'Special Abilities', list: '' };
-    return { label: 'Special Abilities:', list: ` ${names.join(', ')}` };
+    return { label: 'Special Abilities', list: ' ' + names.join(', ') };
   });
+
+  protected readonly actionsHeaderText = computed(() => {
+    const e = this.entity();
+    if (!e) return { label: '', list: '' };
+    const label = 'class' in e ? 'Equipment' : 'Actions';
+    const names = this.actionNames();
+    const isExpanded = this.isPanelExpanded('1');
+
+    if (isExpanded || names.length === 0) {
+      return { label, list: '' };
+    }
+    return { label, list: ' ' + names.join(', ') };
+  });
+
+  protected readonly legendaryActionsHeaderText = computed(() => {
+    const names = this.legendaryActionNames();
+    const isExpanded = this.isPanelExpanded('3');
+
+    if (isExpanded || names.length === 0) {
+      return { label: 'Legendary Actions', list: '' };
+    }
+    return { label: 'Legendary Actions', list: ' ' + names.join(', ') };
+  });
+
   constructor() {
     const dummyCharacter: Character = {
       id: 1,
@@ -299,7 +358,7 @@ export class EntityCard {
           blinded: false,
           charmed: false,
           deafened: false,
-          frightened: false,
+          frightened: true,
           grappled: false,
           incapacitated: false,
           invisible: false,
@@ -317,7 +376,7 @@ export class EntityCard {
           bludgeoning: ResistanceType.None,
           cold: ResistanceType.None,
           fire: ResistanceType.Immune,
-          force: ResistanceType.None,
+          force: ResistanceType.Resistant,
           lightning: ResistanceType.None,
           necrotic: ResistanceType.None,
           piercing: ResistanceType.None,
@@ -410,12 +469,51 @@ export class EntityCard {
             { actionId: 2, count: 2 },
           ],
         ],
-        legendaryActions: [],
+        legendaryActions: [
+          {
+            actionId: 4,
+            name: 'Detect',
+            numberOfDice: 0,
+            die: DiceType.D0,
+            amountToAdd: 0,
+            attackBonus: 0,
+            damageType: DamageType.Bludgeoning,
+            index: 0,
+            rechargeValue: 0,
+            hasDC: false,
+            description: 'The dragon makes a Wisdom (Perception) check.'
+          },
+          {
+            actionId: 5,
+            name: 'Tail Attack',
+            numberOfDice: 2,
+            die: DiceType.D8,
+            amountToAdd: 10,
+            attackBonus: 17,
+            damageType: DamageType.Bludgeoning,
+            index: 1,
+            rechargeValue: 0,
+            hasDC: false,
+          },
+          {
+            actionId: 6,
+            name: 'Wing Attack',
+            numberOfDice: 2,
+            die: DiceType.D6,
+            amountToAdd: 10,
+            attackBonus: 17,
+            damageType: DamageType.Bludgeoning,
+            index: 2,
+            rechargeValue: 0,
+            hasDC: false,
+            description: 'The dragon beats its wings. Each creature within 15 feet of the dragon must succeed on a DC 25 Dexterity saving throw or take 17 (2d6 + 10) bludgeoning damage and be knocked prone.'
+          }
+        ],
         rechargeActions: { 3: 5 },
       },
     };
-    this.entity.set(dummyMonster);
-    // this.entity.set(dummyCharacter);
+    // this.entity.set(dummyMonster);
+    this.entity.set(dummyCharacter);
   }
 
   protected readonly getModifier = getModifier;
