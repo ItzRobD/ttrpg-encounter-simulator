@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { Mapper } from './mapper';
+import { MapperService } from './mapper.service';
 import { TimelineNode } from '../models/simulation.model';
 
-describe('Mapper', () => {
-  let service: Mapper;
+describe('MapperService', () => {
+  let service: MapperService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(Mapper);
+    service = TestBed.inject(MapperService);
   });
 
   it('should be created', () => {

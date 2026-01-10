@@ -4,7 +4,7 @@ import { SimulationEvent, TimelineNode } from '../models';
 @Injectable({
   providedIn: 'root',
 })
-export class Mapper {
+export class MapperService {
   /**
    * Transforms a raw gzipped JSON log into a hierarchical tree for the UI.
    */

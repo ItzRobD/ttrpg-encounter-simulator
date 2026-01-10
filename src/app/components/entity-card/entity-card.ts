@@ -144,6 +144,21 @@ export class EntityCard {
     return active.toString() === panelValue.toString();
   }
 
+  protected readonly statsHeaderText = computed(() => {
+    const e = this.entity();
+    if (!e) return { label: 'Statistics', list: '' };
+
+    const isExpanded = this.isPanelExpanded('0');
+    if (isExpanded) {
+      return { label: 'Statistics', list: '' };
+    }
+
+    const order = getAbilityScoreEntries(e.abilityScores);
+    const list = ' ' + order.map((entry) => `${entry.shortName.toUpperCase()} ${entry.value}`).join(', ');
+
+    return { label: 'Statistics', list };
+  });
+
   protected readonly saHeaderText = computed(() => {
     const names = this.specialAbilityNames();
     const isExpanded = this.isPanelExpanded('2');
