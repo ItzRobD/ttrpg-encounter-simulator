@@ -1,4 +1,46 @@
-import { AbilityScores, Action, DiceType, MultiattackOption } from '../../models';
+import {
+  AbilityScores,
+  Action,
+  DamageResistances,
+  DamageType,
+  DiceType, Entity,
+  MultiattackOption,
+  ResistanceType,
+  Weapon
+} from '../../models';
+
+/**
+ * Returns an array of AbilityScoreEntry objects for display purposes.
+ * @param scores
+ */
+export function getAbilityScoreEntries(scores: AbilityScores): AbilityScoreEntry[] {
+  const order: (keyof AbilityScores)[] = [
+    'strength',
+    'dexterity',
+    'constitution',
+    'intelligence',
+    'wisdom',
+    'charisma',
+  ];
+  return order.map((key) => ({
+    key,
+    shortName: getAbilityScoreShortName(key),
+    value: scores[key],
+    modifier: getModifier(scores[key]),
+  }));
+}
+
+/**
+ * Returns an array of damage types that match a specific resistance type.
+ */
+export function getDamageTypesByResistance(
+  resistances: DamageResistances,
+  type: ResistanceType,
+): DamageType[] {
+  return Object.entries(resistances)
+    .filter(([_, value]) => value === type)
+    .map(([key]) => key as DamageType);
+}
 
 /**
  * Formats a dice roll into a string (e.g., "1d8+3").
@@ -29,14 +71,36 @@ export function generateActionDescription(action: Action): string {
 /**
  * Formats a multiattack routine into a readable string.
  */
-export function formatMultiattack(options: MultiattackOption[], allActions: Action[]): string {
+export function formatMultiattack(entityName: string, options: MultiattackOption[], allActions: Action[]): string {
+  if (options.length === 0) return '';
+
   const parts = options.map((opt) => {
     const action = allActions.find((a) => a.actionId === opt.actionId);
     const actionName = action ? action.name : 'Unknown Action';
-    return `${actionName} (${opt.count})`;
+    return `${opt.count} times with ${actionName}`;
   });
 
-  return `Multiattack: The monster makes ${parts.join(', ')}.`;
+  let joinedParts = '';
+  if (parts.length === 1) {
+    joinedParts = parts[0];
+  } else if (parts.length === 2) {
+    joinedParts = parts.join(' and ');
+  } else {
+    joinedParts = parts.slice(0, -1).join(', ') + ', and ' + parts.slice(-1);
+  }
+
+  return `Multiattack: The ${entityName} attacks ${joinedParts}.`;
+}
+
+/**
+ * Formats a monster action's full stat line.
+ */
+export function formatMonsterAction(action: Action): string {
+  const toHit = action.attackBonus;
+  const diceStr = formatDice(action.numberOfDice, action.die, action.amountToAdd);
+  const avgDmg = Math.floor((action.numberOfDice * (action.die / 2 + 0.5)) + action.amountToAdd);
+
+  return `${formatModifier(toHit)} to hit. Damage: ${avgDmg} (${diceStr}) ${action.damageType} damage.`;
 }
 
 /**
@@ -123,19 +187,36 @@ export interface AbilityScoreEntry {
   modifier: number;
 }
 
-export function getAbilityScoreEntries(scores: AbilityScores): AbilityScoreEntry[] {
-  const order: (keyof AbilityScores)[] = [
-    'strength',
-    'dexterity',
-    'constitution',
-    'intelligence',
-    'wisdom',
-    'charisma',
-  ];
-  return order.map((key) => ({
-    key,
-    shortName: getAbilityScoreShortName(key),
-    value: scores[key],
-    modifier: getModifier(scores[key]),
-  }));
+/**
+ * Returns the relevant ability modifier for a weapon based on its properties.
+ */
+export function getWeaponAbilityModifier(e: Entity, weapon: Weapon): number {
+  const str = getModifier(e.abilityScores.strength);
+  const dex = getModifier(e.abilityScores.dexterity);
+
+  if (weapon.properties.isRanged || weapon.properties.isOnlyRanged) return dex;
+  if (weapon.properties.isFinesse) return Math.max(str, dex);
+  return str;
+}
+
+/**
+ * Formats a weapon's full stat line.
+ */
+export function formatWeaponData(e: Entity, weapon: Weapon): string {
+  const proficiency = getProficiencyBonus('level' in e ? (e as any).level : (e as any).cr || 1);
+  const abilityMod = getWeaponAbilityModifier(e, weapon);
+
+  // To Hit: Ability Mod + Proficiency (if proficient) + Weapon Magic Bonus
+  // Note: Assuming character is proficient with their equipped weapons for simplicity here
+  const toHit = abilityMod + proficiency + weapon.modifiers.attackBonus;
+
+  // Damage Dice String: e.g., "1d8+3"
+  // Note: In D&D, damage bonus usually includes the Ability Mod + Magic Bonus
+  const totalDmgBonus = abilityMod + weapon.modifiers.damageBonus;
+  const diceStr = formatDice(weapon.numberOfDice, weapon.die, totalDmgBonus);
+
+  // Average Damage: (DieAvg * Count) + Bonus
+  const avgDmg = Math.floor((weapon.numberOfDice * (weapon.die / 2 + 0.5)) + totalDmgBonus);
+
+  return `${weapon.name}. ${formatModifier(toHit)} to hit. Damage: ${avgDmg} (${diceStr}) ${weapon.damageType} damage.`;
 }

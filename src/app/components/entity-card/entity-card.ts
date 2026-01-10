@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import {
   Character,
@@ -10,16 +10,23 @@ import {
   ResistanceType,
   DiceType,
   AbilityScores,
+  WeaponSlot,
+  DamageType,
 } from '../../models';
 import { Tag } from 'primeng/tag';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
 import {
   formatModifier,
+  formatWeaponData,
+  formatMonsterAction,
+  formatMultiattack,
   getAbilityScoreEntries,
   getAbilityScoreShortName,
   getAbilityScoresOrder,
+  getDamageTypesByResistance,
   getModifier,
 } from '../../shared/utils/dnd-utils';
+import { KeyValuePipe, TitleCasePipe } from '@angular/common';
 import { ProgressBar } from 'primeng/progressbar';
 @Component({
   selector: 'app-entity-card',
@@ -32,11 +39,14 @@ import { ProgressBar } from 'primeng/progressbar';
     AccordionHeader,
     AccordionContent,
     ProgressBar,
+    TitleCasePipe,
+    KeyValuePipe,
   ],
   templateUrl: './entity-card.html',
   styleUrl: './entity-card.css',
 })
 export class EntityCard {
+  public readonly gradientStop = input<string>('50%');
   protected readonly entity = signal<Character | Monster | undefined>(undefined);
   protected readonly activeConditions = computed(() => {
     const e = this.entity();
@@ -63,6 +73,25 @@ export class EntityCard {
     if (percent > 20) return '#eab308'; // Yellow 500
     return '#ef4444'; // Red 500
   });
+
+  protected readonly immunities = computed(() => {
+    const e = this.entity();
+    if (!e) return [];
+    return getDamageTypesByResistance(e.state.resistances, ResistanceType.Immune);
+  });
+
+  protected readonly resistances = computed(() => {
+    const e = this.entity();
+    if (!e) return [];
+    return getDamageTypesByResistance(e.state.resistances, ResistanceType.Resistant);
+  });
+
+  protected readonly vulnerabilities = computed(() => {
+    const e = this.entity();
+    if (!e) return [];
+    return getDamageTypesByResistance(e.state.resistances, ResistanceType.Vulnerable);
+  });
+
   protected expanded = false;
   constructor() {
     const dummyCharacter: Character = {
@@ -109,25 +138,104 @@ export class EntityCard {
           stunned: false,
           unconscious: false,
         },
-        deathSaves: { successes: 0, failures: 0 },
+        deathSaves: { successes: 2, failures: 1 },
         resistances: {
-          acid: ResistanceType.None,
-          bludgeoning: ResistanceType.None,
+          acid: ResistanceType.Immune,
+          bludgeoning: ResistanceType.Resistant,
           cold: ResistanceType.None,
-          fire: ResistanceType.Resistant,
+          fire: ResistanceType.Vulnerable,
           force: ResistanceType.None,
           lightning: ResistanceType.None,
           necrotic: ResistanceType.None,
-          piercing: ResistanceType.None,
+          piercing: ResistanceType.Resistant,
           poison: ResistanceType.None,
           psychic: ResistanceType.None,
           radiant: ResistanceType.None,
-          slashing: ResistanceType.None,
+          slashing: ResistanceType.Resistant,
           thunder: ResistanceType.None,
         },
         isStable: true,
         isDead: false,
         initiative: 14,
+      },
+      equipment: {
+        armor: { id: 1, name: 'Plate', ac: 18, minimumStrength: 15 },
+        shield: { id: 2, name: 'Shield', ac: 2, minimumStrength: 0 },
+        hasShieldEquipped: true,
+        weapons: {
+          [WeaponSlot.Primary]: {
+            name: 'Longsword',
+            numberOfDice: 1,
+            die: DiceType.D8,
+            damageType: DamageType.Slashing,
+            properties: {
+              isVersatile: true,
+              isFinesse: false,
+              isRanged: false,
+              isHeavy: false,
+              isTwoHanded: false,
+              isLight: false,
+              isThrown: false,
+              isOnlyRanged: false,
+            },
+            modifiers: {
+              isMagic: true,
+              isSilvered: false,
+              isAdamantine: false,
+              isColdForgedIron: false,
+              attackBonus: 1,
+              damageBonus: 1,
+            },
+          },
+          [WeaponSlot.Secondary]: {
+            name: 'Shortsword',
+            numberOfDice: 1,
+            die: DiceType.D6,
+            damageType: DamageType.Piercing,
+            properties: {
+              isVersatile: false,
+              isFinesse: true,
+              isRanged: false,
+              isHeavy: false,
+              isTwoHanded: false,
+              isLight: true,
+              isThrown: false,
+              isOnlyRanged: false,
+            },
+            modifiers: {
+              isMagic: false,
+              isSilvered: false,
+              isAdamantine: false,
+              isColdForgedIron: false,
+              attackBonus: 0,
+              damageBonus: 0,
+            },
+          },
+          [WeaponSlot.Ranged]: {
+            name: 'Longbow',
+            numberOfDice: 1,
+            die: DiceType.D8,
+            damageType: DamageType.Piercing,
+            properties: {
+              isVersatile: false,
+              isFinesse: false,
+              isRanged: true,
+              isHeavy: true,
+              isTwoHanded: true,
+              isLight: false,
+              isThrown: false,
+              isOnlyRanged: true,
+            },
+            modifiers: {
+              isMagic: false,
+              isSilvered: false,
+              isAdamantine: false,
+              isColdForgedIron: false,
+              attackBonus: 0,
+              damageBonus: 0,
+            },
+          },
+        },
       },
     };
     const dummyMonster: Monster = {
@@ -194,7 +302,7 @@ export class EntityCard {
           slashing: ResistanceType.None,
           thunder: ResistanceType.None,
         },
-        isStable: true,
+        isStable: false,
         isDead: false,
         initiative: 10,
       },
@@ -230,10 +338,59 @@ export class EntityCard {
         sneakAttackNumDice: 0,
         undeadFortitude: false,
       },
-      monsterActions: { actions: [], multiattacks: [], legendaryActions: [], rechargeActions: {} },
+      monsterActions: {
+        actions: [
+          {
+            actionId: 1,
+            name: 'Bite',
+            numberOfDice: 2,
+            die: DiceType.D10,
+            amountToAdd: 10,
+            attackBonus: 17,
+            damageType: DamageType.Piercing,
+            index: 0,
+            rechargeValue: 0,
+            hasDC: false,
+          },
+          {
+            actionId: 2,
+            name: 'Claw',
+            numberOfDice: 2,
+            die: DiceType.D6,
+            amountToAdd: 10,
+            attackBonus: 17,
+            damageType: DamageType.Slashing,
+            index: 1,
+            rechargeValue: 0,
+            hasDC: false,
+          },
+          {
+            actionId: 3,
+            name: 'Fire Breath',
+            numberOfDice: 26,
+            die: DiceType.D6,
+            amountToAdd: 0,
+            attackBonus: 0,
+            damageType: DamageType.Fire,
+            index: 2,
+            rechargeValue: 5,
+            hasDC: true,
+            dc: 24,
+            dcAbility: 'Constitution',
+          },
+        ],
+        multiattacks: [
+          [
+            { actionId: 1, count: 1 },
+            { actionId: 2, count: 2 },
+          ],
+        ],
+        legendaryActions: [],
+        rechargeActions: { 3: 5 },
+      },
     };
-    // this.entity.set(dummyMonster);
-    this.entity.set(dummyCharacter);
+    this.entity.set(dummyMonster);
+    // this.entity.set(dummyCharacter);
   }
 
   protected readonly getModifier = getModifier;
@@ -241,4 +398,14 @@ export class EntityCard {
   protected readonly getAbilityScoreShortName = getAbilityScoreShortName;
   protected readonly getAbilityScoreEntries = getAbilityScoreEntries;
   protected readonly formatModifier = formatModifier;
+  protected readonly getDamageTypesByResistance = getDamageTypesByResistance;
+  protected readonly ResistanceType = ResistanceType;
+  protected readonly formatWeaponData = formatWeaponData;
+  protected readonly formatMonsterAction = formatMonsterAction;
+  protected readonly formatMultiattack = formatMultiattack;
+  protected readonly weaponSlots: WeaponSlot[] = [
+    WeaponSlot.Primary,
+    WeaponSlot.Secondary,
+    WeaponSlot.Ranged,
+  ];
 }

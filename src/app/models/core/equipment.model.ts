@@ -2,9 +2,9 @@ import { DamageType } from './combat.model';
 import { DiceType } from './stats.model';
 
 export enum WeaponSlot {
-  MainHand = "main_hand",
-  OffHand = "off_hand",
-  Ranged = "ranged"
+  Primary = "Primary",
+  Secondary = "Secondary",
+  Ranged = "Ranged"
 }
 
 export interface WeaponProperties {
