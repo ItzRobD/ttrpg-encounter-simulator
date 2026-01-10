@@ -119,6 +119,13 @@ export class CombatantService {
   }
 
   /**
+   * Sorts the combatants by initiative (descending).
+   */
+  sortByInitiative(): void {
+    this._combatants.update(list => [...list].sort((a, b) => b.state.initiative - a.state.initiative));
+  }
+
+  /**
    * Seeds the encounter with dummy data for testing.
    */
   seedDummyData(): void {

@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { EntityCard } from '../../components/entity-card/entity-card';
 import { CombatantService } from '../../services/combatant.service';
+import { SimulationService } from '../../services/simulation.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -24,6 +25,7 @@ import { environment } from '../../../environments/environment';
 })
 export class SimulatorShell {
   public readonly combatantService = inject(CombatantService);
+  public readonly simulationService = inject(SimulationService);
   private readonly breakpointObserver = inject(BreakpointObserver);
   protected readonly layout = environment.layout;
 

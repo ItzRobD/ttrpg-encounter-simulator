@@ -138,9 +138,30 @@
       <div class="p-2 md:p-4 border-1 surface-border border-round h-full min-h-20rem">
         <div class="flex justify-content-between align-items-center mb-4">
           <h3 class="text-xl font-semibold m-0">Simulation Results</h3>
-          <p-button label="Run Simulation" icon="pi pi-play" severity="success"></p-button>
+          <p-button
+            label="Run Simulation"
+            icon="pi pi-play"
+            severity="success"
+            [loading]="simulationService.loading()"
+            [disabled]="combatantService.count() === 0"
+            (onClick)="simulationService.runSimulation()"
+          ></p-button>
         </div>
-        <p class="text-600">Run a simulation to see the timeline here.</p>
+
+        @if (simulationService.simulationResult(); as result) {
+          <div class="flex flex-column gap-3">
+            <div class="surface-ground p-3 border-round">
+              <span class="font-bold">Total Events:</span> {{ result.events.length }}
+            </div>
+            <p class="text-600">Timeline visualization coming soon...</p>
+          </div>
+        } @else {
+          <p class="text-600">
+            {{ combatantService.count() === 0
+               ? 'Add combatants to start a simulation.'
+               : 'Click "Run Simulation" to see the timeline here.' }}
+          </p>
+        }
       </div>
     </div>
   </div>

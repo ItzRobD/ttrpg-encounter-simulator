@@ -69,3 +69,8 @@ export interface TimelineNode {
   children?: TimelineNode[];
   expanded?: boolean;
 }
+
+export interface SimulationLog {
+  events: SimulationEvent[];
+  count: number;
+}
