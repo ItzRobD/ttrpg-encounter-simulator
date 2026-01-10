@@ -95,7 +95,7 @@
                       @for (entry of getAbilityScoreEntries(e.abilityScores); track entry.key) {
                         <div class="col-4 sm:col-2 p-1">
                           <div
-                            class="flex flex-column align-items-center border-1 border-round surface-border p-1"
+                            class="flex flex-column align-items-center border-1 border-round surface-border p-1 h-full"
                           >
                             <div class="flex align-items-center gap-1">
                               <span class="text-xs font-bold uppercase text-600">{{
@@ -115,11 +115,11 @@
                                 style="font-size: 0.5rem"
                               ></i>
                             </div>
-                            <div class="flex align-items-center gap-1">
-                              <span class="text-xl font-semibold leading-none">{{
+                            <div class="flex flex-column align-items-center gap-0">
+                              <span class="text-lg font-semibold leading-tight">{{
                                 entry.value
                               }}</span>
-                              <span class="text-xs text-500 leading-none"
+                              <span class="text-xs text-500 leading-tight"
                                 >({{ formatModifier(entry.modifier) }})</span
                               >
                             </div>

@@ -13,23 +13,45 @@
   </p>
 
   <div class="mt-4 md:mt-6 grid">
-    <div class="col-12 xl:col-6">
+    <div class="col-12 xl:col-8">
       <div class="p-2 md:p-4 border-1 surface-border border-round">
-        <h3 class="text-xl font-semibold mb-2">Active Combatants ({{ combatantService.count() }})</h3>
+        <h3 class="text-xl font-semibold mb-4">Active Combatants ({{ combatantService.count() }})</h3>
+
         <div class="grid">
-          @for (e of combatantService.combatants(); track e.instanceId) {
-            <div class="col-12 sm:col-10 md:col-8 lg:col-12 xl:col-12 mb-3">
-              <app-entity-card [entity]="e"></app-entity-card>
+          <!-- Characters Column -->
+          <div class="col-12 lg:col-6">
+            <div class="flex align-items-center gap-2 mb-3">
+              <i class="pi pi-users text-primary text-xl"></i>
+              <h4 class="text-lg font-medium m-0">Characters ({{ combatantService.characters().length }})</h4>
             </div>
-          } @empty {
-            <div class="col-12">
-              <p class="text-600 italic">No combatants added yet. Use the buttons above to get started.</p>
+            <div class="flex flex-column gap-3">
+              @for (e of combatantService.characters(); track e.instanceId) {
+                <app-entity-card [entity]="e"></app-entity-card>
+              } @empty {
+                <p class="text-600 italic p-3 border-1 surface-border border-round border-dashed">No characters added.</p>
+              }
             </div>
-          }
+          </div>
+
+          <!-- Monsters Column -->
+          <div class="col-12 lg:col-6">
+            <div class="flex align-items-center gap-2 mb-3">
+              <i class="pi pi-skull text-red-500 text-xl"></i>
+              <h4 class="text-lg font-medium m-0">Monsters ({{ combatantService.monsters().length }})</h4>
+            </div>
+            <div class="flex flex-column gap-3">
+              @for (e of combatantService.monsters(); track e.instanceId) {
+                <app-entity-card [entity]="e"></app-entity-card>
+              } @empty {
+                <p class="text-600 italic p-3 border-1 surface-border border-round border-dashed">No monsters added.</p>
+              }
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-12 xl:col-6">
+
+    <div class="col-12 xl:col-4">
       <div class="p-2 md:p-4 border-1 surface-border border-round h-full">
         <h3 class="text-xl font-semibold mb-2">Simulation Results</h3>
         <p class="text-600">Run a simulation to see the timeline here.</p>
