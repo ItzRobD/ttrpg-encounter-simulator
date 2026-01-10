@@ -220,3 +220,136 @@ export function formatWeaponData(e: Entity, weapon: Weapon): string {
 
   return `${weapon.name}. ${formatModifier(toHit)} to hit. Damage: ${avgDmg} (${diceStr}) ${weapon.damageType} damage.`;
 }
+
+/**
+ * Returns an array of Title Case names of active special abilities.
+ */
+export function getSpecialAbilityNames(abilities: any): string[] {
+  const names: string[] = [];
+  if (!abilities) return names;
+
+  const entries = Object.entries(abilities);
+  for (const [key, value] of entries) {
+    if (value === false || value === 0 || value === 'D0' || value === DiceType.D0) continue;
+
+    // These are the specific keys that have numeric/complex values
+    const complexKeys = [
+      'legendaryResistanceCount',
+      'divineEminenceNumDice',
+      'martialAdvantageNumDice',
+      'sneakAttackNumDice',
+      'regenerationValue',
+      'relentlessThreshold',
+      'berserkThreshold',
+      'limitedMagicImmunityLevel',
+      'deathBurstNumDice',
+      'deathThroesNumDice',
+      'fireAuraNumDice',
+      'heatedBodyNumDice',
+      'corrosiveFormNumDice',
+      'consumeLifeDie'
+    ];
+
+    if (complexKeys.includes(key)) {
+      // Map back to a readable name
+      let name = '';
+      switch (key) {
+        case 'legendaryResistanceCount': name = 'Legendary Resistance'; break;
+        case 'divineEminenceNumDice': name = 'Divine Eminence'; break;
+        case 'martialAdvantageNumDice': name = 'Martial Advantage'; break;
+        case 'sneakAttackNumDice': name = 'Sneak Attack'; break;
+        case 'regenerationValue': name = 'Regeneration'; break;
+        case 'relentlessThreshold': name = 'Relentless'; break;
+        case 'berserkThreshold': name = 'Berserk'; break;
+        case 'limitedMagicImmunityLevel': name = 'Limited Magic Immunity'; break;
+        case 'deathBurstNumDice': name = 'Death Burst'; break;
+        case 'deathThroesNumDice': name = 'Death Throes'; break;
+        case 'fireAuraNumDice': name = 'Fire Aura'; break;
+        case 'heatedBodyNumDice': name = 'Heated Body'; break;
+        case 'corrosiveFormNumDice': name = 'Corrosive Form'; break;
+        case 'consumeLifeDie': name = 'Consume Life'; break;
+      }
+      if (name) names.push(name);
+    } else if (value === true) {
+      names.push(formatCamelCase(key));
+    }
+  }
+  return names;
+}
+
+/**
+ * Formats monster special abilities into an array of readable strings.
+ */
+export function getFormattedSpecialAbilities(abilities: any): string[] {
+  const formatted: string[] = [];
+
+  if (!abilities) return formatted;
+
+  const entries = Object.entries(abilities);
+
+  for (const [key, value] of entries) {
+    // Skip if value is false, 0, or D0
+    if (value === false || value === 0 || value === 'D0' || value === DiceType.D0) continue;
+
+    switch (key) {
+      case 'legendaryResistanceCount':
+        formatted.push(`Legendary Resistance: ${value} Uses`);
+        break;
+      case 'divineEminenceNumDice':
+        formatted.push(`Divine Eminence: ${value}d6`);
+        break;
+      case 'martialAdvantageNumDice':
+        formatted.push(`Martial Advantage: ${value}d6`);
+        break;
+      case 'sneakAttackNumDice':
+        formatted.push(`Sneak Attack: ${value}d6`);
+        break;
+      case 'regenerationValue':
+        formatted.push(`Regeneration: ${value} HP`);
+        break;
+      case 'relentlessThreshold':
+        formatted.push(`Relentless: <=${value} HP`);
+        break;
+      case 'berserkThreshold':
+        formatted.push(`Berserk: ${value} HP`);
+        break;
+      case 'limitedMagicImmunityLevel':
+        formatted.push(`Limited Magic Immunity: Level ${value} or lower`);
+        break;
+      case 'deathBurstNumDice':
+        formatted.push(`Death Burst (DC ${abilities.deathBurstDC}): ${value}d8 ${abilities.deathBurstDamageType || ''}`);
+        break;
+      case 'deathThroesNumDice':
+        formatted.push(`Death Throes (DC ${abilities.deathThroesDC}): ${value}d6`);
+        break;
+      case 'fireAuraNumDice':
+        formatted.push(`Fire Aura: ${value}d6`);
+        break;
+      case 'heatedBodyNumDice':
+        formatted.push(`Heated Body: ${value}d10`);
+        break;
+      case 'corrosiveFormNumDice':
+        formatted.push(`Corrosive Form: ${value}d8`);
+        break;
+      case 'consumeLifeDie':
+        formatted.push(`Consume Life: 3d${value}`);
+        break;
+      default:
+        // Handle boolean traits
+        if (value === true) {
+          formatted.push(formatCamelCase(key));
+        }
+        break;
+    }
+  }
+
+  return formatted;
+}
+
+/**
+ * Formats a camelCase string to Title Case (e.g., "magicResistance" -> "Magic Resistance").
+ */
+function formatCamelCase(str: string): string {
+  const result = str.replace(/([A-Z])/g, ' $1');
+  return result.charAt(0).toUpperCase() + result.slice(1);
+}

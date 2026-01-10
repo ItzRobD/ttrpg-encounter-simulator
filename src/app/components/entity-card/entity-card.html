@@ -203,7 +203,39 @@
             </div>
           </div>
 
-          <div class="flex flex-column align-items-center gap-2">
+          @if (specialAbilities().length > 0) {
+            <p-accordion
+              class="w-full"
+              [dt]="{ headerPadding: '0.5rem 1rem', contentPadding: '0.5rem 1rem' }"
+              [value]="saActiveValue()"
+              (valueChange)="saActiveValue.set($event)"
+            >
+              <p-accordion-panel [value]="0">
+                <p-accordion-header>
+                  <div class="text-xs font-bold text-600">
+                    <span class="uppercase">{{ saHeaderText().label }}</span>
+                    <span class="font-medium">{{ saHeaderText().list }}</span>
+                  </div>
+                </p-accordion-header>
+                <p-accordion-content>
+                  <div class="grid mt-1">
+                    @for (ability of specialAbilities(); track ability) {
+                      <div class="col-6 p-1">
+                        <div
+                          class="flex align-items-center gap-2 p-2 border-1 border-round surface-border bg-surface-50 h-full"
+                        >
+                          <i class="pi pi-sparkles text-primary" style="font-size: 0.75rem"></i>
+                          <span class="text-xs font-medium">{{ ability }}</span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </p-accordion-content>
+              </p-accordion-panel>
+            </p-accordion>
+          }
+
+          <div class="flex flex-column align-items-center gap-2 mt-2">
             <span class="text-lg font-bold">{{ 'class' in e ? 'Equipment' : 'Attacks' }}</span>
             <div class="col-12 p-1 border-1 border-round surface-border">
               @if ('class' in e) {

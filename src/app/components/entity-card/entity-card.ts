@@ -1,5 +1,6 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { CardModule } from 'primeng/card';
+import { ButtonModule } from 'primeng/button';
 import {
   Character,
   Class,
@@ -25,9 +26,11 @@ import {
   getAbilityScoresOrder,
   getDamageTypesByResistance,
   getModifier,
+  getFormattedSpecialAbilities,
+  getSpecialAbilityNames,
 } from '../../shared/utils/dnd-utils';
-import { KeyValuePipe, TitleCasePipe } from '@angular/common';
-import { ProgressBar } from 'primeng/progressbar';
+import { TitleCasePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 @Component({
   selector: 'app-entity-card',
   standalone: true,
@@ -38,9 +41,9 @@ import { ProgressBar } from 'primeng/progressbar';
     AccordionPanel,
     AccordionHeader,
     AccordionContent,
-    ProgressBar,
     TitleCasePipe,
-    KeyValuePipe,
+    ButtonModule,
+    FormsModule,
   ],
   templateUrl: './entity-card.html',
   styleUrl: './entity-card.css',
@@ -92,7 +95,29 @@ export class EntityCard {
     return getDamageTypesByResistance(e.state.resistances, ResistanceType.Vulnerable);
   });
 
-  protected expanded = false;
+  protected readonly specialAbilities = computed(() => {
+    const e = this.entity();
+    if (!e || !('specialAbilities' in e)) return [];
+    return getFormattedSpecialAbilities(e.specialAbilities);
+  });
+
+  protected readonly specialAbilityNames = computed(() => {
+    const e = this.entity();
+    if (!e || !('specialAbilities' in e)) return [];
+    return getSpecialAbilityNames(e.specialAbilities);
+  });
+
+  protected readonly saActiveValue = signal<string | number | string[] | number[] | null | undefined>(undefined);
+
+  protected readonly saHeaderText = computed(() => {
+    const isExpanded = this.saActiveValue() === 0;
+    if (isExpanded) {
+      return { label: 'Special Abilities', list: '' };
+    }
+    const names = this.specialAbilityNames();
+    if (names.length === 0) return { label: 'Special Abilities', list: '' };
+    return { label: 'Special Abilities:', list: ` ${names.join(', ')}` };
+  });
   constructor() {
     const dummyCharacter: Character = {
       id: 1,
@@ -309,12 +334,12 @@ export class EntityCard {
       specialAbilities: {
         assassinate: false,
         berserkThreshold: 0,
-        bloodFrenzy: false,
+        bloodFrenzy: true,
         consumeLifeDie: DiceType.D0,
         corrosiveFormNumDice: 0,
-        deathBurstNumDice: 0,
-        deathBurstDamageType: 'fire' as any,
-        deathBurstDC: 0,
+        deathBurstNumDice: 3,
+        deathBurstDamageType: DamageType.Fire,
+        deathBurstDC: 12,
         deathThroesNumDice: 0,
         deathThroesDC: 0,
         divineEminenceNumDice: 0,
@@ -327,13 +352,13 @@ export class EntityCard {
         legendaryResistanceCount: 3,
         lightningAbsorption: false,
         limitedMagicImmunityLevel: 0,
-        magicResistance: false,
+        magicResistance: true,
         magicWeapons: true,
         martialAdvantageNumDice: 0,
-        packTactics: false,
+        packTactics: true,
         reckless: false,
         reflectiveCarapace: false,
-        regenerationValue: 0,
+        regenerationValue: 20,
         relentlessThreshold: 0,
         sneakAttackNumDice: 0,
         undeadFortitude: false,
@@ -389,8 +414,8 @@ export class EntityCard {
         rechargeActions: { 3: 5 },
       },
     };
-    // this.entity.set(dummyMonster);
-    this.entity.set(dummyCharacter);
+    this.entity.set(dummyMonster);
+    // this.entity.set(dummyCharacter);
   }
 
   protected readonly getModifier = getModifier;
