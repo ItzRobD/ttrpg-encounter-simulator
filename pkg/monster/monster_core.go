@@ -12,6 +12,8 @@ func (m *Monster) ProcessTurn(actorID int, turnType core.TurnType) (*core.TurnRe
 		return m.processLegendaryTurn(actorID)
 	}
 
+	m.LogEvent(events.ETTurnStartEvent, nil)
+
 	result := &core.TurnResult{
 		TurnStatuses: make(map[core.TurnStatus]bool),
 	}

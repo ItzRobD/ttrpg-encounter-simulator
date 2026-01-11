@@ -99,9 +99,9 @@ func setupBaseEvent(ctx *core.EventContext, actor core.Entity, event CombatEvent
 	event.SetTimestamp(time.Now())
 	event.SetContext(ctx)
 	if ctx != nil {
-		// If it's an action choice, we want to use the parent ID (the Action ID) as the ID of this event
+		// If it's a turn start event, we want to use the parent ID (the Action ID container) as the ID of this event
 		// so that child events correctly link to it.
-		if event.GetEventType() == ETActionChoiceEvent {
+		if event.GetEventType() == ETTurnStartEvent {
 			event.SetID(ctx.GetParentID())
 		} else {
 			ctx.GenerateCurrentID()
@@ -521,6 +521,14 @@ func LogVictoryEvent(ctx *core.EventContext, winningSide WinningSide, rounds int
 }
 
 func LogEquipmentEvent(ctx *core.EventContext, actor core.Entity, event *EquipmentEvent, listener func(event interface{})) {
+	setupBaseEvent(ctx, actor, event)
+	if listener != nil {
+		listener(event)
+	}
+}
+
+func LogTurnStartEvent(ctx *core.EventContext, actor core.Entity, listener func(event interface{})) {
+	event := &TurnStartEvent{}
 	setupBaseEvent(ctx, actor, event)
 	if listener != nil {
 		listener(event)

@@ -32,6 +32,7 @@ const (
 	ETConditionEvent              EventType = "condition"
 	ETVictoryEvent                EventType = "victory"
 	ETEquipmentEvent              EventType = "equipment"
+	ETTurnStartEvent              EventType = "turnstart"
 )
 
 type CombatEvent interface {
@@ -442,6 +443,12 @@ type VictoryEvent struct {
 }
 
 func (e *VictoryEvent) GetEventType() EventType { return ETVictoryEvent }
+
+type TurnStartEvent struct {
+	BaseEvent
+}
+
+func (e *TurnStartEvent) GetEventType() EventType { return ETTurnStartEvent }
 
 type CombatLogger interface {
 	LogEvent(event CombatEvent)

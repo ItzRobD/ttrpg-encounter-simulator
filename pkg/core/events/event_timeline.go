@@ -24,9 +24,14 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 	}
 
 	switch e := event.(type) {
+	case *TurnStartEvent:
+		te.Type = TimelineTurnStartType
+		te.ParentID = te.SequenceID
+		te.Data = TimelineTurnStart{
+			Actor: mapTimelineEntity(e.GetActor()),
+		}
 	case *ActionChoiceEvent: // parent id is the sequence id, the target choice parent id is the action id, therefore parent id
 		te.Type = TimelineChoiceType
-		te.ParentID = te.SequenceID // override parent id to be the sequence id, this is the start of action logic
 		choiceStr := e.ActionChoice.String()
 		te.Data = TimelineChoice{
 			Actor:      mapTimelineEntity(e.GetActor()),

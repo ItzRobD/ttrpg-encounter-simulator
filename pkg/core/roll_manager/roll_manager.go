@@ -545,6 +545,9 @@ func (rm *RollManager) RollDeathSavingThrow() (*RollResult, error) {
 		return nil, fmt.Errorf("failed to roll death saving throw: %w", err)
 	}
 
+	// Log the death saving throw
+	rm.parent.LogEvent(events.ETRollEvent, res)
+
 	return res, nil
 }
 

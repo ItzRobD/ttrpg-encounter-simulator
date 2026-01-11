@@ -98,6 +98,8 @@ func (m *Monster) LogEvent(eventType interface{}, data interface{}) {
 			if d, ok := data.(*events.EquipmentEvent); ok {
 				events.LogEquipmentEvent(ctx, m, d, listener)
 			}
+		case events.ETTurnStartEvent:
+			events.LogTurnStartEvent(ctx, m, listener)
 		}
 	}
 }

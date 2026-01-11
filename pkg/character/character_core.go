@@ -16,6 +16,8 @@ func (c *Character) ProcessTurn(actorID int, turnType core.TurnType) (*core.Turn
 		return nil, nil, fmt.Errorf("invalid turn type for character: %s", turnType)
 	}
 
+	c.LogEvent(events.ETTurnStartEvent, nil)
+
 	result := &core.TurnResult{
 		TurnStatuses: make(map[core.TurnStatus]bool),
 	}

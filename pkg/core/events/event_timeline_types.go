@@ -21,6 +21,7 @@ const (
 	TimelineConditionType      TimelineType = "condition"
 	TimelineVictoryType        TimelineType = "victory"
 	TimelineEquipmentType      TimelineType = "equipment"
+	TimelineTurnStartType      TimelineType = "turnstart"
 )
 
 type TimelineEntity struct {
@@ -117,4 +118,8 @@ type TimelineScores struct {
 type TimelineVictory struct {
 	Winner WinningSide
 	Rounds int
+}
+
+type TimelineTurnStart struct {
+	Actor TimelineEntity
 }

@@ -64,7 +64,7 @@ func setupBob() character.CharacterConfig {
 			Proficiencies: core.AbilityScoresProficiencies{},
 		},
 		HPMethod: core.HPSetValue,
-		HPValue:  150,
+		HPValue:  10, // Low HP to trigger unconsciousness quickly
 		Seed: core.Seed{
 			Seed1: 0,
 			Seed2: 0,

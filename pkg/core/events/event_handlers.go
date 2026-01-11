@@ -47,18 +47,28 @@ func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 		h.handleSavingThrow(e)
 	case *SpecialAbilityEvent:
 		h.handleSpecialAbility(e)
+	case *ConditionEvent:
+		h.handleCondition(e)
 	case *CombatEventMessage:
 		h.handleCombatMessage(e)
 	case *VictoryEvent:
 		h.handleVictory(e)
-	case *EquipmentEvent:
-		// We don't need a specific text output for equipment event in the console log
+	case *EquipmentEvent, *TurnStartEvent:
+		// We don't need a specific text output for equipment or turn start events in the console log
 		// but we can add one if needed. For now, just avoid the "Unknown event type" warning.
 		break
 	default:
 		fmt.Printf("Unknown event type: %T\n", e)
 	}
 
+}
+
+func (h *UniversalEventHandler) handleCondition(e *ConditionEvent) {
+	note := "Added"
+	if !e.IsAdded {
+		note = "Removed"
+	}
+	fmt.Printf("[Round %d] <Condition> %s: %s %s\n", e.GetRound(), e.GetActorName(), e.Condition, note)
 }
 
 func (h *UniversalEventHandler) handleMeleeAttack(e *MartialAttackEvent) {

@@ -99,6 +99,8 @@ func (l *Lair) LogEvent(eventType interface{}, data interface{}) {
 			if d, ok := data.(*events.EquipmentEvent); ok {
 				events.LogEquipmentEvent(ctx, l, d, listener)
 			}
+		case events.ETTurnStartEvent:
+			events.LogTurnStartEvent(ctx, l, listener)
 		}
 	}
 }
