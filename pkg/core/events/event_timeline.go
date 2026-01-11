@@ -18,6 +18,7 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 		ID:         event.GetID(),
 		SequenceID: seqID,
 		ParentID:   parentID,
+		Round:      event.GetRound(),
 		Type:       "",
 		Data:       nil,
 	}
@@ -90,13 +91,15 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 	case *HPModifiedEvent:
 		te.Type = TimelineHPModifiedType
 		te.Data = TimelineEffect{
-			Actor:        mapTimelineEntity(e.GetActor()),
-			Target:       TimelineEntity{Name: e.SubjectName},
-			Type:         core.EffectDamage,
-			Value:        e.ModificationValue,
-			OriginalHP:   e.OriginalHP,
-			FinalHP:      e.NewHP,
-			SourceRollID: e.SourceRollID,
+			Actor:          mapTimelineEntity(e.GetActor()),
+			Target:         TimelineEntity{Name: e.SubjectName},
+			Type:           core.EffectDamage,
+			Value:          e.ModificationValue,
+			OriginalHP:     e.OriginalHP,
+			FinalHP:        e.NewHP,
+			OriginalTempHP: e.OriginalTempHP,
+			FinalTempHP:    e.NewTempHP,
+			SourceRollID:   e.SourceRollID,
 		}
 	case *DamageModifiedEvent:
 		te.Type = TimelineDamageModifiedType
@@ -130,6 +133,19 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 			Target: mapTimelineEntity(e.GetActor()),
 			Type:   core.EffectCondition,
 			Note:   "Unconscious",
+		}
+	case *ConditionEvent:
+		te.Type = TimelineConditionType
+		note := "Added"
+		if !e.IsAdded {
+			note = "Removed"
+		}
+		te.Data = TimelineEffect{
+			Actor:     mapTimelineEntity(e.GetActor()),
+			Target:    mapTimelineEntity(e.GetActor()),
+			Type:      core.EffectCondition,
+			Condition: &e.Condition,
+			Note:      note,
 		}
 	}
 

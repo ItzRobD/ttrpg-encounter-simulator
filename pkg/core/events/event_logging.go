@@ -437,3 +437,15 @@ func LogUnconsciousEvent(ctx *core.EventContext, actor core.Entity, listener fun
 		listener(event)
 	}
 }
+
+func LogConditionEvent(ctx *core.EventContext, actor core.Entity, condition core.Condition, isAdded bool, listener func(event interface{})) {
+	event := &ConditionEvent{
+		Condition: condition,
+		IsAdded:   isAdded,
+	}
+	setupBaseEvent(ctx, actor, event)
+
+	if listener != nil {
+		listener(event)
+	}
+}

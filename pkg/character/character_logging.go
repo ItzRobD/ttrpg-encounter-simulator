@@ -57,6 +57,9 @@ func (c *Character) LogEvent(eventType interface{}, data interface{}) {
 		case events.ETSpellChoiceEvent:
 			if d, ok := data.(*events.SpellChoiceData); ok {
 				events.LogSpellChoiceEvent(ctx, c, d.Choice, d.Status, listener)
+				if ctx != nil {
+					ctx.AdvanceScope()
+				}
 			}
 		case events.ETHPModifiedEvent:
 			if d, ok := data.(*events.HPModifiedData); ok {
@@ -81,6 +84,9 @@ func (c *Character) LogEvent(eventType interface{}, data interface{}) {
 		case events.ETDragonbornBreathWeaponEvent:
 			if d, ok := data.(*events.DragonbornBreathWeaponData); ok {
 				events.LogDragonbornBreathWeaponEvent(ctx, c, d.Target, d.DamageTotal, d.DamageType, d.DC, d.SaveAbility, d.SaveSuccess, d.SaveResult, listener)
+				if ctx != nil {
+					ctx.AdvanceScope()
+				}
 			}
 		case events.ETSpecialAbilityEvent:
 			if d, ok := data.(*events.SpecialAbilityData); ok {

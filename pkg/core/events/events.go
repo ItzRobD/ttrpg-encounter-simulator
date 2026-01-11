@@ -29,6 +29,7 @@ const (
 	ETDragonbornBreathWeaponEvent EventType = "dragonbornbreathweapon"
 	ETSpecialAbilityEvent         EventType = "specialability"
 	ETRollInitiative              EventType = "initiative"
+	ETConditionEvent              EventType = "condition"
 )
 
 type CombatEvent interface {
@@ -347,6 +348,14 @@ type CombatEventMessage struct {
 }
 
 func (e *CombatEventMessage) GetEventType() EventType { return ECombatEventMessage }
+
+type ConditionEvent struct {
+	BaseEvent
+	Condition core.Condition
+	IsAdded   bool
+}
+
+func (e *ConditionEvent) GetEventType() EventType { return ETConditionEvent }
 
 type CombatLogger interface {
 	LogEvent(event CombatEvent)

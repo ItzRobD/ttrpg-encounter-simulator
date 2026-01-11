@@ -297,8 +297,11 @@ func (esm *EntityStateManager) AddCondition(c core.Condition) {
 	if c == core.ConditionUnconscious {
 		esm.conditions.Add(core.ConditionUnconscious)
 		esm.conditions.Add(core.ConditionProne)
+		events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, core.ConditionUnconscious, true, esm.Parent.GetEventListener())
+		events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, core.ConditionProne, true, esm.Parent.GetEventListener())
 	} else {
 		esm.conditions.Add(c)
+		events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, c, true, esm.Parent.GetEventListener())
 	}
 
 	// Break concentration if incapacitated or other severe conditions
@@ -308,7 +311,10 @@ func (esm *EntityStateManager) AddCondition(c core.Condition) {
 }
 
 func (esm *EntityStateManager) RemoveCondition(c core.Condition) {
-	esm.conditions.Remove(c)
+	if esm.conditions.Has(c) {
+		esm.conditions.Remove(c)
+		events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, c, false, esm.Parent.GetEventListener())
+	}
 }
 
 func (esm *EntityStateManager) HasCondition(c core.Condition) bool {
@@ -324,6 +330,9 @@ func (esm *EntityStateManager) GetActiveConditions() []core.Condition {
 }
 
 func (esm *EntityStateManager) ResetConditions() {
+	for _, c := range esm.conditions.GetActive() {
+		events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, c, false, esm.Parent.GetEventListener())
+	}
 	esm.conditions.Clear()
 }
 
@@ -332,9 +341,14 @@ func (esm *EntityStateManager) SetUnconscious(isUnconscious bool) {
 		// Directly add conditions to avoid circular call
 		esm.conditions.Add(core.ConditionUnconscious)
 		esm.conditions.Add(core.ConditionProne)
+		events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, core.ConditionUnconscious, true, esm.Parent.GetEventListener())
+		events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, core.ConditionProne, true, esm.Parent.GetEventListener())
 		esm.BreakConcentration()
 	} else {
-		esm.conditions.Remove(core.ConditionUnconscious)
+		if esm.conditions.Has(core.ConditionUnconscious) {
+			esm.conditions.Remove(core.ConditionUnconscious)
+			events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, core.ConditionUnconscious, false, esm.Parent.GetEventListener())
+		}
 	}
 }
 

@@ -305,7 +305,7 @@ func testSimulation(charCfgs []character.CharacterConfig, monsterIds []int) {
 	sim.SetupEventListeners()
 	//sim.InitializeCombatants()
 
-	err := sim.RunSimulation(2)
+	err := sim.RunSimulation(24)
 	if err != nil {
 		fmt.Println(err)
 	}

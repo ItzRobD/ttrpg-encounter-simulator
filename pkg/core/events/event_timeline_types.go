@@ -18,6 +18,7 @@ const (
 	TimelineHealType           TimelineType = "heal"
 	TimelineDeathType          TimelineType = "death"
 	TimelineUnconsciousType    TimelineType = "unconscious"
+	TimelineConditionType      TimelineType = "condition"
 )
 
 type TimelineEntity struct {
@@ -31,6 +32,7 @@ type TimelineEvent struct {
 	ID         string
 	SequenceID string
 	ParentID   string
+	Round      int
 	Type       TimelineType
 	Data       interface{}
 }
@@ -79,8 +81,10 @@ type TimelineEffect struct {
 	Note string
 
 	// Added fields for better UI representation
-	OriginalHP int
-	FinalHP    int
+	OriginalHP     int
+	FinalHP        int
+	OriginalTempHP int
+	FinalTempHP    int
 }
 
 type TimelineScores struct {

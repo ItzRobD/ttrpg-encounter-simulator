@@ -19,44 +19,6 @@ func NewMartialAttackManager(parent core.Entity, rm *roll_manager.RollManager) *
 	}
 }
 
-/*
-Melee Attack flow:
-
-Encounter handle turn
-	Character:
-		Chooses melee or spell attack
-		Choose target
-		Melee attack:
-			Decides which weapon to use -> Generates attack request
-				Create Attack request contains target
-			Call martial manager
-				Make martial attack
-					Gets parent info for multi attacks
-					Sets roll options
-					Call roll manager
-						Roll attack dice
-							Log
-					If hit, call roll manager
-						roll damage dice
-							Log
-	Monster:
-		Chooses melee or spell attack
-		Choose target
-		Melee Attack:
-			Decide how to proceed -> determine multiattack or single attacks
-				Create attack request containing target and actions
-			Call martial manager
-				Make martial attack
-					Sets roll options
-					Call roll manager
-						Roll attack dice
-							Log
-					If hit, call roll manager
-						roll damage dice
-							Log
-
-*/
-
 // ProcessAttackRequest processes an attack request by performing attack rolls and calculating damage for each attack.
 // It uses the attack request data and options to execute attacks and returns a list of results for each attempt.
 // Returns an error if the attack roll or damage roll fails at any point.

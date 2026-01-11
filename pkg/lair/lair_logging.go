@@ -58,6 +58,9 @@ func (l *Lair) LogEvent(eventType interface{}, data interface{}) {
 		case events.ETSpellChoiceEvent:
 			if d, ok := data.(*events.SpellChoiceData); ok {
 				events.LogSpellChoiceEvent(ctx, l, d.Choice, d.Status, listener)
+				if ctx != nil {
+					ctx.AdvanceScope()
+				}
 			}
 		case events.ETHPModifiedEvent:
 			if d, ok := data.(*events.HPModifiedData); ok {
@@ -82,6 +85,9 @@ func (l *Lair) LogEvent(eventType interface{}, data interface{}) {
 		case events.ETDragonbornBreathWeaponEvent:
 			if d, ok := data.(*events.DragonbornBreathWeaponData); ok {
 				events.LogDragonbornBreathWeaponEvent(ctx, l, d.Target, d.DamageTotal, d.DamageType, d.DC, d.SaveAbility, d.SaveSuccess, d.SaveResult, listener)
+				if ctx != nil {
+					ctx.AdvanceScope()
+				}
 			}
 		case events.ETSpecialAbilityEvent:
 			if d, ok := data.(*events.SpecialAbilityData); ok {
