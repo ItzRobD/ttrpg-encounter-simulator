@@ -1,4 +1,4 @@
-import { Entity } from './combatants';
+import { Entity, ResistanceType} from './combatants';
 
 export interface CombatantReference {
   name: string;
@@ -21,7 +21,10 @@ export interface RollResult {
   isCritical: boolean;
   isNaturalOne: boolean;
   isSuccess: boolean;
-  targetValue: number;
+  originalRolls?: number[];
+  rerollEvents?: any;
+  wasRerolled?: boolean;
+  name?: string;
 }
 
 export interface EventData {
@@ -41,7 +44,24 @@ export interface EventData {
   finalHp?: number;
   originalTempHp?: number;
   finalTempHp?: number;
+  originalValue?: number;
+  finalValue?: number;
+  wasModified?: boolean;
+  resistanceType?: string;
+  resistanceBroken?: boolean;
   note?: string;
+  attackType?: string;
+  winner?: string;
+  rounds?: number;
+  name?: string;
+  numberOfDice?: number;
+  die?: string;
+  damageType?: string;
+  attackBonus?: number;
+  damageBonus?: number;
+  isRanged?: boolean;
+  properties?: string[];
+  modifiers?: string[];
 }
 
 
@@ -57,6 +77,8 @@ export enum EventType {
   Turn = 'turn',
   Death = 'death',
   Unconscious = 'unconscious',
+  Victory = 'victory',
+  Equipment = 'equipment',
 }
 
 export interface SimulationEvent {

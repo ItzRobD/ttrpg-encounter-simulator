@@ -51,6 +51,7 @@ export class SimulationService {
 
     this._loading.set(true);
 
+    // TODO: Update endpoint
     const url = `${environment.apiUrl}/simulate`;
 
     this.http.post(url, config, { responseType: 'arraybuffer' })

@@ -46,6 +46,13 @@ export class MapperService {
     let result = str;
 
     // Handle common acronyms at the end of strings (e.g., SequenceID -> SequenceId, MaxHP -> MaxHp)
+    if (result === 'OriginalHP') return 'originalHp';
+    if (result === 'FinalHP') return 'finalHp';
+    if (result === 'OriginalTempHP') return 'originalTempHp';
+    if (result === 'FinalTempHP') return 'finalTempHp';
+    if (result === 'OriginalDamage') return 'originalDamage';
+    if (result === 'FinalDamage') return 'finalDamage';
+
     if (result.endsWith('ID')) {
       result = result.slice(0, -2) + 'Id';
     } else if (result.endsWith('HP')) {
@@ -75,17 +82,28 @@ export class MapperService {
     const nodesMap = new Map<string, TimelineNode>();
 
     // 1. Pre-create nodes for all actual events to facilitate hierarchy lookup
-    events.forEach((event) => {
+    const filteredEvents = events.filter(event => {
+      return !(event.type === EventType.DamageModified && !event.data.wasModified);
+
+    });
+
+    filteredEvents.forEach((event) => {
       nodesMap.set(event.id, { data: event, children: [] });
     });
 
     const rootNodes: TimelineNode[] = [];
 
-    events.forEach((event) => {
+    filteredEvents.forEach((event) => {
       const node = nodesMap.get(event.id)!;
 
       // 0. SPECIAL CASE: Death events with no parent are treated as root nodes
       if (event.type === EventType.Death && !event.parentId) {
+        rootNodes.push(node);
+        return;
+      }
+
+      // 0. SPECIAL CASE: Victory events with no parent are treated as root nodes
+      if (event.type === EventType.Victory && !event.parentId) {
         rootNodes.push(node);
         return;
       }
