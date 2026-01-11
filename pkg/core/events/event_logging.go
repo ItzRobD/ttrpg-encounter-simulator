@@ -52,12 +52,14 @@ type LayOnHandsHealData struct {
 type DamageModifiedData struct {
 	Subject      core.Entity
 	Res          core.DamageModificationResult
+	DamageType   core.DamageType
 	SourceRollID string
 }
 
 type HPModifiedData struct {
 	Subject      core.Entity
 	Res          core.HPModificationResult
+	DamageType   core.DamageType
 	SourceRollID string
 }
 
@@ -85,6 +87,11 @@ type SpecialAbilityData struct {
 	Description string
 	TargetName  string
 	Value       int
+}
+
+type DiceRollData struct {
+	RollResult core.RollResult
+	DamageType string
 }
 
 func setupBaseEvent(ctx *core.EventContext, actor core.Entity, event CombatEvent) {
@@ -297,13 +304,14 @@ func LogLayOnHandsHealEvent(ctx *core.EventContext, actor core.Entity, subject c
 	}
 }
 
-func LogDamageModifiedEvent(ctx *core.EventContext, actor core.Entity, subject core.Entity, res core.DamageModificationResult, sourceRollID string, listener func(event interface{})) {
+func LogDamageModifiedEvent(ctx *core.EventContext, actor core.Entity, subject core.Entity, res core.DamageModificationResult, damageType core.DamageType, sourceRollID string, listener func(event interface{})) {
 	event := &DamageModifiedEvent{
 		BaseEvent:        BaseEvent{},
 		SubjectName:      core.FormatEntityName(subject),
 		subject:          subject,
 		OriginalValue:    res.OriginalValue,
 		FinalValue:       res.FinalValue,
+		DamageType:       damageType,
 		WasModified:      res.WasModified,
 		ResistanceType:   res.ResistanceType,
 		ResistanceBroken: res.ResistanceBroken,
@@ -316,7 +324,7 @@ func LogDamageModifiedEvent(ctx *core.EventContext, actor core.Entity, subject c
 	}
 }
 
-func LogHPModifiedEvent(ctx *core.EventContext, actor core.Entity, subject core.Entity, res core.HPModificationResult, sourceRollID string, listener func(event interface{})) {
+func LogHPModifiedEvent(ctx *core.EventContext, actor core.Entity, subject core.Entity, res core.HPModificationResult, damageType core.DamageType, sourceRollID string, listener func(event interface{})) {
 	event := &HPModifiedEvent{
 		BaseEvent:         BaseEvent{},
 		SubjectName:       core.FormatEntityName(subject),
@@ -326,6 +334,7 @@ func LogHPModifiedEvent(ctx *core.EventContext, actor core.Entity, subject core.
 		OriginalTempHP:    res.GetOriginalTempHP(),
 		NewHP:             res.GetNewHP(),
 		NewTempHP:         res.GetNewTempHP(),
+		DamageType:        damageType,
 		DidHealHP:         res.GetDidHealHP(),
 		DidHealTempHP:     res.GetDidHealTempHP(),
 		DidTempDamage:     res.GetDidTempDamage(),
@@ -355,6 +364,10 @@ func LogHPRollEvent(ctx *core.EventContext, actor core.Entity, rollSum int, roll
 }
 
 func LogDiceRollEvent(ctx *core.EventContext, actor core.Entity, res core.RollResult, listener func(event interface{})) {
+	LogDiceRollEventWithType(ctx, actor, res, "", listener)
+}
+
+func LogDiceRollEventWithType(ctx *core.EventContext, actor core.Entity, res core.RollResult, damageType string, listener func(event interface{})) {
 	event := &DiceRollEvent{
 		RollType:       res.GetDiceRollType(),
 		NumberOfDice:   res.GetNumberOfDice(),
@@ -371,6 +384,7 @@ func LogDiceRollEvent(ctx *core.EventContext, actor core.Entity, res core.RollRe
 		IsNaturalOne:   res.GetIsNaturalOne(),
 		IsSuccess:      res.GetIsSuccess(),
 		TargetValue:    res.GetTargetValue(),
+		DamageType:     damageType,
 		target:         res.GetTarget(),
 	}
 	setupBaseEvent(ctx, actor, event)
@@ -501,6 +515,13 @@ func LogVictoryEvent(ctx *core.EventContext, winningSide WinningSide, rounds int
 	}
 	setupBaseEvent(ctx, nil, event) // Actor is nil for victory event
 
+	if listener != nil {
+		listener(event)
+	}
+}
+
+func LogEquipmentEvent(ctx *core.EventContext, actor core.Entity, event *EquipmentEvent, listener func(event interface{})) {
+	setupBaseEvent(ctx, actor, event)
 	if listener != nil {
 		listener(event)
 	}

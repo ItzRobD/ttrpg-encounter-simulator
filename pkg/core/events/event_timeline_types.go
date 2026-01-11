@@ -20,6 +20,7 @@ const (
 	TimelineUnconsciousType    TimelineType = "unconscious"
 	TimelineConditionType      TimelineType = "condition"
 	TimelineVictoryType        TimelineType = "victory"
+	TimelineEquipmentType      TimelineType = "equipment"
 )
 
 type TimelineEntity struct {
@@ -60,10 +61,24 @@ type TimelineSavingThrow struct {
 	DiceRoll interface{}
 }
 
+type TimelineEquipment struct {
+	Actor        TimelineEntity
+	Name         string
+	NumberOfDice int
+	Die          string
+	DamageType   string
+	AttackBonus  int
+	DamageBonus  int
+	IsRanged     bool
+	Properties   []string
+	Modifiers    []string
+}
+
 type TimelineRoll struct {
-	Actor  TimelineEntity
-	Target TimelineEntity
-	Roll   interface{}
+	Actor      TimelineEntity
+	Target     TimelineEntity
+	Roll       interface{}
+	DamageType string
 }
 
 type TimelineEffect struct {

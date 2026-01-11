@@ -515,6 +515,8 @@ type AttackData struct {
 	IsOnlyRanged      bool
 	IsHeavyWeapon     bool
 	Average           int
+	WeaponAttackBonus int
+	WeaponDamageBonus int
 }
 
 func (ad AttackData) GetAttackName() string              { return ad.Name }

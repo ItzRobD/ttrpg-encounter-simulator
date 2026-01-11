@@ -51,6 +51,10 @@ func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 		h.handleCombatMessage(e)
 	case *VictoryEvent:
 		h.handleVictory(e)
+	case *EquipmentEvent:
+		// We don't need a specific text output for equipment event in the console log
+		// but we can add one if needed. For now, just avoid the "Unknown event type" warning.
+		break
 	default:
 		fmt.Printf("Unknown event type: %T\n", e)
 	}

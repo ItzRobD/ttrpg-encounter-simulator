@@ -42,7 +42,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 		rollOpts.TreatOnesAsTwos = req.SpellOptions.TreatOnesAsTwos
 		rollOpts.RollType = core.DiceRollDamage
 
-		dmgRollResult, err := scm.rollManager.RollSpellValue(req, false, rollOpts)
+		dmgRollResult, err := scm.rollManager.RollSpellValue(req, false, rollOpts, false)
 		if err != nil {
 			return nil, err
 		}
@@ -162,7 +162,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			rollOpts.TreatOnesAsTwos = req.SpellOptions.TreatOnesAsTwos
 			rollOpts.RollType = core.DiceRollDamage
 
-			dmg, err2 := scm.rollManager.RollSpellValue(req, false, rollOpts)
+			dmg, err2 := scm.rollManager.RollSpellValue(req, false, rollOpts, false)
 			if err2 != nil {
 				return nil, err2
 			}
@@ -208,6 +208,12 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 			actionID := ctx.GetParentID()
 			ctx.AdvanceScope()
 
+			// 2b. Log Damage Roll manually (it will use the Spell as parent)
+			scm.parent.LogEvent(events.ETRollEvent, &events.DiceRollData{
+				RollResult: dmgRollResult,
+				DamageType: spellResult.DamageType.String(),
+			})
+
 			// 3. Restore Action ID
 			ctx.SetParentID(actionID)
 		}
@@ -239,7 +245,7 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 		rollOpts.TreatOnesAsTwos = req.SpellOptions.TreatOnesAsTwos
 		rollOpts.RollType = core.DiceRollDamage
 
-		dmgRollResult, err := scm.rollManager.RollSpellValue(req, attackRollResult.IsCritical, rollOpts)
+		dmgRollResult, err := scm.rollManager.RollSpellValue(req, attackRollResult.IsCritical, rollOpts, false)
 		if err != nil {
 			return nil, err
 		}
@@ -273,6 +279,12 @@ func (scm *SpellcastingManager) castDamageSpell(req *SpellCastRequest) (*SpellRe
 		if ctx != nil {
 			actionID := ctx.GetParentID()
 			ctx.AdvanceScope()
+
+			// 2b. Log Damage Roll manually (it will use the Spell as parent)
+			scm.parent.LogEvent(events.ETRollEvent, &events.DiceRollData{
+				RollResult: dmgRollResult,
+				DamageType: attackResult.DamageType.String(),
+			})
 
 			// 3. Restore Action ID
 			ctx.SetParentID(actionID)
@@ -311,7 +323,7 @@ func (scm *SpellcastingManager) castHealingSpell(req *SpellCastRequest) (*SpellR
 	opts := roll_manager.NewRollOptions()
 	opts.RollType = core.DiceRollHealing
 
-	healRollResult, err := scm.rollManager.RollSpellValue(req, false, opts)
+	healRollResult, err := scm.rollManager.RollSpellValue(req, false, opts, false)
 	if err != nil {
 		return nil, err
 	}

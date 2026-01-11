@@ -220,8 +220,31 @@ func (mam *MonsterActionManager) ProcessAttackRequest(req *core.AttackRequest) (
 			actionID := ctx.GetParentID() // Store current action ID
 			ctx.AdvanceScope()
 
+			// 4b. Log Equipment Info (as child of Attack)
+			mods := make([]string, 0)
+			for _, rb := range ad.ResistBreakers {
+				if rb != core.ResistBreakerNone {
+					mods = append(mods, rb.String())
+				}
+			}
+
+			mam.parent.LogEvent(events.ETEquipmentEvent, &events.EquipmentEvent{
+				Name:         ad.Name,
+				NumberOfDice: ad.NumberOfDice,
+				Die:          ad.Die.String(),
+				DamageType:   ad.DamageType.String(),
+				AttackBonus:  ad.WeaponAttackBonus + req.AttackOptions.GetBonusToAttackRoll(),
+				DamageBonus:  ad.WeaponDamageBonus + req.AttackOptions.GetBonusToDamageRoll(),
+				IsRanged:     ad.IsRangedWeapon,
+				Properties:   nil, // Monsters usually don't have weapon properties in this structure
+				Modifiers:    mods,
+			})
+
 			// 5. Log Damage Roll manually (it will use the Attack as parent)
-			mam.parent.LogEvent(events.ETRollEvent, dmgRollResult)
+			mam.parent.LogEvent(events.ETRollEvent, &events.DiceRollData{
+				RollResult: dmgRollResult,
+				DamageType: ad.DamageType.String(),
+			})
 
 			results = append(results, attackResult)
 
@@ -254,6 +277,8 @@ func (mam *MonsterActionManager) createAttackDataFromAction(action Action) core.
 		DamageType:        action.DamageType,
 		IsVersatileAttack: false,
 		Average:           avg,
+		WeaponAttackBonus: action.AttackBonus,
+		WeaponDamageBonus: action.AmountToAdd,
 	}
 }
 

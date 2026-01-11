@@ -372,7 +372,10 @@ func (c *Character) resolveSneakAttack(params core.SneakAttackParams, simOptions
 	}
 
 	c.EntityStateManager.SetHasUsedSneakAttack(true)
-	c.LogEvent(events.ETRollEvent, res)
+	c.LogEvent(events.ETRollEvent, &events.DiceRollData{
+		RollResult: res,
+		DamageType: params.DamageType.String(),
+	})
 	c.LogEvent(events.ETSpecialAbilityEvent, &events.SpecialAbilityData{
 		AbilityName: "Sneak Attack",
 		Description: fmt.Sprintf("%s deals extra damage from Sneak Attack!", c.GetName()),

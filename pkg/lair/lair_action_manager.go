@@ -148,12 +148,18 @@ func (lam *LairActionManager) ProcessAttackRequest(req *core.AttackRequest) ([]c
 			ctx.AdvanceScope()
 
 			// Log Damage Roll manually
-			lam.parent.LogEvent(events.ETRollEvent, dmgRollResult)
+			lam.parent.LogEvent(events.ETRollEvent, &events.DiceRollData{
+				RollResult: dmgRollResult,
+				DamageType: ad.DamageType.String(),
+			})
 
 			ctx.SetParentID(actionID)
 		} else {
 			// Fallback: log damage roll normally
-			lam.parent.LogEvent(events.ETRollEvent, dmgRollResult)
+			lam.parent.LogEvent(events.ETRollEvent, &events.DiceRollData{
+				RollResult: dmgRollResult,
+				DamageType: ad.DamageType.String(),
+			})
 		}
 
 		results = append(results, ar)
@@ -205,10 +211,16 @@ func (lam *LairActionManager) ExecuteAdvanced(actionIndex int, primaryTarget cor
 		dOpts.RollType = core.DiceRollDamage
 		// Reuse AttackRequest shell to drive RollDamage API
 		req := &core.AttackRequest{AttackData: []core.AttackData{a.AttackData}, Target: targets[0]}
-		dmgRoll, err := lam.rollManager.RollDamage(req, 0, false, dOpts, true)
+		dmgRoll, err := lam.rollManager.RollDamage(req, 0, false, dOpts, false)
 		if err != nil {
 			return nil, nil, err
 		}
+
+		// Log damage roll manually to include DamageType and context
+		lam.parent.LogEvent(events.ETRollEvent, &events.DiceRollData{
+			RollResult: dmgRoll,
+			DamageType: a.AttackData.DamageType.String(),
+		})
 
 		for _, t := range targets {
 			var simOpts *core.SimulationOptions

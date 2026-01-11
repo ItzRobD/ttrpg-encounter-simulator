@@ -302,6 +302,8 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 		IsLightWeapon:     w.Weapon.Properties.IsLight,
 		IsThrownWeapon:    w.Weapon.Properties.IsThrown,
 		IsHeavyWeapon:     w.Weapon.Properties.IsHeavy,
+		WeaponAttackBonus: w.Weapon.GetAttackBonus(),
+		WeaponDamageBonus: w.Weapon.GetDamageBonus(),
 	}
 	weaponData := WeaponAttackData{Normal: normal}
 
@@ -319,6 +321,8 @@ func (em *EquipmentManager) computeAttackDataForSlot(slot core.WeaponSlot) error
 			DamageType:        vNormDT,
 			ResistBreakers:    resistBreakers,
 			IsVersatileAttack: true,
+			WeaponAttackBonus: w.Weapon.GetAttackBonus(),
+			WeaponDamageBonus: w.Weapon.GetDamageBonus(),
 		}
 		weaponData.Versatile = &versatile
 	}

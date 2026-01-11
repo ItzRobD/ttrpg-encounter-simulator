@@ -141,6 +141,7 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 					actor.LogEvent(events.ETDamageModifiedEvent, &events.DamageModifiedData{
 						Subject:      target.GetEntity(),
 						Res:          res,
+						DamageType:   currentEffect.DamageType,
 						SourceRollID: currentEffect.SourceRollID,
 					})
 					hpModResult, err = target.GetEntity().ModifyHP(res.FinalValue, false, false, ce.SimOptions.UseMassiveDamage, currentEffect.DamageType, currentEffect.AttackCtx != nil && currentEffect.AttackCtx.IsCritical)
@@ -244,6 +245,7 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 				actor.LogEvent(events.ETHPModifiedEvent, &events.HPModifiedData{
 					Subject:      target.GetEntity(),
 					Res:          hpModResult,
+					DamageType:   currentEffect.DamageType,
 					SourceRollID: currentEffect.SourceRollID,
 				})
 

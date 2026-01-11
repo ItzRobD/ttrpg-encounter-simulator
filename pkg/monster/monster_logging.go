@@ -19,6 +19,8 @@ func (m *Monster) LogEvent(eventType interface{}, data interface{}) {
 		case events.ETRollEvent, events.ETRollInitiative:
 			if res, ok := data.(*roll_manager.RollResult); ok {
 				events.LogDiceRollEvent(ctx, m, res, listener)
+			} else if d, ok := data.(*events.DiceRollData); ok {
+				events.LogDiceRollEventWithType(ctx, m, d.RollResult, d.DamageType, listener)
 			}
 		case events.ETAttackEvent:
 			if res, ok := data.(*core.AttackResult); ok {
@@ -63,7 +65,7 @@ func (m *Monster) LogEvent(eventType interface{}, data interface{}) {
 			}
 		case events.ETHPModifiedEvent:
 			if d, ok := data.(*events.HPModifiedData); ok {
-				events.LogHPModifiedEvent(ctx, m, d.Subject, d.Res, d.SourceRollID, listener)
+				events.LogHPModifiedEvent(ctx, m, d.Subject, d.Res, d.DamageType, d.SourceRollID, listener)
 			}
 		case events.ETSavingThrowEvent:
 			if d, ok := data.(*events.SavingThrowData); ok {
@@ -79,7 +81,7 @@ func (m *Monster) LogEvent(eventType interface{}, data interface{}) {
 			}
 		case events.ETDamageModifiedEvent:
 			if d, ok := data.(*events.DamageModifiedData); ok {
-				events.LogDamageModifiedEvent(ctx, m, d.Subject, d.Res, d.SourceRollID, listener)
+				events.LogDamageModifiedEvent(ctx, m, d.Subject, d.Res, d.DamageType, d.SourceRollID, listener)
 			}
 		case events.ETDragonbornBreathWeaponEvent:
 			if d, ok := data.(*events.DragonbornBreathWeaponData); ok {
@@ -91,6 +93,10 @@ func (m *Monster) LogEvent(eventType interface{}, data interface{}) {
 		case events.ETSpecialAbilityEvent:
 			if d, ok := data.(*events.SpecialAbilityData); ok {
 				events.LogSpecialAbilityEvent(ctx, m, d.AbilityName, d.Description, d.TargetName, d.Value, listener)
+			}
+		case events.ETEquipmentEvent:
+			if d, ok := data.(*events.EquipmentEvent); ok {
+				events.LogEquipmentEvent(ctx, m, d, listener)
 			}
 		}
 	}

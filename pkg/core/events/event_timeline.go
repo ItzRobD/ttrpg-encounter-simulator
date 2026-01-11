@@ -106,10 +106,30 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 			}
 		} else {
 			te.Type = TimelineDamageType
-			te.Data = TimelineRoll{
-				Actor: mapTimelineEntity(e.GetActor()),
-				Roll:  e,
+			target := TimelineEntity{}
+			if e.GetTargetEntity() != nil {
+				target = mapTimelineEntity(e.GetTargetEntity())
 			}
+			te.Data = TimelineRoll{
+				Actor:      mapTimelineEntity(e.GetActor()),
+				Target:     target,
+				Roll:       e,
+				DamageType: e.DamageType,
+			}
+		}
+	case *EquipmentEvent:
+		te.Type = TimelineEquipmentType
+		te.Data = TimelineEquipment{
+			Actor:        mapTimelineEntity(e.GetActor()),
+			Name:         e.Name,
+			NumberOfDice: e.NumberOfDice,
+			Die:          e.Die,
+			DamageType:   e.DamageType,
+			AttackBonus:  e.AttackBonus,
+			DamageBonus:  e.DamageBonus,
+			IsRanged:     e.IsRanged,
+			Properties:   e.Properties,
+			Modifiers:    e.Modifiers,
 		}
 	case *HPModifiedEvent:
 		te.Type = TimelineHPModifiedType
@@ -122,6 +142,7 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 			Target:         target,
 			Type:           core.EffectDamage,
 			Value:          e.ModificationValue,
+			DamageType:     e.DamageType,
 			OriginalHP:     e.OriginalHP,
 			FinalHP:        e.NewHP,
 			OriginalTempHP: e.OriginalTempHP,
@@ -139,6 +160,7 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 			Target:           target,
 			Type:             core.EffectDamage,
 			Value:            e.FinalValue,
+			DamageType:       e.DamageType,
 			SourceRollID:     e.SourceRollID,
 			OriginalValue:    e.OriginalValue,
 			FinalValue:       e.FinalValue,

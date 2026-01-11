@@ -359,7 +359,7 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 	return &res, nil
 }
 
-func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool, opts RollOptions) (*RollResult, error) {
+func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool, opts RollOptions, shouldLogEvent bool) (*RollResult, error) {
 	var res RollResult
 
 	var valueMod int
@@ -422,7 +422,9 @@ func (rm *RollManager) RollSpellValue(req core.SpellCastRequest, isCritical bool
 	res.Total = res.FinalRollValue + res.Modifier
 
 	// log rolls
-	rm.parent.LogEvent(events.ETRollEvent, &res)
+	if shouldLogEvent {
+		rm.parent.LogEvent(events.ETRollEvent, &res)
+	}
 
 	return &res, nil
 }

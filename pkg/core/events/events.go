@@ -31,6 +31,7 @@ const (
 	ETRollInitiative              EventType = "initiative"
 	ETConditionEvent              EventType = "condition"
 	ETVictoryEvent                EventType = "victory"
+	ETEquipmentEvent              EventType = "equipment"
 )
 
 type CombatEvent interface {
@@ -115,6 +116,21 @@ func (e *MartialAttackEvent) SetTargetEntity(target core.Entity) { e.target = ta
 func (e *MartialAttackEvent) GetTargetEntity() core.Entity       { return e.target }
 
 func (e *MartialAttackEvent) GetEventType() EventType { return ETAttackEvent }
+
+type EquipmentEvent struct {
+	BaseEvent
+	Name         string
+	NumberOfDice int
+	Die          string
+	DamageType   string
+	AttackBonus  int
+	DamageBonus  int
+	IsRanged     bool
+	Properties   []string
+	Modifiers    []string
+}
+
+func (e *EquipmentEvent) GetEventType() EventType { return ETEquipmentEvent }
 
 type DragonbornBreathWeaponEvent struct {
 	BaseEvent
@@ -276,6 +292,7 @@ type DamageModifiedEvent struct {
 	subject          core.Entity
 	OriginalValue    int
 	FinalValue       int
+	DamageType       core.DamageType
 	WasModified      bool
 	ResistanceType   core.ResistanceType
 	ResistanceBroken bool
@@ -296,6 +313,7 @@ type HPModifiedEvent struct {
 	OriginalTempHP    int
 	NewHP             int
 	NewTempHP         int
+	DamageType        core.DamageType
 	DidHealHP         bool
 	DidHealTempHP     bool
 	DidTempDamage     bool
@@ -331,6 +349,7 @@ type DiceRollEvent struct {
 	IsNaturalOne bool
 	IsSuccess    bool
 	TargetValue  int
+	DamageType   string
 	Name         string // Used for recharges only
 
 	target core.Entity
