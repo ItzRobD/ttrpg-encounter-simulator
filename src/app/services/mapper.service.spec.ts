@@ -60,30 +60,30 @@ describe('MapperService', () => {
     it('should build a hierarchical tree by Round and Turn', () => {
       const rawLog = [
         {
-          ID: 'init-1',
-          Round: 0,
-          Type: 'initiative',
-          Data: { Actor: { Name: 'Bob' } }
+          id: 'init-1',
+          round: 0,
+          type: 'initiative' as any,
+          data: { actor: { name: 'Bob' } }
         },
         {
-          ID: 'choice-1',
-          SequenceID: 'turn-1',
-          ParentID: 'turn-1',
-          Round: 1,
-          Type: 'choice',
-          Data: { Actor: { Name: 'Acolyte' } }
+          id: 'choice-1',
+          sequenceId: 'turn-1',
+          parentId: 'turn-1',
+          round: 1,
+          type: 'choice' as any,
+          data: { actor: { name: 'Acolyte' } }
         },
         {
-          ID: 'attack-1',
-          SequenceID: 'turn-1',
-          ParentID: 'choice-1',
-          Round: 1,
-          Type: 'attack',
-          Data: { Actor: { Name: 'Acolyte' } }
+          id: 'attack-1',
+          sequenceId: 'turn-1',
+          parentId: 'choice-1',
+          round: 1,
+          type: 'attack' as any,
+          data: { actor: { name: 'Acolyte' } }
         }
       ];
 
-      const tree = service.mapSimulationLog(rawLog);
+      const tree = service.mapSimulationLog(rawLog as any);
 
       // 1. Check Rounds
       expect(tree.length).toBe(2); // Round 0 and Round 1
@@ -110,12 +110,12 @@ describe('MapperService', () => {
 
     it('should handle deep nesting beyond turn level', () => {
       const rawLog = [
-        { ID: 'round-1-turn-1', SequenceID: 'turn-1', ParentID: 'turn-1', Round: 1, Type: 'choice', Data: {} },
-        { ID: 'attack-1', SequenceID: 'turn-1', ParentID: 'round-1-turn-1', Round: 1, Type: 'attack', Data: {} },
-        { ID: 'damage-1', SequenceID: 'turn-1', ParentID: 'attack-1', Round: 1, Type: 'damageroll', Data: {} }
+        { id: 'round-1-turn-1', sequenceId: 'turn-1', parentId: 'turn-1', round: 1, type: 'choice' as any, data: {} },
+        { id: 'attack-1', sequenceId: 'turn-1', parentId: 'round-1-turn-1', round: 1, type: 'attack' as any, data: {} },
+        { id: 'damage-1', sequenceId: 'turn-1', parentId: 'attack-1', round: 1, type: 'damageroll' as any, data: {} }
       ];
 
-      const tree = service.mapSimulationLog(rawLog);
+      const tree = service.mapSimulationLog(rawLog as any);
       const turnNode = tree[0].children?.[0] as TimelineNode;
       const choiceNode = turnNode.children?.[0] as TimelineNode;
       const attackNode = choiceNode.children?.[0] as TimelineNode;

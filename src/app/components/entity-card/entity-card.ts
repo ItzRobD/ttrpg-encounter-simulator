@@ -8,7 +8,6 @@ import {
   MonsterSize,
   MonsterType,
   Race,
-  ResistanceType,
   DiceType,
   AbilityScores,
   WeaponSlot,
@@ -20,19 +19,18 @@ import { Tag } from 'primeng/tag';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
 import {
   formatModifier,
-  formatWeaponData,
-  formatMonsterAction,
-  formatMultiattack,
   getAbilityScoreEntries,
-  getAbilityScoreShortName,
-  getAbilityScoresOrder,
-  getDamageTypesByResistance,
   getModifier,
-  getFormattedSpecialAbilities,
   getSpecialAbilityNames,
 } from '../../shared/utils/dnd-utils';
 import { TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { EntityStats } from '../entity-stats/entity-stats';
+import { EntitySpecialAbilities } from '../entity-special-abilities/entity-special-abilities';
+import { EntityAttacks } from '../entity-attacks/entity-attacks';
+import { EntityEquipment } from '../entity-equipment/entity-equipment';
+import { EntityLegendaryActions } from '../entity-legendary-actions/entity-legendary-actions';
+
 @Component({
   selector: 'app-entity-card',
   standalone: true,
@@ -46,6 +44,11 @@ import { FormsModule } from '@angular/forms';
     TitleCasePipe,
     ButtonModule,
     FormsModule,
+    EntityStats,
+    EntitySpecialAbilities,
+    EntityAttacks,
+    EntityEquipment,
+    EntityLegendaryActions,
   ],
   templateUrl: './entity-card.html',
   styleUrl: './entity-card.css',
@@ -99,30 +102,6 @@ export class EntityCard {
     if (percent >= 50) return '#22c55e'; // Green 500
     if (percent >= 25) return '#eab308'; // Yellow 500
     return '#ef4444'; // Red 500
-  });
-
-  protected readonly immunities = computed(() => {
-    const e = this.entity();
-    if (!e) return [];
-    return getDamageTypesByResistance(e.state.resistances, ResistanceType.Immune);
-  });
-
-  protected readonly resistances = computed(() => {
-    const e = this.entity();
-    if (!e) return [];
-    return getDamageTypesByResistance(e.state.resistances, ResistanceType.Resistant);
-  });
-
-  protected readonly vulnerabilities = computed(() => {
-    const e = this.entity();
-    if (!e) return [];
-    return getDamageTypesByResistance(e.state.resistances, ResistanceType.Vulnerable);
-  });
-
-  protected readonly specialAbilities = computed(() => {
-    const e = this.entity();
-    if (!e || !('specialAbilities' in e)) return [];
-    return getFormattedSpecialAbilities(e.specialAbilities);
   });
 
   protected readonly specialAbilityNames = computed(() => {
@@ -219,18 +198,6 @@ export class EntityCard {
   });
 
   protected readonly getModifier = getModifier;
-  protected readonly getAbilityScoresOrder = getAbilityScoresOrder;
-  protected readonly getAbilityScoreShortName = getAbilityScoreShortName;
   protected readonly getAbilityScoreEntries = getAbilityScoreEntries;
   protected readonly formatModifier = formatModifier;
-  protected readonly getDamageTypesByResistance = getDamageTypesByResistance;
-  protected readonly ResistanceType = ResistanceType;
-  protected readonly formatWeaponData = formatWeaponData;
-  protected readonly formatMonsterAction = formatMonsterAction;
-  protected readonly formatMultiattack = formatMultiattack;
-  protected readonly weaponSlots: WeaponSlot[] = [
-    WeaponSlot.Primary,
-    WeaponSlot.Secondary,
-    WeaponSlot.Ranged,
-  ];
 }

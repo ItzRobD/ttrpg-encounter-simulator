@@ -95,7 +95,7 @@ export class SimulationResults {
   }
 
   getEventDetails(event: SimulationEvent): string {
-    let details = '';
+    let details: string;
 
     if (event.type === EventType.Choice) {
       if (event.data.choiceType === 'target') {

@@ -80,7 +80,7 @@ export function formatMultiattack(entityName: string, options: MultiattackOption
     return `${opt.count} times with ${actionName}`;
   });
 
-  let joinedParts = '';
+  let joinedParts: string;
   if (parts.length === 1) {
     joinedParts = parts[0];
   } else if (parts.length === 2) {

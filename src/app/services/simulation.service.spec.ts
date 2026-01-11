@@ -42,8 +42,8 @@ describe('SimulationService', () => {
       imports: [HttpClientTestingModule],
       providers: [
         SimulationService,
-        { provide: CombatantService, useValue: combatantServiceSpy },
-        { provide: MapperService, useValue: mapperServiceSpy }
+        MapperService,
+        { provide: CombatantService, useValue: combatantServiceSpy }
       ]
     });
 
@@ -73,7 +73,10 @@ describe('SimulationService', () => {
 
   it('should run simulation, decompress and update result on success', async () => {
     // Mock data
-    const mockJson = [{ ID: '1', Type: 'round' }];
+    const mockJson = {
+      Logs: [{ ID: '1', Type: 'round', Events: [{ ID: '1', Type: 'round' }] }],
+      Count: 1
+    };
     const jsonString = JSON.stringify(mockJson);
     const encoder = new TextEncoder();
     const data = encoder.encode(jsonString);
@@ -100,12 +103,12 @@ describe('SimulationService', () => {
 
     // We need to wait for the async decompression to finish
     // Since it's a promise inside an observable, we might need a small delay or use fakeAsync
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     expect(service.loading()).toBe(false);
     expect(service.simulationResult()).not.toBeNull();
     expect(service.simulationResult()?.count).toBe(1);
-    expect(service.simulationResult()?.events[0].id).toBe('1');
+    expect(service.simulationResult()?.logs[0].events[0].id).toBe('1');
   });
 
   it('should handle errors and stop loading', () => {

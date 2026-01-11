@@ -1,0 +1,22 @@
+<div class="col-12 p-1 border-1 border-round surface-border mt-2">
+  <div class="flex flex-column gap-1">
+    @for (action of monster().monsterActions.legendaryActions; track action.actionId) {
+      <p-card
+        class="w-full"
+        [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
+      >
+        <div class="flex align-items-center gap-2">
+          <i class="pi pi-star text-primary"></i>
+          <span class="text-sm">
+            <strong>{{ action.name }}</strong>
+            @if (action.die !== DiceType.D0) {
+              {{ formatMonsterAction(action) }}
+            } @else if (action.description) {
+              . {{ action.description }}
+            }
+          </span>
+        </div>
+      </p-card>
+    }
+  </div>
+</div>

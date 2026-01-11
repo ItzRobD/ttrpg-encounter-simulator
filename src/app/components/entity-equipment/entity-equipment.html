@@ -1,0 +1,18 @@
+<div class="flex flex-column gap-1 w-full mt-2">
+  @for (slotKey of weaponSlots; track slotKey) {
+    @if (character().equipment.weapons[slotKey]; as weapon) {
+      <p-card
+        class="w-full"
+        [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
+      >
+        <div class="flex align-items-center gap-2">
+          <i class="pi pi-shield text-primary"></i>
+          <span class="text-sm">
+            <strong>{{ slotKey | titlecase }}:</strong>
+            {{ formatWeaponData(character(), weapon) }}
+          </span>
+        </div>
+      </p-card>
+    }
+  }
+</div>
