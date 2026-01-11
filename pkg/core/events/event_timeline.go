@@ -131,10 +131,17 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 			target = mapTimelineEntity(e.GetSubjectEntity())
 		}
 		te.Data = TimelineEffect{
-			Actor:        mapTimelineEntity(e.GetActor()),
-			Target:       target,
-			SourceRollID: e.SourceRollID,
-			Note:         fmt.Sprintf("Original: %d, Final: %d", e.OriginalValue, e.FinalValue),
+			Actor:            mapTimelineEntity(e.GetActor()),
+			Target:           target,
+			Type:             core.EffectDamage,
+			Value:            e.FinalValue,
+			SourceRollID:     e.SourceRollID,
+			OriginalValue:    e.OriginalValue,
+			FinalValue:       e.FinalValue,
+			WasModified:      e.WasModified,
+			ResistanceType:   e.ResistanceType,
+			ResistanceBroken: e.ResistanceBroken,
+			Note:             fmt.Sprintf("Original: %d, Final: %d", e.OriginalValue, e.FinalValue),
 		}
 	case *HealEvent:
 		te.Type = TimelineHealType

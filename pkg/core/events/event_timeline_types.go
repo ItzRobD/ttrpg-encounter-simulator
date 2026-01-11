@@ -82,10 +82,15 @@ type TimelineEffect struct {
 	Note string
 
 	// Added fields for better UI representation
-	OriginalHP     int
-	FinalHP        int
-	OriginalTempHP int
-	FinalTempHP    int
+	OriginalHP       int
+	FinalHP          int
+	OriginalTempHP   int
+	FinalTempHP      int
+	OriginalValue    int
+	FinalValue       int
+	WasModified      bool
+	ResistanceType   core.ResistanceType
+	ResistanceBroken bool
 }
 
 type TimelineScores struct {
