@@ -13,7 +13,7 @@ type UniversalEventHandler struct{}
 
 func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 	switch e := event.(type) {
-	case *MeleeAttackEvent:
+	case *MartialAttackEvent:
 		h.handleMeleeAttack(e)
 	case *ActionChoiceEvent:
 		h.handleActionChoice(e)
@@ -57,7 +57,7 @@ func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 
 }
 
-func (h *UniversalEventHandler) handleMeleeAttack(e *MeleeAttackEvent) {
+func (h *UniversalEventHandler) handleMeleeAttack(e *MartialAttackEvent) {
 	var s string
 	if e.CriticalHit {
 		s = fmt.Sprintf("[Round %d] <Martial Critical Hit> Attack %d - %s attacks %s with %s. %d to hit, %d + %d. Target: %d. Success: %t. Damage: %d %s\n",

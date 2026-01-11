@@ -133,7 +133,7 @@ func LogMonsterActionChoiceEvent(ctx *core.EventContext, actor core.Entity, choi
 	}
 }
 
-func LogMeleeAttackEvent(ctx *core.EventContext, actor core.Entity, attackResult *core.AttackResult, listener func(event interface{})) {
+func LogMartialAttackEvent(ctx *core.EventContext, actor core.Entity, attackResult *core.AttackResult, listener func(event interface{})) {
 	var damageTotal int
 	var damageType string
 	if attackResult.GetDamageResult() != nil {
@@ -141,7 +141,7 @@ func LogMeleeAttackEvent(ctx *core.EventContext, actor core.Entity, attackResult
 		damageType = attackResult.GetDamageType().String()
 	}
 
-	event := &MeleeAttackEvent{
+	event := &MartialAttackEvent{
 		Target:         attackResult.GetTargetName(),
 		target:         attackResult.GetTarget(),
 		AttackName:     attackResult.GetAttackName(),
@@ -154,6 +154,7 @@ func LogMeleeAttackEvent(ctx *core.EventContext, actor core.Entity, attackResult
 		CriticalHit:    attackResult.GetIsCriticalHit(),
 		DamageTotal:    damageTotal,
 		DamageType:     damageType,
+		IsRanged:       attackResult.IsRanged,
 	}
 	setupBaseEvent(ctx, actor, event)
 

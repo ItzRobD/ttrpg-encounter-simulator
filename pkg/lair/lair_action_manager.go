@@ -113,11 +113,11 @@ func (lam *LairActionManager) ProcessAttackRequest(req *core.AttackRequest) ([]c
 			return nil, err
 		}
 
-		// Damage
+		// Damage (without logging yet)
 		dOpts := roll_manager.NewRollOptions()
 		dOpts.Modifier = ad.DamageModifier + req.AttackOptions.GetBonusToDamageRoll()
 		dOpts.RollType = core.DiceRollDamage
-		dmgRollResult, err := lam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, dOpts)
+		dmgRollResult, err := lam.rollManager.RollDamage(req, idx, attackRollResult.IsCritical, dOpts, false)
 		if err != nil {
 			return nil, err
 		}
@@ -134,8 +134,28 @@ func (lam *LairActionManager) ProcessAttackRequest(req *core.AttackRequest) ([]c
 			AttackRoll:    attackRollResult.FinalRollValue,
 			DamageRoll:    dmgRollResult,
 			DamageType:    ad.DamageType,
+			IsRanged:      ad.IsRangedWeapon,
+			AdvantageUsed: attackRollResult.Advantage,
 		}
+
+		// Log Attack
 		lam.parent.LogEvent(events.ETAttackEvent, &ar)
+
+		// Advance Scope for damage roll
+		ctx := lam.parent.GetCurrentEventContext()
+		if ctx != nil {
+			actionID := ctx.GetParentID()
+			ctx.AdvanceScope()
+
+			// Log Damage Roll manually
+			lam.parent.LogEvent(events.ETRollEvent, dmgRollResult)
+
+			ctx.SetParentID(actionID)
+		} else {
+			// Fallback: log damage roll normally
+			lam.parent.LogEvent(events.ETRollEvent, dmgRollResult)
+		}
+
 		results = append(results, ar)
 	}
 	return results, nil
@@ -185,7 +205,7 @@ func (lam *LairActionManager) ExecuteAdvanced(actionIndex int, primaryTarget cor
 		dOpts.RollType = core.DiceRollDamage
 		// Reuse AttackRequest shell to drive RollDamage API
 		req := &core.AttackRequest{AttackData: []core.AttackData{a.AttackData}, Target: targets[0]}
-		dmgRoll, err := lam.rollManager.RollDamage(req, 0, false, dOpts)
+		dmgRoll, err := lam.rollManager.RollDamage(req, 0, false, dOpts, true)
 		if err != nil {
 			return nil, nil, err
 		}

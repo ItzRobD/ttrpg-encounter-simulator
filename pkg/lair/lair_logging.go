@@ -22,7 +22,7 @@ func (l *Lair) LogEvent(eventType interface{}, data interface{}) {
 			}
 		case events.ETAttackEvent:
 			if res, ok := data.(*core.AttackResult); ok {
-				events.LogMeleeAttackEvent(ctx, l, res, listener)
+				events.LogMartialAttackEvent(ctx, l, res, listener)
 			}
 		case events.ETSpellAttackEvent:
 			if res, ok := data.(*core.SpellResult); ok {

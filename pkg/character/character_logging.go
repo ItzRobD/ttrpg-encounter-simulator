@@ -22,7 +22,7 @@ func (c *Character) LogEvent(eventType interface{}, data interface{}) {
 			}
 		case events.ETAttackEvent:
 			if res, ok := data.(*core.AttackResult); ok {
-				events.LogMeleeAttackEvent(ctx, c, res, listener)
+				events.LogMartialAttackEvent(ctx, c, res, listener)
 			}
 		case events.ETSpellAttackEvent:
 			if res, ok := data.(*core.SpellResult); ok {

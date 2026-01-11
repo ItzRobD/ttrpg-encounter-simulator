@@ -94,7 +94,7 @@ func (b *BaseEvent) Context() *core.EventContext {
 	return b.ctx
 }
 
-type MeleeAttackEvent struct {
+type MartialAttackEvent struct {
 	BaseEvent
 	Target         string
 	target         core.Entity
@@ -108,12 +108,13 @@ type MeleeAttackEvent struct {
 	CriticalHit    bool
 	DamageTotal    int
 	DamageType     string
+	IsRanged       bool
 }
 
-func (e *MeleeAttackEvent) SetTargetEntity(target core.Entity) { e.target = target }
-func (e *MeleeAttackEvent) GetTargetEntity() core.Entity       { return e.target }
+func (e *MartialAttackEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *MartialAttackEvent) GetTargetEntity() core.Entity       { return e.target }
 
-func (e *MeleeAttackEvent) GetEventType() EventType { return ETAttackEvent }
+func (e *MartialAttackEvent) GetEventType() EventType { return ETAttackEvent }
 
 type DragonbornBreathWeaponEvent struct {
 	BaseEvent

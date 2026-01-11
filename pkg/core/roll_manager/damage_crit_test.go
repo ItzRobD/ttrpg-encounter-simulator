@@ -28,7 +28,7 @@ func TestRollDamage_CriticalNumberDice(t *testing.T) {
 	}
 
 	// Normal damage
-	res, err := rm.RollDamage(req, 0, false, RollOptions{RollType: core.DiceRollDamage})
+	res, err := rm.RollDamage(req, 0, false, RollOptions{RollType: core.DiceRollDamage}, false)
 	if err != nil {
 		t.Fatalf("RollDamage error: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestRollDamage_CriticalNumberDice(t *testing.T) {
 	}
 
 	// Critical damage (Standard)
-	resCrit, err := rm.RollDamage(req, 0, true, RollOptions{RollType: core.DiceRollDamage})
+	resCrit, err := rm.RollDamage(req, 0, true, RollOptions{RollType: core.DiceRollDamage}, false)
 	if err != nil {
 		t.Fatalf("RollDamage error: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestRollDamage_CriticalNumberDice(t *testing.T) {
 
 	// Critical damage (Improved)
 	req.SimulationOptions.UseImprovedCriticals = true
-	resImp, err := rm.RollDamage(req, 0, true, RollOptions{RollType: core.DiceRollDamage})
+	resImp, err := rm.RollDamage(req, 0, true, RollOptions{RollType: core.DiceRollDamage}, false)
 	if err != nil {
 		t.Fatalf("RollDamage error: %v", err)
 	}

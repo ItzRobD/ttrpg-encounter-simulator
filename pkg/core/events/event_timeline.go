@@ -51,16 +51,20 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 			ChoiceType: "spell",
 			Choice:     &choiceStr,
 		}
-	case *MeleeAttackEvent:
+	case *MartialAttackEvent:
 		te.Type = TimelineAttackType
 		target := TimelineEntity{Name: e.Target}
 		if e.GetTargetEntity() != nil {
 			target = mapTimelineEntity(e.GetTargetEntity())
 		}
+		attackType := "melee"
+		if e.IsRanged {
+			attackType = "ranged"
+		}
 		te.Data = TimelineAttack{
 			Actor:      mapTimelineEntity(e.GetActor()),
 			Target:     target,
-			AttackType: "melee",
+			AttackType: attackType,
 			DiceRoll:   e,
 		}
 	case *SpellAttackEvent:

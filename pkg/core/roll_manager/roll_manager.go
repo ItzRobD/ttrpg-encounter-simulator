@@ -272,7 +272,7 @@ func (rm *RollManager) RollRecharge(options RollOptions) *RollResult {
 }
 
 // RollDamage rolls damage dice for an attack, applies modifiers, handles reroll rules, critical hits, and logs events.
-func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritical bool, opts RollOptions) (*RollResult, error) {
+func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritical bool, opts RollOptions, shouldLogEvent bool) (*RollResult, error) {
 	// Handle damage rolls
 	// Apply Great Weapon Fighting, Elemental Adept
 	// Log all events
@@ -352,7 +352,9 @@ func (rm *RollManager) RollDamage(req *core.AttackRequest, adIndex int, isCritic
 	res.Total = res.FinalRollValue + res.Modifier
 
 	// Log damage roll
-	rm.parent.LogEvent(events.ETRollEvent, &res)
+	if shouldLogEvent {
+		rm.parent.LogEvent(events.ETRollEvent, &res)
+	}
 
 	return &res, nil
 }
