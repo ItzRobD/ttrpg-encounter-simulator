@@ -30,6 +30,7 @@ const (
 	ETSpecialAbilityEvent         EventType = "specialability"
 	ETRollInitiative              EventType = "initiative"
 	ETConditionEvent              EventType = "condition"
+	ETVictoryEvent                EventType = "victory"
 )
 
 type CombatEvent interface {
@@ -405,6 +406,22 @@ type ConditionEvent struct {
 }
 
 func (e *ConditionEvent) GetEventType() EventType { return ETConditionEvent }
+
+type WinningSide string
+
+const (
+	WinningSideCharacters WinningSide = "characters"
+	WinningSideMonsters   WinningSide = "monsters"
+	WinningSideNone       WinningSide = "none"
+)
+
+type VictoryEvent struct {
+	BaseEvent
+	WinningSide WinningSide
+	Rounds      int
+}
+
+func (e *VictoryEvent) GetEventType() EventType { return ETVictoryEvent }
 
 type CombatLogger interface {
 	LogEvent(event CombatEvent)

@@ -49,6 +49,8 @@ func (h *UniversalEventHandler) HandleEvent(event CombatEvent) {
 		h.handleSpecialAbility(e)
 	case *CombatEventMessage:
 		h.handleCombatMessage(e)
+	case *VictoryEvent:
+		h.handleVictory(e)
 	default:
 		fmt.Printf("Unknown event type: %T\n", e)
 	}
@@ -416,4 +418,8 @@ func (h *UniversalEventHandler) handleCombatMessage(e *CombatEventMessage) {
 	fmt.Printf("[Round %d] <Combat Message> %s\n",
 		e.GetRound(),
 		e.Message)
+}
+
+func (h *UniversalEventHandler) handleVictory(e *VictoryEvent) {
+	fmt.Printf("[Round %d] <Victory> Winner: %s. Total Rounds: %d\n", e.GetRound(), e.WinningSide, e.Rounds)
 }

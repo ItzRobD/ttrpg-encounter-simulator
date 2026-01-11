@@ -19,6 +19,7 @@ const (
 	TimelineDeathType          TimelineType = "death"
 	TimelineUnconsciousType    TimelineType = "unconscious"
 	TimelineConditionType      TimelineType = "condition"
+	TimelineVictoryType        TimelineType = "victory"
 )
 
 type TimelineEntity struct {
@@ -91,4 +92,9 @@ type TimelineScores struct {
 	UtilityScore float64
 	Factors      map[DecisionFactor]float64
 	TopReasons   []DecisionFactor
+}
+
+type TimelineVictory struct {
+	Winner WinningSide
+	Rounds int
 }

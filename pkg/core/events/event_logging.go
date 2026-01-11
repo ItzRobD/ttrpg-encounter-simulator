@@ -492,3 +492,15 @@ func LogConditionEvent(ctx *core.EventContext, actor core.Entity, condition core
 		listener(event)
 	}
 }
+
+func LogVictoryEvent(ctx *core.EventContext, winningSide WinningSide, rounds int, listener func(event interface{})) {
+	event := &VictoryEvent{
+		WinningSide: winningSide,
+		Rounds:      rounds,
+	}
+	setupBaseEvent(ctx, nil, event) // Actor is nil for victory event
+
+	if listener != nil {
+		listener(event)
+	}
+}

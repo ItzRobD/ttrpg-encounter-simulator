@@ -246,6 +246,23 @@ func (s *SimulationManager) RunSimulation(maxRounds int) error {
 		default:
 			fmt.Println("Victory: Resolved with status", victory)
 		}
+
+		// Log the victory event for the timeline
+		var winningSide events.WinningSide
+		switch victory {
+		case core.VictoryStatusCharacters:
+			winningSide = events.WinningSideCharacters
+		case core.VictoryStatusMonsters:
+			winningSide = events.WinningSideMonsters
+		default:
+			winningSide = events.WinningSideNone
+		}
+
+		events.LogVictoryEvent(s.combatEngine.EventContext, winningSide, s.combatEngine.CurrentRound, func(event interface{}) {
+			if ce, ok := event.(events.CombatEvent); ok {
+				s.LogEvent(ce)
+			}
+		})
 	}
 
 	return nil

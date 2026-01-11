@@ -178,6 +178,13 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 			Condition: &e.Condition,
 			Note:      note,
 		}
+	case *VictoryEvent:
+		te.Type = TimelineVictoryType
+		te.ParentID = "" // Always root
+		te.Data = TimelineVictory{
+			Winner: e.WinningSide,
+			Rounds: e.Rounds,
+		}
 	}
 
 	return te
