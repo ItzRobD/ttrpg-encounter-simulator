@@ -1,0 +1,93 @@
+<div class="flex flex-column h-full">
+  <!-- Log Tabs -->
+  <p-tabs [value]="0" (valueChange)="onTabChange($event)" class="mb-3">
+    <p-tablist>
+      @for (index of logIndicies(); track index) {
+        <p-tab [value]="index">Log {{ index + 1 }}</p-tab>
+      }
+    </p-tablist>
+  </p-tabs>
+
+  <!-- Hierarchical Event List -->
+  <div class="flex-1 overflow-auto border-1 surface-border border-round bg-card">
+    <p-treeTable
+      [value]="treeNodes()"
+      [scrollable]="true"
+      scrollHeight="flex"
+      selectionMode="single"
+      class="w-full"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 280px">Event</th>
+          <th style="width: 150px">Actor</th>
+          <th>Details</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-rowNode let-rowData="rowData">
+        <tr [class.bg-primary-reverse]="isEventActive(rowData.id)" class="transition-colors">
+          <td style="width: 280px">
+            <p-treeTableToggler [rowNode]="rowNode"></p-treeTableToggler>
+            <i
+              [class]="
+                rowData.type === EventType.Round
+                  ? 'pi pi-calendar'
+                  : rowData.type === EventType.Turn
+                    ? 'pi pi-user'
+                    : rowData.type === EventType.Death
+                      ? 'pi pi-times-circle text-red-500'
+                      : rowData.type === EventType.Unconscious
+                        ? 'pi pi-moon text-blue-500'
+                        : 'pi pi-bolt'
+              "
+              class="mr-2 text-primary"
+            ></i>
+            <span [class.font-bold]="rowData.type === EventType.Round || rowData.type === EventType.Turn">
+              {{ getEventLabel(rowData) }}
+            </span>
+          </td>
+          <td style="width: 150px">
+            @if (rowData.data.actor; as actor) {
+              <span class="text-sm font-medium">
+                {{ actor.name }}
+              </span>
+            }
+          </td>
+          <td>
+            <span class="text-sm text-700">
+              {{ getEventDetails(rowData) }}
+            </span>
+          </td>
+        </tr>
+      </ng-template>
+    </p-treeTable>
+  </div>
+
+  <!-- Timeline Scrubber -->
+  @if (timelineService.selectedSimulationLog(); as log) {
+    <div class="mt-4 pt-4 border-top-1 surface-border bg-card">
+      <div class="flex align-items-center gap-3 mb-2 px-2">
+        <span class="text-xs font-mono text-500">0</span>
+        <p-slider
+          class="flex-1"
+          [min]="0"
+          [max]="timelineService.scrubbableEvents().length - 1"
+          [(ngModel)]="timelineService.currentTimelineIndex"
+        ></p-slider>
+        <span class="text-xs font-mono text-500">{{ timelineService.scrubbableEvents().length - 1 }}</span>
+      </div>
+      <div class="flex justify-content-between align-items-center px-2">
+        <div class="text-sm font-medium">
+          Step <span class="text-primary">{{ timelineService.currentTimelineIndex + 1 }}</span>
+          <span class="text-500"> / {{ timelineService.scrubbableEvents().length }}</span>
+        </div>
+        @if (timelineService.activeEvent(); as active) {
+          <div class="text-xs text-500 italic">
+            Active: {{ getEventLabel(active) }}
+            {{ active.data.actor ? 'by ' + active.data.actor.name : '' }}
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
