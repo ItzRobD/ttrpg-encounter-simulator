@@ -83,10 +83,13 @@ type RollResult struct {
 	IsSuccess    bool
 	TargetValue  int
 	Name         string // Used for recharge only
+
+	Target core.Entity
 }
 
 func (rr *RollResult) GetID() string                      { return rr.ID }
 func (rr *RollResult) SetID(id string)                    { rr.ID = id }
+func (rr *RollResult) GetTarget() core.Entity             { return rr.Target }
 func (rr *RollResult) GetDiceRollType() core.DiceRollType { return rr.DiceRollType }
 func (rr *RollResult) GetNumberOfDice() int               { return rr.NumberOfDice }
 func (rr *RollResult) GetDiceType() string                { return rr.Die.String() }

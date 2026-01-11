@@ -6,5 +6,7 @@ type TimelineHandler struct {
 
 func (h *TimelineHandler) HandleEvent(event CombatEvent) {
 	timelineEvent := MakeTimelineEvent(event)
-	h.Timeline = append(h.Timeline, *timelineEvent)
+	if timelineEvent != nil {
+		h.Timeline = append(h.Timeline, *timelineEvent)
+	}
 }

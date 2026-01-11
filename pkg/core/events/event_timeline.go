@@ -38,7 +38,7 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 		te.Type = TimelineChoiceType
 		te.Data = TimelineChoice{
 			Actor:      mapTimelineEntity(e.GetActor()),
-			Target:     TimelineEntity{Name: e.Target},
+			Target:     mapTimelineEntity(e.GetTargetEntity()),
 			ChoiceType: "target",
 			Scores:     makeTimelineScores(e.Score, e.Factors, nil),
 		}
@@ -47,31 +47,50 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 		choiceStr := e.SpellChoice.GetSpell().GetName()
 		te.Data = TimelineChoice{
 			Actor:      mapTimelineEntity(e.GetActor()),
+			Target:     mapTimelineEntity(e.GetTargetEntity()),
 			ChoiceType: "spell",
 			Choice:     &choiceStr,
 		}
 	case *MeleeAttackEvent:
 		te.Type = TimelineAttackType
+		target := TimelineEntity{Name: e.Target}
+		if e.GetTargetEntity() != nil {
+			target = mapTimelineEntity(e.GetTargetEntity())
+		}
 		te.Data = TimelineAttack{
 			Actor:      mapTimelineEntity(e.GetActor()),
-			Target:     TimelineEntity{Name: e.Target},
+			Target:     target,
 			AttackType: "melee",
 			DiceRoll:   e,
 		}
 	case *SpellAttackEvent:
+		// If the spell has a DC, we skip logging it as an "attack" type event in the timeline
+		// to avoid redundancy with the saving throw and damage roll events.
+		// For attack roll spells, it's still needed.
+		if e.HasDC {
+			return nil
+		}
 		te.Type = TimelineAttackType
+		target := TimelineEntity{Name: e.Target}
+		if e.GetTargetEntity() != nil {
+			target = mapTimelineEntity(e.GetTargetEntity())
+		}
 		te.Data = TimelineAttack{
 			Actor:      mapTimelineEntity(e.GetActor()),
-			Target:     TimelineEntity{Name: e.Target},
+			Target:     target,
 			AttackType: "spell",
 			DiceRoll:   e,
 		}
 	case *DiceRollEvent:
 		if e.RollType == core.DiceRollSavingThrow || e.RollType == core.DiceRollDeathSavingThrow {
 			te.Type = TimelineSaveType
+			target := TimelineEntity{Name: e.Name}
+			if e.GetTargetEntity() != nil {
+				target = mapTimelineEntity(e.GetTargetEntity())
+			}
 			te.Data = TimelineSavingThrow{
 				Actor:    mapTimelineEntity(e.GetActor()),
-				Target:   TimelineEntity{Name: e.Name}, // e.Name is often target name for saves
+				Target:   target,
 				DC:       e.TargetValue,
 				DiceRoll: e,
 			}
@@ -90,9 +109,13 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 		}
 	case *HPModifiedEvent:
 		te.Type = TimelineHPModifiedType
+		target := TimelineEntity{Name: e.SubjectName}
+		if e.GetSubjectEntity() != nil {
+			target = mapTimelineEntity(e.GetSubjectEntity())
+		}
 		te.Data = TimelineEffect{
 			Actor:          mapTimelineEntity(e.GetActor()),
-			Target:         TimelineEntity{Name: e.SubjectName},
+			Target:         target,
 			Type:           core.EffectDamage,
 			Value:          e.ModificationValue,
 			OriginalHP:     e.OriginalHP,
@@ -103,17 +126,25 @@ func MakeTimelineEvent(event CombatEvent) *TimelineEvent {
 		}
 	case *DamageModifiedEvent:
 		te.Type = TimelineDamageModifiedType
+		target := TimelineEntity{Name: e.SubjectName}
+		if e.GetSubjectEntity() != nil {
+			target = mapTimelineEntity(e.GetSubjectEntity())
+		}
 		te.Data = TimelineEffect{
 			Actor:        mapTimelineEntity(e.GetActor()),
-			Target:       TimelineEntity{Name: e.SubjectName},
+			Target:       target,
 			SourceRollID: e.SourceRollID,
 			Note:         fmt.Sprintf("Original: %d, Final: %d", e.OriginalValue, e.FinalValue),
 		}
 	case *HealEvent:
 		te.Type = TimelineHealType
+		target := TimelineEntity{Name: e.Target}
+		if e.GetTargetEntity() != nil {
+			target = mapTimelineEntity(e.GetTargetEntity())
+		}
 		te.Data = TimelineEffect{
 			Actor:  mapTimelineEntity(e.GetActor()),
-			Target: TimelineEntity{Name: e.Target},
+			Target: target,
 			Type:   core.EffectHealing,
 			Value:  e.HealTotal,
 			Note:   e.Name,
@@ -161,6 +192,9 @@ func makeTimelineScores(utilityScore float64, factors map[DecisionFactor]float64
 }
 
 func mapTimelineEntity(e core.Entity) TimelineEntity {
+	if e == nil {
+		return TimelineEntity{}
+	}
 	return TimelineEntity{
 		Name:       e.GetName(),
 		InstanceID: e.GetInstanceID(),

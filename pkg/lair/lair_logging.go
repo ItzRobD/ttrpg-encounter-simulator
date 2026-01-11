@@ -57,7 +57,7 @@ func (l *Lair) LogEvent(eventType interface{}, data interface{}) {
 			}
 		case events.ETSpellChoiceEvent:
 			if d, ok := data.(*events.SpellChoiceData); ok {
-				events.LogSpellChoiceEvent(ctx, l, d.Choice, d.Status, listener)
+				events.LogSpellChoiceEvent(ctx, l, d.Choice, d.Status, d.Target, listener)
 				if ctx != nil {
 					ctx.AdvanceScope()
 				}

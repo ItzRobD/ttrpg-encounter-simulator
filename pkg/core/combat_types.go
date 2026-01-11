@@ -565,6 +565,7 @@ func (ar *AttackRequest) GetTarget() Entity                        { return ar.T
 type AttackResult struct {
 	ActorName      string
 	TargetName     string
+	Target         Entity
 	AttackName     string
 	AttackCount    int
 	TargetValue    int
@@ -581,6 +582,7 @@ type AttackResult struct {
 
 func (r AttackResult) GetActorName() string        { return r.ActorName }
 func (r AttackResult) GetTargetName() string       { return r.TargetName }
+func (r AttackResult) GetTarget() Entity           { return r.Target }
 func (r AttackResult) GetAttackName() string       { return r.AttackName }
 func (r AttackResult) GetAttackCount() int         { return r.AttackCount }
 func (r AttackResult) GetIsHit() bool              { return r.IsHit }

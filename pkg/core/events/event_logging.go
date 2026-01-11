@@ -33,6 +33,7 @@ type DamageData struct {
 type SpellChoiceData struct {
 	Choice *core.SpellChoice
 	Status *spells.SpellcastingManagerStatus
+	Target core.Entity
 }
 
 type SpellDCData struct {
@@ -142,6 +143,7 @@ func LogMeleeAttackEvent(ctx *core.EventContext, actor core.Entity, attackResult
 
 	event := &MeleeAttackEvent{
 		Target:         attackResult.GetTargetName(),
+		target:         attackResult.GetTarget(),
 		AttackName:     attackResult.GetAttackName(),
 		AttackCount:    attackResult.GetAttackCount(),
 		AttackRoll:     attackResult.GetAttackRoll(),
@@ -163,6 +165,7 @@ func LogMeleeAttackEvent(ctx *core.EventContext, actor core.Entity, attackResult
 func LogDragonbornBreathWeaponEvent(ctx *core.EventContext, actor core.Entity, target core.Entity, damageTotal int, damageType string, dc int, saveAbility string, saveSuccess bool, saveResult int, listener func(event interface{})) {
 	event := &DragonbornBreathWeaponEvent{
 		Target:             core.FormatEntityName(target),
+		target:             target,
 		DamageTotal:        damageTotal,
 		DamageType:         damageType,
 		DC:                 dc,
@@ -184,6 +187,7 @@ func LogDragonbornBreathWeaponEvent(ctx *core.EventContext, actor core.Entity, t
 func LogDamageEvent(ctx *core.EventContext, actor core.Entity, target core.Entity, damageType string, damage int, rolls []int, listener func(event interface{})) {
 	event := &DamageEvent{
 		Target:     core.FormatEntityName(target),
+		target:     target,
 		Amount:     damage,
 		DamageType: damageType,
 		Rolls:      rolls,
@@ -195,10 +199,11 @@ func LogDamageEvent(ctx *core.EventContext, actor core.Entity, target core.Entit
 	}
 }
 
-func LogSpellChoiceEvent(ctx *core.EventContext, actor core.Entity, choice *core.SpellChoice, status *spells.SpellcastingManagerStatus, listener func(event interface{})) {
+func LogSpellChoiceEvent(ctx *core.EventContext, actor core.Entity, choice *core.SpellChoice, status *spells.SpellcastingManagerStatus, target core.Entity, listener func(event interface{})) {
 	event := &SpellChoiceEvent{
 		SpellChoice:   choice,
 		ManagerStatus: status,
+		target:        target,
 	}
 	setupBaseEvent(ctx, actor, event)
 
@@ -217,6 +222,7 @@ func LogSpellAttackEvent(ctx *core.EventContext, actor core.Entity, res core.Spe
 
 	event := &SpellAttackEvent{
 		Target:             res.GetTargetName(),
+		target:             res.GetTarget(),
 		SpellName:          res.GetSpellName(),
 		SpellLevel:         res.GetSpellLevel(),
 		AttackTotal:        res.GetAttackTotal(),
@@ -243,6 +249,7 @@ func LogSpellAttackEvent(ctx *core.EventContext, actor core.Entity, res core.Spe
 func LogSpellDCEvent(ctx *core.EventContext, actor core.Entity, target core.Entity, spell *spells.Spell, dc int, save int, isHit bool, listener func(event interface{})) {
 	event := &SpellDCEvent{
 		Target:      core.FormatEntityName(target),
+		target:      target,
 		SpellChoice: spell,
 		DC:          dc,
 		SavingThrow: save,
@@ -258,6 +265,7 @@ func LogSpellDCEvent(ctx *core.EventContext, actor core.Entity, target core.Enti
 func LogSpellHealEvent(ctx *core.EventContext, actor core.Entity, res core.SpellResult, listener func(event interface{})) {
 	event := &HealEvent{
 		Target:     res.GetTargetName(),
+		target:     res.GetTarget(),
 		Name:       res.GetSpellName(),
 		SpellLevel: res.GetSpellLevel(),
 		IsSpell:    true,
@@ -274,6 +282,7 @@ func LogSpellHealEvent(ctx *core.EventContext, actor core.Entity, res core.Spell
 func LogLayOnHandsHealEvent(ctx *core.EventContext, actor core.Entity, subject core.Entity, value int, listener func(event interface{})) {
 	event := &HealEvent{
 		Target:     core.FormatEntityName(subject),
+		target:     subject,
 		Name:       "Lay on Hands",
 		SpellLevel: 0,
 		IsSpell:    false,
@@ -291,6 +300,7 @@ func LogDamageModifiedEvent(ctx *core.EventContext, actor core.Entity, subject c
 	event := &DamageModifiedEvent{
 		BaseEvent:        BaseEvent{},
 		SubjectName:      core.FormatEntityName(subject),
+		subject:          subject,
 		OriginalValue:    res.OriginalValue,
 		FinalValue:       res.FinalValue,
 		WasModified:      res.WasModified,
@@ -309,6 +319,7 @@ func LogHPModifiedEvent(ctx *core.EventContext, actor core.Entity, subject core.
 	event := &HPModifiedEvent{
 		BaseEvent:         BaseEvent{},
 		SubjectName:       core.FormatEntityName(subject),
+		subject:           subject,
 		ModificationValue: res.GetModificationValue(),
 		OriginalHP:        res.GetOriginalHP(),
 		OriginalTempHP:    res.GetOriginalTempHP(),
@@ -359,6 +370,7 @@ func LogDiceRollEvent(ctx *core.EventContext, actor core.Entity, res core.RollRe
 		IsNaturalOne:   res.GetIsNaturalOne(),
 		IsSuccess:      res.GetIsSuccess(),
 		TargetValue:    res.GetTargetValue(),
+		target:         res.GetTarget(),
 	}
 	setupBaseEvent(ctx, actor, event)
 	res.SetID(event.GetID()) // sync the generated event id back to the roll result
@@ -385,6 +397,7 @@ func LogSavingThrowEvent(ctx *core.EventContext, actor core.Entity, result int, 
 func LogTargetChoiceEvent(ctx *core.EventContext, actor core.Entity, target core.Entity, score float64, factors map[DecisionFactor]float64, listener func(event interface{})) {
 	event := &TargetChoiceEvent{
 		Target:  core.FormatEntityName(target),
+		target:  target,
 		Score:   score,
 		Factors: factors,
 	}
@@ -402,6 +415,8 @@ func LogSpecialAbilityEvent(ctx *core.EventContext, actor core.Entity, abilityNa
 		Target:      targetName,
 		Value:       value,
 	}
+	// Note: target entity might not be available here as it's passed as targetName string.
+	// If needed, we could update this function signature too.
 	setupBaseEvent(ctx, actor, event)
 
 	if listener != nil {
@@ -427,6 +442,20 @@ func LogDeathEvent(ctx *core.EventContext, actor core.Entity, listener func(even
 	if listener != nil {
 		listener(event)
 	}
+
+	// Also log as a root event with no parent for better visibility
+	if ctx != nil && ctx.GetSequenceID() != "" && ctx.GetParentID() != "" {
+		originalParent := ctx.GetParentID()
+		ctx.SetParentID("")
+
+		eventRoot := &DeathEvent{}
+		setupBaseEvent(ctx, actor, eventRoot)
+		if listener != nil {
+			listener(eventRoot)
+		}
+
+		ctx.SetParentID(originalParent)
+	}
 }
 
 func LogUnconsciousEvent(ctx *core.EventContext, actor core.Entity, listener func(event interface{})) {
@@ -435,6 +464,20 @@ func LogUnconsciousEvent(ctx *core.EventContext, actor core.Entity, listener fun
 
 	if listener != nil {
 		listener(event)
+	}
+
+	// Also log as a root event with no parent for better visibility
+	if ctx != nil && ctx.GetSequenceID() != "" && ctx.GetParentID() != "" {
+		originalParent := ctx.GetParentID()
+		ctx.SetParentID("")
+
+		eventRoot := &UnconsciousEvent{}
+		setupBaseEvent(ctx, actor, eventRoot)
+		if listener != nil {
+			listener(eventRoot)
+		}
+
+		ctx.SetParentID(originalParent)
 	}
 }
 

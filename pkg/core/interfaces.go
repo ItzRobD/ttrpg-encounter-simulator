@@ -27,6 +27,7 @@ type AttackResultData interface {
 type SpellResult interface {
 	GetActorName() string
 	GetTargetName() string
+	GetTarget() Entity
 	GetSpellName() string
 	GetSpellLevel() int
 	GetSpellTotalValue() int
@@ -95,6 +96,7 @@ type SpellCastRequest interface {
 type RollResult interface {
 	GetID() string
 	SetID(id string)
+	GetTarget() Entity
 	GetDiceRollType() DiceRollType
 	GetNumberOfDice() int
 	GetDiceType() string

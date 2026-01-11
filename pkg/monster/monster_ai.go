@@ -272,6 +272,7 @@ func (mai *MonsterAI) createMonsterDamageActionRequest() (*core.AIRequest, error
 			mai.parent.LogEvent(events.ETSpellChoiceEvent, &events.SpellChoiceData{
 				Choice: spellChoice,
 				Status: mai.parent.SpellCastingManager.GetStatus(),
+				Target: target,
 			})
 			return mai.buildAIRequest(-1, targetID, spellChoice, core.ATSpell)
 		}

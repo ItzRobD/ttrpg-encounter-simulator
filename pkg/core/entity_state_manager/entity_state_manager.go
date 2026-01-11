@@ -343,6 +343,7 @@ func (esm *EntityStateManager) SetUnconscious(isUnconscious bool) {
 		esm.conditions.Add(core.ConditionProne)
 		events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, core.ConditionUnconscious, true, esm.Parent.GetEventListener())
 		events.LogConditionEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, core.ConditionProne, true, esm.Parent.GetEventListener())
+		events.LogUnconsciousEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, esm.Parent.GetEventListener())
 		esm.BreakConcentration()
 	} else {
 		if esm.conditions.Has(core.ConditionUnconscious) {
@@ -790,6 +791,7 @@ func (esm *EntityStateManager) Kill() {
 	if esm.isConcentrating {
 		esm.BreakConcentration()
 	}
+	events.LogDeathEvent(esm.Parent.GetCurrentEventContext(), esm.Parent, esm.Parent.GetEventListener())
 }
 
 func (esm *EntityStateManager) GetSavingThrowAdvantage(ability core.Ability) core.AdvantageType {

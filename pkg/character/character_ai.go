@@ -133,6 +133,10 @@ func (cai *CharacterAI) hasValidTargets(targetType core.TargetType) bool {
 }
 
 func (cai *CharacterAI) SelectTargetID(targetType core.TargetType) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
+	return cai.SelectTargetIDWithLogging(targetType, true)
+}
+
+func (cai *CharacterAI) SelectTargetIDWithLogging(targetType core.TargetType, shouldLog bool) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
 	if cai.combatCtx == nil {
 		return core.TargetInvalidType, -1, 0, nil, fmt.Errorf("combat context not set")
 	}
@@ -155,30 +159,32 @@ func (cai *CharacterAI) SelectTargetID(targetType core.TargetType) (core.TargetS
 	}
 
 	if cai.combatCtx.Options.UseWeightedAI {
-		return cai.selectTargetWeighted(validTargets, targetType)
+		return cai.selectTargetWeighted(validTargets, targetType, shouldLog)
 	}
 
-	status, id, err := cai.selectTargetSimple(validTargets, targetType)
+	status, id, err := cai.selectTargetSimple(validTargets, targetType, shouldLog)
 	return status, id, 1.0, nil, err
 }
 
-func (cai *CharacterAI) selectTargetSimple(validTargets map[int]*core.Combatant, targetType core.TargetType) (core.TargetStatus, int, error) {
+func (cai *CharacterAI) selectTargetSimple(validTargets map[int]*core.Combatant, targetType core.TargetType, shouldLog bool) (core.TargetStatus, int, error) {
 	status, target, err := core.SelectTargetFromMap(validTargets, cai.parent.EntityStateManager.GetTargetPrioritization(), cai.rng)
 	if err != nil || status != core.TargetOK {
 		return status, -1, err
 	}
 	// Structured logging: chosen target
-	if combatant, ok := validTargets[target]; ok && combatant != nil {
-		cai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
-			Target:  combatant.GetEntity(),
-			Score:   1.0,
-			Factors: nil,
-		})
+	if shouldLog {
+		if combatant, ok := validTargets[target]; ok && combatant != nil {
+			cai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
+				Target:  combatant.GetEntity(),
+				Score:   1.0,
+				Factors: nil,
+			})
+		}
 	}
 	return core.TargetOK, target, nil
 }
 
-func (cai *CharacterAI) selectTargetWeighted(validTargets map[int]*core.Combatant, targetType core.TargetType) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
+func (cai *CharacterAI) selectTargetWeighted(validTargets map[int]*core.Combatant, targetType core.TargetType, shouldLog bool) (core.TargetStatus, int, float64, map[events.DecisionFactor]float64, error) {
 	if len(validTargets) == 0 {
 		return core.TargetNone, -1, 0, nil, nil
 	}
@@ -291,11 +297,13 @@ func (cai *CharacterAI) selectTargetWeighted(validTargets map[int]*core.Combatan
 		fmt.Println()
 	}
 
-	cai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
-		Target:  validTargets[bestID].Entity,
-		Score:   bestScore,
-		Factors: bestFactors,
-	})
+	if shouldLog {
+		cai.parent.LogEvent(events.ETTargetChoiceEvent, &events.TargetChoiceData{
+			Target:  validTargets[bestID].Entity,
+			Score:   bestScore,
+			Factors: bestFactors,
+		})
+	}
 	return core.TargetOK, bestID, bestScore, bestFactors, nil
 }
 
@@ -312,7 +320,7 @@ func (cai *CharacterAI) chooseActionWeighted() (core.ActionType, error) {
 	breathFactors := make(map[events.DecisionFactor]float64)
 
 	// Evaluate Damage Utility based on best target
-	tStatus, _, bestDamageScore, bestDamageFactors, _ := cai.SelectTargetID(core.TTDamage)
+	tStatus, _, bestDamageScore, bestDamageFactors, _ := cai.SelectTargetIDWithLogging(core.TTDamage, false)
 	if tStatus == core.TargetOK {
 		damageUtility *= bestDamageScore
 		if cai.combatCtx.Options.DebugAI {
@@ -596,6 +604,7 @@ func (cai *CharacterAI) createCharacterHealActionRequest() (*core.AIRequest, err
 		cai.parent.LogEvent(events.ETSpellChoiceEvent, &events.SpellChoiceData{
 			Choice: healReq.SpellChoice,
 			Status: cai.parent.SpellCastingManager.GetStatus(),
+			Target: target,
 		})
 	}
 
@@ -655,6 +664,7 @@ func (cai *CharacterAI) createCharacterDamageActionRequest() (*core.AIRequest, e
 		cai.parent.LogEvent(events.ETSpellChoiceEvent, &events.SpellChoiceData{
 			Choice: choice,
 			Status: cai.parent.SpellCastingManager.GetStatus(),
+			Target: target,
 		})
 	case core.ATMelee:
 		slot = core.WSPrimary

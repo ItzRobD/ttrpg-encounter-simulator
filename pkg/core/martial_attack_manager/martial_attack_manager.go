@@ -67,6 +67,7 @@ func (mam *MartialAttackManager) ProcessAttackRequest(req *core.AttackRequest) (
 			attackResult := core.AttackResult{
 				ActorName:      core.FormatEntityName(mam.parent),
 				TargetName:     core.FormatEntityName(req.Target),
+				Target:         req.Target,
 				AttackName:     ad.Name,
 				AttackCount:    i,
 				TargetValue:    attackRollResult.TargetValue,

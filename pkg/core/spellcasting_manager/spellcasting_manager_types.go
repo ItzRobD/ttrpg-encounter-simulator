@@ -47,6 +47,7 @@ func (scd SpellCastData) GetSpellcastingModifier() int     { return scd.Spellcas
 type SpellResult struct {
 	ActorName        string
 	TargetName       string
+	Target           core.Entity
 	SpellName        string
 	SpellLevel       int
 	SpellTotalValue  int // Damage or heal amount
@@ -69,6 +70,7 @@ type SpellResult struct {
 
 func (r *SpellResult) GetActorName() string                 { return r.ActorName }
 func (r *SpellResult) GetTargetName() string                { return r.TargetName }
+func (r *SpellResult) GetTarget() core.Entity               { return r.Target }
 func (r *SpellResult) GetSpellName() string                 { return r.SpellName }
 func (r *SpellResult) GetSpellLevel() int                   { return r.SpellLevel }
 func (r *SpellResult) GetSpellTotalValue() int              { return r.SpellTotalValue }

@@ -96,6 +96,7 @@ func (b *BaseEvent) Context() *core.EventContext {
 type MeleeAttackEvent struct {
 	BaseEvent
 	Target         string
+	target         core.Entity
 	AttackName     string
 	AttackCount    int
 	AttackRoll     int
@@ -108,11 +109,15 @@ type MeleeAttackEvent struct {
 	DamageType     string
 }
 
+func (e *MeleeAttackEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *MeleeAttackEvent) GetTargetEntity() core.Entity       { return e.target }
+
 func (e *MeleeAttackEvent) GetEventType() EventType { return ETAttackEvent }
 
 type DragonbornBreathWeaponEvent struct {
 	BaseEvent
 	Target             string
+	target             core.Entity
 	DamageTotal        int
 	DamageType         string
 	DC                 int
@@ -120,6 +125,9 @@ type DragonbornBreathWeaponEvent struct {
 	SavingThrowSuccess bool
 	SavingThrowResult  int
 }
+
+func (e *DragonbornBreathWeaponEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *DragonbornBreathWeaponEvent) GetTargetEntity() core.Entity       { return e.target }
 
 func (e *DragonbornBreathWeaponEvent) GetEventType() EventType { return ETDragonbornBreathWeaponEvent }
 
@@ -169,13 +177,18 @@ type SpellChoiceEvent struct {
 	BaseEvent
 	SpellChoice   *core.SpellChoice
 	ManagerStatus *spells.SpellcastingManagerStatus
+	target        core.Entity
 }
+
+func (e *SpellChoiceEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *SpellChoiceEvent) GetTargetEntity() core.Entity       { return e.target }
 
 func (e *SpellChoiceEvent) GetEventType() EventType { return ETSpellChoiceEvent }
 
 type SpellAttackEvent struct {
 	BaseEvent
 	Target             string
+	target             core.Entity
 	SpellName          string
 	SpellLevel         int
 	AttackRoll         int
@@ -193,38 +206,53 @@ type SpellAttackEvent struct {
 	SavingThrowResult  int
 }
 
+func (e *SpellAttackEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *SpellAttackEvent) GetTargetEntity() core.Entity       { return e.target }
+
 func (e *SpellAttackEvent) GetEventType() EventType { return ETSpellAttackEvent }
 
 type SpellDCEvent struct {
 	BaseEvent
 	Target      string
+	target      core.Entity
 	SpellChoice *spells.Spell
 	DC          int
 	SavingThrow int
 	Success     bool
 }
 
+func (e *SpellDCEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *SpellDCEvent) GetTargetEntity() core.Entity       { return e.target }
+
 func (e *SpellDCEvent) GetEventType() EventType { return ETSpellDCEvent }
 
 type DamageEvent struct {
 	BaseEvent
 	Target     string
+	target     core.Entity
 	DamageType string
 	Amount     int
 	Rolls      []int
 }
+
+func (e *DamageEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *DamageEvent) GetTargetEntity() core.Entity       { return e.target }
 
 func (e *DamageEvent) GetEventType() EventType { return ETDamageEvent }
 
 type HealEvent struct {
 	BaseEvent
 	Target     string
+	target     core.Entity
 	Name       string
 	IsSpell    bool
 	SpellLevel int
 	HealTotal  int
 	HealRolls  []int
 }
+
+func (e *HealEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *HealEvent) GetTargetEntity() core.Entity       { return e.target }
 
 func (e *HealEvent) GetEventType() EventType { return ETHealEvent }
 
@@ -243,6 +271,7 @@ func (e *UnconsciousEvent) GetEventType() EventType { return ETUnconsciousEvent 
 type DamageModifiedEvent struct {
 	BaseEvent
 	SubjectName      string
+	subject          core.Entity
 	OriginalValue    int
 	FinalValue       int
 	WasModified      bool
@@ -251,11 +280,15 @@ type DamageModifiedEvent struct {
 	SourceRollID     string
 }
 
+func (e *DamageModifiedEvent) SetSubjectEntity(subject core.Entity) { e.subject = subject }
+func (e *DamageModifiedEvent) GetSubjectEntity() core.Entity        { return e.subject }
+
 func (e *DamageModifiedEvent) GetEventType() EventType { return ETDamageModifiedEvent }
 
 type HPModifiedEvent struct {
 	BaseEvent
 	SubjectName       string
+	subject           core.Entity
 	ModificationValue int
 	OriginalHP        int
 	OriginalTempHP    int
@@ -269,6 +302,9 @@ type HPModifiedEvent struct {
 	IsMaxHealth       bool
 	SourceRollID      string
 }
+
+func (e *HPModifiedEvent) SetSubjectEntity(subject core.Entity) { e.subject = subject }
+func (e *HPModifiedEvent) GetSubjectEntity() core.Entity        { return e.subject }
 
 func (e *HPModifiedEvent) GetEventType() EventType { return ETHPModifiedEvent }
 
@@ -294,7 +330,12 @@ type DiceRollEvent struct {
 	IsSuccess    bool
 	TargetValue  int
 	Name         string // Used for recharges only
+
+	target core.Entity
 }
+
+func (e *DiceRollEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *DiceRollEvent) GetTargetEntity() core.Entity       { return e.target }
 
 func (e *DiceRollEvent) GetEventType() EventType {
 	if e.RollType == core.DiceRollInitiative {
@@ -325,9 +366,13 @@ func (e *SavingThrowEvent) GetEventType() EventType { return ETSavingThrowEvent 
 type TargetChoiceEvent struct {
 	BaseEvent
 	Target  string
+	target  core.Entity
 	Score   float64
 	Factors map[DecisionFactor]float64
 }
+
+func (e *TargetChoiceEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *TargetChoiceEvent) GetTargetEntity() core.Entity       { return e.target }
 
 func (e *TargetChoiceEvent) GetEventType() EventType { return ETTargetChoiceEvent }
 
@@ -336,8 +381,12 @@ type SpecialAbilityEvent struct {
 	AbilityName string
 	Description string
 	Target      string
+	target      core.Entity
 	Value       int
 }
+
+func (e *SpecialAbilityEvent) SetTargetEntity(target core.Entity) { e.target = target }
+func (e *SpecialAbilityEvent) GetTargetEntity() core.Entity       { return e.target }
 
 func (e *SpecialAbilityEvent) GetEventType() EventType { return ETSpecialAbilityEvent }
 

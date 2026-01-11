@@ -21,6 +21,7 @@ type testRollResult struct {
 	targetValue int
 }
 
+func (r testRollResult) GetTarget() core.Entity                    { return nil }
 func (r testRollResult) GetDiceRollType() core.DiceRollType        { return r.diceType }
 func (r testRollResult) GetNumberOfDice() int                      { return len(r.rolls) }
 func (r testRollResult) GetDiceType() string                       { return "d20" }

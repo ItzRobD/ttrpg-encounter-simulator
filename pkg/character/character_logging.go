@@ -56,7 +56,7 @@ func (c *Character) LogEvent(eventType interface{}, data interface{}) {
 			}
 		case events.ETSpellChoiceEvent:
 			if d, ok := data.(*events.SpellChoiceData); ok {
-				events.LogSpellChoiceEvent(ctx, c, d.Choice, d.Status, listener)
+				events.LogSpellChoiceEvent(ctx, c, d.Choice, d.Status, d.Target, listener)
 				if ctx != nil {
 					ctx.AdvanceScope()
 				}

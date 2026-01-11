@@ -87,6 +87,15 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 			var err error
 			for _, effect := range outcome.Effects {
 				currentEffect := effect
+
+				// Advance scope if we have a source roll ID to link to
+				ctx := actor.GetCurrentEventContext()
+				originalParentID := ""
+				if ctx != nil && currentEffect.SourceRollID != "" {
+					originalParentID = ctx.GetParentID()
+					ctx.SetParentID(currentEffect.SourceRollID)
+				}
+
 				if targetID != outcome.TargetID && currentEffect.SaveCtx != nil {
 					// Re-evaluate saving throw for secondary targets
 					saveRes, err := target.GetEntity().MakeSavingThrow(
@@ -261,13 +270,26 @@ func (ce *CombatEngine) processActionResults(actor core.Entity, outcome *core.Ac
 				// If target is down or dead, check victory
 				if target.GetEntity().IsDead() || target.GetEntity().IsUnconscious() {
 					if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+						// Restore parent ID before returning
+						if ctx != nil && originalParentID != "" {
+							ctx.SetParentID(originalParentID)
+						}
 						return nil
 					}
 				}
 
 				// Early victory check after each effect
 				if v := ce.checkVictoryCondition(); v != core.VictoryStatusNone {
+					// Restore parent ID before returning
+					if ctx != nil && originalParentID != "" {
+						ctx.SetParentID(originalParentID)
+					}
 					return nil
+				}
+
+				// Restore parent ID after each effect
+				if ctx != nil && originalParentID != "" {
+					ctx.SetParentID(originalParentID)
 				}
 			}
 			// Final state persist
