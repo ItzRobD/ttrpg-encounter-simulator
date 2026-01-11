@@ -318,9 +318,28 @@ export class CombatantService {
         isDead: false,
         initiative: 0,
       },
+      spellcasting: {
+        casterType: 'full' as any,
+        casterLevel: 1,
+        spellSaveDC: 12,
+        spellAttackBonus: 4,
+        spellSlots: {
+          1: { current: 3, max: 3 }
+        },
+        spells: [
+          { id: 1, name: 'Light', level: 0, description: '', isConcentration: false, castingTime: 'action' as any, spellType: 'healing' as any, isAOE: false, hasDC: false, isAutoHit: true },
+          { id: 2, name: 'Sacred Flame', level: 0, description: '', isConcentration: false, castingTime: 'action' as any, spellType: 'damage' as any, isAOE: false, hasDC: true, isAutoHit: false },
+          { id: 3, name: 'Thaumaturgy', level: 0, description: '', isConcentration: false, castingTime: 'action' as any, spellType: 'healing' as any, isAOE: false, hasDC: false, isAutoHit: true },
+          { id: 4, name: 'Bless', level: 1, description: '', isConcentration: true, castingTime: 'action' as any, spellType: 'healing' as any, isAOE: true, hasDC: false, isAutoHit: true },
+          { id: 5, name: 'Cure Wounds', level: 1, description: '', isConcentration: false, castingTime: 'action' as any, spellType: 'healing' as any, isAOE: false, hasDC: false, isAutoHit: true },
+          { id: 6, name: 'Sanctuary', level: 1, description: '', isConcentration: false, castingTime: 'bonus action' as any, spellType: 'healing' as any, isAOE: false, hasDC: true, isAutoHit: false }
+        ]
+      }
     };
 
-    this._combatants.set([bob, acolyte]);
+    console.log('Seeding Acolyte with spells (ID 200):', acolyte);
+    const entities = [bob, acolyte];
+    this._combatants.set(entities);
   }
 
   /**

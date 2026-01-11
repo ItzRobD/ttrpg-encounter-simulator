@@ -167,6 +167,28 @@
                 </p-accordion-panel>
               }
             }
+            <!-- Spellcasting Panel -->
+            @if (e.spellcasting; as sc) {
+              <p-accordion-panel value="4">
+                <p-accordion-header>
+                  <div class="grid w-full align-items-center">
+                    <div class="col-4">
+                      <span class="text-sm font-bold uppercase text-600">{{
+                          spellcastingHeaderText().label
+                        }}</span>
+                    </div>
+                    <div class="col-8">
+                      <span class="text-xs text-700 font-medium">{{
+                          spellcastingHeaderText().list
+                        }}</span>
+                    </div>
+                  </div>
+                </p-accordion-header>
+                <p-accordion-content>
+                  <app-entity-spellcasting [spellcasting]="sc"></app-entity-spellcasting>
+                </p-accordion-content>
+              </p-accordion-panel>
+            }
           </p-accordion>
         </p-accordion-content>
       </p-accordion-panel>

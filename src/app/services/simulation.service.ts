@@ -103,8 +103,11 @@ export class SimulationService {
       this._simulationResult.set(result);
       if (result.logs.length > 0) {
         this.timelineService.setSelectedSimulationLog(result.logs[0]);
+        // Also update combatant service if needed, though usually the entity card
+        // in simulation mode might be showing entities from the log
       }
-      console.log('Dummy simulation data seeded', result);
+      console.log('Dummy simulation data seeded:', result);
+      console.log('Entities in seeded log:', result.logs[0]?.entities);
     } catch (err) {
       console.error('Failed to seed dummy simulation data', err);
     }

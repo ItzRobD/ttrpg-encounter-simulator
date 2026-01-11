@@ -1,4 +1,4 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, effect, input, signal } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import {
@@ -30,6 +30,7 @@ import { EntitySpecialAbilities } from '../entity-special-abilities/entity-speci
 import { EntityAttacks } from '../entity-attacks/entity-attacks';
 import { EntityEquipment } from '../entity-equipment/entity-equipment';
 import { EntityLegendaryActions } from '../entity-legendary-actions/entity-legendary-actions';
+import { EntitySpellcasting } from '../entity-spellcasting/entity-spellcasting';
 
 @Component({
   selector: 'app-entity-card',
@@ -49,6 +50,7 @@ import { EntityLegendaryActions } from '../entity-legendary-actions/entity-legen
     EntityAttacks,
     EntityEquipment,
     EntityLegendaryActions,
+    EntitySpellcasting,
   ],
   templateUrl: './entity-card.html',
   styleUrl: './entity-card.css',
@@ -58,6 +60,12 @@ export class EntityCard {
   public readonly gradientStop = input<string>('50%');
   public readonly entity = input.required<Entity>();
   public readonly projectedState = input<EntityState>();
+
+  constructor() {
+    effect(() => {
+      console.log('Entity data updated:', this.entity());
+    });
+  }
 
   protected readonly displayState = computed(() => {
     return this.projectedState() || this.entity().state;
@@ -106,8 +114,10 @@ export class EntityCard {
 
   protected readonly specialAbilityNames = computed(() => {
     const e = this.entity();
-    if (!e || !('specialAbilities' in e)) return [];
-    return getSpecialAbilityNames(e.specialAbilities);
+    if (!e) return [];
+    const abilities = (e as any).specialAbilities;
+    if (!abilities) return [];
+    return getSpecialAbilityNames(abilities);
   });
 
   protected readonly actionNames = computed(() => {
@@ -196,6 +206,20 @@ export class EntityCard {
     }
     return { label: 'Legendary Actions', list: ' ' + names.join(' | ') };
   });
+
+  protected readonly spellcastingHeaderText = computed(() => {
+    const e = this.entity();
+    const sc = e.spellcasting;
+    console.log(`Spellcasting for ${e.name}:`, sc);
+    if (!e || !sc) return { label: '', list: '' };
+    const label = 'Spells';
+    const names = sc.spells.map((s) => s.name);
+    const isExpanded = this.isPanelExpanded('4');
+    if (isExpanded) {
+      return { label, list: '' };
+    }
+    return { label, list: ' ' + names.join(' | ') };
+  })
 
   protected readonly getModifier = getModifier;
   protected readonly getAbilityScoreEntries = getAbilityScoreEntries;

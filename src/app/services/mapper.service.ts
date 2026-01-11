@@ -66,6 +66,10 @@ export class MapperService {
       result = 'hp' + result.slice(2);
     } else if (result.startsWith('AC')) {
       result = 'ac' + result.slice(2);
+    } else if (result === 'DC') {
+      return 'dc';
+    } else if (result.endsWith('DC')) {
+      result = result.slice(0, -2) + 'DC';
     }
 
     // Lowercase the first character for standard camelCase
