@@ -1,5 +1,6 @@
 <p-card class="p-fluid border-1 surface-border">
   @if (entity(); as e) {
+    @let state = displayState();
     <p-accordion>
       <p-accordion-panel value="0">
         <p-accordion-header>
@@ -27,14 +28,14 @@
                     [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"
                   ></p-tag>
                 }
-                @if (e.state.isStable) {
+                @if (state.isStable) {
                   <p-tag
                     value="Stable"
                     severity="success"
                     [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"
                   ></p-tag>
                 }
-                @if (e.state.isDead) {
+                @if (state.isDead) {
                   <p-tag
                     value="Dead"
                     severity="danger"
@@ -46,7 +47,7 @@
             <div class="flex gap-3 align-items-center">
               <div class="flex flex-column align-items-center gap-1" style="min-width: 120px">
                 <span class="text-xs font-bold white-space-nowrap text-600">
-                  HP: {{ e.state.currentHP }}{{ e.state.tempHP > 0 ? ' (+' + e.state.tempHP + ')' : '' }} / {{ e.state.maxHP }}
+                  HP: {{ state.currentHp }}{{ state.tempHp > 0 ? ' (+' + state.tempHp + ')' : '' }} / {{ state.maxHp }}
                 </span>
                 <div
                   class="relative overflow-hidden border-round"
@@ -67,6 +68,7 @@
               </div>
               <div class="flex flex-column pt-0">
                 <span class="text-xs font-bold white-space-nowrap">AC: 14</span>
+                <span class="text-xs font-bold text-primary">Init: {{ state.initiative }}</span>
               </div>
             </div>
           </div>
@@ -145,7 +147,7 @@
                                 <i
                                   class="pi pi-circle-fill"
                                   [style.color]="
-                                    e.state.deathSaves.successes >= i
+                                    state.deathSaves.successes >= i
                                       ? 'var(--p-green-500)'
                                       : 'var(--p-surface-200)'
                                   "
@@ -162,7 +164,7 @@
                                 <i
                                   class="pi pi-circle-fill"
                                   [style.color]="
-                                    e.state.deathSaves.failures >= i
+                                    state.deathSaves.failures >= i
                                       ? 'var(--p-red-500)'
                                       : 'var(--p-surface-200)'
                                   "

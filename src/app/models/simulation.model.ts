@@ -1,3 +1,5 @@
+import { Entity } from './combatants';
+
 export interface CombatantReference {
   name: string;
   instanceId: number;
@@ -35,10 +37,10 @@ export interface EventData {
     topReasons: string[] | null;
   };
   value?: number;
-  originalHP?: number;
-  finalHP?: number;
-  originalTempHP?: number;
-  finalTempHP?: number;
+  originalHp?: number;
+  finalHp?: number;
+  originalTempHp?: number;
+  finalTempHp?: number;
   note?: string;
 }
 
@@ -53,6 +55,8 @@ export enum EventType {
   DamageModified = 'damagemodified',
   Round = 'round',
   Turn = 'turn',
+  Death = 'death',
+  Unconscious = 'unconscious',
 }
 
 export interface SimulationEvent {
@@ -75,6 +79,11 @@ export interface TimelineNode {
 }
 
 export interface SimulationLog {
+  entities: Entity[];
   events: SimulationEvent[];
+}
+
+export interface SimulationResult {
+  logs: SimulationLog[];
   count: number;
 }

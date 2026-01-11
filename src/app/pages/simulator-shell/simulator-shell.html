@@ -12,6 +12,13 @@
         class="hidden md:block"
       ></p-button>
       <p-button
+        label="Add Timeline Dummy"
+        icon="pi pi-history"
+        severity="info"
+        (onClick)="onAddTimelineDummyData()"
+        class="flex-grow-1 md:flex-grow-0"
+      ></p-button>
+      <p-button
         label="Add Dummy Data"
         icon="pi pi-database"
         severity="secondary"
@@ -85,7 +92,10 @@
                     {{ e.name.substring(0, 2).toUpperCase() }}
                   </div>
                 } @else {
-                  <app-entity-card [entity]="e"></app-entity-card>
+                  <app-entity-card
+                    [entity]="e"
+                    [projectedState]="timelineService.projectedState().get(e.instanceId) || e.state"
+                  ></app-entity-card>
                 }
               } @empty {
                 @if (!isCombatantsCollapsed()) {
@@ -118,7 +128,10 @@
                     {{ e.name.substring(0, 2).toUpperCase() }}
                   </div>
                 } @else {
-                  <app-entity-card [entity]="e"></app-entity-card>
+                  <app-entity-card
+                    [entity]="e"
+                    [projectedState]="timelineService.projectedState().get(e.instanceId) || e.state"
+                  ></app-entity-card>
                 }
               } @empty {
                 @if (!isCombatantsCollapsed()) {
@@ -151,9 +164,9 @@
         @if (simulationService.simulationResult(); as result) {
           <div class="flex flex-column gap-3">
             <div class="surface-ground p-3 border-round">
-              <span class="font-bold">Total Events:</span> {{ result.events.length }}
+              <span class="font-bold">Total Logs:</span> {{ result.count }}
             </div>
-            <p class="text-600">Timeline visualization coming soon...</p>
+            <app-simulation-results></app-simulation-results>
           </div>
         } @else {
           <p class="text-600">

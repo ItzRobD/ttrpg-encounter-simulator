@@ -1,8 +1,9 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { SimulationLog, EncounterConfig, SimulationEvent } from '../models';
+import { SimulationLog, SimulationResult, EncounterConfig, SimulationEvent, EventType } from '../models';
 import { CombatantService } from './combatant.service';
 import { MapperService } from './mapper.service';
+import { TimelineService } from './timeline.service';
 import { environment } from '../../environments/environment';
 import { finalize, map, switchMap } from 'rxjs/operators';
 import { from, Observable } from 'rxjs';
@@ -15,11 +16,13 @@ export class SimulationService {
   private readonly combatantService = inject(CombatantService);
   private readonly mapperService = inject(MapperService);
 
-  private readonly _simulationResult = signal<SimulationLog | null>(null);
+  private readonly _simulationResult = signal<SimulationResult | null>(null);
   readonly simulationResult = this._simulationResult.asReadonly();
 
   private readonly _loading = signal(false);
   readonly loading = this._loading.asReadonly();
+
+  private readonly timelineService = inject(TimelineService);
 
   /**
    * Decompresses a GZIP ArrayBuffer into a JSON object.
@@ -53,15 +56,15 @@ export class SimulationService {
     this.http.post(url, config, { responseType: 'arraybuffer' })
       .pipe(
         switchMap(buffer => from(this.decompress(buffer))),
-        map(rawEvents => {
-          if (!Array.isArray(rawEvents)) {
-            throw new Error('Invalid simulation result: expected an array of events.');
+        map(rawResult => {
+          // Map the entire structure to handle nested logs
+          const mappedResult = this.mapperService.mapKeys(rawResult) as SimulationResult;
+
+          if (!mappedResult || !Array.isArray(mappedResult.logs)) {
+            throw new Error('Invalid simulation result: expected an object with a logs array.');
           }
-          const events = rawEvents.map(e => this.mapperService.mapKeys(e) as SimulationEvent);
-          return {
-            events,
-            count: events.length
-          } as SimulationLog;
+
+          return mappedResult;
         }),
         finalize(() => this._loading.set(false))
       )
@@ -78,5 +81,31 @@ export class SimulationService {
 
   clearResult(): void {
     this._simulationResult.set(null);
+  }
+
+  /**
+   * Seeds the simulation result with dummy data from timeline_output.json.
+   */
+  async seedDummyData(): Promise<void> {
+    try {
+      const response = await fetch('/timeline_output.json');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const rawResult = await response.json();
+      const result = this.mapperService.mapKeys(rawResult) as SimulationResult;
+
+      if (!result || !Array.isArray(result.logs)) {
+        throw new Error('Invalid dummy data: expected an object with a logs array.');
+      }
+
+      this._simulationResult.set(result);
+      if (result.logs.length > 0) {
+        this.timelineService.setSelectedSimulationLog(result.logs[0]);
+      }
+      console.log('Dummy simulation data seeded', result);
+    } catch (err) {
+      console.error('Failed to seed dummy simulation data', err);
+    }
   }
 }

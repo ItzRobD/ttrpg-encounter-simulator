@@ -14,6 +14,7 @@ import {
   WeaponSlot,
   DamageType,
   Entity,
+  EntityState,
 } from '../../models';
 import { Tag } from 'primeng/tag';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
@@ -53,6 +54,11 @@ export class EntityCard {
   protected readonly DiceType = DiceType;
   public readonly gradientStop = input<string>('50%');
   public readonly entity = input.required<Entity>();
+  public readonly projectedState = input<EntityState>();
+
+  protected readonly displayState = computed(() => {
+    return this.projectedState() || this.entity().state;
+  });
 
   isCharacter(e: Entity): e is Character {
     return 'class' in e;
@@ -71,28 +77,27 @@ export class EntityCard {
   }
 
   protected readonly activeConditions = computed(() => {
-    const e = this.entity();
-    if (!e) return [];
-    return Object.entries(e.state.conditions)
+    const state = this.displayState();
+    return Object.entries(state.conditions)
       .filter(([_, active]) => active)
       .map(([condition]) => condition)
       .sort();
   });
   protected readonly hpPercent = computed(() => {
-    const e = this.entity();
-    if (!e) return 0;
-    return Math.min(100, Math.floor((e.state.currentHP / e.state.maxHP) * 100));
+    const state = this.displayState();
+    if (!state || !state.maxHp) return 0;
+    return Math.min(100, Math.floor((state.currentHp / state.maxHp) * 100));
   });
   protected readonly tempHpPercent = computed(() => {
-    const e = this.entity();
-    if (!e || e.state.tempHP <= 0) return 0;
+    const state = this.displayState();
+    if (!state || state.tempHp <= 0 || !state.maxHp) return 0;
     // We calculate temp HP relative to Max HP to see how much of the bar it should occupy
-    return Math.floor((e.state.tempHP / e.state.maxHP) * 100);
+    return Math.floor((state.tempHp / state.maxHp) * 100);
   });
   protected readonly hpColor = computed(() => {
     const percent = this.hpPercent();
-    if (percent > 50) return '#22c55e'; // Green 500
-    if (percent > 20) return '#eab308'; // Yellow 500
+    if (percent >= 50) return '#22c55e'; // Green 500
+    if (percent >= 25) return '#eab308'; // Yellow 500
     return '#ef4444'; // Red 500
   });
 

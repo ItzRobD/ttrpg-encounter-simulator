@@ -15,7 +15,7 @@ describe('CombatantService', () => {
     name: 'Goblin',
     abilityScores: { strength: 8, dexterity: 14, constitution: 10, intelligence: 10, wisdom: 8, charisma: 8 },
     abilityScoreProficiency: { strength: false, dexterity: false, constitution: false, intelligence: false, wisdom: false, charisma: false },
-    state: { currentHP: 7, maxHP: 7, tempHP: 0, hitDie: 6, conditions: {} as any, deathSaves: { successes: 0, failures: 0 }, resistances: {} as any, isStable: true, isDead: false, initiative: 0 }
+    state: { currentHp: 7, maxHp: 7, tempHp: 0, hitDie: 6, conditions: {} as any, deathSaves: { successes: 0, failures: 0 }, resistances: {} as any, isStable: true, isDead: false, initiative: 0 }
   };
 
   const mockCharacter = {

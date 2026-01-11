@@ -126,6 +126,204 @@ export class CombatantService {
   }
 
   /**
+   * Seeds the encounter with specific dummy data matching the timeline_output.json.
+   */
+  seedTimelineDummyData(): void {
+    this.clearEncounter();
+
+    // Bob (Character)
+    const bob: Character = {
+      id: 100,
+      instanceId: 0,
+      name: 'Bob',
+      race: Race.Human,
+      class: Class.Fighter,
+      level: 1,
+      abilityScores: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      abilityScoreProficiency: {
+        strength: false,
+        dexterity: false,
+        constitution: false,
+        intelligence: false,
+        wisdom: false,
+        charisma: false,
+      },
+      state: {
+        currentHp: 150,
+        maxHp: 150,
+        tempHp: 0,
+        hitDie: 10,
+        conditions: {
+          blinded: false,
+          charmed: false,
+          deafened: false,
+          frightened: false,
+          grappled: false,
+          incapacitated: false,
+          invisible: false,
+          paralyzed: false,
+          petrified: false,
+          poisoned: false,
+          prone: false,
+          restrained: false,
+          stunned: false,
+          unconscious: false,
+        } as any,
+        deathSaves: { successes: 0, failures: 0 },
+        resistances: {
+          acid: ResistanceType.None,
+          bludgeoning: ResistanceType.None,
+          cold: ResistanceType.None,
+          fire: ResistanceType.None,
+          force: ResistanceType.None,
+          lightning: ResistanceType.None,
+          necrotic: ResistanceType.None,
+          piercing: ResistanceType.None,
+          poison: ResistanceType.None,
+          psychic: ResistanceType.None,
+          radiant: ResistanceType.None,
+          slashing: ResistanceType.None,
+          thunder: ResistanceType.None,
+        } as any,
+        isStable: true,
+        isDead: false,
+        initiative: 0,
+      },
+      equipment: {
+        armor: { id: 0, name: 'None', ac: 10, minimumStrength: 0 },
+        shield: undefined,
+        hasShieldEquipped: false,
+        weapons: {
+          [WeaponSlot.Primary]: {
+            name: 'Longsword',
+            numberOfDice: 1,
+            die: DiceType.D10,
+            damageType: DamageType.Slashing,
+            properties: {
+              isVersatile: true,
+              isFinesse: false,
+              isRanged: false,
+              isHeavy: false,
+              isLight: false,
+              isTwoHanded: false,
+              isThrown: false,
+              isOnlyRanged: false,
+            },
+            modifiers: {
+              isMagic: false,
+              isSilvered: false,
+              isAdamantine: false,
+              isColdForgedIron: false,
+              attackBonus: 0,
+              damageBonus: 0,
+            },
+          },
+        },
+      },
+    };
+
+    // Acolyte (Monster)
+    const acolyte: Monster = {
+      id: 200,
+      instanceId: 1,
+      name: 'Acolyte',
+      size: MonsterSize.Medium,
+      type: MonsterType.Humanoid,
+      cr: 0.25,
+      proficiencyBonus: 2,
+      isLegendary: false,
+      isSpellcaster: true,
+      isInnateSpellcaster: false,
+      specialAbilities: {} as any,
+      monsterActions: {
+        actions: [
+          {
+            actionId: 1,
+            name: 'Club',
+            rechargeValue: 0,
+            hasDC: false,
+            index: 0,
+            numberOfDice: 1,
+            die: DiceType.D4,
+            amountToAdd: 0,
+            attackBonus: 2,
+            damageType: DamageType.Bludgeoning,
+          },
+        ],
+        multiattacks: [],
+        legendaryActions: [],
+        rechargeActions: {},
+      },
+      abilityScores: {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 14,
+        charisma: 11,
+      },
+      abilityScoreProficiency: {
+        strength: false,
+        dexterity: false,
+        constitution: false,
+        intelligence: false,
+        wisdom: false,
+        charisma: false,
+      },
+      state: {
+        currentHp: 11,
+        maxHp: 11,
+        tempHp: 0,
+        hitDie: 8,
+        conditions: {
+          blinded: false,
+          charmed: false,
+          deafened: false,
+          frightened: false,
+          grappled: false,
+          incapacitated: false,
+          invisible: false,
+          paralyzed: false,
+          petrified: false,
+          poisoned: false,
+          prone: false,
+          restrained: false,
+          stunned: false,
+          unconscious: false,
+        } as any,
+        deathSaves: { successes: 0, failures: 0 },
+        resistances: {
+          acid: ResistanceType.None,
+          bludgeoning: ResistanceType.None,
+          cold: ResistanceType.None,
+          fire: ResistanceType.None,
+          force: ResistanceType.None,
+          lightning: ResistanceType.None,
+          necrotic: ResistanceType.None,
+          piercing: ResistanceType.None,
+          poison: ResistanceType.None,
+          psychic: ResistanceType.None,
+          radiant: ResistanceType.None,
+          slashing: ResistanceType.None,
+          thunder: ResistanceType.None,
+        } as any,
+        isStable: true,
+        isDead: false,
+        initiative: 0,
+      },
+    };
+
+    this._combatants.set([bob, acolyte]);
+  }
+
+  /**
    * Seeds the encounter with dummy data for testing.
    */
   seedDummyData(): void {
@@ -153,9 +351,9 @@ export class CombatantService {
         charisma: false,
       },
       state: {
-        currentHP: 40,
-        maxHP: 63,
-        tempHP: 12,
+        currentHp: 40,
+        maxHp: 63,
+        tempHp: 12,
         hitDie: 10,
         conditions: {
           blinded: false,
@@ -302,9 +500,9 @@ export class CombatantService {
         charisma: true,
       },
       state: {
-        currentHP: 546,
-        maxHP: 546,
-        tempHP: 0,
+        currentHp: 546,
+        maxHp: 546,
+        tempHp: 0,
         hitDie: 20,
         conditions: {
           blinded: false,

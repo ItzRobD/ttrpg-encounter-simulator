@@ -29,9 +29,9 @@ export type DamageResistances = {
 };
 
 export interface EntityState {
-  currentHP: number;
-  maxHP: number;
-  tempHP: number;
+  currentHp: number;
+  maxHp: number;
+  tempHp: number;
   hitDie: number;
   conditions: Conditions;
   deathSaves: DeathSaves;

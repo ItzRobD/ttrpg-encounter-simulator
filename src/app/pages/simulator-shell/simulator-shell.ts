@@ -8,11 +8,13 @@ import { EntityCard } from '../../components/entity-card/entity-card';
 import { CombatantService } from '../../services/combatant.service';
 import { SimulationService } from '../../services/simulation.service';
 import { environment } from '../../../environments/environment';
+import {TimelineService} from '../../services/timeline.service';
+import {SimulationResults} from '../../components/simulation-results/simulation-results';
 
 @Component({
   selector: 'app-simulator-shell',
   standalone: true,
-  imports: [ButtonModule, TooltipModule, EntityCard],
+  imports: [ButtonModule, TooltipModule, EntityCard, SimulationResults],
   templateUrl: './simulator-shell.html',
   styles: [
     `
@@ -26,6 +28,7 @@ import { environment } from '../../../environments/environment';
 export class SimulatorShell {
   public readonly combatantService = inject(CombatantService);
   public readonly simulationService = inject(SimulationService);
+  public readonly timelineService = inject(TimelineService);
   private readonly breakpointObserver = inject(BreakpointObserver);
   protected readonly layout = environment.layout;
 
@@ -41,6 +44,11 @@ export class SimulatorShell {
 
   onAddDummyData() {
     this.combatantService.seedDummyData();
+  }
+
+  onAddTimelineDummyData() {
+    this.combatantService.seedTimelineDummyData();
+    this.simulationService.seedDummyData();
   }
 
   toggleCombatants() {

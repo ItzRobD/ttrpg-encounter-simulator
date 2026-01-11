@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { EventType, SimulationEvent, TimelineNode } from '../models';
+import { Entity, EventType, SimulationEvent, SimulationLog, TimelineNode } from '../models';
 
 @Injectable({
   providedIn: 'root',
@@ -7,9 +7,9 @@ import { EventType, SimulationEvent, TimelineNode } from '../models';
 export class MapperService {
   /**
    * Transforms a raw gzipped JSON log into a hierarchical tree for the UI.
+   * Expects the events array.
    */
-  mapSimulationLog(rawLog: unknown[]): TimelineNode[] {
-    const events = rawLog.map((e) => this.mapKeys(e) as SimulationEvent);
+  mapSimulationLog(events: SimulationEvent[]): TimelineNode[] {
     return this.buildTree(events);
   }
 
@@ -84,6 +84,12 @@ export class MapperService {
     events.forEach((event) => {
       const node = nodesMap.get(event.id)!;
 
+      // 0. SPECIAL CASE: Death events with no parent are treated as root nodes
+      if (event.type === EventType.Death && !event.parentId) {
+        rootNodes.push(node);
+        return;
+      }
+
       // 2. Ensure Round node exists
       if (!roundsMap.has(event.round)) {
         const roundNode: TimelineNode = {
@@ -94,7 +100,7 @@ export class MapperService {
             data: { note: `Round ${event.round}` },
           },
           children: [],
-          expanded: event.round <= 1, // Auto-expand early rounds for better UX
+          expanded: false,
         };
         roundsMap.set(event.round, roundNode);
         rootNodes.push(roundNode);
@@ -124,7 +130,11 @@ export class MapperService {
 
         // 4. Attach to hierarchy
         // If it has a parentId, and that parent is NOT the turn itself, nest it
-        if (event.parentId && event.parentId !== event.sequenceId && nodesMap.has(event.parentId)) {
+        if (
+          event.parentId &&
+          event.parentId !== event.sequenceId &&
+          nodesMap.has(event.parentId)
+        ) {
           nodesMap.get(event.parentId)!.children?.push(node);
         } else {
           // Top-level action within a turn

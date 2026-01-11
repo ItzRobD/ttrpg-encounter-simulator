@@ -21,24 +21,63 @@ export class TimelineService {
 
   setSelectedSimulationLog(log: SimulationLog | null): void {
     this._selectedSimulationLog.set(log);
+    this._scrubberIndex.set(0);
+    this._currentTimelineIndex.set(0);
   }
 
   private readonly _currentTimelineIndex: WritableSignal<number> = signal(0);
 
+  /**
+   * The list of events that the user can scrub through (Rounds, Turns, Choices).
+   */
+  readonly scrubbableEvents = computed(() => {
+    const log = this._selectedSimulationLog();
+    if (!log) return [];
+    return log.events.filter(e =>
+      e.type === EventType.Round ||
+      e.type === EventType.Turn ||
+      e.type === EventType.Choice ||
+      e.type === EventType.Unconscious ||
+      e.type === EventType.Death ||
+      e.type === EventType.HPModified
+    );
+  });
+
+  /**
+   * The index within the scrubbableEvents list.
+   */
+  private readonly _scrubberIndex = signal(0);
+
   get currentTimelineIndex(): number {
-    return this._currentTimelineIndex();
+    return this._scrubberIndex();
   }
 
   set currentTimelineIndex(index: number) {
-    this._currentTimelineIndex.set(index);
+    this._scrubberIndex.set(index);
+
+    // Sync the internal event index
+    const scrubbable = this.scrubbableEvents();
+    if (scrubbable[index]) {
+      const log = this._selectedSimulationLog();
+      if (log) {
+        const fullIndex = log.events.findIndex(e => e.id === scrubbable[index].id);
+        if (fullIndex !== -1) {
+          this._currentTimelineIndex.set(fullIndex);
+        }
+      }
+    }
   }
 
   incrementTimelineIndex(): void {
-    this._currentTimelineIndex.update(i => i + 1);
+    if (this._scrubberIndex() < this.scrubbableEvents().length - 1) {
+      this.currentTimelineIndex = this._scrubberIndex() + 1;
+    }
   }
 
   decrementTimelineIndex(): void {
-    this._currentTimelineIndex.update(i => i - 1);
+    if (this._scrubberIndex() > 0) {
+      this.currentTimelineIndex = this._scrubberIndex() - 1;
+    }
   }
 
   readonly projectedState = computed(() => {
@@ -52,8 +91,8 @@ export class TimelineService {
 
     const stateMap = new Map<number, EntityState>();
 
-    // 1. Initialize with starting states from CombatantService
-    this.combatantService.combatants().forEach(c => {
+    // 1. Initialize with starting states from the log's entities
+    log.entities.forEach(c => {
       stateMap.set(c.instanceId, { ...c.state });
     });
 
@@ -63,30 +102,31 @@ export class TimelineService {
       switch (event.type) {
         // TODO: Conditions, death saves
         case EventType.HPModified: {
-          const targetID = event.data.target?.instanceId;
-          const newHP = event.data.finalHP;
-          const newTempHP = event.data.finalTempHP;
+          const targetId = event.data.target?.instanceId;
+          const newHp = event.data.finalHp;
+          const newTempHp = event.data.finalTempHp;
 
-          if (targetID !== undefined && newHP !== undefined) {
-            const currentState = stateMap.get(targetID);
+          if (targetId !== undefined && newHp !== undefined) {
+            const currentState = stateMap.get(targetId);
             if (currentState) {
-              stateMap.set(targetID, {
+              const maxHp = currentState.maxHp || 1;
+              stateMap.set(targetId, {
                 ...currentState,
-                currentHP: newHP,
-                tempHP: newTempHP != undefined ? newTempHP : currentState.tempHP
+                currentHp: Math.max(0, Math.min(newHp, maxHp)),
+                tempHp: newTempHp != undefined ? Math.max(0, newTempHp) : currentState.tempHp
               });
             }
           }
           break;
         }
         case EventType.Initiative: {
-          const actorID = event.data.actor?.instanceId;
+          const actorId = event.data.actor?.instanceId;
           const initiative = event.data.roll?.total;
 
-          if (actorID !== undefined && initiative !== undefined) {
-            const currentState = stateMap.get(actorID);
+          if (actorId !== undefined && initiative !== undefined) {
+            const currentState = stateMap.get(actorId);
             if (currentState) {
-              stateMap.set(actorID, {
+              stateMap.set(actorId, {
                 ...currentState,
                 initiative: initiative
               });
