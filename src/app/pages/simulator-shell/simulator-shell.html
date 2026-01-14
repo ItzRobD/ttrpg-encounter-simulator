@@ -70,6 +70,10 @@
           </div>
         </div>
 
+        @if (simulationService.error()) {
+          <p-message severity="error" [text]="simulationService.error()!" styleClass="w-full"></p-message>
+        }
+
         <div class="grid" [class.flex-column]="isCombatantsCollapsed()">
           <!-- Characters -->
           <div [class]="isCombatantsCollapsed() ? 'col-12' : 'col-12 lg:col-6'">
@@ -95,6 +99,7 @@
                   <app-entity-card
                     [entity]="e"
                     [projectedState]="timelineService.projectedState().get(e.instanceId) || e.state"
+                    [hideState]="false"
                   ></app-entity-card>
                 }
               } @empty {
@@ -131,6 +136,7 @@
                   <app-entity-card
                     [entity]="e"
                     [projectedState]="timelineService.projectedState().get(e.instanceId) || e.state"
+                    [hideState]="false"
                   ></app-entity-card>
                 }
               } @empty {

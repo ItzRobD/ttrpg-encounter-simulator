@@ -1,4 +1,4 @@
-import { Entity } from './entity.model';
+import { Entity, EntitySummary } from './entity.model';
 import { MonsterActions, MonsterSize, MonsterType, SpecialAbilities, Spellcasting } from '../core';
 
 export interface Monster extends Entity {
@@ -11,5 +11,13 @@ export interface Monster extends Entity {
   isInnateSpellcaster: boolean;
   specialAbilities: SpecialAbilities;
   monsterActions: MonsterActions;
-  spellcasting?: Spellcasting;
+}
+
+export interface MonsterSummary extends EntitySummary {
+  cr: number;
+  type: MonsterType;
+  size: MonsterSize;
+  ac: number;
+  isLegendary: boolean;
+  isSpellcaster: boolean;
 }

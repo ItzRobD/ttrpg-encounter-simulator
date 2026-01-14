@@ -27,6 +27,11 @@ export interface AbilityScoreProficiency {
   charisma: boolean;
 }
 
+export interface AsConfig {
+  abilityScores: AbilityScores;
+  proficiencies: AbilityScoreProficiency;
+}
+
 export interface DeathSaves {
   successes: number;
   failures: number;

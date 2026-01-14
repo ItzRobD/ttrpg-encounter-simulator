@@ -15,16 +15,30 @@ export class MapperService {
 
   /**
    * Recursively converts object keys from PascalCase to camelCase.
-   * Uses 'unknown' because JSON data can contain heterogeneous types (strings, numbers, booleans, nested objects).
-   * Unlike 'any', 'unknown' is type-safe as it forces checking or casting before the data can be used.
+   * Special handling for Monster data from backend.
    */
   mapKeys(obj: unknown): unknown {
     if (Array.isArray(obj)) {
       return obj.map((v) => this.mapKeys(v));
     } else if (obj !== null && typeof obj === 'object') {
-      const result: Record<string, unknown> = {};
       const record = obj as Record<string, unknown>;
 
+      // New unified response structure: { data: { ... } }
+      if (record['data'] && typeof record['data'] === 'object' && !Array.isArray(record['data'])) {
+        const data = record['data'] as Record<string, any>;
+
+        // Distinguish between Monster and Character within the "data" envelope
+        if (data['actions'] && data['as_config']) {
+          return this.mapMonsterResponse(data);
+        }
+
+        if (data['class_id'] !== undefined && data['race_id'] !== undefined) {
+          return this.mapCharacterResponse(data);
+        }
+      }
+
+      // Fallback for objects already inside the mappers or simpler objects
+      const result: Record<string, unknown> = {};
       Object.keys(record).forEach((key) => {
         const camelKey = this.toCamelCase(key);
         result[camelKey] = this.mapKeys(record[key]);
@@ -36,14 +50,212 @@ export class MapperService {
   }
 
   /**
+   * Specifically handles the mapping of the Character response from the backend.
+   */
+  private mapCharacterResponse(response: Record<string, any>): Record<string, any> {
+    const result: Record<string, any> = {};
+
+    Object.keys(response).forEach((key) => {
+      const camelKey = this.toCamelCase(key);
+      result[camelKey] = this.mapKeys(response[key]);
+    });
+
+    // Map as_config directly to asConfig
+    if (response['as_config']) {
+      result['asConfig'] = this.mapKeys(response['as_config']);
+    }
+
+    // 1. Map Spellcasting if present
+    const rawSpellcasting = response['spellcasting'] || response['Spellcasting'];
+    if (rawSpellcasting) {
+      const slots: Record<number, { current: number; max: number }> = {};
+      const rawSlots = rawSpellcasting.spell_slots || rawSpellcasting.SpellSlots;
+      if (rawSlots) {
+        Object.entries(rawSlots).forEach(([level, max]: [string, any]) => {
+          slots[Number(level)] = { current: max, max: max };
+        });
+      }
+
+      const rawSpells = rawSpellcasting.known_spells || rawSpellcasting.spells || [];
+      const spells = Array.isArray(rawSpells) ? rawSpells.map((s: any) => this.mapKeys(s)) : [];
+
+      result['spellcasting'] = {
+        casterType: 'none', // Default for now
+        casterLevel: rawSpellcasting.casting_level || rawSpellcasting.CastingLevel || 0,
+        spellSlots: slots,
+        spells: spells,
+        spellSaveDC: rawSpellcasting.save_dc || rawSpellcasting.SaveDC || 0,
+        spellAttackBonus: rawSpellcasting.attack_modifier || rawSpellcasting.AttackModifier || 0
+      };
+    }
+
+    // 2. Map Resistances
+    const resistances: Record<string, string> = {};
+    const rawResistances = response['resistances'] || {};
+    Object.entries(rawResistances).forEach(([type, data]: [string, any]) => {
+      resistances[type] = (data.resistance || data.Resistance || 'none').toLowerCase();
+    });
+
+    // 3. Ensure state exists
+    result['state'] = {
+      ...result['state'],
+      resistances: resistances,
+      conditions: {},
+      deathSaves: { successes: 0, failures: 0 },
+      isStable: false,
+      isDead: false
+    };
+
+    return result;
+  }
+
+  /**
+   * Specifically handles the mapping of the complex Monster response from the backend.
+   */
+  private mapMonsterResponse(response: Record<string, any>): Record<string, any> {
+    const result: Record<string, any> = {};
+
+    Object.keys(response).forEach((key) => {
+      // Avoid recursive mapping of large arrays/objects we handle manually below
+      if (['actions', 'legendary_actions', 'multiattacks', 'resistances', 'spellcasting'].includes(key)) {
+        return;
+      }
+      const camelKey = this.toCamelCase(key);
+      result[camelKey] = this.mapKeys(response[key]);
+    });
+
+    // Map as_config directly to asConfig
+    if (response['as_config']) {
+      result['asConfig'] = this.mapKeys(response['as_config']);
+    }
+
+    // 1. Map Actions
+    const rawActions = response['actions'] || [];
+    const actions = Array.isArray(rawActions) ? rawActions.map((a: any) => this.mapKeys(a)) : [];
+
+    // 2. Map Multiattacks
+    const rawMultiattacks = response['multiattacks'] || [];
+    const multiattacks = Array.isArray(rawMultiattacks) ? rawMultiattacks.map((m: any) => this.mapKeys(m)) : [];
+
+    // 3. Map Legendary Actions
+    const rawLegendary = response['legendary_actions'] || [];
+    const legendaryActions = Array.isArray(rawLegendary) ? rawLegendary.map((la: any) => {
+      const mapped = this.mapKeys(la) as any;
+      if (mapped.action) {
+        return { ...mapped.action, cost: mapped.cost };
+      }
+      return mapped;
+    }) : [];
+
+    // 4. Map Resistances
+    const resistances: Record<string, string> = {};
+    const rawResistances = response['resistances'] || {};
+    Object.entries(rawResistances).forEach(([type, data]: [string, any]) => {
+      resistances[type] = (data.resistance || 'none').toLowerCase();
+    });
+
+    // 5. Assemble the monsterActions structure
+    const rechargeActions: Record<number, number> = {};
+    actions.forEach((a: any) => {
+      if (a.rechargeValue > 0) {
+        rechargeActions[a.actionId] = a.rechargeValue;
+      }
+    });
+
+    result['monsterActions'] = {
+      actions: actions,
+      multiattacks: multiattacks,
+      legendaryActions: legendaryActions,
+      rechargeActions: rechargeActions
+    };
+
+    // 6. Map Spellcasting
+    const rawSpellcasting = response['spellcasting'];
+    if (rawSpellcasting) {
+      const spells = (rawSpellcasting.leveled_spells || []).map((s: any) => this.mapKeys(s));
+      const innateSpells = (rawSpellcasting.innate_spells || []).map((is: any) => {
+        const spell = this.mapKeys(is.Spell || is.spell || {}) as any;
+        return {
+          ...spell,
+          isInnate: true,
+          maxCastsPerDay: is.MaxCastsPerDay !== undefined ? is.MaxCastsPerDay : (is.max_casts_per_day !== undefined ? is.max_casts_per_day : -1)
+        };
+      });
+
+      const slots: Record<number, { current: number; max: number }> = {};
+      if (rawSpellcasting.spell_slots) {
+        Object.entries(rawSpellcasting.spell_slots).forEach(([level, max]: [string, any]) => {
+          slots[Number(level)] = { current: max, max: max };
+        });
+      }
+
+      result['spellcasting'] = {
+        casterType: 'full',
+        casterLevel: rawSpellcasting.casting_level || 0,
+        spellSlots: slots,
+        spells: [...spells, ...innateSpells],
+        spellSaveDC: rawSpellcasting.save_dc || 0,
+        spellAttackBonus: rawSpellcasting.attack_modifier || 0
+      };
+    } else if (response['spellcasting_config']) {
+      // Fallback for older monster format if any
+      const oldSpellcasting = response['spellcasting_config'];
+      const spells = (oldSpellcasting.LeveledSpells || []).map((s: any) => this.mapKeys(s));
+      const innateSpells = (oldSpellcasting.InnateSpells || []).map((is: any) => {
+        const spell = this.mapKeys(is.Spell || is.spell || {}) as any;
+        return {
+          ...spell,
+          isInnate: true,
+          maxCastsPerDay: is.MaxCastsPerDay !== undefined ? is.MaxCastsPerDay : (is.max_casts_per_day !== undefined ? is.max_casts_per_day : -1)
+        };
+      });
+      const slots: Record<number, { current: number; max: number }> = {};
+      if (oldSpellcasting.SpellSlots) {
+        Object.entries(oldSpellcasting.SpellSlots).forEach(([level, max]: [string, any]) => {
+          slots[Number(level)] = { current: max, max: max };
+        });
+      }
+      result['spellcasting'] = {
+        casterType: 'full',
+        casterLevel: oldSpellcasting.CastingLevel || 0,
+        spellSlots: slots,
+        spells: [...spells, ...innateSpells],
+        spellSaveDC: oldSpellcasting.SaveDC || 0,
+        spellAttackBonus: oldSpellcasting.AttackModifier || 0
+      };
+    }
+
+    // 7. Ensure state exists
+    result['state'] = {
+      ...result['state'],
+      resistances: resistances,
+      conditions: {},
+      deathSaves: { successes: 0, failures: 0 },
+      isStable: false,
+      isDead: false
+    };
+
+    return result;
+  }
+
+  /**
    * Robust PascalCase to camelCase converter that handles dnd specific abbreviations.
    */
   private toCamelCase(str: string): string {
     if (str === 'ID') return 'id';
     if (str === 'AC') return 'ac';
     if (str === 'HP') return 'hp';
+    if (str === 'CR') return 'cr';
+    if (str === 'AbilityScores' || str === 'ability_scores') return 'abilityScores';
+    if (str === 'AbilityScoreProf' || str === 'ability_score_prof') return 'abilityScoreProficiency';
+    if (str === 'DC') return 'dc';
 
     let result = str;
+
+    // Handle snake_case
+    if (result.includes('_')) {
+      result = result.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+    }
 
     // Handle common acronyms at the end of strings (e.g., SequenceID -> SequenceId, MaxHP -> MaxHp)
     if (result === 'OriginalHP') return 'originalHp';
@@ -66,8 +278,8 @@ export class MapperService {
       result = 'hp' + result.slice(2);
     } else if (result.startsWith('AC')) {
       result = 'ac' + result.slice(2);
-    } else if (result === 'DC') {
-      return 'dc';
+    } else if (result.startsWith('DC')) {
+      result = 'dc' + result.slice(2);
     } else if (result.endsWith('DC')) {
       result = result.slice(0, -2) + 'DC';
     }

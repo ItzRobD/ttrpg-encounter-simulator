@@ -22,6 +22,16 @@ export function getAbilityScoreEntries(scores: AbilityScores): AbilityScoreEntry
     'wisdom',
     'charisma',
   ];
+
+  if (!scores) {
+    return order.map((key) => ({
+      key,
+      shortName: getAbilityScoreShortName(key),
+      value: 10,
+      modifier: 0,
+    }));
+  }
+
   return order.map((key) => ({
     key,
     shortName: getAbilityScoreShortName(key),
@@ -191,8 +201,9 @@ export interface AbilityScoreEntry {
  * Returns the relevant ability modifier for a weapon based on its properties.
  */
 export function getWeaponAbilityModifier(e: Entity, weapon: Weapon): number {
-  const str = getModifier(e.abilityScores.strength);
-  const dex = getModifier(e.abilityScores.dexterity);
+  if (!e.asConfig?.abilityScores) return 0;
+  const str = getModifier(e.asConfig.abilityScores.strength);
+  const dex = getModifier(e.asConfig.abilityScores.dexterity);
 
   if (weapon.properties.isRanged || weapon.properties.isOnlyRanged) return dex;
   if (weapon.properties.isFinesse) return Math.max(str, dex);

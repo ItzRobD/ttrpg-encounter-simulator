@@ -23,16 +23,13 @@ export interface MultiattackOption {
   count: number;
 }
 
-export interface LegendaryAction {
-  actionId: number;
+export interface LegendaryAction extends Action {
   cost: number; // typically 1-3
-  name: string;
-  description: string;
 }
 
 export interface MonsterActions {
   actions: Action[];
   multiattacks: MultiattackOption[][];
-  legendaryActions: Action[];
+  legendaryActions: LegendaryAction[];
   rechargeActions: { [actionId: number]: number };
 }

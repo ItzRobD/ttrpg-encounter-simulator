@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
+import { MessageModule } from 'primeng/message';
 import { EntityCard } from '../../components/entity-card/entity-card';
 import { CombatantService } from '../../services/combatant.service';
 import { SimulationService } from '../../services/simulation.service';
@@ -14,7 +15,7 @@ import {SimulationResults} from '../../components/simulation-results/simulation-
 @Component({
   selector: 'app-simulator-shell',
   standalone: true,
-  imports: [ButtonModule, TooltipModule, EntityCard, SimulationResults],
+  imports: [ButtonModule, TooltipModule, MessageModule, EntityCard, SimulationResults],
   templateUrl: './simulator-shell.html',
   styles: [
     `

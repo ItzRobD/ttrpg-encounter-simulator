@@ -17,6 +17,16 @@ describe('EntityLegendaryActions', () => {
     isLegendary: true,
     isSpellcaster: false,
     isInnateSpellcaster: false,
+    ac: 19,
+    hp: {
+      hpSetMethod: 0,
+      value: 0,
+      hpAverage: 256,
+      numberOfDice: 17,
+      hitDie: 12,
+      amountToAdd: 119,
+      modifier: 7,
+    },
     abilityScores: {} as any,
     abilityScoreProficiency: {} as any,
     specialAbilities: {} as any,
@@ -26,11 +36,13 @@ describe('EntityLegendaryActions', () => {
       legendaryActions: [
         {
           actionId: 10, name: 'Detect', description: 'The dragon makes a Wisdom (Perception) check.',
-          rechargeValue: 0, hasDC: false, index: 0, numberOfDice: 0, die: DiceType.D0, amountToAdd: 0, attackBonus: 0, damageType: DamageType.Acid
+          rechargeValue: 0, hasDC: false, index: 0, numberOfDice: 0, die: DiceType.D0, amountToAdd: 0, attackBonus: 0, damageType: DamageType.Acid,
+          cost: 1
         },
         {
           actionId: 11, name: 'Tail Attack', description: 'The dragon makes a tail attack.',
-          rechargeValue: 0, hasDC: false, index: 1, numberOfDice: 1, die: DiceType.D8, amountToAdd: 0, attackBonus: 0, damageType: DamageType.Bludgeoning
+          rechargeValue: 0, hasDC: false, index: 1, numberOfDice: 1, die: DiceType.D8, amountToAdd: 0, attackBonus: 0, damageType: DamageType.Bludgeoning,
+          cost: 1
         }
       ],
       rechargeActions: {}

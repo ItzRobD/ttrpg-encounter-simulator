@@ -6,7 +6,7 @@ import { MapperService } from './mapper.service';
 import { TimelineService } from './timeline.service';
 import { environment } from '../../environments/environment';
 import { finalize, map, switchMap } from 'rxjs/operators';
-import { from, Observable } from 'rxjs';
+import { catchError, from, Observable, retry, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -21,6 +21,9 @@ export class SimulationService {
 
   private readonly _loading = signal(false);
   readonly loading = this._loading.asReadonly();
+
+  private readonly _error = signal<string | null>(null);
+  readonly error = this._error.asReadonly();
 
   private readonly timelineService = inject(TimelineService);
 
@@ -50,12 +53,17 @@ export class SimulationService {
     };
 
     this._loading.set(true);
+    this._error.set(null);
 
     // TODO: Update endpoint
     const url = `${environment.apiUrl}/simulate`;
 
     this.http.post(url, config, { responseType: 'arraybuffer' })
       .pipe(
+        retry({
+          count: environment.httpRetryCount,
+          delay: environment.httpRetryDelay
+        }),
         switchMap(buffer => from(this.decompress(buffer))),
         map(rawResult => {
           // Map the entire structure to handle nested logs
@@ -66,6 +74,10 @@ export class SimulationService {
           }
 
           return mappedResult;
+        }),
+        catchError((err) => {
+          this._error.set('Simulation request failed after multiple retries. Please check your connection or try again later.');
+          return throwError(() => err);
         }),
         finalize(() => this._loading.set(false))
       )
@@ -78,6 +90,13 @@ export class SimulationService {
           console.error('Simulation failed', err);
         }
       });
+  }
+
+  /**
+   * Clears any current error state.
+   */
+  clearError(): void {
+    this._error.set(null);
   }
 
   clearResult(): void {

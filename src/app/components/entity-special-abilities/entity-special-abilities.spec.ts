@@ -29,6 +29,16 @@ describe('EntitySpecialAbilities', () => {
     isLegendary: false,
     isSpellcaster: false,
     isInnateSpellcaster: false,
+    ac: 15,
+    hp: {
+      hpSetMethod: 0,
+      value: 0,
+      hpAverage: 7,
+      numberOfDice: 2,
+      hitDie: 6,
+      amountToAdd: 0,
+      modifier: 0,
+    },
     abilityScores: {} as any,
     abilityScoreProficiency: {} as any,
     specialAbilities: {

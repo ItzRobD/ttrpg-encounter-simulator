@@ -3,13 +3,13 @@
     <h1 class="text-2xl md:text-3xl font-bold m-0 text-center md:text-left">Bestiary</h1>
     <div class="flex gap-2 w-full md:w-auto">
       <p-button
-        label="Import Monster"
+        label="Import Character"
         icon="pi pi-download"
         severity="secondary"
         class="flex-grow-1 md:flex-grow-0"
       ></p-button>
       <p-button
-        label="Create Monster"
+        label="Create Character"
         icon="pi pi-plus"
         severity="primary"
         class="flex-grow-1 md:flex-grow-0"
@@ -18,16 +18,16 @@
   </div>
 
   <p class="text-700 line-height-3 hidden md:block">
-    Browse and manage your collection of monsters for simulations.
+    Browse and manage your collection of characters for simulations.
   </p>
 
   <div class="flex flex-column md:flex-row mt-4 md:mt-6 gap-3 overflow-hidden">
-    <!-- Monsters List Column -->
+    <!-- Characters List Column -->
     <div class="w-full md:w-5 lg:w-7 flex-shrink-0">
       <div class="flex flex-column gap-4 border-1 surface-border border-round p-3 h-full overflow-hidden">
         <div class="flex justify-content-between align-items-center">
           <h3 class="text-xl font-semibold m-0 white-space-nowrap">
-            Monsters
+            Characters
           </h3>
           <div class="flex gap-2">
             <p-iconfield iconPosition="left" class="w-full md:w-12rem lg:w-15rem">
@@ -51,44 +51,45 @@
         </div>
 
         <div class="flex flex-column gap-2 flex-1 overflow-auto">
-          <!-- Entities Table -->
-          <app-entity-table mode="monster" [searchTerm]="searchTerm()"></app-entity-table>
+          <!-- Characters Table -->
+          <app-entity-table mode="character" [searchTerm]="searchTerm()"></app-entity-table>
         </div>
       </div>
     </div>
 
-    <!-- Monster Detail Column -->
+    <!-- Character Detail Column -->
     <div
       class="flex-1 min-w-0"
     >
       <div class="p-2 md:p-4 border-1 surface-border border-round h-full min-h-20rem">
         <div class="flex justify-content-between align-items-center mb-4 border-bottom-1 surface-border pb-3">
-          <h3 class="text-xl font-semibold m-0">Monster</h3>
+          <h3 class="text-xl font-semibold m-0">Character</h3>
           <div class="flex gap-2">
             <p-button
               icon="pi pi-pencil"
               [text]="true"
-              pTooltip="Edit Monster"
+              pTooltip="Edit Character"
             ></p-button>
             <p-button
               icon="pi pi-copy"
               [text]="true"
-              pTooltip="Duplicate Monster"
+              pTooltip="Duplicate Character"
             ></p-button>
             <p-button
               icon="pi pi-trash"
               severity="danger"
               [text]="true"
-              pTooltip="Delete Monster"
+              pTooltip="Delete Character"
             ></p-button>
           </div>
         </div>
 
         <div class="flex flex-column gap-3">
-          @if (monsterService.selectedEntity(); as monster) {
-            <app-entity-card [entity]="monster" [hideState]="true" [startExpanded]="true"></app-entity-card>
+          @if (characterService.selectedEntity(); as character) {
+            <app-entity-card [entity]="character" [hideState]="true"
+                             [startExpanded]="true"></app-entity-card>
           } @else {
-            <p class="text-600 italic">Select a monster from the list to view its details.</p>
+            <p class="text-600 italic">Select a character from the list to view its details.</p>
           }
         </div>
       </div>

@@ -1,7 +1,7 @@
 <p-card class="p-fluid border-1 surface-border">
   @if (entity(); as e) {
     @let state = displayState();
-    <p-accordion>
+    <p-accordion [value]="mainActivePanel()" (valueChange)="mainActivePanel.set($event)">
       <p-accordion-panel value="0">
         <p-accordion-header>
           <div
@@ -15,7 +15,7 @@
                   Level {{ char.level }} {{ char.race }} {{ char.class }}
                 } @else if (isMonster(e)) {
                   @let monster = asMonster(e);
-                  CR {{ monster.cr }} {{ monster.type }}
+                  CR {{ monster.cr | crFormat }} {{ monster.type }}
                 }
               </span>
               <div
@@ -28,14 +28,14 @@
                     [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"
                   ></p-tag>
                 }
-                @if (state.isStable) {
+                @if (state?.isStable) {
                   <p-tag
                     value="Stable"
                     severity="success"
                     [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"
                   ></p-tag>
                 }
-                @if (state.isDead) {
+                @if (state?.isDead) {
                   <p-tag
                     value="Dead"
                     severity="danger"
@@ -47,34 +47,46 @@
             <div class="flex gap-3 align-items-center">
               <div class="flex flex-column align-items-center gap-1" style="min-width: 120px">
                 <span class="text-xs font-bold white-space-nowrap text-600">
-                  HP: {{ state.currentHp }}{{ state.tempHp > 0 ? ' (+' + state.tempHp + ')' : '' }} / {{ state.maxHp }}
+                  @if (!hideState()) {
+                    HP: {{ state?.currentHp ?? '?' }}{{ (state?.tempHp ?? 0) > 0 ? ' (+' + state.tempHp + ')' : '' }} / {{ state?.maxHp ?? '?' }}
+                  } @else {
+                    @if (isMonster(e) || isCharacter(e)) {
+                      HP : {{ hiddenStateHpString() }}
+                    } @else {
+                      HP: {{ state?.maxHp || '?' }}
+                    }
+                  }
                 </span>
-                <div
-                  class="relative overflow-hidden border-round"
-                  style="height: 8px; width: 100%; background-color: var(--p-surface-200)"
-                >
+                @if (!hideState()) {
                   <div
-                    class="absolute top-0 left-0 h-full transition-all transition-duration-300"
-                    [style.width.%]="hpPercent()"
-                    [style.background-color]="hpColor()"
-                  ></div>
-                  <div
-                    class="absolute top-0 h-full transition-all transition-duration-300"
-                    [style.left.%]="hpPercent()"
-                    [style.width.%]="tempHpPercent()"
-                    style="background-color: #3b82f6; opacity: 0.8"
-                  ></div>
-                </div>
+                    class="relative overflow-hidden border-round"
+                    style="height: 8px; width: 100%; background-color: var(--p-surface-200)"
+                  >
+                    <div
+                      class="absolute top-0 left-0 h-full transition-all transition-duration-300"
+                      [style.width.%]="hpPercent()"
+                      [style.background-color]="hpColor()"
+                    ></div>
+                    <div
+                      class="absolute top-0 h-full transition-all transition-duration-300"
+                      [style.left.%]="hpPercent()"
+                      [style.width.%]="tempHpPercent()"
+                      style="background-color: #3b82f6; opacity: 0.8"
+                    ></div>
+                  </div>
+                }
               </div>
               <div class="flex flex-column pt-0">
-                <span class="text-xs font-bold white-space-nowrap">AC: 14</span>
-                <span class="text-xs font-bold text-primary">Init: {{ state.initiative }}</span>
+                <span class="text-xs font-bold white-space-nowrap">AC: {{ e.ac || '??' }}</span>
+                @if (!hideState()) {
+                  <span class="text-xs font-bold text-primary">Init: {{ state.initiative }}</span>
+                }
               </div>
             </div>
           </div>
         </p-accordion-header>
         <p-accordion-content class="pt-2">
-          <p-accordion [multiple]="true" [value]="saActiveValue()" (valueChange)="saActiveValue.set($event)">
+          <p-accordion [multiple]="true" [value]="activePanels()" (valueChange)="activePanels.set($event)">
             <!-- Statistics Panel -->
             <p-accordion-panel value="0">
               <p-accordion-header>
@@ -93,6 +105,7 @@
                 <app-entity-stats
                   [entity]="e"
                   [projectedState]="projectedState()"
+                  [hideState]="hideState()"
                   [gradientStop]="gradientStop()"
                 ></app-entity-stats>
               </p-accordion-content>
@@ -169,25 +182,27 @@
             }
             <!-- Spellcasting Panel -->
             @if (e.spellcasting; as sc) {
-              <p-accordion-panel value="4">
-                <p-accordion-header>
-                  <div class="grid w-full align-items-center">
-                    <div class="col-4">
-                      <span class="text-sm font-bold uppercase text-600">{{
-                          spellcastingHeaderText().label
-                        }}</span>
+              @if (sc.spells.length > 0) {
+                <p-accordion-panel value="4">
+                  <p-accordion-header>
+                    <div class="grid w-full align-items-center">
+                      <div class="col-4">
+                        <span class="text-sm font-bold uppercase text-600">{{
+                            spellcastingHeaderText().label
+                          }}</span>
+                      </div>
+                      <div class="col-8">
+                        <span class="text-xs text-700 font-medium">{{
+                            spellcastingHeaderText().list
+                          }}</span>
+                      </div>
                     </div>
-                    <div class="col-8">
-                      <span class="text-xs text-700 font-medium">{{
-                          spellcastingHeaderText().list
-                        }}</span>
-                    </div>
-                  </div>
-                </p-accordion-header>
-                <p-accordion-content>
-                  <app-entity-spellcasting [spellcasting]="sc"></app-entity-spellcasting>
-                </p-accordion-content>
-              </p-accordion-panel>
+                  </p-accordion-header>
+                  <p-accordion-content>
+                    <app-entity-spellcasting [spellcasting]="sc" [hideState]="hideState()"></app-entity-spellcasting>
+                  </p-accordion-content>
+                </p-accordion-panel>
+              }
             }
           </p-accordion>
         </p-accordion-content>
