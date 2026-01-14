@@ -37,6 +37,17 @@ export class MapperService {
         }
       }
 
+      // Handle entities directly (from seeds or timelines)
+      if (record['as_config'] && typeof record['as_config'] === 'object') {
+        const data = record as Record<string, any>;
+        if (data['monster_actions'] || data['actions']) {
+          return this.mapMonsterResponse(data);
+        }
+        if (data['class_id'] !== undefined || data['class']) {
+          return this.mapCharacterResponse(data);
+        }
+      }
+
       // Fallback for objects already inside the mappers or simpler objects
       const result: Record<string, unknown> = {};
       Object.keys(record).forEach((key) => {
@@ -60,16 +71,31 @@ export class MapperService {
       result[camelKey] = this.mapKeys(response[key]);
     });
 
+    // Handle class_id and race_id explicitly to ensure both snake_case and camelCase keys are available
+    // for type guards and mapping logic that might look for either.
+    if (response['class_id'] !== undefined) {
+      result['class_id'] = response['class_id'];
+      result['classId'] = response['class_id'];
+    }
+    if (response['race_id'] !== undefined) {
+      result['race_id'] = response['race_id'];
+      result['raceId'] = response['race_id'];
+    }
+
+    // Explicitly ensure AC and HP are mapped if they exist in the response
+    if (response['ac'] !== undefined) result['ac'] = response['ac'];
+    if (response['hp'] !== undefined) result['hp'] = this.mapKeys(response['hp']);
+
     // Map as_config directly to asConfig
     if (response['as_config']) {
       result['asConfig'] = this.mapKeys(response['as_config']);
     }
 
     // 1. Map Spellcasting if present
-    const rawSpellcasting = response['spellcasting'] || response['Spellcasting'];
+    const rawSpellcasting = response['spellcasting'];
     if (rawSpellcasting) {
       const slots: Record<number, { current: number; max: number }> = {};
-      const rawSlots = rawSpellcasting.spell_slots || rawSpellcasting.SpellSlots;
+      const rawSlots = rawSpellcasting.spell_slots;
       if (rawSlots) {
         Object.entries(rawSlots).forEach(([level, max]: [string, any]) => {
           slots[Number(level)] = { current: max, max: max };
@@ -80,23 +106,62 @@ export class MapperService {
       const spells = Array.isArray(rawSpells) ? rawSpells.map((s: any) => this.mapKeys(s)) : [];
 
       result['spellcasting'] = {
-        casterType: 'none', // Default for now
-        casterLevel: rawSpellcasting.casting_level || rawSpellcasting.CastingLevel || 0,
+        casterType: (rawSpellcasting.caster_type || 'none').toLowerCase(),
+        casterLevel: rawSpellcasting.casting_level || 0,
         spellSlots: slots,
         spells: spells,
-        spellSaveDC: rawSpellcasting.save_dc || rawSpellcasting.SaveDC || 0,
-        spellAttackBonus: rawSpellcasting.attack_modifier || rawSpellcasting.AttackModifier || 0
+        spellSaveDC: rawSpellcasting.save_dc || 0,
+        spellAttackBonus: rawSpellcasting.attack_modifier || 0
       };
     }
 
-    // 2. Map Resistances
+    // 2. Map Equipment
+    const rawEquipment = response['equipment'];
+    if (rawEquipment) {
+      const weapons: Record<string, any[]> = {};
+
+      const mapWeaponSlot = (slotData: any[]) => {
+        if (!Array.isArray(slotData)) return [];
+        return slotData.map(item => {
+          const weapon = this.mapKeys(item.weapon_data || item) as any;
+          return {
+            ...weapon,
+            isProficient: !!item.is_proficient
+          };
+        });
+      };
+
+      if (rawEquipment.primary_slot) {
+        weapons['Primary'] = mapWeaponSlot(rawEquipment.primary_slot);
+      }
+      if (rawEquipment.secondary_slot) {
+        weapons['Secondary'] = mapWeaponSlot(rawEquipment.secondary_slot);
+      }
+      if (rawEquipment.ranged_slot) {
+        weapons['Ranged'] = mapWeaponSlot(rawEquipment.ranged_slot);
+      }
+
+      result['equipment'] = {
+        armor: rawEquipment.armor_data ? this.mapKeys(rawEquipment.armor_data) : (rawEquipment.armor ? this.mapKeys(rawEquipment.armor) : undefined),
+        shield: rawEquipment.shield_data ? this.mapKeys(rawEquipment.shield_data) : (rawEquipment.shield ? this.mapKeys(rawEquipment.shield) : undefined),
+        hasShieldEquipped: !!rawEquipment.has_shield_equipped,
+        weapons: weapons
+      };
+    }
+
+    // 3. Map Resistances
     const resistances: Record<string, string> = {};
     const rawResistances = response['resistances'] || {};
     Object.entries(rawResistances).forEach(([type, data]: [string, any]) => {
-      resistances[type] = (data.resistance || data.Resistance || 'none').toLowerCase();
+      resistances[type] = (data.resistance || 'none').toLowerCase();
     });
 
-    // 3. Ensure state exists
+    // 4. Map Special Abilities
+    if (response['special_abilities']) {
+      result['specialAbilities'] = this.mapKeys(response['special_abilities']);
+    }
+
+    // 5. Ensure state exists
     result['state'] = {
       ...result['state'],
       resistances: resistances,
@@ -172,9 +237,9 @@ export class MapperService {
     // 6. Map Spellcasting
     const rawSpellcasting = response['spellcasting'];
     if (rawSpellcasting) {
-      const spells = (rawSpellcasting.leveled_spells || []).map((s: any) => this.mapKeys(s));
+      const spells = (rawSpellcasting.leveled_spells || rawSpellcasting.known_spells || []).map((s: any) => this.mapKeys(s));
       const innateSpells = (rawSpellcasting.innate_spells || []).map((is: any) => {
-        const spell = this.mapKeys(is.Spell || is.spell || {}) as any;
+        const spell = this.mapKeys(is.Spell || is.spell || is) as any;
         return {
           ...spell,
           isInnate: true,
@@ -190,7 +255,7 @@ export class MapperService {
       }
 
       result['spellcasting'] = {
-        casterType: 'full',
+        casterType: (rawSpellcasting.caster_type || 'full').toLowerCase(),
         casterLevel: rawSpellcasting.casting_level || 0,
         spellSlots: slots,
         spells: [...spells, ...innateSpells],
@@ -249,6 +314,8 @@ export class MapperService {
     if (str === 'AbilityScores' || str === 'ability_scores') return 'abilityScores';
     if (str === 'AbilityScoreProf' || str === 'ability_score_prof') return 'abilityScoreProficiency';
     if (str === 'DC') return 'dc';
+    if (str === 'dice_count') return 'numberOfDice';
+    if (str === 'hp_method') return 'hpSetMethod';
 
     let result = str;
 

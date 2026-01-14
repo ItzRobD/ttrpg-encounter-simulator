@@ -1,7 +1,7 @@
 <div class="grid w-full pt-2">
   <!-- Ability Scores -->
   <div class="col-12">
-    @if (entity().asConfig.abilityScores) {
+    @if (entity() && entity().asConfig && entity().asConfig.abilityScores) {
       <div class="grid">
         @for (entry of getAbilityScoreEntries(entity().asConfig.abilityScores); track entry.key) {
           <div class="col-4 sm:col-2 p-1">
@@ -12,7 +12,7 @@
                 <span class="text-xs font-bold uppercase text-600">{{
                   entry.shortName
                 }}</span>
-                @if (entity().asConfig.proficiencies) {
+                @if (entity() && entity().asConfig && entity().asConfig.proficiencies) {
                   <i
                     [class]="
                       entity().asConfig.proficiencies[entry.key]

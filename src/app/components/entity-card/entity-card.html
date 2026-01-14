@@ -132,33 +132,52 @@
               </p-accordion-panel>
             }
 
-            <!-- Attacks / Equipment Panel -->
-            <p-accordion-panel value="1">
-              <p-accordion-header>
-                <div class="grid w-full align-items-center">
-                  <div class="col-4">
-                    <span class="text-sm font-bold uppercase text-600">{{
-                      actionsHeaderText().label
-                    }}</span>
+            <!-- Equipment Panel (Character only) -->
+            @if (isCharacter(e) && weaponNames().length > 0) {
+              <p-accordion-panel value="5">
+                <p-accordion-header>
+                  <div class="grid w-full align-items-center">
+                    <div class="col-4">
+                      <span class="text-sm font-bold uppercase text-600">{{
+                        equipmentHeaderText().label
+                      }}</span>
+                    </div>
+                    <div class="col-8">
+                      <span class="text-xs text-700 font-medium">{{ equipmentHeaderText().list }}</span>
+                    </div>
                   </div>
-                  <div class="col-8">
-                    <span class="text-xs text-700 font-medium">{{ actionsHeaderText().list }}</span>
-                  </div>
-                </div>
-              </p-accordion-header>
-              <p-accordion-content>
-                @if (isCharacter(e)) {
+                </p-accordion-header>
+                <p-accordion-content>
                   <app-entity-equipment [character]="asCharacter(e)"></app-entity-equipment>
-                } @else if (isMonster(e)) {
-                  <app-entity-attacks [monster]="asMonster(e)"></app-entity-attacks>
-                }
-              </p-accordion-content>
-            </p-accordion-panel>
+                </p-accordion-content>
+              </p-accordion-panel>
+            }
+
+            <!-- Actions Panel (Monster only) -->
+            @if (isMonster(e) && actionNames().length > 0) {
+              <p-accordion-panel value="1">
+                <p-accordion-header>
+                  <div class="grid w-full align-items-center">
+                    <div class="col-4">
+                      <span class="text-sm font-bold uppercase text-600">{{
+                        actionsHeaderText().label
+                      }}</span>
+                    </div>
+                    <div class="col-8">
+                      <span class="text-xs text-700 font-medium">{{ actionsHeaderText().list }}</span>
+                    </div>
+                  </div>
+                </p-accordion-header>
+                <p-accordion-content>
+                  <app-entity-actions [monster]="asMonster(e)"></app-entity-actions>
+                </p-accordion-content>
+              </p-accordion-panel>
+            }
 
             <!-- Legendary Actions Panel -->
             @if (isMonster(e)) {
               @let monster = asMonster(e);
-              @if (monster.monsterActions.legendaryActions.length > 0) {
+              @if (monster.monsterActions.legendaryActions.length) {
                 <p-accordion-panel value="3">
                   <p-accordion-header>
                     <div class="grid w-full align-items-center">

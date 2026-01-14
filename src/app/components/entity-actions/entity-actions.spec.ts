@@ -1,10 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { EntityAttacks } from './entity-attacks';
+import { EntityActions } from './entity-actions';
 import { Monster, MonsterType, MonsterSize, DamageType, DiceType } from '../../models';
 
-describe('EntityAttacks', () => {
-  let component: EntityAttacks;
-  let fixture: ComponentFixture<EntityAttacks>;
+describe('EntityActions', () => {
+  let component: EntityActions;
+  let fixture: ComponentFixture<EntityActions>;
 
   const mockMonster: Monster = {
     id: 1,
@@ -49,11 +49,11 @@ describe('EntityAttacks', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [EntityAttacks]
+      imports: [EntityActions]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(EntityAttacks);
+    fixture = TestBed.createComponent(EntityActions);
     component = fixture.componentInstance;
   });
 

@@ -157,13 +157,14 @@ export function formatAbilityScores(scores: AbilityScores): string {
  * @param scores
  */
 export function getAbilityScoresOrder(scores: AbilityScores): number[] {
+  if (!scores) return [10, 10, 10, 10, 10, 10];
   return [
-    scores.strength,
-    scores.dexterity,
-    scores.constitution,
-    scores.intelligence,
-    scores.wisdom,
-    scores.charisma,
+    scores.strength || 10,
+    scores.dexterity || 10,
+    scores.constitution || 10,
+    scores.intelligence || 10,
+    scores.wisdom || 10,
+    scores.charisma || 10,
   ];
 }
 
@@ -218,8 +219,8 @@ export function formatWeaponData(e: Entity, weapon: Weapon): string {
   const abilityMod = getWeaponAbilityModifier(e, weapon);
 
   // To Hit: Ability Mod + Proficiency (if proficient) + Weapon Magic Bonus
-  // Note: Assuming character is proficient with their equipped weapons for simplicity here
-  const toHit = abilityMod + proficiency + weapon.modifiers.attackBonus;
+  const isProficient = weapon.isProficient !== undefined ? weapon.isProficient : true;
+  const toHit = abilityMod + (isProficient ? proficiency : 0) + weapon.modifiers.attackBonus;
 
   // Damage Dice String: e.g., "1d8+3"
   // Note: In D&D, damage bonus usually includes the Ability Mod + Magic Bonus

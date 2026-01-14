@@ -4,13 +4,13 @@ import { CardModule } from 'primeng/card';
 import { formatMonsterAction, formatMultiattack } from '../../shared/utils/dnd-utils';
 
 @Component({
-  selector: 'app-entity-attacks',
+  selector: 'app-entity-actions',
   standalone: true,
   imports: [CardModule],
-  templateUrl: './entity-attacks.html',
-  styleUrl: './entity-attacks.css',
+  templateUrl: './entity-actions.html',
+  styleUrl: './entity-actions.css',
 })
-export class EntityAttacks {
+export class EntityActions {
   public readonly monster = input.required<Monster>();
 
   protected readonly formatMonsterAction = formatMonsterAction;

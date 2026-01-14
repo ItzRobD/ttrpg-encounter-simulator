@@ -28,12 +28,14 @@ export interface WeaponModifiers {
 }
 
 export interface Weapon {
+  id?: number;
   name: string;
   numberOfDice: number;
   die: DiceType;
   damageType: DamageType;
   properties: WeaponProperties;
   modifiers: WeaponModifiers;
+  isProficient?: boolean;
 }
 
 export interface Armor {
@@ -48,6 +50,6 @@ export interface Equipment {
   shield?: Armor;
   hasShieldEquipped: boolean;
   weapons: {
-    [slot in WeaponSlot]?: Weapon;
+    [slot in WeaponSlot]?: Weapon[];
   };
 }

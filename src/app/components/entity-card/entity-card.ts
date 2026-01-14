@@ -28,7 +28,7 @@ import { TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EntityStats } from '../entity-stats/entity-stats';
 import { EntitySpecialAbilities } from '../entity-special-abilities/entity-special-abilities';
-import { EntityAttacks } from '../entity-attacks/entity-attacks';
+import { EntityActions } from '../entity-actions/entity-actions';
 import { EntityEquipment } from '../entity-equipment/entity-equipment';
 import { EntityLegendaryActions } from '../entity-legendary-actions/entity-legendary-actions';
 import { EntitySpellcasting } from '../entity-spellcasting/entity-spellcasting';
@@ -49,7 +49,7 @@ import {CrFormatPipe} from '../../pipes/cr-format.pipe';
     FormsModule,
     EntityStats,
     EntitySpecialAbilities,
-    EntityAttacks,
+    EntityActions,
     EntityEquipment,
     EntityLegendaryActions,
     EntitySpellcasting,
@@ -90,11 +90,11 @@ export class EntityCard {
   });
 
   isCharacter(e: Entity): e is Character {
-    return 'class' in e;
+    return !!e && ('level' in e || 'class' in e || 'classId' in e);
   }
 
   isMonster(e: Entity): e is Monster {
-    return !('class' in e);
+    return !!e && 'monsterActions' in e && !('level' in e);
   }
 
   asCharacter(e: Entity): Character {
@@ -114,7 +114,7 @@ export class EntityCard {
     }
 
     if (this.isMonster(entity)) {
-      return `${entity.hp.hpAverage} ( ${formatDice(entity.hp.numberOfDice, entity.hp.hitDie, entity.hp.amountToAdd)} )`;
+      return `${entity.hp.hpAverage} ( ${formatDice(entity.hp.numberOfDice || 0, entity.hp.hitDie, entity.hp.amountToAdd)} )`;
     }
 
     if (this.isCharacter(entity)) {
@@ -156,33 +156,44 @@ export class EntityCard {
   protected readonly specialAbilityNames = computed(() => {
     const e = this.entity();
     if (!e) return [];
-    const abilities = (e as any).specialAbilities;
-    if (!abilities) return [];
-    return getSpecialAbilityNames(abilities);
+    if (this.isMonster(e)) {
+      return getSpecialAbilityNames(e.specialAbilities);
+    }
+    if (this.isCharacter(e)) {
+      const character = e as Character;
+      if (character.specialAbilities) {
+        return getSpecialAbilityNames(character.specialAbilities);
+      }
+    }
+    return [];
   });
 
   protected readonly actionNames = computed(() => {
     const e = this.entity();
-    if (!e) return [];
-    if (this.isCharacter(e)) {
-      if (!e.equipment?.weapons) return [];
-      return Object.entries(e.equipment.weapons)
-        .filter(([_, weapon]) => !!weapon)
-        .map(([_, weapon]) => weapon!.name);
-    } else {
-      const monster = e as Monster;
-      if (!monster.monsterActions) return [];
-      const names = (monster.monsterActions.actions || []).map((a: any) => a.name);
-      if (monster.monsterActions.multiattacks && monster.monsterActions.multiattacks.length > 0) {
-        names.unshift('Multiattack');
-      }
-      return names;
+    if (!e || !this.isMonster(e)) return [];
+    const monster = e as Monster;
+    if (!monster.monsterActions) return [];
+    const names = (monster.monsterActions.actions || []).map((a: any) => a.name);
+    if (monster.monsterActions.multiattacks && monster.monsterActions.multiattacks.length > 0) {
+      names.unshift('Multiattack');
     }
+    return names;
+  });
+
+  protected readonly weaponNames = computed(() => {
+    const e = this.entity();
+    if (!e || !this.isCharacter(e)) return [];
+    const character = e as Character;
+    if (!character.equipment?.weapons) return [];
+    return Object.values(character.equipment.weapons)
+      .filter((slot): slot is any[] => !!slot && Array.isArray(slot))
+      .flat()
+      .map((weapon: any) => weapon.name);
   });
 
   protected readonly legendaryActionNames = computed(() => {
     const e = this.entity();
-    if (!e || 'class' in e) return [];
+    if (!e || !this.isMonster(e)) return [];
     const monster = e as Monster;
     if (!monster.monsterActions) return [];
     return (monster.monsterActions.legendaryActions || []).map((a: any) => a.name);
@@ -232,11 +243,20 @@ export class EntityCard {
   });
 
   protected readonly actionsHeaderText = computed(() => {
-    const e = this.entity();
-    if (!e) return { label: '', list: '' };
-    const label = 'class' in e ? 'Equipment' : 'Actions';
     const names = this.actionNames();
     const isExpanded = this.isPanelExpanded('1');
+    const label = 'Actions';
+
+    if (isExpanded || names.length === 0) {
+      return { label, list: '' };
+    }
+    return { label, list: ' ' + names.join(' | ') };
+  });
+
+  protected readonly equipmentHeaderText = computed(() => {
+    const names = this.weaponNames();
+    const isExpanded = this.isPanelExpanded('5');
+    const label = 'Equipment';
 
     if (isExpanded || names.length === 0) {
       return { label, list: '' };

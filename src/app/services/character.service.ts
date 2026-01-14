@@ -69,9 +69,11 @@ export class CharacterService implements EntityService<Character, CharacterSumma
             // Map IDs to Enums (1-based index)
             if (c.race_id) {
               mapped.race = Object.values(Race)[c.race_id - 1] as Race;
+              mapped.raceId = c.race_id;
             }
             if (c.class_id) {
               mapped.class = Object.values(Class)[c.class_id - 1] as Class;
+              mapped.classId = c.class_id;
             }
 
             return mapped as CharacterSummary;
@@ -102,7 +104,21 @@ export class CharacterService implements EntityService<Character, CharacterSumma
         count: environment.httpRetryCount,
         delay: environment.httpRetryDelay
       }),
-      map(response => this.mapperService.mapKeys(response) as Character),
+      map(response => {
+        const mapped = this.mapperService.mapKeys(response) as Character;
+
+        // Map IDs to Enums if they are still IDs
+        if (response.race_id && typeof mapped.race !== 'string') {
+          mapped.race = Object.values(Race)[response.race_id - 1] as Race;
+          mapped.raceId = response.race_id;
+        }
+        if (response.class_id && typeof mapped.class !== 'string') {
+          mapped.class = Object.values(Class)[response.class_id - 1] as Class;
+          mapped.classId = response.class_id;
+        }
+
+        return mapped;
+      }),
       tap((character) => {
         this._selectedEntity.set(character);
         this._loading.set(false);
