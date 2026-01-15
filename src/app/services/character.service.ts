@@ -7,6 +7,8 @@ import {catchError, Observable, of, retry, tap, throwError} from 'rxjs';
 import {map} from 'rxjs/operators';
 import {EntityService} from './entity.service.interface';
 
+import { ApiResponse } from '../models';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -22,9 +24,6 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   private readonly _summaries = signal<CharacterSummary[]>([]);
   public readonly summaries = this._summaries.asReadonly();
 
-  private readonly _loadingSummaries = signal(false);
-  public readonly loadingSummaries = this._loadingSummaries.asReadonly();
-
   private readonly _loading = signal(false);
   public readonly loading = this._loading.asReadonly();
 
@@ -34,57 +33,65 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   private readonly _selectedEntity = signal<Character | null>(null);
   public readonly selectedEntity = this._selectedEntity.asReadonly();
 
+  // Selected Character alias
+  public readonly selectedCharacter = this.selectedEntity;
+
   // Deprecated naming
   public get characterSummaries() { return this.summaries; }
-  public get selectedCharacter() { return this.selectedEntity; }
 
   getSummaries(forceRefresh = false): Observable<CharacterSummary[]> {
     if (!forceRefresh && this._summaries().length > 0) {
       return of(this._summaries());
     }
 
-    this._loadingSummaries.set(true);
+    this._loading.set(true);
     this._error.set(null);
-    return this.http.get<any>(`${this.apiUrl}/summaries`)
+    return this.http.get<ApiResponse<unknown>>(`${this.apiUrl}/summaries`)
       .pipe(
         retry({
           count: environment.httpRetryCount,
           delay: environment.httpRetryDelay
         }),
         map((response) => {
-          let rawData: any[] = [];
+          let rawData: unknown[] = [];
           if (response && typeof response === 'object') {
-            if (response.data && Array.isArray(response.data)) {
-              rawData = response.data;
-            } else if (response.characters) {
-              rawData = Object.values(response.characters);
+            const data = response.data;
+            if (data) {
+              rawData = Array.isArray(data) ? data : Object.values(data as Record<string, unknown>);
+            } else if (response && 'characters' in (response as unknown as Record<string, unknown>)) {
+              rawData = Object.values((response as unknown as Record<string, Record<string, unknown>>)['characters']);
             }
-          } else if (Array.isArray(response)) {
-            rawData = response;
           }
 
-          return rawData.map((c: any) => {
-            const mapped = this.mapperService.mapKeys(c) as any;
+          if (rawData.length === 0 && Array.isArray(response)) {
+            rawData = response as unknown[];
+          }
+
+          return rawData.map((c) => {
+            const charData = c as Record<string, unknown>;
+            const mapped = this.mapperService.mapKeys(c) as Record<string, unknown>;
 
             // Map IDs to Enums (1-based index)
-            if (c.race_id) {
-              mapped.race = Object.values(Race)[c.race_id - 1] as Race;
-              mapped.raceId = c.race_id;
+            if (charData['race_id']) {
+              const raceId = charData['race_id'] as number;
+              mapped['race'] = Object.values(Race)[raceId - 1] as Race;
+              mapped['raceId'] = raceId;
             }
-            if (c.class_id) {
-              mapped.class = Object.values(Class)[c.class_id - 1] as Class;
-              mapped.classId = c.class_id;
+            if (charData['class_id']) {
+              const classId = charData['class_id'] as number;
+              mapped['class'] = Object.values(Class)[classId - 1] as Class;
+              mapped['classId'] = classId;
             }
 
-            return mapped as CharacterSummary;
+            return mapped as unknown as CharacterSummary;
           });
         }),
         tap((summaries) => {
           this._summaries.set(summaries);
-          this._loadingSummaries.set(false);
+          this._loading.set(false);
         }),
         catchError((err) => {
-          this._loadingSummaries.set(false);
+          this._loading.set(false);
           this._error.set('Failed to load character summaries. Please try again later.');
           return of([]);
         })
@@ -99,22 +106,25 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   selectEntityByID(id: string): Observable<Character> {
     this._loading.set(true);
     this._error.set(null);
-    return this.http.get<any>(`${this.apiUrl}/${id}`).pipe(
+    return this.http.get<unknown>(`${this.apiUrl}/${id}`).pipe(
       retry({
         count: environment.httpRetryCount,
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        const mapped = this.mapperService.mapKeys(response) as Character;
+        const respRecord = response as Record<string, unknown>;
+        const mapped = this.mapperService.mapKeys(response) as unknown as Character;
 
         // Map IDs to Enums if they are still IDs
-        if (response.race_id && typeof mapped.race !== 'string') {
-          mapped.race = Object.values(Race)[response.race_id - 1] as Race;
-          mapped.raceId = response.race_id;
+        if (respRecord['race_id'] && typeof mapped.race !== 'string') {
+          const raceId = respRecord['race_id'] as number;
+          mapped.race = Object.values(Race)[raceId - 1] as Race;
+          mapped.raceId = raceId;
         }
-        if (response.class_id && typeof mapped.class !== 'string') {
-          mapped.class = Object.values(Class)[response.class_id - 1] as Class;
-          mapped.classId = response.class_id;
+        if (respRecord['class_id'] && typeof mapped.class !== 'string') {
+          const classId = respRecord['class_id'] as number;
+          mapped.class = Object.values(Class)[classId - 1] as Class;
+          mapped.classId = classId;
         }
 
         return mapped;

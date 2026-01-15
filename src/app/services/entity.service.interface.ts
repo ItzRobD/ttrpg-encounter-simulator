@@ -2,9 +2,8 @@ import { Signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Entity, EntitySummary } from '../models';
 
-export interface EntityService<T extends Entity, S extends EntitySummary> {
+export interface EntityService<T, S> {
   summaries: Signal<S[]>;
-  loadingSummaries: Signal<boolean>;
   loading: Signal<boolean>;
   error: Signal<string | null>;
   selectedEntity: Signal<T | null>;

@@ -30,17 +30,17 @@ describe('MapperService', () => {
         }
       };
 
-      const mapped = service.mapKeys(raw) as any;
+      const mapped = service.mapKeys(raw) as Record<string, unknown>;
 
-      expect(mapped.id).toBe('123');
-      expect(mapped.sequenceId).toBe('seq-1');
-      expect(mapped.parentId).toBe('parent-1');
-      expect(mapped.ac).toBe(15);
-      expect(mapped.hp).toBe(20);
-      expect(mapped.maxHp).toBe(30);
-      expect(mapped.armorClass).toBe(18);
-      expect(mapped.data.actorName).toBe('Bob');
-      expect(mapped.data.targetId).toBe('456');
+      expect(mapped['id']).toBe('123');
+      expect(mapped['sequenceId']).toBe('seq-1');
+      expect(mapped['parentId']).toBe('parent-1');
+      expect(mapped['ac']).toBe(15);
+      expect(mapped['hp']).toBe(20);
+      expect(mapped['maxHp']).toBe(30);
+      expect(mapped['armorClass']).toBe(18);
+      expect((mapped['data'] as Record<string, unknown>)['actorName']).toBe('Bob');
+      expect((mapped['data'] as Record<string, unknown>)['targetId']).toBe('456');
     });
 
     it('should handle arrays recursively', () => {
@@ -48,42 +48,42 @@ describe('MapperService', () => {
         { ID: '1', Name: 'A' },
         { ID: '2', Name: 'B' }
       ];
-      const mapped = service.mapKeys(raw) as any[];
-      expect(mapped[0].id).toBe('1');
-      expect(mapped[0].name).toBe('A');
-      expect(mapped[1].id).toBe('2');
-      expect(mapped[1].name).toBe('B');
+      const mapped = service.mapKeys(raw) as Record<string, unknown>[];
+      expect(mapped[0]['id']).toBe('1');
+      expect(mapped[0]['name']).toBe('A');
+      expect(mapped[1]['id']).toBe('2');
+      expect(mapped[1]['name']).toBe('B');
     });
   });
 
   describe('mapSimulationLog', () => {
     it('should build a hierarchical tree by Round and Turn', () => {
-      const rawLog = [
+      const rawLog: Partial<SimulationEvent>[] = [
         {
           id: 'init-1',
           round: 0,
-          type: 'initiative' as any,
-          data: { actor: { name: 'Bob' } }
+          type: EventType.Initiative,
+          data: { actor: { name: 'Bob', type: 'character' } }
         },
         {
           id: 'choice-1',
           sequenceId: 'turn-1',
           parentId: 'turn-1',
           round: 1,
-          type: 'choice' as any,
-          data: { actor: { name: 'Acolyte' } }
+          type: EventType.Choice,
+          data: { actor: { name: 'Acolyte', type: 'monster' } }
         },
         {
           id: 'attack-1',
           sequenceId: 'turn-1',
           parentId: 'choice-1',
           round: 1,
-          type: 'attack' as any,
-          data: { actor: { name: 'Acolyte' } }
+          type: EventType.Attack,
+          data: { actor: { name: 'Acolyte', type: 'monster' } }
         }
       ];
 
-      const tree = service.mapSimulationLog(rawLog as any);
+      const tree = service.mapSimulationLog(rawLog as SimulationEvent[]);
 
       // 1. Check Rounds
       expect(tree.length).toBe(2); // Round 0 and Round 1
@@ -109,13 +109,13 @@ describe('MapperService', () => {
     });
 
     it('should handle deep nesting beyond turn level', () => {
-      const rawLog = [
-        { id: 'round-1-turn-1', sequenceId: 'turn-1', parentId: 'turn-1', round: 1, type: 'choice' as any, data: {} },
-        { id: 'attack-1', sequenceId: 'turn-1', parentId: 'round-1-turn-1', round: 1, type: 'attack' as any, data: {} },
-        { id: 'damage-1', sequenceId: 'turn-1', parentId: 'attack-1', round: 1, type: 'damageroll' as any, data: {} }
+      const rawLog: Partial<SimulationEvent>[] = [
+        { id: 'round-1-turn-1', sequenceId: 'turn-1', parentId: 'turn-1', round: 1, type: EventType.Choice, data: {} },
+        { id: 'attack-1', sequenceId: 'turn-1', parentId: 'round-1-turn-1', round: 1, type: EventType.Attack, data: {} },
+        { id: 'damage-1', sequenceId: 'turn-1', parentId: 'attack-1', round: 1, type: EventType.DamageRoll, data: {} }
       ];
 
-      const tree = service.mapSimulationLog(rawLog as any);
+      const tree = service.mapSimulationLog(rawLog as SimulationEvent[]);
       const turnNode = tree[0].children?.[0] as TimelineNode;
       const choiceNode = turnNode.children?.[0] as TimelineNode;
       const attackNode = choiceNode.children?.[0] as TimelineNode;

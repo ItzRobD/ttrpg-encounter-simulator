@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal} from '@angular/core';
-import {EntityTable} from "../../components/entity-table/entity-table.component";
+import {SharedTable} from "../../components/shared-table/shared-table.component";
 import {Button} from "primeng/button";
 import {EntityCard} from "../../components/entity-card/entity-card";
 import {IconField} from "primeng/iconfield";
@@ -12,7 +12,7 @@ import {CharacterService} from '../../services/character.service';
   selector: 'app-characters-shell',
   standalone: true,
   imports: [
-      EntityTable,
+      SharedTable,
       Button,
       EntityCard,
       IconField,

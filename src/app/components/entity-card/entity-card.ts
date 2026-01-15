@@ -10,6 +10,7 @@ import {
   Race,
   DiceType,
   AbilityScores,
+  Weapon,
   WeaponSlot,
   DamageType,
   Entity,
@@ -171,9 +172,9 @@ export class EntityCard {
   protected readonly actionNames = computed(() => {
     const e = this.entity();
     if (!e || !this.isMonster(e)) return [];
-    const monster = e as Monster;
+    const monster = e;
     if (!monster.monsterActions) return [];
-    const names = (monster.monsterActions.actions || []).map((a: any) => a.name);
+    const names = (monster.monsterActions.actions || []).map((a) => a.name);
     if (monster.monsterActions.multiattacks && monster.monsterActions.multiattacks.length > 0) {
       names.unshift('Multiattack');
     }
@@ -183,20 +184,20 @@ export class EntityCard {
   protected readonly weaponNames = computed(() => {
     const e = this.entity();
     if (!e || !this.isCharacter(e)) return [];
-    const character = e as Character;
+    const character = e;
     if (!character.equipment?.weapons) return [];
     return Object.values(character.equipment.weapons)
-      .filter((slot): slot is any[] => !!slot && Array.isArray(slot))
+      .filter((slot): slot is Weapon[] => !!slot && Array.isArray(slot))
       .flat()
-      .map((weapon: any) => weapon.name);
+      .map((weapon) => weapon.name);
   });
 
   protected readonly legendaryActionNames = computed(() => {
     const e = this.entity();
     if (!e || !this.isMonster(e)) return [];
-    const monster = e as Monster;
+    const monster = e;
     if (!monster.monsterActions) return [];
-    return (monster.monsterActions.legendaryActions || []).map((a: any) => a.name);
+    return (monster.monsterActions.legendaryActions || []).map((a) => a.name);
   });
 
   protected readonly activePanels = signal<string | number | string[] | number[] | null | undefined>(

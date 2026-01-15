@@ -52,7 +52,7 @@
 
         <div class="flex flex-column gap-2 flex-1 overflow-auto">
           <!-- Characters Table -->
-          <app-entity-table mode="character" [searchTerm]="searchTerm()"></app-entity-table>
+          <app-shared-table mode="character" [searchTerm]="searchTerm()"></app-shared-table>
         </div>
       </div>
     </div>
@@ -85,7 +85,7 @@
         </div>
 
         <div class="flex flex-column gap-3">
-          @if (characterService.selectedEntity(); as character) {
+          @if (characterService.selectedCharacter(); as character) {
             <app-entity-card [entity]="character" [hideState]="true"
                              [startExpanded]="true"></app-entity-card>
           } @else {

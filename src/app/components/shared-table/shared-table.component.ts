@@ -1,0 +1,184 @@
+import {
+  Component,
+  inject,
+  ChangeDetectionStrategy,
+  input,
+  computed,
+  Signal,
+} from '@angular/core';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs/operators';
+import { TableModule } from 'primeng/table';
+import { TooltipModule } from 'primeng/tooltip';
+import { MessageModule } from 'primeng/message';
+import { MonsterService } from '../../services/monster.service';
+import { CommonModule } from '@angular/common';
+import { CharacterService } from '../../services/character.service';
+import { EquipmentService } from '../../services/equipment.service';
+import { CrFormatPipe } from '../../pipes/cr-format.pipe';
+import { EntityService } from '../../services/entity.service.interface';
+import {
+  Entity,
+  EntitySummary,
+  MonsterSummary,
+  CharacterSummary,
+  EquipmentSummary,
+  Monster,
+  Character,
+  EquipmentItem
+} from '../../models';
+
+type SupportedService =
+  | EntityService<Monster, MonsterSummary>
+  | EntityService<Character, CharacterSummary>
+  | (Omit<EquipmentService, 'selectedItem' | 'selectItem'> & { selectedEntity: Signal<EquipmentItem | null>, selectEntity: (item: EquipmentItem | null) => void });
+
+@Component({
+  selector: 'app-shared-table',
+  standalone: true,
+  imports: [TableModule, TooltipModule, MessageModule, CommonModule, CrFormatPipe],
+  templateUrl: './shared-table.component.html',
+  styleUrl: './shared-table.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class SharedTable {
+  private readonly monsterService = inject(MonsterService);
+  private readonly characterService = inject(CharacterService);
+  private readonly equipmentService = inject(EquipmentService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+
+  public readonly mode = input<'monster' | 'character' | 'equipment'>('monster');
+  public readonly searchTerm = input('');
+
+  public readonly activeService = computed<SupportedService>(() => {
+    switch (this.mode()) {
+      case 'monster': return this.monsterService;
+      case 'character': return this.characterService;
+      case 'equipment': {
+        const service = this.equipmentService;
+        return {
+          ...service,
+          selectedEntity: service.selectedItem,
+          selectEntity: service.selectItem.bind(service)
+        } as unknown as SupportedService;
+      }
+    }
+  });
+
+  protected readonly colWidths = {
+    desktop: {
+      name: { width: '35%', minWidth: '15rem' },
+      type: { width: '25%', minWidth: '10rem' },
+      size: { width: '2rem', minWidth: '2rem' },
+      cr: { width: '3rem', minWidth: '3rem' },
+      ac: { width: '3rem', minWidth: '3rem' },
+      level: { width: '3rem', minWidth: '3rem' },
+      class: { width: '20%', minWidth: '10rem' },
+      race: { width: '20%', minWidth: '10rem' },
+      detail: { width: '25%', minWidth: '10rem' },
+      status: { width: '0', minWidth: '0' },
+    },
+    mobile: {
+      name: { width: '40%', minWidth: '12rem' },
+      type: { width: '30%', minWidth: '8rem' },
+      size: { width: '0', minWidth: '0' },
+      cr: { width: '5rem', minWidth: '5rem' },
+      ac: { width: '0', minWidth: '0' },
+      level: { width: '5rem', minWidth: '5rem' },
+      class: { width: '15%', minWidth: '12rem' },
+      race: { width: '15%', minWidth: '12rem' },
+      detail: { width: '25%', minWidth: '10rem' },
+      status: { width: '4rem', minWidth: '4rem' },
+    }
+  };
+
+  public readonly isMobile = toSignal(
+    this.breakpointObserver.observe(Breakpoints.Handset).pipe(map((result) => result.matches)),
+    { initialValue: false }
+  );
+
+  public readonly filteredItems = computed(() => {
+    const items = this.activeService().summaries();
+    const term = this.searchTerm().toLowerCase().trim();
+
+    if (!term) {
+      return items;
+    }
+
+    return (items as (MonsterSummary | CharacterSummary | EquipmentSummary)[]).filter((i) => {
+      const basicMatch = i.name.toLowerCase().includes(term);
+
+      if (this.mode() === 'monster') {
+        const m = i as MonsterSummary;
+        return (
+          basicMatch ||
+          m.type?.toLowerCase().includes(term) ||
+          m.size?.toLowerCase().includes(term) ||
+          m.cr?.toString().includes(term) ||
+          m.ac?.toString().includes(term) ||
+          (m.isLegendary && 'legendary'.includes(term)) ||
+          (m.isSpellcaster && 'spellcaster'.includes(term))
+        );
+      } else if (this.mode() === 'character') {
+        const c = i as CharacterSummary;
+        return (
+          basicMatch ||
+          c.race?.toLowerCase().includes(term) ||
+          c.class?.toLowerCase().includes(term) ||
+          c.level?.toString().includes(term)
+        );
+      } else {
+        const eq = i as EquipmentSummary;
+        const propertyMatch = eq.properties ? (
+          (eq.properties.isVersatile && 'versatile'.includes(term)) ||
+          (eq.properties.isFinesse && 'finesse'.includes(term)) ||
+          (eq.properties.isHeavy && 'heavy'.includes(term)) ||
+          (eq.properties.isLight && 'light'.includes(term)) ||
+          (eq.properties.isTwoHanded && 'two-handed'.includes(term)) ||
+          (eq.properties.isThrown && 'thrown'.includes(term)) ||
+          (eq.properties.isRanged && 'ranged'.includes(term))
+        ) : false;
+
+        return (
+          basicMatch ||
+          eq.type?.toLowerCase().includes(term) ||
+          eq.detail?.toLowerCase().includes(term) ||
+          propertyMatch
+        );
+      }
+    });
+  });
+
+  public readonly selectedSummary = computed(() => {
+    const service = this.activeService();
+    const selected = service.selectedEntity();
+    if (!selected) return null;
+    return service.summaries().find((s) => (s as { id: number }).id === (selected as { id: number }).id) || null;
+  });
+
+  onRowSelect(event: { data?: MonsterSummary | CharacterSummary | EquipmentSummary | (MonsterSummary | CharacterSummary | EquipmentSummary)[] }): void {
+    const summary = event.data;
+    if (!summary || Array.isArray(summary)) return;
+
+    const id = (summary as { id?: number }).id;
+    if (id === undefined || id === null) {
+      console.error('Cannot select row: summary.id is undefined or null', summary);
+      return;
+    }
+
+    const service = this.activeService();
+    if (this.mode() === 'monster') {
+      (service as EntityService<Monster, MonsterSummary>).selectEntityByID(id.toString()).subscribe();
+    } else if (this.mode() === 'character') {
+      (service as EntityService<Character, CharacterSummary>).selectEntityByID(id.toString()).subscribe();
+    } else {
+      const eqSummary = summary as EquipmentSummary;
+      this.equipmentService.selectItemByID(id.toString(), eqSummary.type).subscribe();
+    }
+  }
+
+  onRowUnselect(): void {
+    this.activeService().selectEntity(null);
+  }
+}

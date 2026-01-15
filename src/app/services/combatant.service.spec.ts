@@ -7,15 +7,28 @@ import { vi } from 'vitest';
 
 describe('CombatantService', () => {
   let service: CombatantService;
-  let localStorageSpy: any;
+  let localStorageSpy: jasmine.SpyObj<LocalStorageService>;
 
   const mockMonster: Entity = {
     id: 1,
     instanceId: 0,
     name: 'Goblin',
-    abilityScores: { strength: 8, dexterity: 14, constitution: 10, intelligence: 10, wisdom: 8, charisma: 8 },
-    abilityScoreProficiency: { strength: false, dexterity: false, constitution: false, intelligence: false, wisdom: false, charisma: false },
-    state: { currentHp: 7, maxHp: 7, tempHp: 0, hitDie: 6, conditions: {} as any, deathSaves: { successes: 0, failures: 0 }, resistances: {} as any, isStable: true, isDead: false, initiative: 0 }
+    asConfig: {
+      abilityScores: { strength: 8, dexterity: 14, constitution: 10, intelligence: 10, wisdom: 8, charisma: 8 },
+      proficiencies: { strength: false, dexterity: false, constitution: false, intelligence: false, wisdom: false, charisma: false }
+    },
+    state: {
+      currentHp: 7,
+      maxHp: 7,
+      tempHp: 0,
+      hitDie: 6,
+      conditions: {} as Record<ConditionType, boolean>,
+      deathSaves: { successes: 0, failures: 0 },
+      resistances: {} as Record<DamageType, ResistanceType>,
+      isStable: true,
+      isDead: false,
+      initiative: 0
+    }
   };
 
   const mockCharacter = {
@@ -24,7 +37,7 @@ describe('CombatantService', () => {
     class: Class.Fighter,
     race: Race.Human,
     level: 1
-  } as any;
+  } as Character;
 
   beforeEach(() => {
     localStorageSpy = {

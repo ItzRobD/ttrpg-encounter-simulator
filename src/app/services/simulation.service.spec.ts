@@ -10,16 +10,29 @@ import { signal } from '@angular/core';
 describe('SimulationService', () => {
   let service: SimulationService;
   let httpMock: HttpTestingController;
-  let combatantServiceSpy: any;
-  let mapperServiceSpy: any;
+  let combatantServiceSpy: jasmine.SpyObj<CombatantService>;
+  let mapperServiceSpy: jasmine.SpyObj<MapperService>;
 
   const mockCombatant: Entity = {
     id: 1,
     instanceId: 1,
     name: 'Test',
-    abilityScores: {} as any,
-    abilityScoreProficiency: {} as any,
-    state: {} as any
+    asConfig: {
+      abilityScores: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 },
+      proficiencies: { strength: false, dexterity: false, constitution: false, intelligence: false, wisdom: false, charisma: false }
+    },
+    state: {
+      currentHp: 10,
+      maxHp: 10,
+      tempHp: 0,
+      hitDie: 8,
+      conditions: {} as Record<ConditionType, boolean>,
+      deathSaves: { successes: 0, failures: 0 },
+      resistances: {} as Record<DamageType, ResistanceType>,
+      isStable: true,
+      isDead: false,
+      initiative: 10
+    }
   };
 
   beforeEach(() => {
@@ -29,14 +42,15 @@ describe('SimulationService', () => {
     };
 
     mapperServiceSpy = {
-      mapKeys: (obj: any) => {
-        const result: any = {};
-        Object.keys(obj).forEach(key => {
-          result[key.toLowerCase()] = obj[key];
+      mapKeys: (obj: unknown) => {
+        const result: Record<string, unknown> = {};
+        const record = obj as Record<string, unknown>;
+        Object.keys(record).forEach(key => {
+          result[key.toLowerCase()] = record[key];
         });
         return result;
       }
-    };
+    } as unknown as jasmine.SpyObj<MapperService>;
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],

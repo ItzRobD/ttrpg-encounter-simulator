@@ -23,23 +23,34 @@ export class MapperService {
     } else if (obj !== null && typeof obj === 'object') {
       const record = obj as Record<string, unknown>;
 
-      // New unified response structure: { data: { ... } }
-      if (record['data'] && typeof record['data'] === 'object' && !Array.isArray(record['data'])) {
-        const data = record['data'] as Record<string, any>;
+      // New unified response structure: { data: { ... } } or { data: { data: { ... } } }
+      if (record['data'] !== undefined) {
+        let data = record['data'];
 
-        // Distinguish between Monster and Character within the "data" envelope
-        if (data['actions'] && data['as_config']) {
-          return this.mapMonsterResponse(data);
+        // Handle double nesting { data: { data: { ... } } }
+        if (data && typeof data === 'object' && !Array.isArray(data) && (data as Record<string, unknown>)['data'] !== undefined) {
+          data = (data as Record<string, unknown>)['data'] as Record<string, unknown>;
         }
 
-        if (data['class_id'] !== undefined && data['race_id'] !== undefined) {
-          return this.mapCharacterResponse(data);
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          const dataRecord = data as Record<string, unknown>;
+          // Distinguish between Monster and Character within the "data" envelope
+          if (dataRecord['actions'] && dataRecord['as_config']) {
+            return this.mapMonsterResponse(dataRecord);
+          }
+
+          if (dataRecord['class_id'] !== undefined && dataRecord['race_id'] !== undefined) {
+            return this.mapCharacterResponse(dataRecord);
+          }
         }
+
+        // If it's just raw data (Weapon, Armor, or any other object/array) inside the envelope
+        return this.mapKeys(data);
       }
 
       // Handle entities directly (from seeds or timelines)
       if (record['as_config'] && typeof record['as_config'] === 'object') {
-        const data = record as Record<string, any>;
+        const data = record as Record<string, unknown>;
         if (data['monster_actions'] || data['actions']) {
           return this.mapMonsterResponse(data);
         }
@@ -63,8 +74,8 @@ export class MapperService {
   /**
    * Specifically handles the mapping of the Character response from the backend.
    */
-  private mapCharacterResponse(response: Record<string, any>): Record<string, any> {
-    const result: Record<string, any> = {};
+  private mapCharacterResponse(response: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
 
     Object.keys(response).forEach((key) => {
       const camelKey = this.toCamelCase(key);
@@ -92,67 +103,68 @@ export class MapperService {
     }
 
     // 1. Map Spellcasting if present
-    const rawSpellcasting = response['spellcasting'];
+    const rawSpellcasting = response['spellcasting'] as Record<string, unknown> | undefined;
     if (rawSpellcasting) {
       const slots: Record<number, { current: number; max: number }> = {};
-      const rawSlots = rawSpellcasting.spell_slots;
+      const rawSlots = rawSpellcasting['spell_slots'] as Record<string, number> | undefined;
       if (rawSlots) {
-        Object.entries(rawSlots).forEach(([level, max]: [string, any]) => {
+        Object.entries(rawSlots).forEach(([level, max]) => {
           slots[Number(level)] = { current: max, max: max };
         });
       }
 
-      const rawSpells = rawSpellcasting.known_spells || rawSpellcasting.spells || [];
-      const spells = Array.isArray(rawSpells) ? rawSpells.map((s: any) => this.mapKeys(s)) : [];
+      const rawSpells = (rawSpellcasting['known_spells'] || rawSpellcasting['spells'] || []) as unknown[];
+      const spells = Array.isArray(rawSpells) ? rawSpells.map((s) => this.mapKeys(s)) : [];
 
       result['spellcasting'] = {
-        casterType: (rawSpellcasting.caster_type || 'none').toLowerCase(),
-        casterLevel: rawSpellcasting.casting_level || 0,
+        casterType: ((rawSpellcasting['caster_type'] as string) || 'none').toLowerCase(),
+        casterLevel: (rawSpellcasting['casting_level'] as number) || 0,
         spellSlots: slots,
         spells: spells,
-        spellSaveDC: rawSpellcasting.save_dc || 0,
-        spellAttackBonus: rawSpellcasting.attack_modifier || 0
+        spellSaveDC: (rawSpellcasting['save_dc'] as number) || 0,
+        spellAttackBonus: (rawSpellcasting['attack_modifier'] as number) || 0
       };
     }
 
     // 2. Map Equipment
-    const rawEquipment = response['equipment'];
+    const rawEquipment = response['equipment'] as Record<string, unknown> | undefined;
     if (rawEquipment) {
-      const weapons: Record<string, any[]> = {};
+      const weapons: Record<string, unknown[]> = {};
 
-      const mapWeaponSlot = (slotData: any[]) => {
+      const mapWeaponSlot = (slotData: unknown[]) => {
         if (!Array.isArray(slotData)) return [];
         return slotData.map(item => {
-          const weapon = this.mapKeys(item.weapon_data || item) as any;
+          const itemRecord = item as Record<string, unknown>;
+          const weapon = this.mapKeys(itemRecord['weapon_data'] || itemRecord) as Record<string, unknown>;
           return {
             ...weapon,
-            isProficient: !!item.is_proficient
+            isProficient: !!itemRecord['is_proficient']
           };
         });
       };
 
-      if (rawEquipment.primary_slot) {
-        weapons['Primary'] = mapWeaponSlot(rawEquipment.primary_slot);
+      if (rawEquipment['primary_slot']) {
+        weapons['Primary'] = mapWeaponSlot(rawEquipment['primary_slot'] as unknown[]);
       }
-      if (rawEquipment.secondary_slot) {
-        weapons['Secondary'] = mapWeaponSlot(rawEquipment.secondary_slot);
+      if (rawEquipment['secondary_slot']) {
+        weapons['Secondary'] = mapWeaponSlot(rawEquipment['secondary_slot'] as unknown[]);
       }
-      if (rawEquipment.ranged_slot) {
-        weapons['Ranged'] = mapWeaponSlot(rawEquipment.ranged_slot);
+      if (rawEquipment['ranged_slot']) {
+        weapons['Ranged'] = mapWeaponSlot(rawEquipment['ranged_slot'] as unknown[]);
       }
 
       result['equipment'] = {
-        armor: rawEquipment.armor_data ? this.mapKeys(rawEquipment.armor_data) : (rawEquipment.armor ? this.mapKeys(rawEquipment.armor) : undefined),
-        shield: rawEquipment.shield_data ? this.mapKeys(rawEquipment.shield_data) : (rawEquipment.shield ? this.mapKeys(rawEquipment.shield) : undefined),
-        hasShieldEquipped: !!rawEquipment.has_shield_equipped,
+        armor: rawEquipment['armor_data'] ? this.mapKeys(rawEquipment['armor_data']) : (rawEquipment['armor'] ? this.mapKeys(rawEquipment['armor']) : undefined),
+        shield: rawEquipment['shield_data'] ? this.mapKeys(rawEquipment['shield_data']) : (rawEquipment['shield'] ? this.mapKeys(rawEquipment['shield']) : undefined),
+        hasShieldEquipped: !!rawEquipment['has_shield_equipped'],
         weapons: weapons
       };
     }
 
     // 3. Map Resistances
     const resistances: Record<string, string> = {};
-    const rawResistances = response['resistances'] || {};
-    Object.entries(rawResistances).forEach(([type, data]: [string, any]) => {
+    const rawResistances = (response['resistances'] || {}) as Record<string, { resistance?: string }>;
+    Object.entries(rawResistances).forEach(([type, data]) => {
       resistances[type] = (data.resistance || 'none').toLowerCase();
     });
 
@@ -163,7 +175,7 @@ export class MapperService {
 
     // 5. Ensure state exists
     result['state'] = {
-      ...result['state'],
+      ...(result['state'] as Record<string, unknown>),
       resistances: resistances,
       conditions: {},
       deathSaves: { successes: 0, failures: 0 },
@@ -177,8 +189,8 @@ export class MapperService {
   /**
    * Specifically handles the mapping of the complex Monster response from the backend.
    */
-  private mapMonsterResponse(response: Record<string, any>): Record<string, any> {
-    const result: Record<string, any> = {};
+  private mapMonsterResponse(response: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
 
     Object.keys(response).forEach((key) => {
       // Avoid recursive mapping of large arrays/objects we handle manually below
@@ -195,35 +207,36 @@ export class MapperService {
     }
 
     // 1. Map Actions
-    const rawActions = response['actions'] || [];
-    const actions = Array.isArray(rawActions) ? rawActions.map((a: any) => this.mapKeys(a)) : [];
+    const rawActions = (response['actions'] || []) as unknown[];
+    const actions = Array.isArray(rawActions) ? rawActions.map((a) => this.mapKeys(a)) : [];
 
     // 2. Map Multiattacks
-    const rawMultiattacks = response['multiattacks'] || [];
-    const multiattacks = Array.isArray(rawMultiattacks) ? rawMultiattacks.map((m: any) => this.mapKeys(m)) : [];
+    const rawMultiattacks = (response['multiattacks'] || []) as unknown[];
+    const multiattacks = Array.isArray(rawMultiattacks) ? rawMultiattacks.map((m) => this.mapKeys(m)) : [];
 
     // 3. Map Legendary Actions
-    const rawLegendary = response['legendary_actions'] || [];
-    const legendaryActions = Array.isArray(rawLegendary) ? rawLegendary.map((la: any) => {
-      const mapped = this.mapKeys(la) as any;
-      if (mapped.action) {
-        return { ...mapped.action, cost: mapped.cost };
+    const rawLegendary = (response['legendary_actions'] || []) as unknown[];
+    const legendaryActions = Array.isArray(rawLegendary) ? rawLegendary.map((la) => {
+      const mapped = this.mapKeys(la) as Record<string, unknown>;
+      if (mapped['action']) {
+        return { ...(mapped['action'] as Record<string, unknown>), cost: mapped['cost'] };
       }
       return mapped;
     }) : [];
 
     // 4. Map Resistances
     const resistances: Record<string, string> = {};
-    const rawResistances = response['resistances'] || {};
-    Object.entries(rawResistances).forEach(([type, data]: [string, any]) => {
+    const rawResistances = (response['resistances'] || {}) as Record<string, { resistance?: string }>;
+    Object.entries(rawResistances).forEach(([type, data]) => {
       resistances[type] = (data.resistance || 'none').toLowerCase();
     });
 
     // 5. Assemble the monsterActions structure
     const rechargeActions: Record<number, number> = {};
-    actions.forEach((a: any) => {
-      if (a.rechargeValue > 0) {
-        rechargeActions[a.actionId] = a.rechargeValue;
+    actions.forEach((a) => {
+      const action = a as Record<string, unknown>;
+      if ((action['rechargeValue'] as number) > 0) {
+        rechargeActions[action['actionId'] as number] = action['rechargeValue'] as number;
       }
     });
 
@@ -235,64 +248,66 @@ export class MapperService {
     };
 
     // 6. Map Spellcasting
-    const rawSpellcasting = response['spellcasting'];
+    const rawSpellcasting = response['spellcasting'] as Record<string, unknown> | undefined;
     if (rawSpellcasting) {
-      const spells = (rawSpellcasting.leveled_spells || rawSpellcasting.known_spells || []).map((s: any) => this.mapKeys(s));
-      const innateSpells = (rawSpellcasting.innate_spells || []).map((is: any) => {
-        const spell = this.mapKeys(is.Spell || is.spell || is) as any;
+      const spells = ((rawSpellcasting['leveled_spells'] || rawSpellcasting['known_spells'] || []) as unknown[]).map((s) => this.mapKeys(s));
+      const innateSpells = ((rawSpellcasting['innate_spells'] || []) as unknown[]).map((is) => {
+        const innateRecord = is as Record<string, unknown>;
+        const spell = this.mapKeys(innateRecord['Spell'] || innateRecord['spell'] || innateRecord) as Record<string, unknown>;
         return {
           ...spell,
           isInnate: true,
-          maxCastsPerDay: is.MaxCastsPerDay !== undefined ? is.MaxCastsPerDay : (is.max_casts_per_day !== undefined ? is.max_casts_per_day : -1)
+          maxCastsPerDay: innateRecord['MaxCastsPerDay'] !== undefined ? innateRecord['MaxCastsPerDay'] : (innateRecord['max_casts_per_day'] !== undefined ? innateRecord['max_casts_per_day'] : -1)
         };
       });
 
       const slots: Record<number, { current: number; max: number }> = {};
-      if (rawSpellcasting.spell_slots) {
-        Object.entries(rawSpellcasting.spell_slots).forEach(([level, max]: [string, any]) => {
+      if (rawSpellcasting['spell_slots']) {
+        Object.entries(rawSpellcasting['spell_slots'] as Record<string, number>).forEach(([level, max]) => {
           slots[Number(level)] = { current: max, max: max };
         });
       }
 
       result['spellcasting'] = {
-        casterType: (rawSpellcasting.caster_type || 'full').toLowerCase(),
-        casterLevel: rawSpellcasting.casting_level || 0,
+        casterType: ((rawSpellcasting['caster_type'] as string) || 'full').toLowerCase(),
+        casterLevel: (rawSpellcasting['casting_level'] as number) || 0,
         spellSlots: slots,
         spells: [...spells, ...innateSpells],
-        spellSaveDC: rawSpellcasting.save_dc || 0,
-        spellAttackBonus: rawSpellcasting.attack_modifier || 0
+        spellSaveDC: (rawSpellcasting['save_dc'] as number) || 0,
+        spellAttackBonus: (rawSpellcasting['attack_modifier'] as number) || 0
       };
     } else if (response['spellcasting_config']) {
       // Fallback for older monster format if any
-      const oldSpellcasting = response['spellcasting_config'];
-      const spells = (oldSpellcasting.LeveledSpells || []).map((s: any) => this.mapKeys(s));
-      const innateSpells = (oldSpellcasting.InnateSpells || []).map((is: any) => {
-        const spell = this.mapKeys(is.Spell || is.spell || {}) as any;
+      const oldSpellcasting = response['spellcasting_config'] as Record<string, unknown>;
+      const spells = ((oldSpellcasting['LeveledSpells'] || []) as unknown[]).map((s) => this.mapKeys(s));
+      const innateSpells = ((oldSpellcasting['InnateSpells'] || []) as unknown[]).map((is) => {
+        const innateRecord = is as Record<string, unknown>;
+        const spell = this.mapKeys(innateRecord['Spell'] || innateRecord['spell'] || {}) as Record<string, unknown>;
         return {
           ...spell,
           isInnate: true,
-          maxCastsPerDay: is.MaxCastsPerDay !== undefined ? is.MaxCastsPerDay : (is.max_casts_per_day !== undefined ? is.max_casts_per_day : -1)
+          maxCastsPerDay: innateRecord['MaxCastsPerDay'] !== undefined ? innateRecord['MaxCastsPerDay'] : (innateRecord['max_casts_per_day'] !== undefined ? innateRecord['max_casts_per_day'] : -1)
         };
       });
       const slots: Record<number, { current: number; max: number }> = {};
-      if (oldSpellcasting.SpellSlots) {
-        Object.entries(oldSpellcasting.SpellSlots).forEach(([level, max]: [string, any]) => {
+      if (oldSpellcasting['SpellSlots']) {
+        Object.entries(oldSpellcasting['SpellSlots'] as Record<string, number>).forEach(([level, max]) => {
           slots[Number(level)] = { current: max, max: max };
         });
       }
       result['spellcasting'] = {
         casterType: 'full',
-        casterLevel: oldSpellcasting.CastingLevel || 0,
+        casterLevel: (oldSpellcasting['CastingLevel'] as number) || 0,
         spellSlots: slots,
         spells: [...spells, ...innateSpells],
-        spellSaveDC: oldSpellcasting.SaveDC || 0,
-        spellAttackBonus: oldSpellcasting.AttackModifier || 0
+        spellSaveDC: (oldSpellcasting['SaveDC'] as number) || 0,
+        spellAttackBonus: (oldSpellcasting['AttackModifier'] as number) || 0
       };
     }
 
     // 7. Ensure state exists
     result['state'] = {
-      ...result['state'],
+      ...(result['state'] as Record<string, unknown>),
       resistances: resistances,
       conditions: {},
       deathSaves: { successes: 0, failures: 0 },

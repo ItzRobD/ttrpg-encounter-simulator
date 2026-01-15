@@ -22,16 +22,26 @@ export interface RollResult {
   isNaturalOne: boolean;
   isSuccess: boolean;
   originalRolls?: number[];
-  rerollEvents?: any;
+  rerollEvents?: unknown;
   wasRerolled?: boolean;
   name?: string;
+}
+
+export interface DiceRoll {
+  numberOfDice: number;
+  die: number;
+  modifier: number;
+  total: number;
+  results: number[];
+  success?: boolean;
+  targetValue?: number;
 }
 
 export interface EventData {
   actor?: CombatantReference;
   target?: CombatantReference;
   roll?: RollResult;
-  diceRoll?: any; // Used in 'attack' and 'savingthrow' types
+  diceRoll?: DiceRoll; // Used in 'attack' and 'savingthrow' types
   choiceType?: string;
   choice?: string | null;
   scores?: {

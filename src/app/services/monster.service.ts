@@ -7,6 +7,8 @@ import { catchError, map, Observable, of, retry, tap, throwError } from 'rxjs';
 import { MapperService } from './mapper.service';
 import {EntityService} from './entity.service.interface';
 
+import { ApiResponse } from '../models';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -22,9 +24,6 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
   private readonly _summaries = signal<MonsterSummary[]>([]);
   public readonly summaries = this._summaries.asReadonly();
 
-  private readonly _loadingSummaries = signal(false);
-  public readonly loadingSummaries = this._loadingSummaries.asReadonly();
-
   private readonly _loading = signal(false);
   public readonly loading = this._loading.asReadonly();
 
@@ -34,9 +33,12 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
   private readonly _selectedEntity = signal<Monster | null>(null);
   public readonly selectedEntity = this._selectedEntity.asReadonly();
 
+  // Selected Monster alias
+  public readonly selectedMonster = this.selectedEntity;
+
   // Deprecated naming for backward compatibility if needed, but we'll update usages
   public get monsterSummaries() { return this.summaries; }
-  public get selectedBestiaryMonster() { return this.selectedEntity; }
+  public get selectedBestiaryMonster() { return this.selectedMonster; }
 
   // Backward compatibility method
   selectMonster(monster: Monster | null): void {
@@ -48,40 +50,43 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
       return of(this._summaries());
     }
 
-    this._loadingSummaries.set(true);
+    this._loading.set(true);
     this._error.set(null);
     return this.http
-      .get<any>(`${this.apiUrl}/summaries`)
+      .get<ApiResponse<unknown>>(`${this.apiUrl}/summaries`)
       .pipe(
         retry({
           count: environment.httpRetryCount,
           delay: environment.httpRetryDelay
         }),
         map((response) => {
+          let rawData: unknown[] = [];
           if (response && typeof response === 'object') {
-            if (response.data) {
-              if (Array.isArray(response.data)) {
-                return response.data.map((m: any) => this.mapperService.mapKeys(m)) as MonsterSummary[];
+            const data = response.data;
+            if (data) {
+              if (Array.isArray(data)) {
+                rawData = data;
               } else {
                 // Handle dictionary format in data
-                return Object.values(response.data).map((m: any) => this.mapperService.mapKeys(m)) as MonsterSummary[];
+                rawData = Object.values(data as Record<string, unknown>);
               }
-            }
-            if (response.monsters) {
-              return Object.values(response.monsters).map((m: any) => this.mapperService.mapKeys(m)) as MonsterSummary[];
+            } else if (response && 'monsters' in (response as unknown as Record<string, unknown>)) {
+              rawData = Object.values((response as unknown as Record<string, Record<string, unknown>>)['monsters']);
             }
           }
-          if (Array.isArray(response)) {
-            return response.map((m: any) => this.mapperService.mapKeys(m)) as MonsterSummary[];
+
+          if (rawData.length === 0 && Array.isArray(response)) {
+            rawData = response as unknown[];
           }
-          return [];
+
+          return rawData.map((m) => this.mapperService.mapKeys(m)) as MonsterSummary[];
         }),
         tap((summaries) => {
           this._summaries.set(summaries);
-          this._loadingSummaries.set(false);
+          this._loading.set(false);
         }),
         catchError((err) => {
-          this._loadingSummaries.set(false);
+          this._loading.set(false);
           this._error.set('Failed to load monster summaries. Please try again later.');
           return throwError(() => err);
         })
@@ -99,12 +104,20 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
   getMonsters(): Observable<Monster[]> {
     this._loading.set(true);
     this._error.set(null);
-    return this.http.get<{ monsters: Record<string, Monster>; count: number }>(this.apiUrl).pipe(
+    return this.http.get<ApiResponse<unknown>>(this.apiUrl).pipe(
       retry({
         count: environment.httpRetryCount,
         delay: environment.httpRetryDelay
       }),
-      map((response) => Object.values(response.monsters)),
+      map((response) => {
+        let rawData: unknown[] = [];
+        if (response && response.data) {
+          rawData = Array.isArray(response.data) ? response.data : Object.values(response.data as Record<string, unknown>);
+        } else if (response && 'monsters' in (response as unknown as Record<string, unknown>)) {
+          rawData = Object.values((response as unknown as Record<string, Record<string, unknown>>)['monsters']);
+        }
+        return rawData.map(m => this.mapperService.mapKeys(m) as Monster);
+      }),
       tap((monsters) => {
         this._monsters.set(monsters);
         this._loading.set(false);
@@ -120,7 +133,7 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
   selectEntityByID(id: string): Observable<Monster> {
     this._loading.set(true);
     this._error.set(null);
-    return this.http.get<any>(`${this.apiUrl}/${id}`).pipe(
+    return this.http.get<unknown>(`${this.apiUrl}/${id}`).pipe(
       retry({
         count: environment.httpRetryCount,
         delay: environment.httpRetryDelay

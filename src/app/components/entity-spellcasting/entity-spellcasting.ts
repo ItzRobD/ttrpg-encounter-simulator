@@ -1,7 +1,14 @@
 import { Component, computed, input } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
-import { Spellcasting } from '../../models';
+import { Spell, Spellcasting } from '../../models';
+
+interface SpellGroup {
+  level: number;
+  label: string;
+  spells: Spell[];
+  isInnate: boolean;
+}
 
 @Component({
   selector: 'app-entity-spellcasting',
@@ -17,8 +24,8 @@ export class EntitySpellcasting {
   protected readonly groupedSpells = computed(() => {
     const sc = this.spellcasting();
     console.log('Rendering spellcasting data:', sc);
-    const leveledGroups: { [level: number]: any[] } = {};
-    const innateGroups: { [usage: string]: any[] } = {};
+    const leveledGroups: { [level: number]: Spell[] } = {};
+    const innateGroups: { [usage: string]: Spell[] } = {};
 
     sc.spells.forEach((spell) => {
       if (spell.isInnate) {
@@ -35,7 +42,7 @@ export class EntitySpellcasting {
       }
     });
 
-    const leveled = Object.entries(leveledGroups)
+    const leveled: SpellGroup[] = Object.entries(leveledGroups)
       .map(([level, spells]) => ({
         level: Number(level),
         label: Number(level) === 0 ? 'Cantrips' : 'Level ' + level,
@@ -44,7 +51,7 @@ export class EntitySpellcasting {
       }))
       .sort((a, b) => a.level - b.level);
 
-    const innate = Object.entries(innateGroups)
+    const innate: SpellGroup[] = Object.entries(innateGroups)
       .map(([usage, spells]) => ({
         level: -1,
         label: usage,

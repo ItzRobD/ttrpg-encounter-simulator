@@ -42,7 +42,28 @@ export interface Armor {
   id: number;
   name: string;
   ac: number;
+  dexBonus: number;
+  maxBonus: number;
   minimumStrength: number;
+  modifier: number;
+}
+
+export type EquipmentItem = Weapon | Armor;
+
+export interface EquipmentSummary {
+  id: number;
+  name: string;
+  type: 'Weapon' | 'Armor' | 'Shield';
+  detail: string; // e.g., "1d8 Slashing" or "AC 18"
+  properties?: {
+    isVersatile?: boolean;
+    isFinesse?: boolean;
+    isHeavy?: boolean;
+    isLight?: boolean;
+    isTwoHanded?: boolean;
+    isThrown?: boolean;
+    isRanged?: boolean;
+  };
 }
 
 export interface Equipment {

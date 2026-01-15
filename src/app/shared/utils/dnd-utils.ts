@@ -6,7 +6,9 @@ import {
   DiceType, Entity,
   MultiattackOption,
   ResistanceType,
-  Weapon
+  SpecialAbilities,
+  Weapon,
+  EquipmentItem
 } from '../../models';
 
 /**
@@ -14,6 +16,7 @@ import {
  * @param scores
  */
 export function getAbilityScoreEntries(scores: AbilityScores): AbilityScoreEntry[] {
+  if (!scores) return [];
   const order: (keyof AbilityScores)[] = [
     'strength',
     'dexterity',
@@ -130,8 +133,15 @@ export function formatModifier(value: number): string {
 /**
  * Calculates the proficiency bonus based on level/CR.
  */
-export function getProficiencyBonus(level: number): number {
-  return Math.ceil(level / 4) + 1;
+export function getProficiencyBonus(levelOrCr: number): number {
+  if (levelOrCr < 5) return 2;
+  if (levelOrCr < 9) return 3;
+  if (levelOrCr < 13) return 4;
+  if (levelOrCr < 17) return 5;
+  if (levelOrCr < 21) return 6;
+  if (levelOrCr < 25) return 7;
+  if (levelOrCr < 29) return 8;
+  return 9;
 }
 
 /**
@@ -215,7 +225,8 @@ export function getWeaponAbilityModifier(e: Entity, weapon: Weapon): number {
  * Formats a weapon's full stat line.
  */
 export function formatWeaponData(e: Entity, weapon: Weapon): string {
-  const proficiency = getProficiencyBonus('level' in e ? (e as any).level : (e as any).cr || 1);
+  const levelOrCr = 'level' in e ? (e as { level: number }).level : (e as unknown as { cr: number }).cr || 1;
+  const proficiency = getProficiencyBonus(levelOrCr);
   const abilityMod = getWeaponAbilityModifier(e, weapon);
 
   // To Hit: Ability Mod + Proficiency (if proficient) + Weapon Magic Bonus
@@ -234,9 +245,22 @@ export function formatWeaponData(e: Entity, weapon: Weapon): string {
 }
 
 /**
+ * Returns a detail string for an equipment item based on its type.
+ */
+export function getEquipmentDetail(item: EquipmentItem): string {
+  if ('damageType' in item) {
+    // Weapon
+    return `${formatDice(item.numberOfDice, item.die, 0)} ${item.damageType}`;
+  } else {
+    // Armor
+    return `AC ${item.ac}`;
+  }
+}
+
+/**
  * Returns an array of Title Case names of active special abilities.
  */
-export function getSpecialAbilityNames(abilities: any): string[] {
+export function getSpecialAbilityNames(abilities: SpecialAbilities | undefined): string[] {
   const names: string[] = [];
   if (!abilities) return names;
 
@@ -292,7 +316,7 @@ export function getSpecialAbilityNames(abilities: any): string[] {
 /**
  * Formats monster special abilities into an array of readable strings.
  */
-export function getFormattedSpecialAbilities(abilities: any): string[] {
+export function getFormattedSpecialAbilities(abilities: SpecialAbilities | undefined): string[] {
   const formatted: string[] = [];
 
   if (!abilities) return formatted;

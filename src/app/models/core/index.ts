@@ -6,3 +6,4 @@ export * from './spells.model';
 export * from './equipment.model';
 export * from './special-abilities.model';
 export * from './monster-actions.model';
+export * from './api-response.model';

@@ -4,7 +4,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
-import { EntityTable } from '../../components/entity-table/entity-table.component';
+import { SharedTable } from '../../components/shared-table/shared-table.component';
 import { MonsterService } from '../../services/monster.service';
 import {EntityCard} from '../../components/entity-card/entity-card';
 
@@ -17,7 +17,7 @@ import {EntityCard} from '../../components/entity-card/entity-card';
     IconFieldModule,
     InputIconModule,
     InputTextModule,
-    EntityTable,
+    SharedTable,
     EntityCard
   ],
   templateUrl: './bestiary-shell.html',

@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import { Entity } from '../../models';
+import { Entity, SpecialAbilities } from '../../models';
 import { getFormattedSpecialAbilities } from '../../shared/utils/dnd-utils';
 
 @Component({
@@ -15,6 +15,6 @@ export class EntitySpecialAbilities {
   protected readonly specialAbilities = computed(() => {
     const e = this.entity();
     if (!e || !('specialAbilities' in e)) return [];
-    return getFormattedSpecialAbilities(e.specialAbilities);
+    return getFormattedSpecialAbilities((e as unknown as { specialAbilities: SpecialAbilities }).specialAbilities);
   });
 }
