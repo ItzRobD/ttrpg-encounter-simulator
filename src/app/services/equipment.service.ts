@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { MapperService } from './mapper.service';
@@ -7,6 +7,7 @@ import { catchError, forkJoin, Observable, of, retry, tap, throwError } from 'rx
 import { map } from 'rxjs/operators';
 import { EntityService } from './entity.service.interface';
 import { getEquipmentDetail } from '../shared/utils/dnd-utils';
+import { CustomContentService } from './custom-content.service';
 
 import { ApiResponse, DataEnvelope } from '../models';
 
@@ -17,15 +18,44 @@ export class EquipmentService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/equipment`;
   private readonly mapperService = inject(MapperService);
+  private readonly customContentService = inject(CustomContentService);
 
   private readonly _summaries = signal<EquipmentSummary[]>([]);
-  public readonly summaries = this._summaries.asReadonly();
+  public readonly summaries = computed(() => {
+    const customSummaries: EquipmentSummary[] = this.customContentService.customEquipment().map(i => {
+      const isWeapon = 'die' in i;
+      const type = isWeapon ? 'Weapon' : (i.name.toLowerCase().includes('shield') ? 'Shield' : 'Armor');
+      return {
+        id: i.id || 0,
+        name: i.name,
+        isCustom: true,
+        type: type,
+        detail: getEquipmentDetail(i),
+        properties: isWeapon ? {
+          isVersatile: (i as Weapon).properties.isVersatile,
+          isFinesse: (i as Weapon).properties.isFinesse,
+          isHeavy: (i as Weapon).properties.isHeavy,
+          isLight: (i as Weapon).properties.isLight,
+          isTwoHanded: (i as Weapon).properties.isTwoHanded,
+          isThrown: (i as Weapon).properties.isThrown,
+          isRanged: (i as Weapon).properties.isRanged || (i as Weapon).properties.isOnlyRanged
+        } : undefined
+      };
+    });
+    return [...customSummaries, ...this._summaries()];
+  });
 
   private readonly _armorList = signal<Armor[]>([]);
-  public readonly armorList = this._armorList.asReadonly();
+  public readonly armorList = computed(() => {
+    const customArmor = this.customContentService.customEquipment().filter(i => !('die' in i)) as Armor[];
+    return [...customArmor, ...this._armorList()];
+  });
 
   private readonly _weaponList = signal<Weapon[]>([]);
-  public readonly weaponList = this._weaponList.asReadonly();
+  public readonly weaponList = computed(() => {
+    const customWeapons = this.customContentService.customEquipment().filter(i => 'die' in i) as Weapon[];
+    return [...customWeapons, ...this._weaponList()];
+  });
 
   private readonly _loading = signal(false);
   public readonly loading = this._loading.asReadonly();
@@ -156,6 +186,13 @@ export class EquipmentService {
   }
 
   selectItemByID(id: string, type?: 'Weapon' | 'Armor' | 'Shield'): Observable<EquipmentItem> {
+    // Try finding in custom equipment first
+    const customItem = this.customContentService.customEquipment().find(i => i.id?.toString() === id);
+    if (customItem) {
+      this._selectedItem.set(customItem);
+      return of(customItem);
+    }
+
     this._loading.set(true);
     this._error.set(null);
 

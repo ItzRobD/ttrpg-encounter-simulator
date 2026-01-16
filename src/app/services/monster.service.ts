@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Monster, MonsterSummary} from '../models';
 import { environment } from '../../environments/environment';
@@ -6,6 +6,7 @@ import { catchError, map, Observable, of, retry, tap, throwError } from 'rxjs';
 
 import { MapperService } from './mapper.service';
 import {EntityService} from './entity.service.interface';
+import { CustomContentService } from './custom-content.service';
 
 import { ApiResponse } from '../models';
 
@@ -17,12 +18,28 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
   private readonly apiUrl = `${environment.apiUrl}/monsters`;
 
   private readonly mapperService = inject(MapperService);
+  private readonly customContentService = inject(CustomContentService);
 
   private readonly _monsters = signal<Monster[]>([]);
-  public readonly monsters = this._monsters.asReadonly();
+  public readonly monsters = computed(() => {
+    return [...this.customContentService.customMonsters(), ...this._monsters()];
+  });
 
   private readonly _summaries = signal<MonsterSummary[]>([]);
-  public readonly summaries = this._summaries.asReadonly();
+  public readonly summaries = computed(() => {
+    const customSummaries: MonsterSummary[] = this.customContentService.customMonsters().map(m => ({
+      id: m.id,
+      name: m.name,
+      isCustom: true,
+      cr: m.cr,
+      type: m.type,
+      size: m.size,
+      ac: m.ac || 0,
+      isLegendary: m.isLegendary,
+      isSpellcaster: m.isSpellcaster
+    }));
+    return [...customSummaries, ...this._summaries()];
+  });
 
   private readonly _loading = signal(false);
   public readonly loading = this._loading.asReadonly();
@@ -131,6 +148,13 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
   }
 
   selectEntityByID(id: string): Observable<Monster> {
+    // Try finding in custom monsters first
+    const customMonster = this.customContentService.customMonsters().find(m => m.id.toString() === id);
+    if (customMonster) {
+      this._selectedEntity.set(customMonster);
+      return of(customMonster);
+    }
+
     this._loading.set(true);
     this._error.set(null);
     return this.http.get<unknown>(`${this.apiUrl}/${id}`).pipe(

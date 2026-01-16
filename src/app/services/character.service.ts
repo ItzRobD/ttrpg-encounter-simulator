@@ -1,4 +1,4 @@
-import {inject, Injectable, signal} from '@angular/core';
+import {computed, inject, Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {environment} from '../../environments/environment';
 import {MapperService} from './mapper.service';
@@ -6,6 +6,7 @@ import {Character, CharacterSummary, Class, Race} from '../models';
 import {catchError, Observable, of, retry, tap, throwError} from 'rxjs';
 import {map} from 'rxjs/operators';
 import {EntityService} from './entity.service.interface';
+import { CustomContentService } from './custom-content.service';
 
 import { ApiResponse } from '../models';
 
@@ -17,12 +18,28 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   private readonly apiUrl = `${environment.apiUrl}/characters`;
 
   private readonly mapperService = inject(MapperService);
+  private readonly customContentService = inject(CustomContentService);
 
   private readonly _characters = signal<Character[]>([]);
-  public readonly characters = this._characters.asReadonly();
+  public readonly characters = computed(() => {
+    return [...this.customContentService.customCharacters(), ...this._characters()];
+  });
 
   private readonly _summaries = signal<CharacterSummary[]>([]);
-  public readonly summaries = this._summaries.asReadonly();
+  public readonly summaries = computed(() => {
+    const customSummaries: CharacterSummary[] = this.customContentService.customCharacters().map(c => ({
+      id: c.id,
+      name: c.name,
+      isCustom: true,
+      race: c.race,
+      class: c.class,
+      level: c.level,
+      classId: c.classId,
+      raceId: c.raceId,
+      isSpellcaster: !!c.spellcasting
+    }));
+    return [...customSummaries, ...this._summaries()];
+  });
 
   private readonly _loading = signal(false);
   public readonly loading = this._loading.asReadonly();
@@ -104,6 +121,13 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   }
 
   selectEntityByID(id: string): Observable<Character> {
+    // Try finding in custom characters first
+    const customCharacter = this.customContentService.customCharacters().find(c => c.id.toString() === id);
+    if (customCharacter) {
+      this._selectedEntity.set(customCharacter);
+      return of(customCharacter);
+    }
+
     this._loading.set(true);
     this._error.set(null);
     return this.http.get<unknown>(`${this.apiUrl}/${id}`).pipe(

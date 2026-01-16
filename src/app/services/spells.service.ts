@@ -1,9 +1,10 @@
-import {inject, Injectable, signal} from '@angular/core';
+import {computed, inject, Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {environment} from '../../environments/environment';
 import {ApiResponse, Spell, SpellSummary} from '../models';
 import {catchError, map, Observable, of, retry, tap, throwError} from 'rxjs';
 import {MapperService} from './mapper.service';
+import { CustomContentService } from './custom-content.service';
 
 @Injectable({
   providedIn: 'root',
@@ -12,12 +13,29 @@ export class SpellsService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/spells`;
   private mapperService = inject(MapperService);
+  private customContentService = inject(CustomContentService);
 
   private _summaries = signal<SpellSummary[]>([]);
-  public readonly summaries = this._summaries.asReadonly();
+  public readonly summaries = computed(() => {
+    const customSummaries: SpellSummary[] = this.customContentService.customSpells().map(s => ({
+      id: s.id,
+      name: s.name,
+      isCustom: true,
+      isConcentration: s.isConcentration,
+      isRitual: s.isRitual,
+      level: s.level,
+      spellType: s.spellType,
+      isAOE: s.isAOE,
+      isTouch: s.isTouch,
+      hasDC: s.hasDC
+    }));
+    return [...customSummaries, ...this._summaries()];
+  });
 
   private _spells = signal<Spell[]>([]);
-  public readonly spells = this._spells.asReadonly();
+  public readonly spells = computed(() => {
+    return [...this.customContentService.customSpells(), ...this._spells()];
+  });
 
   private _loading = signal(false);
   public readonly loading = this._loading.asReadonly();
@@ -107,6 +125,13 @@ export class SpellsService {
     }
 
   selectSpellByID(id: string): Observable<Spell> {
+    // Try finding in custom spells first
+    const customSpell = this.customContentService.customSpells().find(s => s.id.toString() === id);
+    if (customSpell) {
+      this._selectedSpell.set(customSpell);
+      return of(customSpell);
+    }
+
     this._loading.set(true);
     this._error.set(null);
     return this.http.get<unknown>(`${this.apiUrl}/${id}`).pipe(
