@@ -11,11 +11,19 @@ import { SimulationService } from '../../services/simulation.service';
 import { environment } from '../../../environments/environment';
 import {TimelineService} from '../../services/timeline.service';
 import {SimulationResults} from '../../components/simulation-results/simulation-results';
+import { SimulationOptionsComponent } from '../../components/simulation-options/simulation-options';
 
 @Component({
   selector: 'app-simulator-shell',
   standalone: true,
-  imports: [ButtonModule, TooltipModule, MessageModule, EntityCard, SimulationResults],
+  imports: [
+    ButtonModule,
+    TooltipModule,
+    MessageModule,
+    EntityCard,
+    SimulationResults,
+    SimulationOptionsComponent
+  ],
   templateUrl: './simulator-shell.html',
   styles: [
     `
@@ -34,6 +42,7 @@ export class SimulatorShell {
   protected readonly layout = environment.layout;
 
   public readonly isCombatantsCollapsed = signal(false);
+  public readonly isOptionsVisible = signal(false);
 
   // Use BreakpointObserver with custom query from environment
   public readonly isXL = toSignal(
@@ -54,5 +63,9 @@ export class SimulatorShell {
 
   toggleCombatants() {
     this.isCombatantsCollapsed.update((v) => !v);
+  }
+
+  toggleOptions() {
+    this.isOptionsVisible.update(v => !v);
   }
 }

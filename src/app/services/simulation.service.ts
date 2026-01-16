@@ -1,6 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { SimulationLog, SimulationResult, EncounterConfig, SimulationEvent, EventType } from '../models';
+import { SimulationOptions } from '../models/simoptions.model';
 import { CombatantService } from './combatant.service';
 import { MapperService } from './mapper.service';
 import { TimelineService } from './timeline.service';
@@ -25,7 +26,50 @@ export class SimulationService {
   private readonly _error = signal<string | null>(null);
   readonly error = this._error.asReadonly();
 
+  private readonly _options = signal<SimulationOptions>(this.getDefaultOptions());
+  readonly options = this._options.asReadonly();
+
   private readonly timelineService = inject(TimelineService);
+
+  private getDefaultOptions(): SimulationOptions {
+    return {
+      seed: { seed1: 0, seed2: 0 },
+      useHPAverageMonster: true,
+      useHPAverageCharacter: false,
+      canMonstersCrit: true,
+      canCharactersCrit: true,
+      hasIncreasedCrits: false,
+      useImprovedCritical: false,
+      charactersAlwaysUpcast: false,
+      monstersAlwaysUpcast: false,
+      allowCharacterHeals: true,
+      allowMonsterHeals: true,
+      aoeHitsAllEnemies: false,
+      characterHealThresholdPct: 30,
+      monsterHealThresholdPct: 30,
+      limitedLegendaryActions: true,
+      allowLairActions: true,
+      allowDragonbornBreathAttack: true,
+      enableClassFeatures: true,
+      enableRacialFeatures: true,
+      barbarianAlwaysRecklessAttack: false,
+      paladinAlwaysSmite: false,
+      paladinUseHighestSmiteSlot: false,
+      useMassiveDamage: false,
+      enableSpecialAbilities: true,
+      monsterDeathEffectsHitAllies: true,
+      alwaysUseSneakAttack: true,
+      useWeightedAI: true,
+      debugAI: false,
+      hpVisibilityMode: 'visible',
+      enableMonsterNoise: false,
+      monsterNoiseWeight: 0.05
+    };
+  }
+
+  updateOptions(options: Partial<SimulationOptions>): void {
+    this._options.update(current => ({ ...current, ...options }));
+  }
 
   /**
    * Decompresses a GZIP ArrayBuffer into a JSON object.
@@ -43,11 +87,7 @@ export class SimulationService {
 
     const config: EncounterConfig = {
       combatants,
-      options: {
-        flanking: false,
-        sleepRule: 'official',
-        averageDamage: true
-      },
+      options: this._options(),
       maxRounds: 20,
       iterations: 100
     };

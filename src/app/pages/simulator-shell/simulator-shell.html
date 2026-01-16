@@ -25,6 +25,14 @@
         (onClick)="onAddDummyData()"
         class="flex-grow-1 md:flex-grow-0"
       ></p-button>
+      <p-button
+        label="Options"
+        icon="pi pi-cog"
+        severity="secondary"
+        (onClick)="toggleOptions()"
+        class="flex-grow-1 md:flex-grow-0"
+        pTooltip="Simulation Settings"
+      ></p-button>
     </div>
   </div>
 
@@ -185,3 +193,7 @@
     </div>
   </div>
 </div>
+
+<app-simulation-options
+  [(visible)]="isOptionsVisible"
+></app-simulation-options>
