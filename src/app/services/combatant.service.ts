@@ -174,7 +174,7 @@ export class CombatantService {
         initiative: 0,
       },
       equipment: {
-        armor: { id: 0, name: 'None', ac: 10, minimumStrength: 0, dexBonus: 10, maxBonus: 10, modifier: 0 },
+        armor: { id: 0, name: 'None', ac: 10, minimumStrength: 0, dexBonus: true, maxBonus: false, modifier: 0 },
         shield: undefined,
         hasShieldEquipped: false,
         weapons: {
@@ -448,8 +448,8 @@ export class CombatantService {
         initiative: 14,
       },
       equipment: {
-        armor: { id: 1, name: 'Plate', ac: 18, minimumStrength: 15, dexBonus: 0, maxBonus: 0, modifier: 0 },
-        shield: { id: 2, name: 'Shield', ac: 2, minimumStrength: 0, dexBonus: 0, maxBonus: 0, modifier: 0 },
+        armor: { id: 1, name: 'Plate', ac: 18, minimumStrength: 15, dexBonus: false, maxBonus: false, modifier: 0 },
+        shield: { id: 2, name: 'Shield', ac: 2, minimumStrength: 0, dexBonus: false, maxBonus: false, modifier: 0 },
         hasShieldEquipped: true,
         weapons: {
           [WeaponSlot.Primary]: [

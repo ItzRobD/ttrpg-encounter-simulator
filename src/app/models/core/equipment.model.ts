@@ -44,8 +44,8 @@ export interface Armor {
   name: string;
   isCustom?: boolean;
   ac: number;
-  dexBonus: number;
-  maxBonus: number;
+  dexBonus: boolean;
+  maxBonus: boolean;
   minimumStrength: number;
   modifier: number;
 }

@@ -248,6 +248,16 @@ export class EquipmentService {
     this._selectedItem.set(item);
   }
 
+  deleteItem(id: string | number): Observable<void> {
+    return this.customContentService.deleteEntity('equipment', id).pipe(
+      tap(() => {
+        if (this._selectedItem()?.id === id) {
+          this._selectedItem.set(null);
+        }
+      })
+    );
+  }
+
   clearError(): void {
     this._error.set(null);
   }
