@@ -41,3 +41,15 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Local/Dev Environment
+environment.dev.ts
+environment.local.ts
+
+# Don't upload backend tmp data
+*.json
+
+# Don't upload plan data but allow readme
+*.md
+*.txt
+!readme.md

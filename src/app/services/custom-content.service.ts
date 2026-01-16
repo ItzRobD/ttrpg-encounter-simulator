@@ -70,14 +70,22 @@ export class CustomContentService {
    * Saves a custom entity.
    * Handles LocalStorage for free users and API for premium users.
    */
-  saveEntity<T extends { id: string | number, isCustom?: boolean }>(type: CustomEntityType, entity: T): Observable<T> {
+  saveEntity<T extends { id?: string | number, isCustom?: boolean }>(type: CustomEntityType, entity: T): Observable<T> {
     entity.isCustom = true;
 
     if (this.subscriptionService.isPremium()) {
+      // If it has a local ID, remove it before sending to API so server can generate a fresh one
+      if (entity.id && typeof entity.id === 'string' && entity.id.startsWith('local-')) {
+        delete entity.id;
+      }
       return this.saveToApi(type, entity);
     } else {
-      this.saveToLocal(type, entity);
-      return of(entity);
+      // For local storage, if no ID, generate one (since there is no backend)
+      if (!entity.id) {
+        entity.id = `local-${crypto.randomUUID()}`;
+      }
+      this.saveToLocal(type, entity as T & { id: string | number });
+      return of(entity as T & { id: string | number });
     }
   }
 
@@ -130,12 +138,12 @@ export class CustomContentService {
     this.subscriptionService.fetchLimits();
   }
 
-  private saveToApi<T extends { id: string | number }>(type: CustomEntityType, entity: T): Observable<T> {
+  private saveToApi<T extends { id?: string | number }>(type: CustomEntityType, entity: T): Observable<T> {
     const url = `${environment.apiUrl}/custom/${type}`;
     return this.http.post<T>(url, entity).pipe(
       tap(saved => {
         // Also update local signals so UI is snappy
-        this.saveToLocal(type, saved);
+        this.saveToLocal(type, saved as T & { id: string | number });
       })
     );
   }

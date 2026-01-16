@@ -14,6 +14,7 @@ import {
   Condition,
   CasterType,
   SpecialAbilities,
+  LevelType,
 } from '../models';
 import { environment } from '../../environments/environment';
 import { LocalStorageService } from './local-storage.service';
@@ -310,7 +311,7 @@ export class CombatantService {
             isAOE: false,
             hasDC: false,
             isAutoHit: true,
-            levelType: '',
+            levelType: LevelType.Slot,
             spellDC: { ability: '', onSuccess: '' },
           },
           {
@@ -325,7 +326,7 @@ export class CombatantService {
             isAOE: false,
             hasDC: true,
             isAutoHit: false,
-            levelType: '',
+            levelType: LevelType.Slot,
             spellDC: { ability: '', onSuccess: '' },
           },
           {
@@ -340,7 +341,7 @@ export class CombatantService {
             isAOE: false,
             hasDC: false,
             isAutoHit: true,
-            levelType: '',
+            levelType: LevelType.Slot,
             spellDC: { ability: '', onSuccess: '' },
           },
           {
@@ -355,7 +356,7 @@ export class CombatantService {
             isAOE: true,
             hasDC: false,
             isAutoHit: true,
-            levelType: '',
+            levelType: LevelType.Slot,
             spellDC: { ability: '', onSuccess: '' },
           },
           {
@@ -370,7 +371,7 @@ export class CombatantService {
             isAOE: false,
             hasDC: false,
             isAutoHit: true,
-            levelType: '',
+            levelType: LevelType.Slot,
             spellDC: { ability: '', onSuccess: '' },
           },
           {
@@ -385,7 +386,7 @@ export class CombatantService {
             isAOE: false,
             hasDC: true,
             isAutoHit: false,
-            levelType: '',
+            levelType: LevelType.Slot,
             spellDC: { ability: '', onSuccess: '' },
           },
         ],

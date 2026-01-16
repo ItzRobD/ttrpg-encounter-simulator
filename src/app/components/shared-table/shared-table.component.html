@@ -130,6 +130,9 @@
       <td class="white-space-nowrap overflow-hidden text-overflow-ellipsis">
         <div class="flex align-items-center gap-2">
           <span>{{ item.name | titlecase }}</span>
+          @if (item.isCustom) {
+            <span class="custom-badge" pTooltip="Custom Content">C</span>
+          }
           @if (!isMobile()) {
             <div class="flex gap-1">
               @if (mode() === 'monster') {

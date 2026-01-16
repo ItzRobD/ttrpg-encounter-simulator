@@ -145,12 +145,12 @@
           <div class="flex flex-column gap-3 pt-2">
             <div class="flex flex-column gap-2">
               <label class="text-sm font-semibold">HP Visibility</label>
-              <p-selectButton
+              <p-selectbutton
                 [options]="hpVisibilityOptions"
                 [ngModel]="options().hpVisibilityMode"
                 (ngModelChange)="updateOption('hpVisibilityMode', $event)"
                 class="w-full"
-              ></p-selectButton>
+              ></p-selectbutton>
             </div>
 
             <div class="flex align-items-center justify-content-between">

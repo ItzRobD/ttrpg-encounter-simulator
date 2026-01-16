@@ -4,6 +4,22 @@ export type SpellType = 'damage' | 'healing' | 'other';
 
 export type CastingTime = 'action' | 'bonus action' | 'reaction' | 'instant' | 'minute' | 'hour';
 
+export type SaveSuccessEffect = 'half' | 'none' | 'other';
+
+export enum Ability {
+  Strength = "strength",
+  Dexterity = "dexterity",
+  Constitution = "constitution",
+  Intelligence = "intelligence",
+  Wisdom = "wisdom",
+  Charisma = "charisma"
+}
+
+export enum LevelType {
+  Slot = "slot",
+  Character = "character"
+}
+
 export enum CasterType {
   Full = "full",
   Half = "half",
@@ -20,8 +36,8 @@ export interface SpellSlots {
 }
 
 export interface SpellDC {
-  ability: string;
-  onSuccess: string;
+  ability: Ability | string;
+  onSuccess: SaveSuccessEffect | string;
 }
 
 export interface SpellSummary {
@@ -37,6 +53,7 @@ export interface SpellSummary {
   hasDC: boolean;
 }
 
+// TODO: Add dc save ability and on success
 export interface Spell {
   id: number | string;
   name: string;
@@ -51,9 +68,8 @@ export interface Spell {
   isTouch?: boolean;
   hasDC: boolean;
   isAutoHit: boolean;
-  levelType: string;
+  levelType: LevelType;
   spellDC: SpellDC;
-  range?: string;
   isInnate?: boolean;
   maxCastsPerDay?: number;
   formulas?: Record<number, SpellFormula>;

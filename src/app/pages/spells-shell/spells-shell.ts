@@ -7,9 +7,12 @@ import {InputText} from 'primeng/inputtext';
 import {SharedTable} from '../../components/shared-table/shared-table.component';
 import {Tooltip} from 'primeng/tooltip';
 import {SpellsService} from '../../services/spells.service';
+import {SpellEditorComponent} from '../../components/editors/spell-editor/spell-editor';
+import {Spell} from '../../models';
 
 @Component({
   selector: 'app-spells-shell',
+  standalone: true,
   imports: [
     Button,
     SpellCard,
@@ -17,7 +20,8 @@ import {SpellsService} from '../../services/spells.service';
     InputIcon,
     InputText,
     SharedTable,
-    Tooltip
+    Tooltip,
+    SpellEditorComponent
   ],
   templateUrl: './spells-shell.html',
   styles: [`
@@ -29,9 +33,27 @@ import {SpellsService} from '../../services/spells.service';
 export class SpellsShell implements OnInit {
   public readonly spellsService = inject(SpellsService);
   public readonly searchTerm = signal('');
+  public readonly isEditorVisible = signal(false);
+  public readonly spellToEdit = signal<Spell | null>(null);
 
   ngOnInit(): void {
     this.spellsService.getSummaries().subscribe();
+  }
+
+  onCreateSpell(): void {
+    this.spellToEdit.set(null);
+    this.isEditorVisible.set(true);
+  }
+
+  onEditSpell(spell: Spell): void {
+    this.spellToEdit.set(spell);
+    this.isEditorVisible.set(true);
+  }
+
+  onDeleteSpell(spell: Spell): void {
+    if (confirm(`Are you sure you want to delete the custom spell "${spell.name}"?`)) {
+      this.spellsService.deleteSpell(spell.id).subscribe();
+    }
   }
 
   onSearch(event: Event): void {

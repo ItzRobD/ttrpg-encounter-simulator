@@ -38,9 +38,7 @@
       <div class="col-6 flex flex-column gap-1">
         <span class="text-xs font-bold uppercase text-600">Range/Area</span>
         <span class="text-sm">
-          @if (item().range) {
-            {{ item().range }}
-          } @else if (item().isAOE) {
+          @if (item().isAOE) {
             AOE
           } @else if (item().isTouch) {
             Touch
@@ -54,7 +52,9 @@
           <span class="text-xs font-bold uppercase text-600">Save DC</span>
           <span class="text-sm">
             {{ item().spellDC.ability | titlecase }}
-            <span class="text-500 text-xs">({{ item().spellDC.onSuccess | titlecase }})</span>
+            <span class="text-500 text-xs">
+              ({{ item().spellDC.onSuccess === 'half' ? 'Half damage' : (item().spellDC.onSuccess === 'none' ? 'No damage' : item().spellDC.onSuccess) | titlecase }} on success)
+            </span>
           </span>
         </div>
       }

@@ -159,4 +159,14 @@ export class SpellsService {
   selectSpell(spell: Spell | null): void {
     this._selectedSpell.set(spell);
   }
+
+  deleteSpell(id: string | number): Observable<void> {
+    return this.customContentService.deleteEntity('spells', id).pipe(
+      tap(() => {
+        if (this._selectedSpell()?.id === id) {
+          this._selectedSpell.set(null);
+        }
+      })
+    );
+  }
 }

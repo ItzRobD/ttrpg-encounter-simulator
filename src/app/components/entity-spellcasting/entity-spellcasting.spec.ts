@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { EntitySpellcasting } from './entity-spellcasting';
-import { Spellcasting, CasterType } from '../../models';
+import { Spellcasting, CasterType, LevelType } from '../../models';
 
 describe('EntitySpellcasting', () => {
   let component: EntitySpellcasting;
@@ -29,7 +29,7 @@ describe('EntitySpellcasting', () => {
         isAOE: true,
         hasDC: true,
         isAutoHit: false,
-        levelType: '',
+        levelType: LevelType.Slot,
         spellDC: { ability: '', onSuccess: '' },
       },
       {
@@ -44,7 +44,7 @@ describe('EntitySpellcasting', () => {
         isAOE: false,
         hasDC: false,
         isAutoHit: true,
-        levelType: '',
+        levelType: LevelType.Slot,
         spellDC: { ability: '', onSuccess: '' },
       },
       {
@@ -59,7 +59,7 @@ describe('EntitySpellcasting', () => {
         isAOE: false,
         hasDC: false,
         isAutoHit: true,
-        levelType: '',
+        levelType: LevelType.Slot,
         spellDC: { ability: '', onSuccess: '' },
       },
       {
@@ -74,7 +74,7 @@ describe('EntitySpellcasting', () => {
         isAOE: false,
         hasDC: false,
         isAutoHit: true,
-        levelType: '',
+        levelType: LevelType.Slot,
         spellDC: { ability: '', onSuccess: '' },
       },
     ],
