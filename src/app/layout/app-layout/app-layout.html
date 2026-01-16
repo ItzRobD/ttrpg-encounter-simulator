@@ -34,6 +34,14 @@
         <i class="pi pi-shield mr-2"></i>Equipment
       </a>
       <a
+        routerLink="/spells"
+        routerLinkActive="font-bold"
+        class="p-3 text-900 border-round hover:surface-100 transition-colors"
+        (click)="visible = false"
+      >
+        <i class="pi pi-bolt mr-2"></i>Spells
+      </a>
+      <a
         routerLink="/history"
         routerLinkActive="font-bold"
         class="p-3 text-900 border-round hover:surface-100 transition-colors"
@@ -76,6 +84,13 @@
         class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline"
       >
         <i class="pi pi-shield mr-2"></i>Equipment
+      </a>
+      <a
+        routerLink="/spells"
+        routerLinkActive="surface-200"
+        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline"
+      >
+        <i class="pi pi-bolt mr-2"></i>Spells
       </a>
       <a
         routerLink="/history"

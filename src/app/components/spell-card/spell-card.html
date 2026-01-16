@@ -1,0 +1,94 @@
+<p-card class="p-fluid border-1 surface-border">
+  <div class="flex flex-column gap-3">
+    <!-- Header -->
+    <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
+      <div class="flex flex-column">
+        <span class="text-xl font-bold">{{ item().name }}</span>
+        <span class="text-sm text-500">
+          {{ levelDisplay() }} {{ item().levelType || '' | titlecase }}
+        </span>
+      </div>
+      <div class="flex flex-column align-items-end">
+        <span class="text-xs font-bold uppercase text-600">Casting Time</span>
+        <span class="text-sm font-semibold">{{ item().castingTime | titlecase }}</span>
+      </div>
+    </div>
+
+    <!-- Tags (Concentration, Ritual) -->
+    @if (spellTags().length > 0) {
+      <div class="flex flex-wrap gap-1">
+        @for (tag of spellTags(); track tag.label) {
+          <p-tag [value]="tag.label" [severity]="tag.severity" [dt]="{ fontSize: '0.7rem' }"></p-tag>
+        }
+      </div>
+    }
+
+    <!-- Description -->
+    <div class="flex flex-column gap-1">
+      <span class="text-xs font-bold uppercase text-600">Description</span>
+      <p class="text-sm m-0 line-height-3 text-700">{{ item().description }}</p>
+    </div>
+
+    <!-- Spell Details -->
+    <div class="grid mt-1">
+      <div class="col-6 flex flex-column gap-1">
+        <span class="text-xs font-bold uppercase text-600">Type</span>
+        <span class="text-sm">{{ item().spellType | titlecase }}</span>
+      </div>
+      <div class="col-6 flex flex-column gap-1">
+        <span class="text-xs font-bold uppercase text-600">Range/Area</span>
+        <span class="text-sm">
+          @if (item().range) {
+            {{ item().range }}
+          } @else if (item().isAOE) {
+            AOE
+          } @else if (item().isTouch) {
+            Touch
+          } @else {
+            Ranged
+          }
+        </span>
+      </div>
+      @if (item().hasDC) {
+        <div class="col-6 flex flex-column gap-1">
+          <span class="text-xs font-bold uppercase text-600">Save DC</span>
+          <span class="text-sm">
+            {{ item().spellDC.ability | titlecase }}
+            <span class="text-500 text-xs">({{ item().spellDC.onSuccess | titlecase }})</span>
+          </span>
+        </div>
+      }
+      @if (item().isAutoHit) {
+        <div class="col-6 flex flex-column gap-1">
+          <span class="text-xs font-bold uppercase text-600">Hit</span>
+          <span class="text-sm text-success font-semibold">Auto-Hit</span>
+        </div>
+      }
+    </div>
+
+    <!-- Formulas (Detailed display) -->
+    @if (sortedFormulas(); as formulas) {
+      @if (formulas.length > 0) {
+        <div class="flex flex-column gap-1 border-top-1 surface-border pt-2">
+          <span class="text-xs font-bold uppercase text-600">Scaling</span>
+          <div class="flex flex-column gap-2 mt-1">
+            @for (item of formulas; track item.level) {
+              <div class="flex align-items-center justify-content-between p-2 border-round surface-50 text-sm">
+                <div class="flex flex-column">
+                  <span class="font-bold">Level {{ item.level }}</span>
+                  <span class="text-xs text-500">{{ item.formula.damageType | titlecase }}</span>
+                </div>
+                <div class="flex flex-column align-items-end">
+                  <span class="font-semibold text-primary">
+                    {{ item.formula.numberOfDice }}d{{ item.formula.die }}{{ item.formula.amountToAdd ? (item.formula.amountToAdd > 0 ? '+' : '') + item.formula.amountToAdd : '' }}
+                  </span>
+                  <span class="text-xs text-600">Avg: {{ item.formula.averageValue }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+</p-card>

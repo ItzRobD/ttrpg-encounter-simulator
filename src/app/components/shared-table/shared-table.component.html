@@ -88,6 +88,21 @@
         >
           Level <p-sortIcon field="level"></p-sortIcon>
         </th>
+      } @else if (mode() === 'spells') {
+        <th
+          pSortableColumn="level"
+          [style.width]="widths.level.width"
+          [style.min-width]="widths.level.minWidth"
+        >
+          Level <p-sortIcon field="level"></p-sortIcon>
+        </th>
+        <th
+          pSortableColumn="spellType"
+          [style.min-width]="widths.type.minWidth"
+          [style.width]="widths.type.width"
+        >
+          Type <p-sortIcon field="spellType"></p-sortIcon>
+        </th>
       } @else {
         <th
           pSortableColumn="type"
@@ -123,6 +138,19 @@
                 }
                 @if (item.isSpellcaster) {
                   <i class="pi pi-bolt text-blue-500 text-xs" pTooltip="Spellcaster"></i>
+                }
+              } @else if (mode() === 'spells') {
+                @if (item.isConcentration) {
+                  <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
+                }
+                @if (item.isRitual) {
+                  <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
+                }
+                @if (item.isAOE) {
+                  <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
+                }
+                @if (item.hasDC) {
+                  <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
                 }
               } @else if (mode() === 'equipment' && item.type === 'Weapon' && item.properties) {
                 @let props = item.properties;
@@ -166,6 +194,9 @@
         <td>{{ item.race | titlecase }}</td>
         <td>{{ item.class | titlecase }}</td>
         <td>{{ item.level }}</td>
+      } @else if (mode() === 'spells') {
+        <td>{{ item.level === 0 ? 'Cantrip' : item.level }}</td>
+        <td>{{ item.spellType | titlecase }}</td>
       } @else {
         <td>{{ item.type }}</td>
         <td>{{ item.detail }}</td>
@@ -180,6 +211,19 @@
               }
               @if (item.isSpellcaster) {
                 <i class="pi pi-bolt text-blue-500 text-xs" pTooltip="Spellcaster"></i>
+              }
+            } @else if (mode() === 'spells') {
+              @if (item.isConcentration) {
+                <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
+              }
+              @if (item.isRitual) {
+                <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
+              }
+              @if (item.isAOE) {
+                <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
+              }
+              @if (item.hasDC) {
+                <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
               }
             } @else if (mode() === 'equipment' && item.type === 'Weapon' && item.properties) {
               @let props = item.properties;
@@ -209,8 +253,8 @@
   </ng-template>
   <ng-template pTemplate="emptymessage">
     <tr>
-      <td [attr.colspan]="isMobile() ? (mode() === 'monster' ? 4 : (mode() === 'character' ? 4 : 3)) : (mode() === 'monster' ? 5 : (mode() === 'character' ? 4 : 3))" class="text-center p-4 text-600">
-        No {{ mode() === 'monster' || mode() === 'character' ? mode() + 's' : 'items' }} found.
+      <td [attr.colspan]="isMobile() ? (mode() === 'monster' ? 4 : (mode() === 'character' ? 4 : (mode() === 'spells' ? 3 : 3))) : (mode() === 'monster' ? 5 : (mode() === 'character' ? 4 : (mode() === 'spells' ? 3 : 3)))" class="text-center p-4 text-600">
+        No {{ mode() === 'monster' || mode() === 'character' || mode() === 'spells' ? mode() + (mode() === 'spells' ? '' : 's') : 'items' }} found.
       </td>
     </tr>
   </ng-template>

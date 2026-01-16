@@ -1,3 +1,5 @@
+import {DamageType} from './combat.model';
+
 export type SpellType = 'damage' | 'healing' | 'other';
 
 export type CastingTime = 'action' | 'bonus action' | 'reaction' | 'instant' | 'minute' | 'hour';
@@ -22,6 +24,18 @@ export interface SpellDC {
   onSuccess: string;
 }
 
+export interface SpellSummary {
+  id: number;
+  name: string;
+  isConcentration: boolean;
+  isRitual?: boolean;
+  level: number;
+  spellType: SpellType;
+  isAOE: boolean;
+  isTouch?: boolean;
+  hasDC: boolean;
+}
+
 export interface Spell {
   id: number;
   name: string;
@@ -32,12 +46,25 @@ export interface Spell {
   level: number;
   spellType: SpellType;
   isAOE: boolean;
+  isTouch?: boolean;
   hasDC: boolean;
   isAutoHit: boolean;
   levelType: string;
   spellDC: SpellDC;
+  range?: string;
   isInnate?: boolean;
   maxCastsPerDay?: number;
+  formulas?: Record<number, SpellFormula>;
+}
+
+export interface SpellFormula {
+  castLevel: number;
+  numberOfDice: number;
+  die: number;
+  amountToAdd: number;
+  useSpellMod: boolean;
+  damageType: DamageType;
+  averageValue: number;
 }
 
 export interface Spellcasting {

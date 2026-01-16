@@ -42,6 +42,19 @@ export class MapperService {
           if (dataRecord['class_id'] !== undefined && dataRecord['race_id'] !== undefined) {
             return this.mapCharacterResponse(dataRecord);
           }
+
+          if (dataRecord['spell_type'] !== undefined || dataRecord['casting_time'] !== undefined) {
+            return this.mapSpellResponse(dataRecord);
+          }
+
+          // Handle dictionary of objects (e.g., { "119": { ... } })
+          const values = Object.values(dataRecord);
+          if (values.length > 0 && typeof values[0] === 'object' && values[0] !== null) {
+            const firstVal = values[0] as Record<string, unknown>;
+            if (firstVal['spell_type'] !== undefined || firstVal['casting_time'] !== undefined) {
+              return this.mapSpellResponse(firstVal);
+            }
+          }
         }
 
         // If it's just raw data (Weapon, Armor, or any other object/array) inside the envelope
@@ -57,6 +70,11 @@ export class MapperService {
         if (data['class_id'] !== undefined || data['class']) {
           return this.mapCharacterResponse(data);
         }
+      }
+
+      // Handle spells directly
+      if (record['spell_type'] !== undefined || record['casting_time'] !== undefined) {
+        return this.mapSpellResponse(record as Record<string, unknown>);
       }
 
       // Fallback for objects already inside the mappers or simpler objects
@@ -182,6 +200,47 @@ export class MapperService {
       isStable: false,
       isDead: false
     };
+
+    return result;
+  }
+
+  /**
+   * Specifically handles the mapping of the Spell response from the backend.
+   */
+  private mapSpellResponse(response: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+
+    Object.keys(response).forEach((key) => {
+      if (key === 'formulas' || key === 'spell_dc' || key === 'casting_time') return;
+      const camelKey = this.toCamelCase(key);
+      result[camelKey] = this.mapKeys(response[key]);
+    });
+
+    // Handle Formulas - converting map keys to numbers and values to camelCase
+    if (response['formulas'] && typeof response['formulas'] === 'object') {
+      const rawFormulas = response['formulas'] as Record<string, unknown>;
+      const formulas: Record<number, unknown> = {};
+
+      Object.entries(rawFormulas).forEach(([key, value]) => {
+        formulas[Number(key)] = this.mapKeys(value);
+      });
+      result['formulas'] = formulas;
+    }
+
+    // Handle spell_dc explicitly
+    if (response['spell_dc'] && typeof response['spell_dc'] === 'object') {
+      result['spellDC'] = this.mapKeys(response['spell_dc']);
+    }
+
+    // Handle casting_time explicitly
+    if (response['casting_time'] !== undefined) {
+      result['castingTime'] = response['casting_time'];
+    }
+
+    // Explicitly map range if present (it's often missing or differently named in backend)
+    if (response['range'] !== undefined) {
+      result['range'] = response['range'];
+    }
 
     return result;
   }
@@ -332,11 +391,41 @@ export class MapperService {
     if (str === 'dice_count') return 'numberOfDice';
     if (str === 'hp_method') return 'hpSetMethod';
 
+    // Handle snake_case specifically for spell_dc and other dnd fields
+    if (str === 'on_success') return 'onSuccess';
+    if (str === 'spell_dc') return 'spellDC';
+    if (str === 'casting_time') return 'castingTime';
+    if (str === 'spell_type') return 'spellType';
+    if (str === 'level_type') return 'levelType';
+    if (str === 'is_concentration') return 'isConcentration';
+    if (str === 'is_ritual') return 'isRitual';
+    if (str === 'is_touch') return 'isTouch';
+    if (str === 'is_aoe') return 'isAOE';
+    if (str === 'has_dc') return 'hasDC';
+    if (str === 'is_auto_hit') return 'isAutoHit';
+
+    // SpellFormula fields
+    if (str === 'cast_level') return 'castLevel';
+    if (str === 'number_of_dice') return 'numberOfDice';
+    if (str === 'amount_to_add') return 'amountToAdd';
+    if (str === 'use_spellmod') return 'useSpellMod';
+    if (str === 'damage_type') return 'damageType';
+    if (str === 'average_value') return 'averageValue';
+
+    // Handle PascalCase explicitly for SpellFormulas (Fallback for older backend versions)
+    if (str === 'CastLevel') return 'castLevel';
+    if (str === 'NumberOfDice') return 'numberOfDice';
+    if (str === 'Die') return 'die';
+    if (str === 'AmountToAdd') return 'amountToAdd';
+    if (str === 'UseSpellmod') return 'useSpellMod';
+    if (str === 'DamageType') return 'damageType';
+    if (str === 'AverageValue') return 'averageValue';
+
     let result = str;
 
     // Handle snake_case
     if (result.includes('_')) {
-      result = result.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+      result = result.replace(/_([a-z0-9])/g, (g) => g[1].toUpperCase());
     }
 
     // Handle common acronyms at the end of strings (e.g., SequenceID -> SequenceId, MaxHP -> MaxHp)
@@ -367,7 +456,14 @@ export class MapperService {
     }
 
     // Lowercase the first character for standard camelCase
-    return result.charAt(0).toLowerCase() + result.slice(1);
+    const finalResult = result.charAt(0).toLowerCase() + result.slice(1);
+
+    // Final check for common dnd fields that might have slipped through
+    if (finalResult === 'castingTime') return 'castingTime';
+    if (finalResult === 'spellType') return 'spellType';
+    if (finalResult === 'levelType') return 'levelType';
+
+    return finalResult;
   }
 
   /**

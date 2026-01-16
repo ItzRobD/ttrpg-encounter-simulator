@@ -5,6 +5,7 @@ import { HistoryShell } from './pages/history-shell/history-shell';
 import { BestiaryShell } from './pages/bestiary-shell/bestiary-shell';
 import {CharactersShell} from './pages/characters-shell/characters-shell';
 import {EquipmentShell} from './pages/equipment-shell/equipment-shell';
+import {SpellsShell} from './pages/spells-shell/spells-shell';
 export const routes: Routes = [
   {
     path: '',
@@ -15,6 +16,7 @@ export const routes: Routes = [
       { path: 'bestiary', component: BestiaryShell },
       { path: 'characters', component: CharactersShell },
       { path: 'equipment', component: EquipmentShell },
+      { path: 'spells', component: SpellsShell },
     ],
   },
   { path: '**', redirectTo: '' },

@@ -9,6 +9,7 @@ import {
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
+import { Observable } from 'rxjs';
 import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageModule } from 'primeng/message';
@@ -26,13 +27,23 @@ import {
   EquipmentSummary,
   Monster,
   Character,
-  EquipmentItem
+  EquipmentItem, SpellSummary, Spell
 } from '../../models';
+import {SpellsService} from '../../services/spells.service';
 
 type SupportedService =
   | EntityService<Monster, MonsterSummary>
   | EntityService<Character, CharacterSummary>
-  | (Omit<EquipmentService, 'selectedItem' | 'selectItem'> & { selectedEntity: Signal<EquipmentItem | null>, selectEntity: (item: EquipmentItem | null) => void });
+  | (Omit<EquipmentService, 'selectedItem' | 'selectItem'> & {
+      selectedEntity: Signal<EquipmentItem | null>;
+      selectEntity: (item: EquipmentItem | null) => void;
+      selectEntityByID: (id: string) => Observable<EquipmentItem>;
+    })
+  | (Omit<SpellsService, 'selectedSpell' | 'selectSpell'> & {
+      selectedEntity: Signal<Spell | null>;
+      selectEntity: (spell: Spell | null) => void;
+      selectEntityByID: (id: string) => Observable<Spell>;
+    });
 
 @Component({
   selector: 'app-shared-table',
@@ -46,9 +57,10 @@ export class SharedTable {
   private readonly monsterService = inject(MonsterService);
   private readonly characterService = inject(CharacterService);
   private readonly equipmentService = inject(EquipmentService);
+  private readonly spellsService = inject(SpellsService);
   private readonly breakpointObserver = inject(BreakpointObserver);
 
-  public readonly mode = input<'monster' | 'character' | 'equipment'>('monster');
+  public readonly mode = input<'monster' | 'character' | 'equipment' | 'spells'>('monster');
   public readonly searchTerm = input('');
 
   public readonly activeService = computed<SupportedService>(() => {
@@ -60,7 +72,17 @@ export class SharedTable {
         return {
           ...service,
           selectedEntity: service.selectedItem,
-          selectEntity: service.selectItem.bind(service)
+          selectEntity: service.selectItem.bind(service),
+          selectEntityByID: (id: string) => service.selectItemByID(id, 'Weapon') // Defaulting to Weapon for now
+        } as unknown as SupportedService;
+      }
+      case 'spells': {
+        const service = this.spellsService;
+        return {
+          ...service,
+          selectedEntity: service.selectedSpell,
+          selectEntity: service.selectSpell.bind(service),
+          selectEntityByID: (id: string) => service.selectSpellByID(id)
         } as unknown as SupportedService;
       }
     }
@@ -106,7 +128,7 @@ export class SharedTable {
       return items;
     }
 
-    return (items as (MonsterSummary | CharacterSummary | EquipmentSummary)[]).filter((i) => {
+    return (items as (MonsterSummary | CharacterSummary | EquipmentSummary | SpellSummary)[]).filter((i) => {
       const basicMatch = i.name.toLowerCase().includes(term);
 
       if (this.mode() === 'monster') {
@@ -128,7 +150,7 @@ export class SharedTable {
           c.class?.toLowerCase().includes(term) ||
           c.level?.toString().includes(term)
         );
-      } else {
+      } else if (this.mode() === 'equipment') {
         const eq = i as EquipmentSummary;
         const propertyMatch = eq.properties ? (
           (eq.properties.isVersatile && 'versatile'.includes(term)) ||
@@ -139,13 +161,25 @@ export class SharedTable {
           (eq.properties.isThrown && 'thrown'.includes(term)) ||
           (eq.properties.isRanged && 'ranged'.includes(term))
         ) : false;
-
         return (
           basicMatch ||
           eq.type?.toLowerCase().includes(term) ||
           eq.detail?.toLowerCase().includes(term) ||
           propertyMatch
         );
+      } else if (this.mode() === 'spells') {
+        const spell = i as SpellSummary;
+        return (
+          basicMatch ||
+          spell.spellType?.toLowerCase().includes(term) ||
+          spell.level?.toString().includes(term) ||
+          (spell.isConcentration && 'concentration'.includes(term)) ||
+          (spell.isRitual && 'ritual'.includes(term)) ||
+          (spell.isAOE && ('aoe'.includes(term) || 'area of effect'.includes(term))) ||
+          (spell.hasDC && ('dc'.includes(term) || 'save'.includes(term)))
+        );
+      } else {
+        return false;
       }
     });
   });
@@ -157,7 +191,7 @@ export class SharedTable {
     return service.summaries().find((s) => (s as { id: number }).id === (selected as { id: number }).id) || null;
   });
 
-  onRowSelect(event: { data?: MonsterSummary | CharacterSummary | EquipmentSummary | (MonsterSummary | CharacterSummary | EquipmentSummary)[] }): void {
+  onRowSelect(event: { data?: MonsterSummary | CharacterSummary | EquipmentSummary | SpellSummary | (MonsterSummary | CharacterSummary | EquipmentSummary | SpellSummary)[] }): void {
     const summary = event.data;
     if (!summary || Array.isArray(summary)) return;
 
@@ -172,9 +206,11 @@ export class SharedTable {
       (service as EntityService<Monster, MonsterSummary>).selectEntityByID(id.toString()).subscribe();
     } else if (this.mode() === 'character') {
       (service as EntityService<Character, CharacterSummary>).selectEntityByID(id.toString()).subscribe();
-    } else {
+    } else if (this.mode() === 'equipment') {
       const eqSummary = summary as EquipmentSummary;
       this.equipmentService.selectItemByID(id.toString(), eqSummary.type).subscribe();
+    } else if (this.mode() === 'spells') {
+      this.spellsService.selectSpellByID(id.toString()).subscribe();
     }
   }
 
