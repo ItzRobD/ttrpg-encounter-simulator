@@ -1,0 +1,199 @@
+<p-drawer
+  [visible]="visible()"
+  (onHide)="onHide()"
+  position="right"
+  header="Simulation Options"
+  [style]="{ width: '400px' }"
+  [blockScroll]="true"
+>
+  <div class="flex flex-column gap-4 p-2">
+    <p-accordion [multiple]="true" [value]="['0', '1', '2', '3']">
+      <!-- General & Seeds -->
+      <p-accordion-panel value="0">
+        <p-accordion-header>General & Seed</p-accordion-header>
+        <p-accordion-content>
+          <div class="flex flex-column gap-3 pt-2">
+            <div class="flex flex-column gap-2">
+              <label class="font-bold text-sm">Simulation Seed</label>
+              <div class="flex flex-column gap-2">
+                <p-inputNumber
+                  [ngModel]="options().seed.seed1"
+                  (ngModelChange)="updateSeed('seed1', $event)"
+                  placeholder="Seed 1"
+                  [useGrouping]="false"
+                  class="w-full"
+                  styleClass="w-full"
+                ></p-inputNumber>
+                <p-inputNumber
+                  [ngModel]="options().seed.seed2"
+                  (ngModelChange)="updateSeed('seed2', $event)"
+                  placeholder="Seed 2"
+                  [useGrouping]="false"
+                  class="w-full"
+                  styleClass="w-full"
+                ></p-inputNumber>
+              </div>
+              <small class="text-500">Set seeds for deterministic results (0 for random).</small>
+            </div>
+
+            <div class="flex align-items-center justify-content-between">
+              <label for="useHPAverageMonster" class="text-sm font-semibold">Average Monster HP</label>
+              <p-toggleswitch
+                id="useHPAverageMonster"
+                [ngModel]="options().useHPAverageMonster"
+                (ngModelChange)="updateOption('useHPAverageMonster', $event)"
+              ></p-toggleswitch>
+            </div>
+
+            <div class="flex align-items-center justify-content-between">
+              <label for="useHPAverageCharacter" class="text-sm font-semibold">Average Character HP</label>
+              <p-toggleswitch
+                id="useHPAverageCharacter"
+                [ngModel]="options().useHPAverageCharacter"
+                (ngModelChange)="updateOption('useHPAverageCharacter', $event)"
+              ></p-toggleswitch>
+            </div>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <!-- Combat Rules -->
+      <p-accordion-panel value="1">
+        <p-accordion-header>Combat Rules</p-accordion-header>
+        <p-accordion-content>
+          <div class="flex flex-column gap-3 pt-2">
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Monsters Can Crit</label>
+              <p-toggleswitch
+                [ngModel]="options().canMonstersCrit"
+                (ngModelChange)="updateOption('canMonstersCrit', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Characters Can Crit</label>
+              <p-toggleswitch
+                [ngModel]="options().canCharactersCrit"
+                (ngModelChange)="updateOption('canCharactersCrit', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Improved Criticals</label>
+              <p-toggleswitch
+                [ngModel]="options().useImprovedCritical"
+                (ngModelChange)="updateOption('useImprovedCritical', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Always Upcast (NPCs)</label>
+              <p-toggleswitch
+                [ngModel]="options().monstersAlwaysUpcast"
+                (ngModelChange)="updateOption('monstersAlwaysUpcast', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">AOE Hits All Enemies</label>
+              <p-toggleswitch
+                [ngModel]="options().aoeHitsAllEnemies"
+                (ngModelChange)="updateOption('aoeHitsAllEnemies', $event)"
+              ></p-toggleswitch>
+            </div>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <!-- Class & Racial Features -->
+      <p-accordion-panel value="2">
+        <p-accordion-header>Features & Abilities</p-accordion-header>
+        <p-accordion-content>
+          <div class="flex flex-column gap-3 pt-2">
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Enable Class Features</label>
+              <p-toggleswitch
+                [ngModel]="options().enableClassFeatures"
+                (ngModelChange)="updateOption('enableClassFeatures', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Enable Racial Features</label>
+              <p-toggleswitch
+                [ngModel]="options().enableRacialFeatures"
+                (ngModelChange)="updateOption('enableRacialFeatures', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Paladins Always Smite</label>
+              <p-toggleswitch
+                [ngModel]="options().paladinAlwaysSmite"
+                (ngModelChange)="updateOption('paladinAlwaysSmite', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Always Sneak Attack</label>
+              <p-toggleswitch
+                [ngModel]="options().alwaysUseSneakAttack"
+                (ngModelChange)="updateOption('alwaysUseSneakAttack', $event)"
+              ></p-toggleswitch>
+            </div>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <!-- AI & Visibility -->
+      <p-accordion-panel value="3">
+        <p-accordion-header>AI & Premium Options</p-accordion-header>
+        <p-accordion-content>
+          <div class="flex flex-column gap-3 pt-2">
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">HP Visibility</label>
+              <p-selectButton
+                [options]="hpVisibilityOptions"
+                [ngModel]="options().hpVisibilityMode"
+                (ngModelChange)="updateOption('hpVisibilityMode', $event)"
+                class="w-full"
+              ></p-selectButton>
+            </div>
+
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Use Weighted AI</label>
+              <p-toggleswitch
+                [ngModel]="options().useWeightedAI"
+                (ngModelChange)="updateOption('useWeightedAI', $event)"
+              ></p-toggleswitch>
+            </div>
+
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Enable Monster Noise</label>
+              <p-toggleswitch
+                [ngModel]="options().enableMonsterNoise"
+                (ngModelChange)="updateOption('enableMonsterNoise', $event)"
+              ></p-toggleswitch>
+            </div>
+
+            @if (options().enableMonsterNoise) {
+              <div class="flex flex-column gap-2">
+                <label class="text-sm font-semibold">Noise Weight ({{ options().monsterNoiseWeight }})</label>
+                <p-inputNumber
+                  [ngModel]="options().monsterNoiseWeight"
+                  (ngModelChange)="updateOption('monsterNoiseWeight', $event)"
+                  [min]="0"
+                  [max]="1"
+                  [step]="0.01"
+                  [showButtons]="true"
+                  class="w-full"
+                ></p-inputNumber>
+              </div>
+            }
+
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Debug AI Logs</label>
+              <p-toggleswitch
+                [ngModel]="options().debugAI"
+                (ngModelChange)="updateOption('debugAI', $event)"
+              ></p-toggleswitch>
+            </div>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+    </p-accordion>
+  </div>
+</p-drawer>

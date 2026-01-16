@@ -4,4 +4,5 @@ export * from './configs/utility-weights.model';
 export * from './configs/character-config.model';
 export * from './configs/encounter-config.model';
 export * from './simulation.model';
-export * from './simoptions.model'
+export * from './simoptions.model';
+export * from './subscription.model';

@@ -28,8 +28,9 @@ export interface WeaponModifiers {
 }
 
 export interface Weapon {
-  id?: number;
+  id?: number | string;
   name: string;
+  isCustom?: boolean;
   numberOfDice: number;
   die: DiceType;
   damageType: DamageType;
@@ -39,8 +40,9 @@ export interface Weapon {
 }
 
 export interface Armor {
-  id: number;
+  id?: number | string;
   name: string;
+  isCustom?: boolean;
   ac: number;
   dexBonus: number;
   maxBonus: number;
@@ -51,8 +53,9 @@ export interface Armor {
 export type EquipmentItem = Weapon | Armor;
 
 export interface EquipmentSummary {
-  id: number;
+  id: number | string;
   name: string;
+  isCustom?: boolean;
   type: 'Weapon' | 'Armor' | 'Shield';
   detail: string; // e.g., "1d8 Slashing" or "AC 18"
   properties?: {

@@ -1,9 +1,10 @@
 import {AsConfig, EntityState, Spellcasting} from '../core';
 
 export interface Entity {
-  id: number;
+  id: number | string;
   instanceId: number;
   name: string;
+  isCustom?: boolean;
   asConfig: AsConfig;
   state: EntityState;
   spellcasting?: Spellcasting;
@@ -20,6 +21,7 @@ export interface Entity {
 }
 
 export interface EntitySummary {
-  id: number;
+  id: number | string;
   name: string;
+  isCustom?: boolean;
 }

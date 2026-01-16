@@ -1,0 +1,62 @@
+import { Component, inject, input, output } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { DrawerModule } from 'primeng/drawer';
+import { ButtonModule } from 'primeng/button';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { TooltipModule } from 'primeng/tooltip';
+import { AccordionModule, AccordionPanel, AccordionHeader, AccordionContent } from 'primeng/accordion';
+import { SimulationOptions, HPVisibilityMode } from '../../models/simoptions.model';
+import { SimulationService } from '../../services/simulation.service';
+
+@Component({
+  selector: 'app-simulation-options',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    DrawerModule,
+    ButtonModule,
+    ToggleSwitchModule,
+    InputNumberModule,
+    SelectButtonModule,
+    TooltipModule,
+    AccordionModule,
+    AccordionPanel,
+    AccordionHeader,
+    AccordionContent
+  ],
+  templateUrl: './simulation-options.html',
+  styleUrl: './simulation-options.css'
+})
+export class SimulationOptionsComponent {
+  private readonly simulationService = inject(SimulationService);
+
+  public readonly visible = input.required<boolean>();
+  public readonly visibleChange = output<boolean>();
+
+  protected readonly options = this.simulationService.options;
+
+  protected readonly hpVisibilityOptions = [
+    { label: 'Visible', value: 'visible' },
+    { label: 'Hidden', value: 'hidden' },
+    { label: 'Percentage', value: 'percentage' }
+  ];
+
+  onHide() {
+    this.visibleChange.emit(false);
+  }
+
+  updateOption(key: keyof SimulationOptions, value: any) {
+    this.simulationService.updateOptions({ [key]: value });
+  }
+
+  updateSeed(part: 'seed1' | 'seed2', value: number | null) {
+    const currentSeed = this.options().seed;
+    this.simulationService.updateOptions({
+      seed: { ...currentSeed, [part]: value || 0 }
+    });
+  }
+}

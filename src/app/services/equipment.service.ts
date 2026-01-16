@@ -170,7 +170,7 @@ export class EquipmentService {
     }
 
     if (!type || type === 'Armor' || type === 'Shield') {
-      const armor = this._armorList().find(a => a.id.toString() === id);
+      const armor = this._armorList().find(a => a.id?.toString() === id);
       if (armor) {
         this._selectedItem.set(armor);
         this._loading.set(false);

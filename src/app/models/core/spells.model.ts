@@ -25,8 +25,9 @@ export interface SpellDC {
 }
 
 export interface SpellSummary {
-  id: number;
+  id: number | string;
   name: string;
+  isCustom?: boolean;
   isConcentration: boolean;
   isRitual?: boolean;
   level: number;
@@ -37,8 +38,9 @@ export interface SpellSummary {
 }
 
 export interface Spell {
-  id: number;
+  id: number | string;
   name: string;
+  isCustom?: boolean;
   description: string;
   isConcentration: boolean;
   castingTime: CastingTime;
