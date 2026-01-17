@@ -1,6 +1,13 @@
 import { DamageType } from './combat.model';
 import { DiceType } from './stats.model';
 
+export interface DamageComponent {
+  numberOfDice: number;
+  die: DiceType;
+  amountToAdd: number;
+  damageType: DamageType;
+}
+
 export interface Action {
   actionId: number;
   name: string;
@@ -8,11 +15,8 @@ export interface Action {
   rechargeValue: number;
   hasDC: boolean;
   index: number;
-  numberOfDice: number;
-  die: DiceType;
-  amountToAdd: number;
   attackBonus: number;
-  damageType: DamageType;
+  damageComponents: DamageComponent[];
   dcAbility?: string;
   dcOnSuccess?: string;
   dc?: number;

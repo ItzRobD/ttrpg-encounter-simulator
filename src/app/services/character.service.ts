@@ -174,6 +174,23 @@ export class CharacterService implements EntityService<Character, CharacterSumma
     this._selectedEntity.set(entity);
   }
 
+  deleteCharacter(id: string | number): Observable<void> {
+    this._loading.set(true);
+    return this.customContentService.deleteEntity('characters', id).pipe(
+      tap(() => {
+        if (this._selectedEntity()?.id === id) {
+          this._selectedEntity.set(null);
+        }
+        this._loading.set(false);
+      }),
+      catchError(err => {
+        this._loading.set(false);
+        this._error.set(`Failed to delete character: ${err.message}`);
+        return throwError(() => err);
+      })
+    );
+  }
+
   clearError(): void {
     this._error.set(null);
   }

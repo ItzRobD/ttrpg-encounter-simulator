@@ -59,27 +59,7 @@ export class SpellsService {
           count: environment.httpRetryCount,
           delay: environment.httpRetryDelay,
         }),
-        map((resp) => {
-          let rawData: unknown[] = [];
-          if (resp && typeof resp === 'object') {
-            const data = resp.data;
-            if (data) {
-              if (Array.isArray(data)) {
-                rawData = data;
-              } else {
-                rawData = Object.values(data as Record<string, unknown>);
-              }
-            } else if (resp && 'spells' in (resp as unknown as Record<string, unknown>)) {
-              rawData = Object.values((resp as unknown as Record<string, Record<string, unknown>>)['spells']);
-            }
-          }
-
-          if (rawData.length === 0 && Array.isArray(resp)) {
-            rawData = resp as unknown[];
-          }
-
-          return rawData.map((s) => this.mapperService.mapKeys(s)) as SpellSummary[];
-        }),
+        map((resp) => this.mapSummaries(resp)),
       tap((summaries) => {
         this._summaries.set(summaries);
         this._loading.set(false);
@@ -91,6 +71,47 @@ export class SpellsService {
       })
       );
   };
+
+  getSummariesByClass(classId: string | number): Observable<SpellSummary[]> {
+    this._loading.set(true);
+    this._error.set(null);
+    return this.http.get<ApiResponse<unknown>>(`${this.apiUrl}/summaries/class/${classId}`)
+      .pipe(
+        retry({
+          count: environment.httpRetryCount,
+          delay: environment.httpRetryDelay,
+        }),
+        map((resp) => this.mapSummaries(resp)),
+        tap(() => this._loading.set(false)),
+        catchError((err) => {
+          this._loading.set(false);
+          this._error.set('Failed to load class spell summaries.');
+          return throwError(() => err);
+        })
+      );
+  }
+
+  private mapSummaries(resp: ApiResponse<unknown> | unknown[]): SpellSummary[] {
+    let rawData: unknown[] = [];
+    if (resp && typeof resp === 'object' && !Array.isArray(resp)) {
+      const data = (resp as ApiResponse<unknown>).data;
+      if (data) {
+        if (Array.isArray(data)) {
+          rawData = data;
+        } else {
+          rawData = Object.values(data as Record<string, unknown>);
+        }
+      } else if ('spells' in (resp as unknown as Record<string, unknown>)) {
+        rawData = Object.values((resp as unknown as Record<string, Record<string, unknown>>)['spells']);
+      }
+    }
+
+    if (rawData.length === 0 && Array.isArray(resp)) {
+      rawData = resp as unknown[];
+    }
+
+    return rawData.map((s) => this.mapperService.mapKeys(s)) as SpellSummary[];
+  }
 
   /**
    * Fetches all spells from the backend.

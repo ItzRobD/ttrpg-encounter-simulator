@@ -1,9 +1,9 @@
 export enum Race {
   Dwarf = "Dwarf",
+  Dragonborn = "Dragonborn",
   Elf = "Elf",
   Halfling = "Halfling",
   Human = "Human",
-  Dragonborn = "Dragonborn",
   Gnome = "Gnome",
   HalfElf = "Half-Elf",
   HalfOrc = "Half-Orc",
@@ -52,4 +52,17 @@ export enum MonsterSize {
   Huge = "Huge",
   Gargantuan = "Gargantuan",
   Swarm = "Swarm",
+}
+
+export enum DragonbornColor {
+  Blue = "Blue",
+  Black = "Black",
+  Brass = "Brass",
+  Bronze = "Bronze",
+  Copper = "Copper",
+  Gold = "Gold",
+  Green = "Green",
+  Red = "Red",
+  Silver = "Silver",
+  White = "White"
 }

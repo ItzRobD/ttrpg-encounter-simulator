@@ -71,14 +71,23 @@ export function formatDice(count: number, die: DiceType, bonus: number = 0): str
 export function generateActionDescription(action: Action): string {
   if (action.description) return action.description;
 
-  const diceStr = formatDice(action.numberOfDice, action.die, action.amountToAdd);
+  const parts: string[] = [];
+  if (action.damageComponents && action.damageComponents.length > 0) {
+    action.damageComponents.forEach((comp, index) => {
+      const diceStr = formatDice(comp.numberOfDice, comp.die, comp.amountToAdd);
+      const avgDmg = Math.floor((comp.numberOfDice * (comp.die / 2 + 0.5)) + comp.amountToAdd);
+      const part = `${avgDmg} (${diceStr}) ${comp.damageType} damage`;
+      parts.push(index === 0 ? part : `plus ${part}`);
+    });
+  }
+  const damageStr = parts.join(' ');
 
   if (action.hasDC) {
-    return `Each target must make a DC ${action.dc} ${action.dcAbility} saving throw, taking ${diceStr} ${action.damageType} damage on a failed save.`;
+    return `Each target must make a DC ${action.dc} ${action.dcAbility} saving throw, taking ${damageStr} on a failed save.`;
   }
 
   const hitBonus = action.attackBonus >= 0 ? `+${action.attackBonus}` : `${action.attackBonus}`;
-  return `Weapon Attack: ${hitBonus} to hit. Hit: (${diceStr}) ${action.damageType} damage.`;
+  return `Weapon Attack: ${hitBonus} to hit. Hit: (${damageStr}) damage.`;
 }
 
 /**
@@ -110,10 +119,27 @@ export function formatMultiattack(entityName: string, options: MultiattackOption
  */
 export function formatMonsterAction(action: Action): string {
   const toHit = action.attackBonus;
-  const diceStr = formatDice(action.numberOfDice, action.die, action.amountToAdd);
-  const avgDmg = Math.floor((action.numberOfDice * (action.die / 2 + 0.5)) + action.amountToAdd);
+  const parts: string[] = [];
 
-  return `${formatModifier(toHit)} to hit. Damage: ${avgDmg} (${diceStr}) ${action.damageType} damage.`;
+  if (action.damageComponents && action.damageComponents.length > 0) {
+    action.damageComponents.forEach((comp, index) => {
+      const diceStr = formatDice(comp.numberOfDice, comp.die, comp.amountToAdd);
+      const avgDmg = Math.floor((comp.numberOfDice * (comp.die / 2 + 0.5)) + comp.amountToAdd);
+      const part = `${avgDmg} (${diceStr}) ${comp.damageType} damage`;
+      parts.push(index === 0 ? part : `plus ${part}`);
+    });
+  }
+
+  let base = `${formatModifier(toHit)} to hit.`;
+  if (parts.length > 0) {
+    base += ` Hit: ${parts.join(' ')}.`;
+  }
+
+  if (action.hasDC) {
+    base += ` DC ${action.dc} ${getAbilityScoreShortName(action.dcAbility || '').toUpperCase()} save.`;
+  }
+
+  return base;
 }
 
 /**

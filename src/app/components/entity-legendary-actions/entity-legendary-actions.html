@@ -10,11 +10,7 @@
             <i class="pi pi-star text-primary"></i>
             <span class="text-sm">
             <strong>{{ action.name }}</strong>
-              @if (action.die !== DiceType.D0) {
-                {{ formatMonsterAction(action) }}
-              } @else if (action.description) {
-                . {{ action.description }}
-              }
+            {{ formatMonsterAction(action) }}
           </span>
           </div>
         </p-card>

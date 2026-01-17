@@ -249,11 +249,15 @@ export class CombatantService {
             rechargeValue: 0,
             hasDC: false,
             index: 0,
-            numberOfDice: 1,
-            die: DiceType.D4,
-            amountToAdd: 0,
             attackBonus: 2,
-            damageType: DamageType.Bludgeoning,
+            damageComponents: [
+              {
+                numberOfDice: 1,
+                die: DiceType.D4,
+                amountToAdd: 0,
+                damageType: DamageType.Bludgeoning,
+              }
+            ],
           },
         ],
         multiattacks: [],
@@ -660,40 +664,52 @@ export class CombatantService {
           {
             actionId: 1,
             name: 'Bite',
-            numberOfDice: 2,
-            die: DiceType.D10,
-            amountToAdd: 10,
             attackBonus: 17,
-            damageType: DamageType.Piercing,
             index: 0,
             rechargeValue: 0,
             hasDC: false,
+            damageComponents: [
+              {
+                numberOfDice: 2,
+                die: DiceType.D10,
+                amountToAdd: 10,
+                damageType: DamageType.Piercing,
+              }
+            ],
           },
           {
             actionId: 2,
             name: 'Claw',
-            numberOfDice: 2,
-            die: DiceType.D6,
-            amountToAdd: 10,
             attackBonus: 17,
-            damageType: DamageType.Slashing,
             index: 1,
             rechargeValue: 0,
             hasDC: false,
+            damageComponents: [
+              {
+                numberOfDice: 2,
+                die: DiceType.D6,
+                amountToAdd: 10,
+                damageType: DamageType.Slashing,
+              }
+            ],
           },
           {
             actionId: 3,
             name: 'Fire Breath',
-            numberOfDice: 26,
-            die: DiceType.D6,
-            amountToAdd: 0,
             attackBonus: 0,
-            damageType: DamageType.Fire,
             index: 2,
             rechargeValue: 5,
             hasDC: true,
             dc: 24,
-            dcAbility: 'Constitution',
+            dcAbility: 'constitution',
+            damageComponents: [
+              {
+                numberOfDice: 26,
+                die: DiceType.D6,
+                amountToAdd: 0,
+                damageType: DamageType.Fire,
+              }
+            ],
           },
         ],
         multiattacks: [
@@ -706,44 +722,56 @@ export class CombatantService {
           {
             actionId: 4,
             name: 'Detect',
-            numberOfDice: 0,
-            die: DiceType.D0,
-            amountToAdd: 0,
             attackBonus: 0,
-            damageType: DamageType.Bludgeoning,
             index: 0,
             rechargeValue: 0,
             hasDC: false,
             description: 'The dragon makes a Wisdom (Perception) check.',
             cost: 1,
+            damageComponents: [
+              {
+                numberOfDice: 0,
+                die: DiceType.D0,
+                amountToAdd: 0,
+                damageType: DamageType.Bludgeoning,
+              }
+            ],
           },
           {
             actionId: 6,
             name: 'Tail Attack',
-            numberOfDice: 2,
-            die: DiceType.D8,
-            amountToAdd: 10,
             attackBonus: 17,
-            damageType: DamageType.Bludgeoning,
             index: 1,
             rechargeValue: 0,
             hasDC: false,
             cost: 1,
+            damageComponents: [
+              {
+                numberOfDice: 2,
+                die: DiceType.D8,
+                amountToAdd: 10,
+                damageType: DamageType.Bludgeoning,
+              }
+            ],
           },
           {
             actionId: 6,
             name: 'Wing Attack',
-            numberOfDice: 2,
-            die: DiceType.D6,
-            amountToAdd: 10,
             attackBonus: 17,
-            damageType: DamageType.Bludgeoning,
             index: 2,
             rechargeValue: 0,
             hasDC: false,
             cost: 2,
             description:
               'The dragon beats its wings. Each creature within 15 feet of the dragon must succeed on a DC 25 Dexterity saving throw or take 17 (2d6 + 10) bludgeoning damage and be knocked prone.',
+            damageComponents: [
+              {
+                numberOfDice: 2,
+                die: DiceType.D6,
+                amountToAdd: 10,
+                damageType: DamageType.Bludgeoning,
+              }
+            ],
           },
         ],
         rechargeActions: { 3: 5 },

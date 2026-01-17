@@ -22,9 +22,6 @@ export enum LevelType {
 
 export enum CasterType {
   Full = "full",
-  Half = "half",
-  Third = "third",
-  Warlock = "warlock",
   None = "none"
 }
 
@@ -92,4 +89,5 @@ export interface Spellcasting {
   spells: Spell[];
   spellSaveDC: number;
   spellAttackBonus: number;
+  ability?: Ability;
 }

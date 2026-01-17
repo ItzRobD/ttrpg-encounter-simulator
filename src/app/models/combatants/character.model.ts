@@ -1,8 +1,18 @@
-import {AbilityScoreProficiency, AbilityScores, Class, EntityState, Equipment, Race, SpecialAbilities, Spellcasting} from '../core';
+import {
+  AbilityScoreProficiency,
+  AbilityScores,
+  Class, DragonbornColor,
+  EntityState,
+  Equipment,
+  Race,
+  SpecialAbilities,
+  Spellcasting
+} from '../core';
 import {Entity, EntitySummary} from './entity.model';
 
 export interface Character extends Entity {
   race: Race;
+  dragonbornColor?: DragonbornColor;
   class: Class;
   level: number;
   classId?: number;
@@ -13,6 +23,7 @@ export interface Character extends Entity {
 
 export interface CharacterSummary extends EntitySummary {
   race: Race;
+  dragonbornColor?: DragonbornColor;
   class: Class;
   level: number;
   classId?: number;

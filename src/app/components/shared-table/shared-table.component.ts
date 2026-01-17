@@ -47,7 +47,6 @@ type SupportedService =
 
 @Component({
   selector: 'app-shared-table',
-  standalone: true,
   imports: [TableModule, TooltipModule, MessageModule, CommonModule, CrFormatPipe],
   templateUrl: './shared-table.component.html',
   styleUrl: './shared-table.component.css',

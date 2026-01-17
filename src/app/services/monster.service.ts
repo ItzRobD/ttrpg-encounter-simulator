@@ -62,6 +62,16 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
     this.selectEntity(monster);
   }
 
+  deleteMonster(id: string | number): Observable<void> {
+    return this.customContentService.deleteEntity('monsters', id).pipe(
+      tap(() => {
+        if (this._selectedEntity()?.id === id) {
+          this._selectedEntity.set(null);
+        }
+      })
+    );
+  }
+
   getSummaries(forceRefresh = false): Observable<MonsterSummary[]> {
     if (!forceRefresh && this._summaries().length > 0) {
       return of(this._summaries());
