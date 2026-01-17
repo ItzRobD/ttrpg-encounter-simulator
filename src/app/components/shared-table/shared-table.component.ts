@@ -5,14 +5,16 @@ import {
   input,
   computed,
   Signal,
+  output,
 } from '@angular/core';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs/operators';
+import { map, take } from 'rxjs/operators';
 import { Observable } from 'rxjs';
 import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageModule } from 'primeng/message';
+import { ButtonModule } from 'primeng/button';
 import { MonsterService } from '../../services/monster.service';
 import { CommonModule } from '@angular/common';
 import { CharacterService } from '../../services/character.service';
@@ -47,7 +49,7 @@ type SupportedService =
 
 @Component({
   selector: 'app-shared-table',
-  imports: [TableModule, TooltipModule, MessageModule, CommonModule, CrFormatPipe],
+  imports: [TableModule, TooltipModule, MessageModule, CommonModule, CrFormatPipe, ButtonModule],
   templateUrl: './shared-table.component.html',
   styleUrl: './shared-table.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,6 +63,9 @@ export class SharedTable {
 
   public readonly mode = input<'monster' | 'character' | 'equipment' | 'spells'>('monster');
   public readonly searchTerm = input('');
+  public readonly showAddToSimulator = input(false);
+
+  public readonly addToSimulator = output<Entity>();
 
   public readonly activeService = computed<SupportedService>(() => {
     switch (this.mode()) {
@@ -99,6 +104,7 @@ export class SharedTable {
       race: { width: '20%', minWidth: '10rem' },
       detail: { width: '25%', minWidth: '10rem' },
       status: { width: '0', minWidth: '0' },
+      actions: { width: '4rem', minWidth: '4rem' },
     },
     mobile: {
       name: { width: '40%', minWidth: '12rem' },
@@ -111,6 +117,7 @@ export class SharedTable {
       race: { width: '15%', minWidth: '12rem' },
       detail: { width: '25%', minWidth: '10rem' },
       status: { width: '4rem', minWidth: '4rem' },
+      actions: { width: '4rem', minWidth: '4rem' },
     }
   };
 
@@ -201,19 +208,38 @@ export class SharedTable {
     }
 
     const service = this.activeService();
-    if (this.mode() === 'monster') {
-      (service as EntityService<Monster, MonsterSummary>).selectEntityByID(id.toString()).subscribe();
-    } else if (this.mode() === 'character') {
-      (service as EntityService<Character, CharacterSummary>).selectEntityByID(id.toString()).subscribe();
-    } else if (this.mode() === 'equipment') {
+    const mode = this.mode();
+
+    if (mode === 'monster' || mode === 'character') {
+      (service as EntityService<Entity, EntitySummary>).selectEntityByID(id.toString()).pipe(take(1)).subscribe();
+    } else if (mode === 'equipment') {
       const eqSummary = summary as EquipmentSummary;
-      this.equipmentService.selectItemByID(id.toString(), eqSummary.type).subscribe();
-    } else if (this.mode() === 'spells') {
-      this.spellsService.selectSpellByID(id.toString()).subscribe();
+      this.equipmentService.selectItemByID(id.toString(), eqSummary.type).pipe(take(1)).subscribe();
+    } else if (mode === 'spells') {
+      this.spellsService.selectSpellByID(id.toString()).pipe(take(1)).subscribe();
     }
   }
 
   onRowUnselect(): void {
     this.activeService().selectEntity(null);
+  }
+
+  onAddToSimulatorClick(event: Event, summary: MonsterSummary | CharacterSummary): void {
+    event.stopPropagation();
+
+    const service = this.activeService();
+    const id = (summary as { id?: number }).id;
+    if (id === undefined || id === null) return;
+
+    const mode = this.mode();
+    if (mode === 'monster' || mode === 'character') {
+      const entityService = service as EntityService<Entity, EntitySummary>;
+      entityService.selectEntityByID(id.toString()).pipe(take(1)).subscribe({
+        next: () => {
+          const entity = entityService.selectedEntity();
+          if (entity) this.addToSimulator.emit(entity);
+        }
+      });
+    }
   }
 }

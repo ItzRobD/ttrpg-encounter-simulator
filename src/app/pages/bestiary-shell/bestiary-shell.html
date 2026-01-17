@@ -53,7 +53,12 @@
 
         <div class="flex flex-column gap-2 flex-1 overflow-auto">
           <!-- Entities Table -->
-          <app-shared-table mode="monster" [searchTerm]="searchTerm()"></app-shared-table>
+          <app-shared-table
+            mode="monster"
+            [searchTerm]="searchTerm()"
+            [showAddToSimulator]="true"
+            (addToSimulator)="onAddToSimulator($event)"
+          ></app-shared-table>
         </div>
       </div>
     </div>
@@ -107,3 +112,4 @@
 ></app-monster-editor>
 
 <p-confirmDialog></p-confirmDialog>
+<p-toast></p-toast>

@@ -8,9 +8,11 @@ import {InputText} from "primeng/inputtext";
 import {Tooltip} from "primeng/tooltip";
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {ConfirmDialogModule} from 'primeng/confirmdialog';
+import {ToastModule} from 'primeng/toast';
 import {CharacterService} from '../../services/character.service';
-import {Character, CharacterSummary} from '../../models';
+import {Character, CharacterSummary, Entity} from '../../models';
 import {CharacterEditorComponent} from '../../components/editors/character-editor/character-editor';
+import {CombatantService} from '../../services/combatant.service';
 
 @Component({
   selector: 'app-characters-shell',
@@ -23,7 +25,8 @@ import {CharacterEditorComponent} from '../../components/editors/character-edito
       InputText,
       Tooltip,
       ConfirmDialogModule,
-      CharacterEditorComponent
+      CharacterEditorComponent,
+      ToastModule
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './characters-shell.html',
@@ -39,6 +42,8 @@ import {CharacterEditorComponent} from '../../components/editors/character-edito
 export class CharactersShell implements OnInit {
   public readonly characterService = inject(CharacterService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly combatantService = inject(CombatantService);
+  private readonly messageService = inject(MessageService);
 
   public readonly searchTerm = signal('');
   public readonly isEditorVisible = signal(false);
@@ -77,5 +82,24 @@ export class CharactersShell implements OnInit {
         this.characterService.deleteCharacter(character.id).subscribe();
       }
     });
+  }
+
+  onAddToSimulator(character: Entity): void {
+    const success = this.combatantService.addToSimulator(character);
+    if (success) {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Added to Simulator',
+        detail: `${character.name} has been added to the encounter simulator.`,
+        life: 3000
+      });
+    } else {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Cannot Add',
+        detail: 'The encounter is at maximum capacity.',
+        life: 3000
+      });
+    }
   }
 }

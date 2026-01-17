@@ -25,6 +25,9 @@
   <ng-template pTemplate="header">
     @let widths = isMobile() ? colWidths.mobile : colWidths.desktop;
     <tr>
+      @if (showAddToSimulator() && (mode() === 'monster' || mode() === 'character')) {
+        <th [style.width]="widths.actions.width" [style.min-width]="widths.actions.minWidth"></th>
+      }
       <th
         pSortableColumn="name"
         [style.min-width]="widths.name.minWidth"
@@ -127,6 +130,19 @@
   </ng-template>
   <ng-template pTemplate="body" let-item>
     <tr [pSelectableRow]="item" [style.height]="'50px'">
+      @if (showAddToSimulator() && (mode() === 'monster' || mode() === 'character')) {
+        <td>
+          <p-button
+            icon="pi pi-plus"
+            [rounded]="true"
+            [text]="true"
+            size="small"
+            severity="success"
+            pTooltip="Add to Simulator"
+            (onClick)="onAddToSimulatorClick($event, item)"
+          ></p-button>
+        </td>
+      }
       <td class="white-space-nowrap overflow-hidden text-overflow-ellipsis">
         <div class="flex align-items-center gap-2">
           <span>{{ item.name | titlecase }}</span>
@@ -256,7 +272,7 @@
   </ng-template>
   <ng-template pTemplate="emptymessage">
     <tr>
-      <td [attr.colspan]="isMobile() ? (mode() === 'monster' ? 4 : (mode() === 'character' ? 4 : (mode() === 'spells' ? 3 : 3))) : (mode() === 'monster' ? 5 : (mode() === 'character' ? 4 : (mode() === 'spells' ? 3 : 3)))" class="text-center p-4 text-600">
+      <td [attr.colspan]="isMobile() ? (mode() === 'monster' ? 5 : (mode() === 'character' ? 5 : (mode() === 'spells' ? 3 : 3))) : (mode() === 'monster' ? 6 : (mode() === 'character' ? 5 : (mode() === 'spells' ? 3 : 3)))" class="text-center p-4 text-600">
         No {{ mode() === 'monster' || mode() === 'character' || mode() === 'spells' ? mode() + (mode() === 'spells' ? '' : 's') : 'items' }} found.
       </td>
     </tr>

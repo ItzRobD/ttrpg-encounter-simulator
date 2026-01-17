@@ -15,6 +15,8 @@ import {
   CasterType,
   SpecialAbilities,
   LevelType,
+  isCharacter,
+  isMonster
 } from '../models';
 import { environment } from '../../environments/environment';
 import { LocalStorageService } from './local-storage.service';
@@ -36,11 +38,11 @@ export class CombatantService {
   readonly count = computed(() => this._combatants().length);
 
   readonly monsters = computed(() =>
-    this._combatants().filter((e): e is Monster => !('class' in e))
+    this._combatants().filter((e): e is Monster => isMonster(e))
   );
 
   readonly characters = computed(() =>
-    this._combatants().filter((e): e is Character => 'class' in e)
+    this._combatants().filter((e): e is Character => isCharacter(e))
   );
 
   constructor() {
@@ -66,14 +68,14 @@ export class CombatantService {
    *    (e.g., if maxTotal is 23 and characters are 0, you can have 23 monsters).
    */
   addCombatant(entity: Entity): boolean {
-    const isCharacter = 'class' in entity;
+    const isChar = isCharacter(entity);
     const currentCharacters = this.characters().length;
 
     // Check that we're below the max entities
     if (this.count() >= environment.limits.maxTotal) return false;
 
     // Check if we're already at the max number of characters
-    if (isCharacter && currentCharacters >= environment.limits.maxCharacters) return false;
+    if (isChar && currentCharacters >= environment.limits.maxCharacters) return false;
 
     // Note: No monster-specific cap is checked here to allow them to fill
     // the remaining capacity as requested (fluid behavior).
@@ -85,6 +87,50 @@ export class CombatantService {
 
     this._combatants.update(list => [...list, newCombatant]);
     return true;
+  }
+
+  /**
+   * Adds an entity to the simulator from the library (characters or bestiary).
+   * This method clones the entity and initializes it for combat simulation.
+   */
+  addToSimulator(entity: Entity): boolean {
+    const isChar = isCharacter(entity);
+
+    // Create a fresh copy with combat-ready state
+    const combatEntity: Entity = {
+      ...entity,
+      instanceId: 0, // Will be set by addCombatant
+      state: {
+        ...entity.state,
+        // Initialize HP if not already set
+        currentHp: entity.state?.currentHp || entity.hp?.hpAverage || entity.hp?.value || 1,
+        maxHp: entity.state?.maxHp || entity.hp?.hpAverage || entity.hp?.value || 1,
+        tempHp: 0,
+        initiative: 0,
+        isStable: true,
+        isDead: false,
+        conditions: Object.values(Condition).reduce((acc, curr) => ({ ...acc, [curr]: false }), {} as Record<Condition, boolean>),
+        deathSaves: { successes: 0, failures: 0 },
+        resistances: entity.state?.resistances || Object.values(DamageType).reduce((acc, curr) => ({ ...acc, [curr]: ResistanceType.None }), {} as Record<DamageType, ResistanceType>),
+      }
+    };
+
+    // Re-ensure type-specific properties are present if they might have been lost or to help type guards
+    if (isChar && isCharacter(combatEntity)) {
+      const charEntity = combatEntity as Character;
+      const originalChar = entity as Character;
+      if (!charEntity.class && originalChar.class) {
+        charEntity.class = originalChar.class;
+      }
+      if (!charEntity.classId && originalChar.classId) {
+        charEntity.classId = originalChar.classId;
+      }
+      if (!charEntity.level && originalChar.level) {
+        charEntity.level = originalChar.level;
+      }
+    }
+
+    return this.addCombatant(combatEntity);
   }
 
   /**
