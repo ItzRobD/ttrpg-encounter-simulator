@@ -23,42 +23,26 @@ export class MapperService {
     } else if (obj !== null && typeof obj === 'object') {
       const record = obj as Record<string, unknown>;
 
-      // New unified response structure: { data: { ... } } or { data: { data: { ... } } }
-      if (record['data'] !== undefined) {
-        let data = record['data'];
-
-        // Handle double nesting { data: { data: { ... } } }
-        if (data && typeof data === 'object' && !Array.isArray(data) && (data as Record<string, unknown>)['data'] !== undefined) {
-          data = (data as Record<string, unknown>)['data'] as Record<string, unknown>;
+      // Resolve unified response envelopes: { data: { ... } } or { data: { data: { ... } } }
+      // including { data: { details: { data: { ... } } } }
+      let current = record;
+      while (current && typeof current === 'object' && !Array.isArray(current)) {
+        if (current['data'] !== undefined) {
+          current = current['data'] as Record<string, unknown>;
+        } else if (current['details'] !== undefined && typeof current['details'] === 'object') {
+          const details = current['details'] as Record<string, unknown>;
+          if (details['data'] !== undefined) {
+            current = details['data'] as Record<string, unknown>;
+          } else {
+            break;
+          }
+        } else {
+          break;
         }
+      }
 
-        if (data && typeof data === 'object' && !Array.isArray(data)) {
-          const dataRecord = data as Record<string, unknown>;
-          // Distinguish between Monster and Character within the "data" envelope
-          if (dataRecord['actions'] && dataRecord['as_config']) {
-            return this.mapMonsterResponse(dataRecord);
-          }
-
-          if (dataRecord['class_id'] !== undefined && dataRecord['race_id'] !== undefined) {
-            return this.mapCharacterResponse(dataRecord);
-          }
-
-          if (dataRecord['spell_type'] !== undefined || dataRecord['casting_time'] !== undefined) {
-            return this.mapSpellResponse(dataRecord);
-          }
-
-          // Handle dictionary of objects (e.g., { "119": { ... } })
-          const values = Object.values(dataRecord);
-          if (values.length > 0 && typeof values[0] === 'object' && values[0] !== null) {
-            const firstVal = values[0] as Record<string, unknown>;
-            if (firstVal['spell_type'] !== undefined || firstVal['casting_time'] !== undefined) {
-              return this.mapSpellResponse(firstVal);
-            }
-          }
-        }
-
-        // If it's just raw data (Weapon, Armor, or any other object/array) inside the envelope
-        return this.mapKeys(data);
+      if (current !== record) {
+        return this.mapKeys(current);
       }
 
       // Handle entities directly (from seeds or timelines)
@@ -75,6 +59,41 @@ export class MapperService {
       // Handle spells directly
       if (record['spell_type'] !== undefined || record['casting_time'] !== undefined) {
         return this.mapSpellResponse(record as Record<string, unknown>);
+      }
+
+      // Handle weapons and armor directly (they might not have as_config)
+      if (record['damage_blocks'] && record['properties'] && record['modifiers']) {
+        // This looks like a Weapon
+        const result: Record<string, unknown> = {};
+        Object.keys(record).forEach((key) => {
+          const camelKey = this.toCamelCase(key);
+          result[camelKey] = this.mapKeys(record[key]);
+        });
+        return result;
+      }
+
+      if (record['ac'] !== undefined && record['minimum_strength'] !== undefined) {
+        // This looks like Armor
+        const result: Record<string, unknown> = {};
+        Object.keys(record).forEach((key) => {
+          const camelKey = this.toCamelCase(key);
+          result[camelKey] = this.mapKeys(record[key]);
+        });
+        return result;
+      }
+
+      // Special case for dictionary of objects (e.g., { "119": { ... } })
+      const entries = Object.entries(record);
+      if (entries.length > 0 && typeof entries[0][1] === 'object' && entries[0][1] !== null) {
+        // Check if the first value looks like a spell or entity
+        const firstVal = entries[0][1] as Record<string, unknown>;
+        if (firstVal['spell_type'] !== undefined || firstVal['casting_time'] !== undefined) {
+          const result: Record<string, unknown> = {};
+          entries.forEach(([k, v]) => {
+            result[k] = this.mapSpellResponse(v as Record<string, unknown>);
+          });
+          return result;
+        }
       }
 
       // Fallback for objects already inside the mappers or simpler objects
@@ -153,7 +172,24 @@ export class MapperService {
         if (!Array.isArray(slotData)) return [];
         return slotData.map(item => {
           const itemRecord = item as Record<string, unknown>;
-          const weapon = this.mapKeys(itemRecord['weapon_data'] || itemRecord) as Record<string, unknown>;
+          const rawWeapon = itemRecord['weapon_data'] || itemRecord['weapon'] || itemRecord;
+          const weapon = this.mapKeys(rawWeapon) as Record<string, unknown>;
+
+          // Map damage_blocks if present to legacy flat structure if needed,
+          // though modern components expect damageBlocks (mapped from damage_blocks)
+          if ((rawWeapon as Record<string, unknown>)['damage_blocks']) {
+             weapon['damageBlocks'] = this.mapKeys((rawWeapon as Record<string, unknown>)['damage_blocks']);
+
+             // For backward compatibility with some components that might still expect flat fields on Weapon
+             const blocks = (rawWeapon as Record<string, unknown>)['damage_blocks'] as any[];
+             if (blocks && blocks.length > 0) {
+                weapon['numberOfDice'] = blocks[0].number_of_dice;
+                weapon['die'] = blocks[0].die;
+                weapon['damageType'] = blocks[0].damage_type;
+                weapon['amountToAdd'] = blocks[0].modifier;
+             }
+          }
+
           return {
             ...weapon,
             isProficient: !!itemRecord['is_proficient']
@@ -253,21 +289,41 @@ export class MapperService {
 
     Object.keys(response).forEach((key) => {
       // Avoid recursive mapping of large arrays/objects we handle manually below
-      if (['actions', 'legendary_actions', 'multiattacks', 'resistances', 'spellcasting'].includes(key)) {
+      if (['actions', 'legendary_actions', 'multiattacks', 'resistances', 'spellcasting', 'hp', 'details'].includes(key)) {
         return;
       }
       const camelKey = this.toCamelCase(key);
       result[camelKey] = this.mapKeys(response[key]);
     });
 
+    // Handle details nesting if present directly in the object
+    if (response['details'] && typeof response['details'] === 'object') {
+       const details = response['details'] as Record<string, unknown>;
+       if (details['data']) {
+          return this.mapMonsterResponse(details['data'] as Record<string, unknown>);
+       }
+    }
+
     // Map as_config directly to asConfig
     if (response['as_config']) {
       result['asConfig'] = this.mapKeys(response['as_config']);
     }
 
+    // Map HP
+    if (response['hp']) {
+      result['hp'] = this.mapKeys(response['hp']);
+    }
+
     // 1. Map Actions
     const rawActions = (response['actions'] || []) as unknown[];
-    const actions = Array.isArray(rawActions) ? rawActions.map((a) => this.mapKeys(a)) : [];
+    const actions = Array.isArray(rawActions) ? rawActions.map((a) => {
+      const mappedAction = this.mapKeys(a) as Record<string, unknown>;
+      // Map damage_blocks if present to damageBlocks
+      if ((a as Record<string, unknown>)['damage_blocks']) {
+        mappedAction['damageBlocks'] = this.mapKeys((a as Record<string, unknown>)['damage_blocks']);
+      }
+      return mappedAction;
+    }) : [];
 
     // 2. Map Multiattacks
     const rawMultiattacks = (response['multiattacks'] || []) as unknown[];
@@ -278,16 +334,21 @@ export class MapperService {
     const legendaryActions = Array.isArray(rawLegendary) ? rawLegendary.map((la) => {
       const mapped = this.mapKeys(la) as Record<string, unknown>;
       if (mapped['action']) {
-        return { ...(mapped['action'] as Record<string, unknown>), cost: mapped['cost'] };
+        const action = this.mapKeys(mapped['action']) as Record<string, unknown>;
+        return { ...action, cost: mapped['cost'] };
       }
       return mapped;
     }) : [];
 
     // 4. Map Resistances
     const resistances: Record<string, string> = {};
-    const rawResistances = (response['resistances'] || {}) as Record<string, { resistance?: string }>;
+    const rawResistances = (response['resistances'] || {}) as Record<string, { resistance?: string } | string>;
     Object.entries(rawResistances).forEach(([type, data]) => {
-      resistances[type] = (data.resistance || 'none').toLowerCase();
+      if (typeof data === 'string') {
+        resistances[type] = data.toLowerCase();
+      } else {
+        resistances[type] = (data.resistance || 'none').toLowerCase();
+      }
     });
 
     // 5. Assemble the monsterActions structure
@@ -403,11 +464,12 @@ export class MapperService {
     if (str === 'is_aoe') return 'isAOE';
     if (str === 'has_dc') return 'hasDC';
     if (str === 'is_auto_hit') return 'isAutoHit';
+    if (str === 'damage_blocks') return 'damageBlocks';
 
     // SpellFormula fields
     if (str === 'cast_level') return 'castLevel';
     if (str === 'number_of_dice') return 'numberOfDice';
-    if (str === 'amount_to_add') return 'amountToAdd';
+    if (str === 'amount_to_add' || str === 'modifier') return 'amountToAdd';
     if (str === 'use_spellmod') return 'useSpellMod';
     if (str === 'damage_type') return 'damageType';
     if (str === 'average_value') return 'averageValue';

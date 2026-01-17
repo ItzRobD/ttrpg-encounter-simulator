@@ -37,6 +37,12 @@ export interface Weapon {
   properties: WeaponProperties;
   modifiers: WeaponModifiers;
   isProficient?: boolean;
+  damageBlocks?: {
+    numberOfDice: number;
+    die: number;
+    amountToAdd: number;
+    damageType: DamageType;
+  }[];
 }
 
 export interface Armor {

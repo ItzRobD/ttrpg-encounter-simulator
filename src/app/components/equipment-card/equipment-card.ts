@@ -1,22 +1,22 @@
 import { Component, computed, input } from '@angular/core';
-import { CommonModule, TitleCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { Weapon, Armor, DiceType } from '../../models';
-import { formatDice, formatModifier } from '../../shared/utils/dnd-utils';
+import { formatDice, formatModifier, getEquipmentDetail } from '../../shared/utils/dnd-utils';
 import { TagModule } from 'primeng/tag';
 
 @Component({
   selector: 'app-equipment-card',
   standalone: true,
-  imports: [CardModule, TitleCasePipe, CommonModule, TagModule],
+  imports: [CardModule, CommonModule, TagModule],
   templateUrl: './equipment-card.html',
   styleUrl: './equipment-card.css',
 })
 export class EquipmentCard {
   public readonly item = input.required<Weapon | Armor>();
 
-  protected readonly isWeapon = computed(() => 'die' in this.item());
-  protected readonly isArmor = computed(() => 'ac' in this.item() && !('die' in this.item()));
+  protected readonly isWeapon = computed(() => 'damageBlocks' in this.item() || 'die' in this.item());
+  protected readonly isArmor = computed(() => 'ac' in this.item() && !('die' in this.item()) && !('damageBlocks' in this.item()));
 
   asWeapon(item: Weapon | Armor): Weapon {
     return item as Weapon;
@@ -53,4 +53,5 @@ export class EquipmentCard {
 
   protected readonly formatDice = formatDice;
   protected readonly formatModifier = formatModifier;
+  protected readonly getEquipmentDetail = getEquipmentDetail;
 }

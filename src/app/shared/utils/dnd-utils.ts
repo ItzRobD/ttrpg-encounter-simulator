@@ -72,13 +72,24 @@ export function generateActionDescription(action: Action): string {
   if (action.description) return action.description;
 
   const parts: string[] = [];
-  if (action.damageComponents && action.damageComponents.length > 0) {
-    action.damageComponents.forEach((comp, index) => {
+  if (action.damageBlocks && action.damageBlocks.length > 0) {
+    action.damageBlocks.forEach((comp, index) => {
       const diceStr = formatDice(comp.numberOfDice, comp.die, comp.amountToAdd);
-      const avgDmg = Math.floor((comp.numberOfDice * (comp.die / 2 + 0.5)) + comp.amountToAdd);
+      const avgDmg = Math.floor(comp.numberOfDice * (comp.die / 2 + 0.5) + comp.amountToAdd);
       const part = `${avgDmg} (${diceStr}) ${comp.damageType} damage`;
       parts.push(index === 0 ? part : `plus ${part}`);
     });
+  } else if ((action as any).numberOfDice) {
+    // Fallback for legacy data
+    const diceStr = formatDice(
+      (action as any).numberOfDice,
+      (action as any).die,
+      (action as any).amountToAdd
+    );
+    const avgDmg = Math.floor(
+      (action as any).numberOfDice * ((action as any).die / 2 + 0.5) + (action as any).amountToAdd
+    );
+    parts.push(`${avgDmg} (${diceStr}) ${(action as any).damageType} damage`);
   }
   const damageStr = parts.join(' ');
 
@@ -121,8 +132,8 @@ export function formatMonsterAction(action: Action): string {
   const toHit = action.attackBonus;
   const parts: string[] = [];
 
-  if (action.damageComponents && action.damageComponents.length > 0) {
-    action.damageComponents.forEach((comp, index) => {
+  if (action.damageBlocks && action.damageBlocks.length > 0) {
+    action.damageBlocks.forEach((comp, index) => {
       const diceStr = formatDice(comp.numberOfDice, comp.die, comp.amountToAdd);
       const avgDmg = Math.floor((comp.numberOfDice * (comp.die / 2 + 0.5)) + comp.amountToAdd);
       const part = `${avgDmg} (${diceStr}) ${comp.damageType} damage`;
@@ -261,25 +272,45 @@ export function formatWeaponData(e: Entity, weapon: Weapon): string {
 
   // Damage Dice String: e.g., "1d8+3"
   // Note: In D&D, damage bonus usually includes the Ability Mod + Magic Bonus
-  const totalDmgBonus = abilityMod + weapon.modifiers.damageBonus;
-  const diceStr = formatDice(weapon.numberOfDice, weapon.die, totalDmgBonus);
+  let diceStr = '';
+  let avgDmg = 0;
 
-  // Average Damage: (DieAvg * Count) + Bonus
-  const avgDmg = Math.floor((weapon.numberOfDice * (weapon.die / 2 + 0.5)) + totalDmgBonus);
+  if (weapon.damageBlocks && weapon.damageBlocks.length > 0) {
+    const components = weapon.damageBlocks.map((c, i) => {
+      // For the first component, we add the ability modifier and magic damage bonus
+      const bonus = i === 0 ? abilityMod + weapon.modifiers.damageBonus : 0;
+      const totalBonus = c.amountToAdd + bonus;
+      avgDmg += Math.floor(c.numberOfDice * (c.die / 2 + 0.5) + totalBonus);
+      return formatDice(c.numberOfDice, c.die, totalBonus) + (c.damageType ? ` ${c.damageType}` : '');
+    });
+    diceStr = components.join(' + ');
+  } else {
+    const totalDmgBonus = abilityMod + weapon.modifiers.damageBonus;
+    diceStr = formatDice(weapon.numberOfDice, weapon.die, totalDmgBonus);
+    avgDmg = Math.floor(weapon.numberOfDice * (weapon.die / 2 + 0.5) + totalDmgBonus);
+  }
 
-  return `${weapon.name}. ${formatModifier(toHit)} to hit. Damage: ${avgDmg} (${diceStr}) ${weapon.damageType} damage.`;
+  return `${weapon.name}. ${formatModifier(toHit)} to hit. Damage: ${avgDmg} (${diceStr}) ${
+    weapon.damageBlocks && weapon.damageBlocks.length > 0 ? '' : weapon.damageType
+  } damage.`.replace(/\s+/g, ' ');
 }
 
 /**
  * Returns a detail string for an equipment item based on its type.
  */
 export function getEquipmentDetail(item: EquipmentItem): string {
-  if ('damageType' in item) {
+  if ('damageBlocks' in item && item.damageBlocks && item.damageBlocks.length > 0) {
+    return item.damageBlocks
+      .map((c) => `${formatDice(c.numberOfDice, c.die, c.amountToAdd)} ${c.damageType}`)
+      .join(' + ');
+  } else if ('damageType' in item) {
     // Weapon
-    return `${formatDice(item.numberOfDice, item.die, 0)} ${item.damageType}`;
+    return `${formatDice((item as Weapon).numberOfDice, (item as Weapon).die, 0)} ${
+      (item as Weapon).damageType
+    }`;
   } else {
     // Armor
-    return `AC ${item.ac}`;
+    return `AC ${(item as any).ac}`;
   }
 }
 

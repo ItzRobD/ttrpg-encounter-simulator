@@ -29,9 +29,9 @@
         <div class="flex justify-content-between align-items-center">
           <div class="flex flex-column">
             <span class="text-xs font-bold uppercase text-600">Damage</span>
-            <span class="text-lg font-semibold">
-              {{ formatDice(weapon.numberOfDice, weapon.die, weapon.modifiers.damageBonus) }} {{ weapon.damageType | titlecase }}
-            </span>
+            <div class="flex flex-column">
+              <span class="text-lg font-semibold">{{ getEquipmentDetail(weapon) }}</span>
+            </div>
           </div>
           <div class="flex flex-column align-items-end">
             <span class="text-xs font-bold uppercase text-600">Attack Bonus</span>

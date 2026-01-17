@@ -250,7 +250,7 @@ export class CombatantService {
             hasDC: false,
             index: 0,
             attackBonus: 2,
-            damageComponents: [
+            damageBlocks: [
               {
                 numberOfDice: 1,
                 die: DiceType.D4,
@@ -668,7 +668,7 @@ export class CombatantService {
             index: 0,
             rechargeValue: 0,
             hasDC: false,
-            damageComponents: [
+            damageBlocks: [
               {
                 numberOfDice: 2,
                 die: DiceType.D10,
@@ -684,7 +684,7 @@ export class CombatantService {
             index: 1,
             rechargeValue: 0,
             hasDC: false,
-            damageComponents: [
+            damageBlocks: [
               {
                 numberOfDice: 2,
                 die: DiceType.D6,
@@ -702,7 +702,7 @@ export class CombatantService {
             hasDC: true,
             dc: 24,
             dcAbility: 'constitution',
-            damageComponents: [
+            damageBlocks: [
               {
                 numberOfDice: 26,
                 die: DiceType.D6,
@@ -728,7 +728,7 @@ export class CombatantService {
             hasDC: false,
             description: 'The dragon makes a Wisdom (Perception) check.',
             cost: 1,
-            damageComponents: [
+            damageBlocks: [
               {
                 numberOfDice: 0,
                 die: DiceType.D0,
@@ -745,7 +745,7 @@ export class CombatantService {
             rechargeValue: 0,
             hasDC: false,
             cost: 1,
-            damageComponents: [
+            damageBlocks: [
               {
                 numberOfDice: 2,
                 die: DiceType.D8,
@@ -764,7 +764,7 @@ export class CombatantService {
             cost: 2,
             description:
               'The dragon beats its wings. Each creature within 15 feet of the dragon must succeed on a DC 25 Dexterity saving throw or take 17 (2d6 + 10) bludgeoning damage and be knocked prone.',
-            damageComponents: [
+            damageBlocks: [
               {
                 numberOfDice: 2,
                 die: DiceType.D6,

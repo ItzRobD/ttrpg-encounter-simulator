@@ -83,23 +83,14 @@ export class EquipmentService {
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        let rawData: unknown = response?.data || response || [];
-        // Handle nested data if it's an object instead of array
-        if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
-          const envelope = rawData as DataEnvelope<unknown>;
-          if (envelope.data) {
-            rawData = envelope.data;
-          }
-        }
+        const mapped = this.mapperService.mapKeys(response);
+        const dataArray = Array.isArray(mapped)
+          ? mapped
+          : (mapped && typeof mapped === 'object'
+            ? Object.values(mapped as Record<string, unknown>)
+            : (mapped ? [mapped] : []));
 
-        // Standardize to array (handle dictionary or single object)
-        const dataArray = Array.isArray(rawData)
-          ? rawData
-          : (rawData && typeof rawData === 'object'
-            ? Object.values(rawData as Record<string, unknown>)
-            : (rawData ? [rawData] : []));
-
-        const weapons = dataArray.map((item) => this.mapperService.mapKeys(item) as Weapon);
+        const weapons = dataArray as Weapon[];
         this._weaponList.set(weapons);
         return weapons;
       }),
@@ -115,23 +106,14 @@ export class EquipmentService {
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        let rawData: unknown = response?.data || response || [];
-        // Handle nested data if it's an object instead of array
-        if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
-          const envelope = rawData as DataEnvelope<unknown>;
-          if (envelope.data) {
-            rawData = envelope.data;
-          }
-        }
+        const mapped = this.mapperService.mapKeys(response);
+        const dataArray = Array.isArray(mapped)
+          ? mapped
+          : (mapped && typeof mapped === 'object'
+            ? Object.values(mapped as Record<string, unknown>)
+            : (mapped ? [mapped] : []));
 
-        // Standardize to array (handle dictionary or single object)
-        const dataArray = Array.isArray(rawData)
-          ? rawData
-          : (rawData && typeof rawData === 'object'
-            ? Object.values(rawData as Record<string, unknown>)
-            : (rawData ? [rawData] : []));
-
-        const armor = dataArray.map((item) => this.mapperService.mapKeys(item) as Armor);
+        const armor = dataArray as Armor[];
         this._armorList.set(armor);
         return armor;
       }),
@@ -229,8 +211,7 @@ export class EquipmentService {
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        const rawData = response?.data || response;
-        return this.mapperService.mapKeys(rawData) as EquipmentItem;
+        return this.mapperService.mapKeys(response) as EquipmentItem;
       }),
       tap(item => {
         this._selectedItem.set(item);

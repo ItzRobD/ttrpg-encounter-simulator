@@ -92,25 +92,18 @@ export class SpellsService {
   }
 
   private mapSummaries(resp: ApiResponse<unknown> | unknown[]): SpellSummary[] {
-    let rawData: unknown[] = [];
-    if (resp && typeof resp === 'object' && !Array.isArray(resp)) {
-      const data = (resp as ApiResponse<unknown>).data;
-      if (data) {
-        if (Array.isArray(data)) {
-          rawData = data;
-        } else {
-          rawData = Object.values(data as Record<string, unknown>);
-        }
-      } else if ('spells' in (resp as unknown as Record<string, unknown>)) {
-        rawData = Object.values((resp as unknown as Record<string, Record<string, unknown>>)['spells']);
-      }
+    const rawData = this.mapperService.mapKeys(resp);
+
+    if (Array.isArray(rawData)) {
+      return rawData as SpellSummary[];
     }
 
-    if (rawData.length === 0 && Array.isArray(resp)) {
-      rawData = resp as unknown[];
+    if (rawData && typeof rawData === 'object') {
+      // If it's a dictionary of spells
+      return Object.values(rawData as Record<string, SpellSummary>);
     }
 
-    return rawData.map((s) => this.mapperService.mapKeys(s)) as SpellSummary[];
+    return [];
   }
 
   /**
@@ -125,13 +118,9 @@ export class SpellsService {
         delay: environment.httpRetryDelay
       }),
       map((response) => {
-        let rawData: unknown[] = [];
-        if (response && response.data) {
-          rawData = Array.isArray(response.data) ? response.data : Object.values(response.data as Record<string, unknown>);
-        } else if (response && 'spells' in (response as unknown as Record<string, unknown>)) {
-          rawData = Object.values((response as unknown as Record<string, Record<string, unknown>>)['spells']);
-        }
-        return rawData.map(m => this.mapperService.mapKeys(m) as Spell);
+        const mapped = this.mapperService.mapKeys(response);
+        const spells = Array.isArray(mapped) ? mapped : (mapped && typeof mapped === 'object' ? Object.values(mapped) : []);
+        return spells as Spell[];
       }),
       tap((spell) => {
         this._spells.set(spell);
@@ -143,7 +132,7 @@ export class SpellsService {
         return throwError(() => err);
       })
     );
-    }
+  }
 
   selectSpellByID(id: string): Observable<Spell> {
     // Try finding in custom spells first

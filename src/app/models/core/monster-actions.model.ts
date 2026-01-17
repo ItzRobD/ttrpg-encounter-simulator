@@ -16,7 +16,7 @@ export interface Action {
   hasDC: boolean;
   index: number;
   attackBonus: number;
-  damageComponents: DamageComponent[];
+  damageBlocks: DamageComponent[];
   dcAbility?: string;
   dcOnSuccess?: string;
   dc?: number;

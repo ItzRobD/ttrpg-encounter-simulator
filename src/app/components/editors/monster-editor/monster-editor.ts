@@ -448,12 +448,12 @@ export class MonsterEditorComponent extends BaseEditorDirective<Monster> impleme
       dcAbility: [data?.dcAbility || Ability.Dexterity],
       dcOnSuccess: [data?.dcOnSuccess || 'half'],
       description: [data?.description || ''],
-      damageComponents: this.fb.array([])
+      damageBlocks: this.fb.array([])
     });
 
-    const components = actionGroup.get('damageComponents') as FormArray;
-    if (data?.damageComponents && Array.isArray(data.damageComponents)) {
-      data.damageComponents.forEach((c: any) => this.addDamageComponent(components, c));
+    const components = actionGroup.get('damageBlocks') as FormArray;
+    if (data?.damageBlocks && Array.isArray(data.damageBlocks)) {
+      data.damageBlocks.forEach((c: any) => this.addDamageComponent(components, c));
     } else if (data?.numberOfDice) {
       // Legacy data support
       this.addDamageComponent(components, {
@@ -496,12 +496,12 @@ export class MonsterEditorComponent extends BaseEditorDirective<Monster> impleme
       hasDC: [data?.hasDC || false],
       dc: [data?.dc || 10],
       description: [data?.description || ''],
-      damageComponents: this.fb.array([])
+      damageBlocks: this.fb.array([])
     });
 
-    const components = actionGroup.get('damageComponents') as FormArray;
-    if (data?.damageComponents && Array.isArray(data.damageComponents)) {
-      data.damageComponents.forEach((c: any) => this.addDamageComponent(components, c));
+    const components = actionGroup.get('damageBlocks') as FormArray;
+    if (data?.damageBlocks && Array.isArray(data.damageBlocks)) {
+      data.damageBlocks.forEach((c: any) => this.addDamageComponent(components, c));
     } else if (data?.numberOfDice) {
       // Legacy data support
       this.addDamageComponent(components, {
@@ -518,8 +518,8 @@ export class MonsterEditorComponent extends BaseEditorDirective<Monster> impleme
     this.legendaryActions.push(actionGroup);
   }
 
-  getDamageComponents(action: any): FormArray {
-    return action.get('damageComponents') as FormArray;
+  getDamageBlocks(action: any): FormArray {
+    return action.get('damageBlocks') as FormArray;
   }
 
   removeLegendaryAction(index: number): void {
