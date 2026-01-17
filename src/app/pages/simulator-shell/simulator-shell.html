@@ -63,12 +63,6 @@
           </h3>
           <div class="flex gap-2" [class.flex-column]="isCombatantsCollapsed()">
             <p-button
-              icon="pi pi-plus"
-              [text]="true"
-              pTooltip="Add Combatant"
-              [class.hidden]="isCombatantsCollapsed()"
-            ></p-button>
-            <p-button
               icon="pi pi-trash"
               severity="danger"
               [text]="true"
@@ -86,13 +80,24 @@
           <!-- Characters -->
           <div [class]="isCombatantsCollapsed() ? 'col-12' : 'col-12 lg:col-6'">
             <div
-              class="flex align-items-center gap-2 mb-3"
-              [class.justify-content-center]="isCombatantsCollapsed()"
+              class="flex align-items-center justify-content-between mb-3"
+              [class.flex-column]="isCombatantsCollapsed()"
             >
-              <i class="pi pi-users text-primary text-xl" pTooltip="Characters"></i>
-              <h4 class="text-lg font-medium m-0 white-space-nowrap" [class.hidden]="isCombatantsCollapsed()">
-                Characters ({{ combatantService.characters().length }})
-              </h4>
+              <div class="flex align-items-center gap-2" [class.justify-content-center]="isCombatantsCollapsed()">
+                <i class="pi pi-users text-primary text-xl" pTooltip="Characters"></i>
+                <h4 class="text-lg font-medium m-0 white-space-nowrap" [class.hidden]="isCombatantsCollapsed()">
+                  Characters ({{ combatantService.characters().length }})
+                </h4>
+              </div>
+              <p-button
+                icon="pi pi-plus"
+                [text]="true"
+                size="small"
+                severity="primary"
+                pTooltip="Add Character"
+                (onClick)="isCharacterSelectorVisible.set(true)"
+                [class.hidden]="isCombatantsCollapsed()"
+              ></p-button>
             </div>
             <div class="flex flex-column gap-3">
               @for (e of combatantService.characters(); track e.instanceId) {
@@ -123,13 +128,24 @@
           <!-- Monsters -->
           <div [class]="isCombatantsCollapsed() ? 'col-12' : 'col-12 lg:col-6'">
             <div
-              class="flex align-items-center gap-2 mb-3"
-              [class.justify-content-center]="isCombatantsCollapsed()"
+              class="flex align-items-center justify-content-between mb-3"
+              [class.flex-column]="isCombatantsCollapsed()"
             >
-              <i class="pi pi-skull text-red-500 text-xl" pTooltip="Monsters"></i>
-              <h4 class="text-lg font-medium m-0 white-space-nowrap" [class.hidden]="isCombatantsCollapsed()">
-                Monsters ({{ combatantService.monsters().length }})
-              </h4>
+              <div class="flex align-items-center gap-2" [class.justify-content-center]="isCombatantsCollapsed()">
+                <i class="pi pi-skull text-red-500 text-xl" pTooltip="Monsters"></i>
+                <h4 class="text-lg font-medium m-0 white-space-nowrap" [class.hidden]="isCombatantsCollapsed()">
+                  Monsters ({{ combatantService.monsters().length }})
+                </h4>
+              </div>
+              <p-button
+                icon="pi pi-plus"
+                [text]="true"
+                size="small"
+                severity="danger"
+                pTooltip="Add Monster"
+                (onClick)="isMonsterSelectorVisible.set(true)"
+                [class.hidden]="isCombatantsCollapsed()"
+              ></p-button>
             </div>
             <div class="flex flex-column gap-3">
               @for (e of combatantService.monsters(); track e.instanceId) {
@@ -197,3 +213,13 @@
 <app-simulation-options
   [(visible)]="isOptionsVisible"
 ></app-simulation-options>
+
+<app-entity-selector-dialog
+  [(visible)]="isCharacterSelectorVisible"
+  mode="character"
+></app-entity-selector-dialog>
+
+<app-entity-selector-dialog
+  [(visible)]="isMonsterSelectorVisible"
+  mode="monster"
+></app-entity-selector-dialog>

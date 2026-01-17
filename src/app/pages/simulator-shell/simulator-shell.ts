@@ -12,6 +12,7 @@ import { environment } from '../../../environments/environment';
 import {TimelineService} from '../../services/timeline.service';
 import {SimulationResults} from '../../components/simulation-results/simulation-results';
 import { SimulationOptionsComponent } from '../../components/simulation-options/simulation-options';
+import { EntitySelectorDialog } from '../../components/entity-selector-dialog/entity-selector-dialog';
 
 @Component({
   selector: 'app-simulator-shell',
@@ -22,7 +23,8 @@ import { SimulationOptionsComponent } from '../../components/simulation-options/
     MessageModule,
     EntityCard,
     SimulationResults,
-    SimulationOptionsComponent
+    SimulationOptionsComponent,
+    EntitySelectorDialog
   ],
   templateUrl: './simulator-shell.html',
   styles: [
@@ -43,6 +45,8 @@ export class SimulatorShell {
 
   public readonly isCombatantsCollapsed = signal(false);
   public readonly isOptionsVisible = signal(false);
+  public readonly isCharacterSelectorVisible = signal(false);
+  public readonly isMonsterSelectorVisible = signal(false);
 
   // Use BreakpointObserver with custom query from environment
   public readonly isXL = toSignal(
