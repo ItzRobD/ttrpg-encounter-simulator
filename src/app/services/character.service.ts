@@ -36,7 +36,9 @@ export class CharacterService implements EntityService<Character, CharacterSumma
       level: c.level,
       classId: c.classId,
       raceId: c.raceId,
-      isSpellcaster: !!c.spellcasting
+      isSpellcaster: !!c.spellcasting,
+      armorName: c.equipment?.armor?.name,
+      weapons: c.equipment?.weapons ? Object.values(c.equipment.weapons).flat().map(w => w.name) : []
     }));
     return [...customSummaries, ...this._summaries()];
   });

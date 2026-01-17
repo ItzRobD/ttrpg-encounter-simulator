@@ -29,4 +29,6 @@ export interface CharacterSummary extends EntitySummary {
   classId?: number;
   raceId?: number;
   isSpellcaster: boolean;
+  armorName?: string;
+  weapons?: string[];
 }

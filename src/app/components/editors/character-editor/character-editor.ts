@@ -13,11 +13,12 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
 import { FluidModule } from 'primeng/fluid';
 import { BaseEditorDirective } from '../base-editor.directive';
-import { Character, Class, Race, Ability, CasterType, DragonbornColor, DamageType, ResistanceType, AbilityScores } from '../../../models';
+import { Character, Class, Race, Ability, CasterType, DragonbornColor, DamageType, ResistanceType, AbilityScores, Weapon, Armor, WeaponSlot, Equipment } from '../../../models';
 import { CustomEntityType } from '../../../services/custom-content.service';
 import { AbilityScoreEditorComponent } from '../ability-score-editor/ability-score-editor';
 import { SpellcastingEditorComponent } from '../spellcasting-editor/spellcasting-editor';
 import { getProficiencyBonus } from '../../../shared/utils/dnd-utils';
+import { EquipmentService } from '../../../services/equipment.service';
 
 @Component({
   selector: 'app-character-editor',
@@ -42,8 +43,27 @@ import { getProficiencyBonus } from '../../../shared/utils/dnd-utils';
 })
 export class CharacterEditorComponent extends BaseEditorDirective<Character> implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly equipmentService = inject(EquipmentService);
 
   public hpDisplay = signal<string>('10 (1d10 + 0)');
+
+  protected readonly equipmentSummaries = this.equipmentService.summaries;
+
+  protected readonly armorOptions = computed(() => {
+    return this.equipmentSummaries().filter(e => e.type === 'Armor');
+  });
+
+  protected readonly shieldOptions = computed(() => {
+    return this.equipmentSummaries().filter(e => e.type === 'Shield');
+  });
+
+  protected readonly weaponOptions = computed(() => {
+    return this.equipmentSummaries().filter(e => e.type === 'Weapon');
+  });
+
+  protected readonly rangedWeaponOptions = computed(() => {
+    return this.weaponOptions().filter(w => w.properties?.isRanged);
+  });
 
   public characterForm: FormGroup = this.fb.group({
     id: [null],
@@ -80,6 +100,14 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
         wisdom: [false],
         charisma: [false]
       })
+    }),
+    equipment: this.fb.group({
+      armor: [null],
+      shield: [null],
+      hasShieldEquipped: [false],
+      primaryWeapon: [null],
+      secondaryWeapon: [null],
+      rangedWeapon: [null]
     }),
     spellcasting: this.fb.group({
       casterType: [CasterType.None],
@@ -144,6 +172,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
 
   constructor() {
     super();
+    this.equipmentService.getSummaries().subscribe();
     effect(() => {
       const item = this.itemToEdit();
       if (item) {
@@ -166,6 +195,20 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
         }
 
         this.characterForm.patchValue(item, { emitEvent: false });
+
+        // Patch equipment specifically if it's in the character model format
+        if (item.equipment) {
+          const eq = item.equipment;
+          this.characterForm.get('equipment')?.patchValue({
+            armor: eq.armor,
+            shield: eq.shield,
+            hasShieldEquipped: eq.hasShieldEquipped,
+            primaryWeapon: eq.weapons?.Primary?.[0],
+            secondaryWeapon: eq.weapons?.Secondary?.[0],
+            rangedWeapon: eq.weapons?.Ranged?.[0]
+          }, { emitEvent: false });
+        }
+
         if (item.hp) {
           this.updateHPDisplay();
         }
@@ -376,7 +419,8 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
 
   onSave(): void {
     if (this.characterForm.valid) {
-      const character = this.characterForm.getRawValue();
+      const rawValues = this.characterForm.getRawValue();
+      const character = { ...rawValues };
 
       // Ensure isCustom is set
       character.isCustom = true;
@@ -398,6 +442,20 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
         resistanceObj[res.damageType] = res.resistanceType;
       });
       character.state.resistances = resistanceObj;
+
+      // Transform equipment form values to Equipment model
+      const eqForm = rawValues.equipment;
+      const equipment: Equipment = {
+        armor: eqForm.armor || undefined,
+        shield: eqForm.shield || undefined,
+        hasShieldEquipped: eqForm.hasShieldEquipped || false,
+        weapons: {
+          [WeaponSlot.Primary]: eqForm.primaryWeapon ? [eqForm.primaryWeapon] : [],
+          [WeaponSlot.Secondary]: eqForm.secondaryWeapon ? [eqForm.secondaryWeapon] : [],
+          [WeaponSlot.Ranged]: eqForm.rangedWeapon ? [eqForm.rangedWeapon] : []
+        }
+      };
+      character.equipment = equipment;
 
       if (!this.itemToEdit()) {
         character.state.currentHp = character.hp.value;
