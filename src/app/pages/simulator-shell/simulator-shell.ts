@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
@@ -18,6 +19,7 @@ import { EntitySelectorDialog } from '../../components/entity-selector-dialog/en
   selector: 'app-simulator-shell',
   standalone: true,
   imports: [
+    CommonModule,
     ButtonModule,
     TooltipModule,
     MessageModule,

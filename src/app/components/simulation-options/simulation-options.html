@@ -36,6 +36,39 @@
               <small class="text-500">Set seeds for deterministic results (0 for random).</small>
             </div>
 
+            <!-- Simulation Config -->
+            <div class="flex align-items-center justify-content-between">
+              <label for="numberOfRuns" class="text-sm font-semibold">Number of Runs</label>
+              <p-inputNumber
+                [ngModel]="config().numberOfRuns"
+                (ngModelChange)="updateConfig('numberOfRuns', $event)"
+                placeholder="20"
+                [useGrouping]="false"
+                class="w-full"
+                styleClass="w-full"
+              ></p-inputNumber>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label for="maxRounds" class="text-sm font-semibold">Max Rounds</label>
+              <p-inputNumber
+                [ngModel]="config().maxRounds"
+                (ngModelChange)="updateConfig('maxRounds', $event)"
+                placeholder="30"
+                [useGrouping]="false"
+                class="w-full"
+                styleClass="w-full"
+              ></p-inputNumber>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label for="includeLogs" class="text-sm font-semibold">Include Logs</label>
+              <p-toggleswitch
+                id="includeLogs"
+                [ngModel]="config().includeLogs"
+                (ngModelChange)="updateConfig('includeLogs', $event)"
+                [disabled]="environment.config.disableIncludeLogsToggle"
+              ></p-toggleswitch>
+            </div>
+
             <div class="flex align-items-center justify-content-between">
               <label for="useHPAverageMonster" class="text-sm font-semibold">Average Monster HP</label>
               <p-toggleswitch
@@ -44,7 +77,6 @@
                 (ngModelChange)="updateOption('useHPAverageMonster', $event)"
               ></p-toggleswitch>
             </div>
-
             <div class="flex align-items-center justify-content-between">
               <label for="useHPAverageCharacter" class="text-sm font-semibold">Average Character HP</label>
               <p-toggleswitch

@@ -1,3 +1,10 @@
+@if (environmentName === 'dev' || environmentName === 'local') {
+  <div class="env-banner"></div>
+  <div class="env-tab">
+    {{ environmentName | titlecase }}
+  </div>
+}
+
 <div class="layout-wrapper flex flex-column md:flex-row min-h-screen">
   <p-drawer [(visible)]="visible" header="D&D Simulator">
     <div class="flex flex-column gap-2">

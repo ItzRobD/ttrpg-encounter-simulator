@@ -10,6 +10,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AccordionModule, AccordionPanel, AccordionHeader, AccordionContent } from 'primeng/accordion';
 import { SimulationOptions, HPVisibilityMode } from '../../models/simoptions.model';
 import { SimulationService } from '../../services/simulation.service';
+import {environment} from '../../../environments/environment';
 
 @Component({
   selector: 'app-simulation-options',
@@ -38,6 +39,7 @@ export class SimulationOptionsComponent {
   public readonly visibleChange = output<boolean>();
 
   protected readonly options = this.simulationService.options;
+  protected readonly config = this.simulationService.config;
 
   protected readonly hpVisibilityOptions = [
     { label: 'Visible', value: 'visible' },
@@ -59,4 +61,14 @@ export class SimulationOptionsComponent {
       seed: { ...currentSeed, [part]: value || 0 }
     });
   }
+
+  updateConfig(part: 'numberOfRuns' | 'maxRounds' | 'includeLogs', value: number | boolean | null) {
+    const currentConfig = this.config();
+    this.simulationService.updateConfig({
+      ...currentConfig,
+      [part]: value || false
+    });
+  }
+
+  protected readonly environment = environment;
 }

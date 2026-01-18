@@ -4,14 +4,14 @@ import { SimulationService } from './simulation.service';
 import { CombatantService } from './combatant.service';
 import { MapperService } from './mapper.service';
 import { environment } from '../../environments/environment';
-import { Entity } from '../models';
+import { Entity, Condition, DamageType, ResistanceType } from '../models';
 import { signal } from '@angular/core';
 
 describe('SimulationService', () => {
   let service: SimulationService;
   let httpMock: HttpTestingController;
-  let combatantServiceSpy: jasmine.SpyObj<CombatantService>;
-  let mapperServiceSpy: jasmine.SpyObj<MapperService>;
+  let combatantServiceSpy: any;
+  let mapperServiceSpy: any;
 
   const mockCombatant: Entity = {
     id: 1,
@@ -26,9 +26,9 @@ describe('SimulationService', () => {
       maxHp: 10,
       tempHp: 0,
       hitDie: 8,
-      conditions: {} as Record<ConditionType, boolean>,
+      conditions: Object.values(Condition).reduce((acc, curr) => ({ ...acc, [curr]: false }), {} as any),
       deathSaves: { successes: 0, failures: 0 },
-      resistances: {} as Record<DamageType, ResistanceType>,
+      resistances: Object.values(DamageType).reduce((acc, curr) => ({ ...acc, [curr]: ResistanceType.None }), {} as any),
       isStable: true,
       isDead: false,
       initiative: 10
@@ -49,8 +49,9 @@ describe('SimulationService', () => {
           result[key.toLowerCase()] = record[key];
         });
         return result;
-      }
-    } as unknown as jasmine.SpyObj<MapperService>;
+      },
+      serializeKeys: (obj: any) => obj
+    };
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
@@ -80,43 +81,50 @@ describe('SimulationService', () => {
 
   it('should not run simulation if no combatants', () => {
     combatantServiceSpy.combatants.set([]);
-    service.runSimulation();
-    httpMock.expectNone(`${environment.apiUrl}/simulate`);
+    service.createSimulation();
+    httpMock.expectNone(`${environment.apiUrl}/simulation/create`);
     expect(service.loading()).toBe(false);
   });
 
   it('should run simulation, decompress and update result on success', async () => {
     // Mock data
     const mockJson = {
-      Logs: [{ ID: '1', Type: 'round', Events: [{ ID: '1', Type: 'round' }] }],
-      Count: 1
+      total_runs: 1,
+      individual_results: [{
+        run_id: 1,
+        logs: [{ ID: '1', Type: 'round' }]
+      }]
     };
-    const jsonString = JSON.stringify(mockJson);
-    const encoder = new TextEncoder();
-    const data = encoder.encode(jsonString);
 
-    // Compress data using CompressionStream (simulating backend)
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(data);
-        controller.close();
-      }
-    }).pipeThrough(new CompressionStream('gzip'));
-
-    const arrayBuffer = await new Response(stream).arrayBuffer();
-
-    service.runSimulation();
+    service.createSimulation();
 
     expect(service.loading()).toBe(true);
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/simulate`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/simulation/create`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.responseType).toBe('arraybuffer');
+    // It will be a 202 now
+    req.flush({ data: { simulation_id: 'test-id', status: 'completed' } }, { status: 202, statusText: 'Accepted' });
 
-    req.flush(arrayBuffer);
+    const statusReq = httpMock.expectOne(`${environment.apiUrl}/simulation/status/test-id`);
+    statusReq.flush({
+      data: {
+        simulation_id: 'test-id',
+        status: 'completed',
+        created_at: '2026-01-18T17:46:19.202803Z',
+        updated_at: '2026-01-18T17:46:19.551564Z'
+      }
+    });
 
-    // We need to wait for the async decompression to finish
-    // Since it's a promise inside an observable, we might need a small delay or use fakeAsync
+    const resultReq = httpMock.expectOne(`${environment.apiUrl}/simulation/results/test-id`);
+    resultReq.flush({
+      data: {
+        simulation_id: 'test-id',
+        status: 'completed',
+        results: mockJson
+      }
+    });
+
+    // Wait for the observables to complete
     await new Promise(resolve => setTimeout(resolve, 100));
 
     expect(service.loading()).toBe(false);
@@ -125,10 +133,69 @@ describe('SimulationService', () => {
     expect(service.simulationResult()?.logs[0].events[0].id).toBe('1');
   });
 
-  it('should handle errors and stop loading', () => {
-    service.runSimulation();
+  it('should handle 202 Accepted response and start polling', async () => {
+    service.createSimulation();
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/simulate`);
+    const createReq = httpMock.expectOne(`${environment.apiUrl}/simulation/create`);
+    createReq.flush({ data: { simulation_id: 'test-id', status: 'pending' } }, { status: 202, statusText: 'Accepted' });
+
+    expect(service.currentSimulationId()).toBe('test-id');
+    expect(service.loading()).toBe(true);
+
+    // First status poll
+    const statusReq = httpMock.expectOne(`${environment.apiUrl}/simulation/status/test-id`);
+    statusReq.flush({
+      data: {
+        simulation_id: 'test-id',
+        status: 'completed',
+        created_at: '2026-01-18T17:46:19.202803Z',
+        updated_at: '2026-01-18T17:46:19.551564Z'
+      }
+    });
+
+    // Result fetch
+    const resultReq = httpMock.expectOne(`${environment.apiUrl}/simulation/results/test-id`);
+
+    const mockResultJson = {
+      total_runs: 0,
+      individual_results: []
+    };
+    resultReq.flush({
+      data: {
+        simulation_id: 'test-id',
+        status: 'completed',
+        results: mockResultJson
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    expect(service.loading()).toBe(false);
+  });
+
+  it('should handle simulation failure with error message from status response', async () => {
+    service.createSimulation();
+
+    const createReq = httpMock.expectOne(`${environment.apiUrl}/simulation/create`);
+    createReq.flush({ data: { simulation_id: 'test-id', status: 'pending' } }, { status: 202, statusText: 'Accepted' });
+
+    const statusReq = httpMock.expectOne(`${environment.apiUrl}/simulation/status/test-id`);
+    statusReq.flush({
+      data: {
+        simulation_id: 'test-id',
+        status: 'failed',
+        error: 'Custom server error message'
+      }
+    });
+
+    expect(service.error()).toBe('Custom server error message');
+    expect(service.loading()).toBe(false);
+  });
+
+  it('should handle errors and stop loading', () => {
+    service.createSimulation();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/simulation/create`);
     req.error(new ErrorEvent('Network error'));
 
     expect(service.loading()).toBe(false);

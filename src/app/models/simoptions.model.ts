@@ -35,3 +35,9 @@ export interface SimulationOptions {
   enableMonsterNoise: boolean;
   monsterNoiseWeight: number;
 }
+
+export interface SimulationConfig {
+  numberOfRuns: number;
+  maxRounds: number;
+  includeLogs: boolean;
+}

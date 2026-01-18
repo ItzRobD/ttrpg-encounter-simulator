@@ -439,6 +439,66 @@ export class MapperService {
   }
 
   /**
+   * Recursively converts object keys from camelCase to snake_case for the backend.
+   */
+  serializeKeys(obj: any): any {
+    if (Array.isArray(obj)) {
+      return obj.map((v) => this.serializeKeys(v));
+    } else if (obj !== null && typeof obj === 'object') {
+      const result: any = {};
+      Object.keys(obj).forEach((key) => {
+        let snakeKey = key;
+
+        // Special mappings for D&D acronyms to prevent over-segmentation
+        // (e.g., spellSaveDC -> spell_save_dc instead of spell_save_d_c)
+        if (key === 'spellSaveDC') {
+          snakeKey = 'spell_save_dc';
+        } else if (key === 'spellAttackBonus') {
+          snakeKey = 'spell_attack_bonus';
+        } else if (key === 'useHPAverageMonster') {
+          snakeKey = 'use_hp_average_monster';
+        } else if (key === 'useHPAverageCharacter') {
+          snakeKey = 'use_hp_average_character';
+        } else if (key === 'aoeHitsAllEnemies') {
+          snakeKey = 'aoe_hits_all_enemies';
+        } else if (key === 'useWeightedAI') {
+          snakeKey = 'use_weighted_ai';
+        } else if (key === 'debugAI') {
+          snakeKey = 'debug_ai';
+        } else if (key === 'instanceId') {
+          snakeKey = 'instance_id';
+        } else if (key === 'classId') {
+          snakeKey = 'class_id';
+        } else if (key === 'raceId') {
+          snakeKey = 'race_id';
+        } else {
+          // General conversion: camelCase -> snake_case
+          // Handle AC, HP, DC specifically if they are part of the key
+          let tempKey = key;
+
+          // Replace known acronyms with a version that won't be split incorrectly
+          tempKey = tempKey.replace(/DC/g, 'Dc');
+          tempKey = tempKey.replace(/HP/g, 'Hp');
+          tempKey = tempKey.replace(/AC/g, 'Ac');
+          tempKey = tempKey.replace(/AI/g, 'Ai');
+          tempKey = tempKey.replace(/AOE/g, 'Aoe');
+
+          snakeKey = tempKey.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+
+          // Remove leading underscore if it was PascalCase
+          if (snakeKey.startsWith('_')) {
+            snakeKey = snakeKey.substring(1);
+          }
+        }
+
+        result[snakeKey] = this.serializeKeys(obj[key]);
+      });
+      return result;
+    }
+    return obj;
+  }
+
+  /**
    * Robust PascalCase to camelCase converter that handles dnd specific abbreviations.
    */
   private toCamelCase(str: string): string {

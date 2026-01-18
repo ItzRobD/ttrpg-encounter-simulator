@@ -1,4 +1,7 @@
 import { Entity, ResistanceType} from './combatants';
+import {SimulationOptions} from './simoptions.model';
+import {CharacterConfig} from './configs/character-config.model';
+import {MonsterConfig} from './configs/monster-config.model';
 
 export interface CombatantReference {
   name: string;
@@ -115,7 +118,53 @@ export interface SimulationLog {
   events: SimulationEvent[];
 }
 
+export interface IndividualResult {
+  runId: number;
+  victoryStatus: string;
+  rounds: number;
+  seed: { seed1: number; seed2: number };
+  logs: SimulationEvent[];
+}
+
 export interface SimulationResult {
+  totalRuns: number;
+  characterVictories: number;
+  monsterVictories: number;
+  otherVictories: number;
+  averageRounds: number;
+  winRatePercentage: number;
+  individualResults: IndividualResult[];
+  // For UI compatibility, we'll map the logs from the first run or flatten them
   logs: SimulationLog[];
   count: number;
+}
+
+export interface SimulationRequest {
+  payload: SimulationPayload;
+}
+
+export enum SimulationStatus {
+  Pending = 'pending',
+  Running = 'running',
+  Completed = 'completed',
+  Failed = 'failed'
+}
+
+export interface SimulationStatusResponse {
+  simulation_id: string;
+  status: SimulationStatus;
+  created_at?: string;
+  updated_at?: string;
+  error?: string;
+}
+
+export interface SimulationPayload {
+  base_options: SimulationOptions;
+  character_configs: Entity[];
+  monster_ids: number[];
+  monster_configs: MonsterConfig[];
+  lair_config: any;
+  number_of_runs: number;
+  max_rounds: number;
+  include_logs: boolean;
 }
