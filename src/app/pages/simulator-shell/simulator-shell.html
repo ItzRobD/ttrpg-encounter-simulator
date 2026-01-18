@@ -84,7 +84,8 @@
               [class.flex-column]="isCombatantsCollapsed()"
             >
               <div class="flex align-items-center gap-2" [class.justify-content-center]="isCombatantsCollapsed()">
-                <i class="pi pi-users text-primary text-xl" pTooltip="Characters"></i>
+                <i class="pi pi-users text-primary text-xl" pTooltip="Characters"
+                showDelay="1000"></i>
                 <h4 class="text-lg font-medium m-0 white-space-nowrap" [class.hidden]="isCombatantsCollapsed()">
                   Characters ({{ combatantService.characters().length }})
                 </h4>
@@ -95,6 +96,7 @@
                 size="small"
                 severity="primary"
                 pTooltip="Add Character"
+                tooltipPosition="top"
                 (onClick)="isCharacterSelectorVisible.set(true)"
                 [class.hidden]="isCombatantsCollapsed()"
               ></p-button>
@@ -134,7 +136,8 @@
               [class.flex-column]="isCombatantsCollapsed()"
             >
               <div class="flex align-items-center gap-2" [class.justify-content-center]="isCombatantsCollapsed()">
-                <i class="pi pi-skull text-red-500 text-xl" pTooltip="Monsters"></i>
+                <i class="pi pi-skull text-red-500 text-xl" pTooltip="Monsters"
+                showDelay="1000"></i>
                 <h4 class="text-lg font-medium m-0 white-space-nowrap" [class.hidden]="isCombatantsCollapsed()">
                   Monsters ({{ combatantService.monsters().length }})
                 </h4>
@@ -145,6 +148,7 @@
                 size="small"
                 severity="danger"
                 pTooltip="Add Monster"
+                tooltipPosition="top"
                 (onClick)="isMonsterSelectorVisible.set(true)"
                 [class.hidden]="isCombatantsCollapsed()"
               ></p-button>
