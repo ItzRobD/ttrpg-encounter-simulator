@@ -1,5 +1,18 @@
-<p-card class="p-fluid border-1 surface-border">
+<p-card class="p-fluid border-1 surface-border relative">
   @if (entity(); as e) {
+    @if (showDelete()) {
+      <div class="absolute delete-button-container">
+        <p-button
+          icon="pi pi-times"
+          [rounded]="true"
+          size="small"
+          [raised]="true"
+          styleClass="delete-button"
+          (onClick)="$event.stopPropagation(); delete.emit(e.instanceId)"
+          pTooltip="Remove from Simulator"
+        ></p-button>
+      </div>
+    }
     @let state = displayState();
     <p-accordion [value]="mainActivePanel()" (valueChange)="mainActivePanel.set($event)">
       <p-accordion-panel value="0">

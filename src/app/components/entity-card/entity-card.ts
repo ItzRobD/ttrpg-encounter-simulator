@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, signal } from '@angular/core';
+import { Component, computed, effect, input, output, signal } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import {
@@ -66,6 +66,9 @@ export class EntityCard {
   public readonly projectedState = input<EntityState>();
   public readonly hideState = input<boolean>(false);
   public readonly startExpanded = input<boolean>(false);
+  public readonly showDelete = input<boolean>(false);
+
+  public readonly delete = output<number>();
 
   constructor() {
     effect(() => {

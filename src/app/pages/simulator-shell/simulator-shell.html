@@ -113,6 +113,8 @@
                     [entity]="e"
                     [projectedState]="timelineService.projectedState().get(e.instanceId) || e.state"
                     [hideState]="false"
+                    [showDelete]="true"
+                    (delete)="combatantService.removeCombatant($event)"
                   ></app-entity-card>
                 }
               } @empty {
@@ -161,6 +163,8 @@
                     [entity]="e"
                     [projectedState]="timelineService.projectedState().get(e.instanceId) || e.state"
                     [hideState]="false"
+                    [showDelete]="true"
+                    (delete)="combatantService.removeCombatant($event)"
                   ></app-entity-card>
                 }
               } @empty {
