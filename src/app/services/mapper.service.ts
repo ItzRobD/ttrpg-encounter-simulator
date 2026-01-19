@@ -166,52 +166,24 @@ export class MapperService {
     // 2. Map Equipment
     const rawEquipment = response['equipment'] as Record<string, unknown> | undefined;
     if (rawEquipment) {
-      const weapons: Record<string, unknown[]> = {};
-
-      const mapWeaponSlot = (slotData: unknown[]) => {
+      const mapWeaponSlot = (slotData: unknown[]): any[] => {
         if (!Array.isArray(slotData)) return [];
         return slotData.map(item => {
           const itemRecord = item as Record<string, unknown>;
-          const rawWeapon = itemRecord['weapon_data'] || itemRecord['weapon'] || itemRecord;
-          const weapon = this.mapKeys(rawWeapon) as Record<string, unknown>;
-
-          // Map damage_blocks if present to legacy flat structure if needed,
-          // though modern components expect damageBlocks (mapped from damage_blocks)
-          if ((rawWeapon as Record<string, unknown>)['damage_blocks']) {
-             weapon['damageBlocks'] = this.mapKeys((rawWeapon as Record<string, unknown>)['damage_blocks']);
-
-             // For backward compatibility with some components that might still expect flat fields on Weapon
-             const blocks = (rawWeapon as Record<string, unknown>)['damage_blocks'] as any[];
-             if (blocks && blocks.length > 0) {
-                weapon['numberOfDice'] = blocks[0].number_of_dice;
-                weapon['die'] = blocks[0].die;
-                weapon['damageType'] = blocks[0].damage_type;
-                weapon['amountToAdd'] = blocks[0].modifier;
-             }
-          }
-
           return {
-            ...weapon,
-            isProficient: !!itemRecord['is_proficient']
+            weaponId: itemRecord['weapon_id'] || itemRecord['id'],
+            isProficient: !!itemRecord['is_proficient'],
+            modifiers: this.mapKeys(itemRecord['modifiers'] || {})
           };
         });
       };
 
-      if (rawEquipment['primary_slot']) {
-        weapons['Primary'] = mapWeaponSlot(rawEquipment['primary_slot'] as unknown[]);
-      }
-      if (rawEquipment['secondary_slot']) {
-        weapons['Secondary'] = mapWeaponSlot(rawEquipment['secondary_slot'] as unknown[]);
-      }
-      if (rawEquipment['ranged_slot']) {
-        weapons['Ranged'] = mapWeaponSlot(rawEquipment['ranged_slot'] as unknown[]);
-      }
-
       result['equipment'] = {
-        armor: rawEquipment['armor_data'] ? this.mapKeys(rawEquipment['armor_data']) : (rawEquipment['armor'] ? this.mapKeys(rawEquipment['armor']) : undefined),
-        shield: rawEquipment['shield_data'] ? this.mapKeys(rawEquipment['shield_data']) : (rawEquipment['shield'] ? this.mapKeys(rawEquipment['shield']) : undefined),
+        armorId: rawEquipment['armor_id'],
         hasShieldEquipped: !!rawEquipment['has_shield_equipped'],
-        weapons: weapons
+        primarySlot: mapWeaponSlot(rawEquipment['primary_slot'] as unknown[]),
+        secondarySlot: mapWeaponSlot(rawEquipment['secondary_slot'] as unknown[]),
+        rangedSlot: mapWeaponSlot(rawEquipment['ranged_slot'] as unknown[])
       };
     }
 
@@ -471,6 +443,10 @@ export class MapperService {
           snakeKey = 'class_id';
         } else if (key === 'raceId') {
           snakeKey = 'race_id';
+        } else if (key === 'armorId') {
+          snakeKey = 'armor_id';
+        } else if (key === 'weaponId') {
+          snakeKey = 'weapon_id';
         } else {
           // General conversion: camelCase -> snake_case
           // Handle AC, HP, DC specifically if they are part of the key

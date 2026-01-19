@@ -119,11 +119,14 @@
             <div class="grid">
               <div class="col-12 md:col-6">
                 <label for="armor" class="font-bold block mb-1">Armor</label>
-                <p-select id="armor" [options]="armorOptions()" formControlName="armor" optionLabel="name" placeholder="Select Armor" [showClear]="true" appendTo="body"></p-select>
+                <p-select id="armor" [options]="armorOptions()" formControlName="armorId" optionLabel="name" optionValue="id" placeholder="Select Armor" [showClear]="true" appendTo="body"></p-select>
               </div>
               <div class="col-12 md:col-6">
-                <label for="shield" class="font-bold block mb-1">Shield</label>
-                <p-select id="shield" [options]="shieldOptions()" formControlName="shield" optionLabel="name" placeholder="Select Shield" [showClear]="true" appendTo="body"></p-select>
+                <!-- Shield is now part of armorId or handled by hasShieldEquipped checkbox -->
+                <label class="font-bold block mb-1 text-secondary">Shield Info</label>
+                <div class="p-2 border-1 surface-border border-round surface-50 text-sm italic">
+                  Shields are handled via the "Equip Shield" toggle below.
+                </div>
               </div>
             </div>
 
@@ -137,15 +140,15 @@
             <div class="grid">
               <div class="col-12 md:col-4">
                 <label for="primaryWeapon" class="font-bold block mb-1">Primary Weapon</label>
-                <p-select id="primaryWeapon" [options]="weaponOptions()" formControlName="primaryWeapon" optionLabel="name" placeholder="Primary" [showClear]="true" appendTo="body"></p-select>
+                <p-select id="primaryWeapon" [options]="weaponOptions()" formControlName="primaryWeaponId" optionLabel="name" optionValue="id" placeholder="Primary" [showClear]="true" appendTo="body"></p-select>
               </div>
               <div class="col-12 md:col-4">
                 <label for="secondaryWeapon" class="font-bold block mb-1">Secondary Weapon</label>
-                <p-select id="secondaryWeapon" [options]="weaponOptions()" formControlName="secondaryWeapon" optionLabel="name" placeholder="Secondary" [showClear]="true" appendTo="body"></p-select>
+                <p-select id="secondaryWeapon" [options]="weaponOptions()" formControlName="secondaryWeaponId" optionLabel="name" optionValue="id" placeholder="Secondary" [showClear]="true" appendTo="body"></p-select>
               </div>
               <div class="col-12 md:col-4">
                 <label for="rangedWeapon" class="font-bold block mb-1">Ranged Weapon</label>
-                <p-select id="rangedWeapon" [options]="rangedWeaponOptions()" formControlName="rangedWeapon" optionLabel="name" placeholder="Ranged" [showClear]="true" appendTo="body"></p-select>
+                <p-select id="rangedWeapon" [options]="rangedWeaponOptions()" formControlName="rangedWeaponId" optionLabel="name" optionValue="id" placeholder="Ranged" [showClear]="true" appendTo="body"></p-select>
               </div>
             </div>
           </div>

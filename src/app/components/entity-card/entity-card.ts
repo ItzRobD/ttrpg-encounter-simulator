@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import {
@@ -34,6 +34,7 @@ import { EntityEquipment } from '../entity-equipment/entity-equipment';
 import { EntityLegendaryActions } from '../entity-legendary-actions/entity-legendary-actions';
 import { EntitySpellcasting } from '../entity-spellcasting/entity-spellcasting';
 import {CrFormatPipe} from '../../pipes/cr-format.pipe';
+import { EquipmentService } from '../../services/equipment.service';
 
 @Component({
   selector: 'app-entity-card',
@@ -60,6 +61,7 @@ import {CrFormatPipe} from '../../pipes/cr-format.pipe';
   styleUrl: './entity-card.css',
 })
 export class EntityCard {
+  private readonly equipmentService = inject(EquipmentService);
   protected readonly DiceType = DiceType;
   public readonly gradientStop = input<string>('50%');
   public readonly entity = input.required<Entity>();
@@ -188,11 +190,19 @@ export class EntityCard {
     const e = this.entity();
     if (!e || !this.isCharacter(e)) return [];
     const character = e;
-    if (!character.equipment?.weapons) return [];
-    return Object.values(character.equipment.weapons)
-      .filter((slot): slot is Weapon[] => !!slot && Array.isArray(slot))
-      .flat()
-      .map((weapon) => weapon.name);
+    const eq = character.equipment;
+    if (!eq) return [];
+
+    const weaponIds = [
+      ...(eq.primarySlot || []).map(w => w.weaponId),
+      ...(eq.secondarySlot || []).map(w => w.weaponId),
+      ...(eq.rangedSlot || []).map(w => w.weaponId),
+    ];
+
+    return weaponIds.map(id => {
+      const summary = this.equipmentService.summaries().find((s: any) => s.id.toString() === id.toString());
+      return summary ? summary.name : `Weapon #${id}`;
+    });
   });
 
   protected readonly legendaryActionNames = computed(() => {

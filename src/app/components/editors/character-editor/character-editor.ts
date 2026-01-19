@@ -102,12 +102,11 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
       })
     }),
     equipment: this.fb.group({
-      armor: [null],
-      shield: [null],
+      armorId: [null],
       hasShieldEquipped: [false],
-      primaryWeapon: [null],
-      secondaryWeapon: [null],
-      rangedWeapon: [null]
+      primaryWeaponId: [null],
+      secondaryWeaponId: [null],
+      rangedWeaponId: [null]
     }),
     spellcasting: this.fb.group({
       casterType: [CasterType.None],
@@ -200,12 +199,11 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
         if (item.equipment) {
           const eq = item.equipment;
           this.characterForm.get('equipment')?.patchValue({
-            armor: eq.armor,
-            shield: eq.shield,
+            armorId: eq.armorId,
             hasShieldEquipped: eq.hasShieldEquipped,
-            primaryWeapon: eq.weapons?.Primary?.[0],
-            secondaryWeapon: eq.weapons?.Secondary?.[0],
-            rangedWeapon: eq.weapons?.Ranged?.[0]
+            primaryWeaponId: eq.primarySlot?.[0]?.weaponId,
+            secondaryWeaponId: eq.secondarySlot?.[0]?.weaponId,
+            rangedWeaponId: eq.rangedSlot?.[0]?.weaponId
           }, { emitEvent: false });
         }
 
@@ -446,14 +444,11 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
       // Transform equipment form values to Equipment model
       const eqForm = rawValues.equipment;
       const equipment: Equipment = {
-        armor: eqForm.armor || undefined,
-        shield: eqForm.shield || undefined,
+        armorId: eqForm.armorId || undefined,
         hasShieldEquipped: eqForm.hasShieldEquipped || false,
-        weapons: {
-          [WeaponSlot.Primary]: eqForm.primaryWeapon ? [eqForm.primaryWeapon] : [],
-          [WeaponSlot.Secondary]: eqForm.secondaryWeapon ? [eqForm.secondaryWeapon] : [],
-          [WeaponSlot.Ranged]: eqForm.rangedWeapon ? [eqForm.rangedWeapon] : []
-        }
+        primarySlot: eqForm.primaryWeaponId ? [{ weaponId: eqForm.primaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
+        secondarySlot: eqForm.secondaryWeaponId ? [{ weaponId: eqForm.secondaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
+        rangedSlot: eqForm.rangedWeaponId ? [{ weaponId: eqForm.rangedWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
       };
       character.equipment = equipment;
 

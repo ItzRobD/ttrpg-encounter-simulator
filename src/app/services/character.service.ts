@@ -2,11 +2,12 @@ import {computed, inject, Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {environment} from '../../environments/environment';
 import {MapperService} from './mapper.service';
-import {Character, CharacterSummary, Class, Race} from '../models';
+import {Character, CharacterSummary, Class, EquipmentSummary, Race, WeaponSlotData} from '../models';
 import {catchError, Observable, of, retry, tap, throwError} from 'rxjs';
 import {map} from 'rxjs/operators';
 import {EntityService} from './entity.service.interface';
 import { CustomContentService } from './custom-content.service';
+import { EquipmentService } from './equipment.service';
 
 import { ApiResponse } from '../models';
 
@@ -20,6 +21,8 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   private readonly mapperService = inject(MapperService);
   private readonly customContentService = inject(CustomContentService);
 
+  private readonly equipmentService = inject(EquipmentService);
+
   private readonly _characters = signal<Character[]>([]);
   public readonly characters = computed(() => {
     return [...this.customContentService.customCharacters(), ...this._characters()];
@@ -27,19 +30,41 @@ export class CharacterService implements EntityService<Character, CharacterSumma
 
   private readonly _summaries = signal<CharacterSummary[]>([]);
   public readonly summaries = computed(() => {
-    const customSummaries: CharacterSummary[] = this.customContentService.customCharacters().map(c => ({
-      id: c.id,
-      name: c.name,
-      isCustom: true,
-      race: c.race,
-      class: c.class,
-      level: c.level,
-      classId: c.classId,
-      raceId: c.raceId,
-      isSpellcaster: !!c.spellcasting,
-      armorName: c.equipment?.armor?.name,
-      weapons: c.equipment?.weapons ? Object.values(c.equipment.weapons).flat().map(w => w.name) : []
-    }));
+    const customSummaries: CharacterSummary[] = this.customContentService.customCharacters().map(c => {
+      let armorName = undefined;
+      if (c.equipment?.armorId) {
+        const armorSummary = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) => s.id.toString() === c.equipment!.armorId!.toString());
+        armorName = armorSummary ? armorSummary.name : `Armor #${c.equipment!.armorId}`;
+      }
+
+      const weaponNames: string[] = [];
+      const eq = c.equipment;
+      if (eq) {
+        const weaponIds = [
+          ...(eq.primarySlot || []).map(w => w.weaponId),
+          ...(eq.secondarySlot || []).map(w => w.weaponId),
+          ...(eq.rangedSlot || []).map(w => w.weaponId),
+        ];
+        weaponIds.forEach(id => {
+          const ws = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) => s.id.toString() === id.toString());
+          weaponNames.push(ws ? ws.name : `Weapon #${id}`);
+        });
+      }
+
+      return {
+        id: c.id,
+        name: c.name,
+        isCustom: true,
+        race: c.race,
+        class: c.class,
+        level: c.level,
+        classId: c.classId,
+        raceId: c.raceId,
+        isSpellcaster: !!c.spellcasting,
+        armorName: armorName,
+        weapons: weaponNames
+      };
+    });
     return [...customSummaries, ...this._summaries()];
   });
 

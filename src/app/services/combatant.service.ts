@@ -220,37 +220,24 @@ export class CombatantService {
         initiative: 0,
       },
       equipment: {
-        armor: { id: 0, name: 'None', ac: 10, minimumStrength: 0, dexBonus: true, maxBonus: false, modifier: 0 },
-        shield: undefined,
+        armorId: 1, // Plate
         hasShieldEquipped: false,
-        weapons: {
-          [WeaponSlot.Primary]: [
-            {
-              name: 'Longsword',
-              numberOfDice: 1,
-              die: DiceType.D10,
-              damageType: DamageType.Slashing,
-              properties: {
-                isVersatile: true,
-                isFinesse: false,
-                isRanged: false,
-                isHeavy: false,
-                isLight: false,
-                isTwoHanded: false,
-                isThrown: false,
-                isOnlyRanged: false,
-              },
-              modifiers: {
-                isMagic: false,
-                isSilvered: false,
-                isAdamantine: false,
-                isColdForgedIron: false,
-                attackBonus: 0,
-                damageBonus: 0,
-              },
+        primarySlot: [
+          {
+            weaponId: 101, // Longsword
+            isProficient: true,
+            modifiers: {
+              isMagic: false,
+              isSilvered: false,
+              isAdamantine: false,
+              isColdForgedIron: false,
+              attackBonus: 0,
+              damageBonus: 0,
             },
-          ],
-        },
+          },
+        ],
+        secondarySlot: [],
+        rangedSlot: []
       },
       hp: {
         hpSetMethod: 0,
@@ -498,89 +485,50 @@ export class CombatantService {
         initiative: 14,
       },
       equipment: {
-        armor: { id: 1, name: 'Plate', ac: 18, minimumStrength: 15, dexBonus: false, maxBonus: false, modifier: 0 },
-        shield: { id: 2, name: 'Shield', ac: 2, minimumStrength: 0, dexBonus: false, maxBonus: false, modifier: 0 },
+        armorId: 1, // Plate
         hasShieldEquipped: true,
-        weapons: {
-          [WeaponSlot.Primary]: [
-            {
-              name: 'Longsword',
-              numberOfDice: 1,
-              die: DiceType.D8,
-              damageType: DamageType.Slashing,
-              properties: {
-                isVersatile: true,
-                isFinesse: false,
-                isRanged: false,
-                isHeavy: false,
-                isTwoHanded: false,
-                isLight: false,
-                isThrown: false,
-                isOnlyRanged: false,
-              },
-              modifiers: {
-                isMagic: true,
-                isSilvered: false,
-                isAdamantine: false,
-                isColdForgedIron: false,
-                attackBonus: 1,
-                damageBonus: 1,
-              },
+        primarySlot: [
+          {
+            weaponId: 101, // Longsword
+            isProficient: true,
+            modifiers: {
+              isMagic: true,
+              isSilvered: false,
+              isAdamantine: false,
+              isColdForgedIron: false,
+              attackBonus: 1,
+              damageBonus: 1,
             },
-          ],
-          [WeaponSlot.Secondary]: [
-            {
-              name: 'Shortsword',
-              numberOfDice: 1,
-              die: DiceType.D6,
-              damageType: DamageType.Piercing,
-              properties: {
-                isVersatile: false,
-                isFinesse: true,
-                isRanged: false,
-                isHeavy: false,
-                isTwoHanded: false,
-                isLight: true,
-                isThrown: false,
-                isOnlyRanged: false,
-              },
-              modifiers: {
-                isMagic: false,
-                isSilvered: false,
-                isAdamantine: false,
-                isColdForgedIron: false,
-                attackBonus: 0,
-                damageBonus: 0,
-              },
+          },
+        ],
+        secondarySlot: [
+          {
+            weaponId: 102, // Shortsword
+            isProficient: true,
+            modifiers: {
+              isMagic: false,
+              isSilvered: false,
+              isAdamantine: false,
+              isColdForgedIron: false,
+              attackBonus: 0,
+              damageBonus: 0,
             },
-          ],
-          [WeaponSlot.Ranged]: [
-            {
-              name: 'Longbow',
-              numberOfDice: 1,
-              die: DiceType.D8,
-              damageType: DamageType.Piercing,
-              properties: {
-                isVersatile: false,
-                isFinesse: false,
-                isRanged: true,
-                isHeavy: true,
-                isTwoHanded: true,
-                isLight: false,
-                isThrown: false,
-                isOnlyRanged: true,
-              },
-              modifiers: {
-                isMagic: false,
-                isSilvered: false,
-                isAdamantine: false,
-                isColdForgedIron: false,
-                attackBonus: 0,
-                damageBonus: 0,
-              },
+          }
+        ],
+        rangedSlot: [
+          {
+            weaponId: 103, // Longbow
+            isProficient: true,
+            modifiers: {
+              isMagic: false,
+              isSilvered: false,
+              isAdamantine: false,
+              isColdForgedIron: false,
+              attackBonus: 0,
+              damageBonus: 0,
             },
-          ],
-        },
+          }
+        ]
       },
       hp: {
         hpSetMethod: 0,

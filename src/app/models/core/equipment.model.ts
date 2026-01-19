@@ -75,11 +75,16 @@ export interface EquipmentSummary {
   };
 }
 
+export interface WeaponSlotData {
+  weaponId: number | string;
+  isProficient: boolean;
+  modifiers: WeaponModifiers;
+}
+
 export interface Equipment {
-  armor?: Armor;
-  shield?: Armor;
+  armorId?: number | string;
   hasShieldEquipped: boolean;
-  weapons: {
-    [slot in WeaponSlot]?: Weapon[];
-  };
+  primarySlot: WeaponSlotData[];
+  secondarySlot: WeaponSlotData[];
+  rangedSlot: WeaponSlotData[];
 }
