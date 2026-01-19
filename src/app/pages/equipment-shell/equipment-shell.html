@@ -52,8 +52,19 @@
         </div>
 
         <div class="flex flex-column gap-2 flex-1 overflow-auto">
+          <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)">
+            <p-tablist>
+              <p-tab value="all">All</p-tab>
+              <p-tab value="armor">Armor</p-tab>
+              <p-tab value="weapons">Weapons</p-tab>
+            </p-tablist>
+          </p-tabs>
           <!-- Equipment Table -->
-          <app-shared-table mode="equipment" [searchTerm]="searchTerm()"></app-shared-table>
+          <app-shared-table
+            mode="equipment"
+            [searchTerm]="searchTerm()"
+            [categoryFilter]="activeTab()"
+          ></app-shared-table>
         </div>
       </div>
     </div>

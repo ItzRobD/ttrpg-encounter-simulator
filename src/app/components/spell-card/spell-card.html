@@ -3,9 +3,9 @@
     <!-- Header -->
     <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
       <div class="flex flex-column">
-        <span class="text-xl font-bold">{{ item().name }}</span>
+        <span class="text-xl font-bold">{{ item().name || 'Unnamed Spell' }}</span>
         <span class="text-sm text-500">
-          {{ levelDisplay() }} {{ item().levelType || '' | titlecase }}
+          {{ levelDisplay() }} {{ item().levelType | titlecase }}
         </span>
       </div>
       <div class="flex flex-column align-items-end">
@@ -53,7 +53,7 @@
           <span class="text-sm">
             {{ item().spellDC.ability | titlecase }}
             <span class="text-500 text-xs">
-              ({{ item().spellDC.onSuccess === 'half' ? 'Half damage' : (item().spellDC.onSuccess === 'none' ? 'No damage' : item().spellDC.onSuccess) | titlecase }} on success)
+              ({{ (item().spellDC.onSuccess === 'half' ? 'Half damage' : (item().spellDC.onSuccess === 'none' ? 'No damage' : item().spellDC.onSuccess)) | titlecase }} on success)
             </span>
           </span>
         </div>

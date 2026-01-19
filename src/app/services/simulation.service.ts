@@ -122,9 +122,15 @@ export class SimulationService {
       }
     }
 
+    // Ensure character spellcasting is lightweight if it contains hydrated spells
+    const characterConfigs = characters.map(c => {
+      // serializeKeys will now handle the transformation of spellcasting to known_spells
+      return c;
+    });
+
     return {
       base_options: this.options(),
-      character_configs: characters,
+      character_configs: characterConfigs as Character[],
       monster_ids: monsterIds,
       monster_configs: monsterConfigs,
       lair_config: null,

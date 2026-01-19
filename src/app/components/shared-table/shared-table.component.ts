@@ -65,6 +65,7 @@ export class SharedTable {
 
   public readonly mode = input<'monster' | 'character' | 'equipment' | 'spells'>('monster');
   public readonly searchTerm = input('');
+  public readonly categoryFilter = input<string>('all');
   public readonly showAddToSimulator = input(false);
 
   public readonly addToSimulator = output<Entity>();
@@ -97,7 +98,7 @@ export class SharedTable {
   protected readonly colWidths = {
     desktop: {
       name: { width: '35%', minWidth: '15rem' },
-      type: { width: '25%', minWidth: '10rem' },
+      type: { width: '15%', minWidth: '10rem' },
       size: { width: '2rem', minWidth: '2rem' },
       cr: { width: '3rem', minWidth: '3rem' },
       ac: { width: '3rem', minWidth: '3rem' },
@@ -129,9 +130,34 @@ export class SharedTable {
   );
 
   public readonly filteredItems = computed(() => {
-    const items = this.activeService().summaries();
+    let summaries = this.activeService().summaries();
     const term = this.searchTerm().toLowerCase().trim();
+    const category = this.categoryFilter().toLowerCase();
 
+    let items: (MonsterSummary | CharacterSummary | EquipmentSummary | SpellSummary)[] = summaries;
+
+    // 1. Category Filtering
+    if (category !== 'all') {
+      items = items.filter((i: any) => {
+        if (this.mode() === 'monster') {
+          const m = i as MonsterSummary;
+          if (category === 'srd') return !m.isCustom;
+          if (category === 'custom') return !!m.isCustom;
+        } else if (this.mode() === 'equipment') {
+          const eq = i as EquipmentSummary;
+          if (category === 'armor') return eq.type === 'Armor' || eq.type === 'Shield';
+          if (category === 'weapons') return eq.type === 'Weapon';
+        } else if (this.mode() === 'spells') {
+          const s = i as SpellSummary;
+          if (category === 'damage') return s.spellType === 'damage';
+          if (category === 'healing') return s.spellType === 'healing';
+          if (category === 'utility') return s.spellType === 'other';
+        }
+        return true;
+      });
+    }
+
+    // 2. Search Term Filtering
     if (!term) {
       return items;
     }

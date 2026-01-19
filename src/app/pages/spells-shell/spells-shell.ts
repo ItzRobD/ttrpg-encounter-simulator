@@ -10,6 +10,8 @@ import {SpellsService} from '../../services/spells.service';
 import {SpellEditorComponent} from '../../components/editors/spell-editor/spell-editor';
 import {Spell} from '../../models';
 
+import {TabsModule} from 'primeng/tabs';
+
 @Component({
   selector: 'app-spells-shell',
   standalone: true,
@@ -21,7 +23,8 @@ import {Spell} from '../../models';
     InputText,
     SharedTable,
     Tooltip,
-    SpellEditorComponent
+    SpellEditorComponent,
+    TabsModule
   ],
   templateUrl: './spells-shell.html',
   styles: [`
@@ -35,6 +38,13 @@ export class SpellsShell implements OnInit {
   public readonly searchTerm = signal('');
   public readonly isEditorVisible = signal(false);
   public readonly spellToEdit = signal<Spell | null>(null);
+  public readonly activeTab = signal('all');
+
+  onTabChange(event: string | number | undefined): void {
+    if (typeof event === 'string') {
+      this.activeTab.set(event);
+    }
+  }
 
   ngOnInit(): void {
     this.spellsService.getSummaries().subscribe();

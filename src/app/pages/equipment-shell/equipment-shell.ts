@@ -11,6 +11,8 @@ import { CommonModule } from '@angular/common';
 import { EquipmentEditorComponent } from '../../components/editors/equipment-editor/equipment-editor';
 import { EquipmentItem } from '../../models';
 
+import { TabsModule } from 'primeng/tabs';
+
 @Component({
   selector: 'app-equipment-shell',
   standalone: true,
@@ -23,7 +25,8 @@ import { EquipmentItem } from '../../models';
     InputTextModule,
     TooltipModule,
     CommonModule,
-    EquipmentEditorComponent
+    EquipmentEditorComponent,
+    TabsModule
   ],
   templateUrl: './equipment-shell.html',
   styleUrl: './equipment-shell.css',
@@ -38,6 +41,13 @@ export class EquipmentShell implements OnInit {
   public readonly searchTerm = signal('');
   public readonly isEditorVisible = signal(false);
   public readonly itemToEdit = signal<EquipmentItem | null>(null);
+  public readonly activeTab = signal('all');
+
+  onTabChange(event: string | number | undefined): void {
+    if (typeof event === 'string') {
+      this.activeTab.set(event);
+    }
+  }
 
   ngOnInit(): void {
     this.equipmentService.getSummaries().subscribe();

@@ -58,15 +58,6 @@ export class SimulatorShell {
     { initialValue: false }
   );
 
-  onAddDummyData() {
-    this.combatantService.seedDummyData();
-  }
-
-  onAddTimelineDummyData() {
-    this.combatantService.seedTimelineDummyData();
-    this.simulationService.seedDummyData();
-  }
-
   toggleCombatants() {
     this.isCombatantsCollapsed.update((v) => !v);
   }

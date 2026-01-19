@@ -2,12 +2,13 @@ import {computed, inject, Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {environment} from '../../environments/environment';
 import {MapperService} from './mapper.service';
-import {Character, CharacterSummary, Class, EquipmentSummary, Race, WeaponSlotData} from '../models';
-import {catchError, Observable, of, retry, tap, throwError} from 'rxjs';
-import {map} from 'rxjs/operators';
+import {Character, CharacterSummary, Class, EquipmentSummary, Race, WeaponSlotData, Spell, Armor} from '../models';
+import {catchError, forkJoin, Observable, of, retry, tap, throwError} from 'rxjs';
+import {map, switchMap} from 'rxjs/operators';
 import {EntityService} from './entity.service.interface';
 import { CustomContentService } from './custom-content.service';
 import { EquipmentService } from './equipment.service';
+import { SpellsService } from './spells.service';
 
 import { ApiResponse } from '../models';
 
@@ -22,6 +23,7 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   private readonly customContentService = inject(CustomContentService);
 
   private readonly equipmentService = inject(EquipmentService);
+  private readonly spellsService = inject(SpellsService);
 
   private readonly _characters = signal<Character[]>([]);
   public readonly characters = computed(() => {
@@ -32,21 +34,37 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   public readonly summaries = computed(() => {
     const customSummaries: CharacterSummary[] = this.customContentService.customCharacters().map(c => {
       let armorName = undefined;
-      if (c.equipment?.armorId) {
-        const armorSummary = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) => s.id.toString() === c.equipment!.armorId!.toString());
-        armorName = armorSummary ? armorSummary.name : `Armor #${c.equipment!.armorId}`;
+      const eq = c.equipment;
+      if (eq?.armorId) {
+        const armorSummary = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) =>
+          s.id.toString() === eq.armorId!.toString() && (s.type === 'Armor' || s.type === 'Shield')
+        );
+        armorName = armorSummary ? armorSummary.name : `Armor #${eq.armorId}`;
+      }
+
+      if (eq?.hasShieldEquipped) {
+        let shieldName = 'Shield';
+        if (eq.shieldId) {
+          const shieldSummary = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) =>
+            s.id.toString() === eq.shieldId!.toString() && s.type === 'Shield'
+          );
+          shieldName = shieldSummary ? shieldSummary.name : `Shield #${eq.shieldId}`;
+        }
+        armorName = armorName ? `${armorName} (+ ${shieldName})` : shieldName;
       }
 
       const weaponNames: string[] = [];
-      const eq = c.equipment;
       if (eq) {
-        const weaponIds = [
-          ...(eq.primarySlot || []).map(w => w.weaponId),
-          ...(eq.secondarySlot || []).map(w => w.weaponId),
-          ...(eq.rangedSlot || []).map(w => w.weaponId),
-        ];
-        weaponIds.forEach(id => {
-          const ws = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) => s.id.toString() === id.toString());
+        const primaryIds = (eq.primarySlot || []).map(w => w.weaponId);
+        const secondaryIds = (eq.secondarySlot || []).map(w => w.weaponId);
+        const rangedIds = (eq.rangedSlot || []).map(w => w.weaponId);
+
+        const allWeaponIds = [...primaryIds, ...secondaryIds, ...rangedIds];
+
+        allWeaponIds.forEach(id => {
+          const ws = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) =>
+            s.id.toString() === id.toString() && s.type === 'Weapon'
+          );
           weaponNames.push(ws ? ws.name : `Weapon #${id}`);
         });
       }
@@ -116,6 +134,40 @@ export class CharacterService implements EntityService<Character, CharacterSumma
             // Inject display names for components that still expect .race and .class
             mapped.race = this.mapperService.getRaceName(mapped.raceId);
             mapped.class = this.mapperService.getClassName(mapped.classId);
+
+            // Correctly resolve armor and weapon names for the summary
+            if (mapped.armorId) {
+              const armor = this.equipmentService.summaries().find(s =>
+                s.id.toString() === mapped.armorId?.toString() && (s.type === 'Armor' || s.type === 'Shield')
+              );
+              mapped.armorName = armor ? armor.name : `Armor #${mapped.armorId}`;
+            }
+
+            // Also check for shield in summary mapping if it's there
+            const raw = c as any;
+            const hasShield = !!(raw.equipment?.has_shield_equipped || raw.has_shield_equipped);
+            const shieldId = raw.equipment?.shield_id || raw.shield_id;
+
+            if (hasShield) {
+              let sName = 'Shield';
+              if (shieldId) {
+                const shield = this.equipmentService.summaries().find(s =>
+                  s.id.toString() === shieldId.toString() && s.type === 'Shield'
+                );
+                sName = shield ? shield.name : `Shield #${shieldId}`;
+              }
+              mapped.armorName = mapped.armorName ? `${mapped.armorName} (+ ${sName})` : sName;
+            }
+
+            if (mapped.weaponIds && Array.isArray(mapped.weaponIds)) {
+              mapped.weapons = mapped.weaponIds.map(id => {
+                const weapon = this.equipmentService.summaries().find(s =>
+                  s.id.toString() === id.toString() && s.type === 'Weapon'
+                );
+                return weapon ? weapon.name : `Weapon #${id}`;
+              });
+            }
+
             return mapped;
           });
         }),
@@ -140,8 +192,9 @@ export class CharacterService implements EntityService<Character, CharacterSumma
     // Try finding in custom characters first
     const customCharacter = this.customContentService.customCharacters().find(c => c.id.toString() === id);
     if (customCharacter) {
-      this._selectedEntity.set(customCharacter);
-      return of(customCharacter);
+      return this.hydrateCharacter(customCharacter).pipe(
+        tap(hydrated => this._selectedEntity.set(hydrated))
+      );
     }
 
     this._loading.set(true);
@@ -157,6 +210,7 @@ export class CharacterService implements EntityService<Character, CharacterSumma
         mapped.class = this.mapperService.getClassName(mapped.classId);
         return mapped;
       }),
+      switchMap(character => this.hydrateCharacter(character)),
       tap((character) => {
         this._selectedEntity.set(character);
         this._loading.set(false);
@@ -166,6 +220,68 @@ export class CharacterService implements EntityService<Character, CharacterSumma
         this._error.set(`Failed to load character with ID ${id}.`);
         return throwError(() => err);
       })
+    );
+  }
+
+  /**
+   * Hydrates character spells and equipment using respective services
+   */
+  private hydrateCharacter(character: Character): Observable<Character> {
+    const hydrationTasks: Observable<unknown>[] = [];
+
+    // 1. Hydrate Spells
+    const spellcasting = character.spellcasting;
+    if (spellcasting && spellcasting.spellIds && spellcasting.spellIds.length > 0) {
+      // If not already hydrated
+      if (!spellcasting.spells || spellcasting.spells.length !== spellcasting.spellIds.length) {
+        const spellRequests = spellcasting.spellIds.map(id =>
+          this.spellsService.selectSpellByID(id.toString()).pipe(
+            catchError(err => {
+              console.error(`Failed to hydrate spell ${id}`, err);
+              return of(null);
+            })
+          )
+        );
+        hydrationTasks.push(forkJoin(spellRequests).pipe(
+          tap(spells => {
+            character.spellcasting!.spells = spells.filter((s): s is Spell => s !== null);
+          })
+        ));
+      }
+    }
+
+    // 2. Hydrate Armor
+    if (character.equipment?.armorId && !character.equipment.armor) {
+      hydrationTasks.push(this.equipmentService.selectItemByID(character.equipment.armorId.toString(), 'Armor').pipe(
+        tap(armor => {
+          character.equipment!.armor = armor as Armor;
+        }),
+        catchError(err => {
+          console.error(`Failed to hydrate armor ${character.equipment?.armorId}`, err);
+          return of(null);
+        })
+      ));
+    }
+
+    // 3. Hydrate Shield
+    if (character.equipment?.shieldId && !character.equipment.shield) {
+      hydrationTasks.push(this.equipmentService.selectItemByID(character.equipment.shieldId.toString(), 'Shield').pipe(
+        tap(shield => {
+          character.equipment!.shield = shield as Armor;
+        }),
+        catchError(err => {
+          console.error(`Failed to hydrate shield ${character.equipment?.shieldId}`, err);
+          return of(null);
+        })
+      ));
+    }
+
+    if (hydrationTasks.length === 0) {
+      return of(character);
+    }
+
+    return forkJoin(hydrationTasks).pipe(
+      map(() => character)
     );
   }
 

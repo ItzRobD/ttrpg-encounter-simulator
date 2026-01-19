@@ -83,6 +83,9 @@ export interface WeaponSlotData {
 
 export interface Equipment {
   armorId?: number | string;
+  armor?: Armor;
+  shieldId?: number | string;
+  shield?: Armor;
   hasShieldEquipped: boolean;
   primarySlot: WeaponSlotData[];
   secondarySlot: WeaponSlotData[];

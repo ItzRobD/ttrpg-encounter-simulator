@@ -24,7 +24,13 @@ export class EquipmentService {
   public readonly summaries = computed(() => {
     const customSummaries: EquipmentSummary[] = this.customContentService.customEquipment().map(i => {
       const isWeapon = 'die' in i;
-      const type = isWeapon ? 'Weapon' : (i.name.toLowerCase().includes('shield') ? 'Shield' : 'Armor');
+      let type: 'Weapon' | 'Armor' | 'Shield' = 'Armor';
+      if (isWeapon) {
+        type = 'Weapon';
+      } else if (i.name.toLowerCase().includes('shield')) {
+        type = 'Shield';
+      }
+
       return {
         id: i.id || 0,
         name: i.name,

@@ -52,10 +52,18 @@
         </div>
 
         <div class="flex flex-column gap-2 flex-1 overflow-auto">
+          <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)">
+            <p-tablist>
+              <p-tab value="all">All</p-tab>
+              <p-tab value="srd">SRD</p-tab>
+              <p-tab value="custom">Custom</p-tab>
+            </p-tablist>
+          </p-tabs>
           <!-- Entities Table -->
           <app-shared-table
             mode="monster"
             [searchTerm]="searchTerm()"
+            [categoryFilter]="activeTab()"
             [showAddToSimulator]="true"
             (addToSimulator)="onAddToSimulator($event)"
           ></app-shared-table>

@@ -15,7 +15,7 @@ import {
   WeaponSlot,
   DamageType,
   Entity,
-  EntityState,
+  EntityState, getAC, isCharacter, isMonster,
 } from '../../models';
 import { Tag } from 'primeng/tag';
 import { Accordion, AccordionContent, AccordionHeader, AccordionPanel } from 'primeng/accordion';
@@ -98,11 +98,11 @@ export class EntityCard {
   });
 
   isCharacter(e: Entity): e is Character {
-    return !!e && ('level' in e || 'class' in e || 'classId' in e);
+    return isCharacter(e);
   }
 
   isMonster(e: Entity): e is Monster {
-    return !!e && 'monsterActions' in e && !('level' in e);
+    return isMonster(e);
   }
 
   asCharacter(e: Entity): Character {
@@ -202,7 +202,7 @@ export class EntityCard {
     ];
 
     return weaponIds.map(id => {
-      const summary = this.equipmentService.summaries().find((s: any) => s.id.toString() === id.toString());
+      const summary = this.equipmentService.summaries().find((s) => s.id.toString() === id.toString() && s.type === 'Weapon');
       return summary ? summary.name : `Weapon #${id}`;
     });
   });
@@ -308,4 +308,5 @@ export class EntityCard {
   protected readonly getAbilityScoreEntries = getAbilityScoreEntries;
   protected readonly formatModifier = formatModifier;
   protected readonly formatDice = formatDice;
+  protected readonly getAC = getAC;
 }

@@ -90,7 +90,8 @@
                 }
               </div>
               <div class="flex flex-column pt-0">
-                <span class="text-xs font-bold white-space-nowrap">AC: {{ e.ac || '??' }}</span>
+                <span class="text-xs font-bold white-space-nowrap">AC:
+                  {{ getAC(e) || '??' }}</span>
                 @if (!hideState()) {
                   <span class="text-xs font-bold text-primary">Init: {{ state.initiative }}</span>
                 }
@@ -214,7 +215,7 @@
             }
             <!-- Spellcasting Panel -->
             @if (e.spellcasting; as sc) {
-              @if (sc.spells.length > 0) {
+              @if ((sc.spells?.length || 0) > 0) {
                 <p-accordion-panel value="4">
                   <p-accordion-header>
                     <div class="grid w-full align-items-center">

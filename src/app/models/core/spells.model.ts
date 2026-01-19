@@ -86,7 +86,8 @@ export interface Spellcasting {
   casterType: CasterType;
   casterLevel: number;
   spellSlots: SpellSlots;
-  spells: Spell[];
+  spells?: Spell[];
+  spellIds?: (number | string)[];
   spellSaveDC: number;
   spellAttackBonus: number;
   ability?: Ability;

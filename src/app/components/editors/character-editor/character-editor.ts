@@ -106,6 +106,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
     }),
     equipment: this.fb.group({
       armorId: [null],
+      shieldId: [null],
       hasShieldEquipped: [false],
       primaryWeaponId: [null],
       secondaryWeaponId: [null],
@@ -139,7 +140,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
   public isSpellcaster = computed(() => {
     const classId = this.classValue();
     if (classId === null || classId === undefined) return false;
-    const spellcasterIndices = [2, 3, 4, 7, 8, 10, 11, 12];
+    const spellcasterIndices = [3, 4, 5, 8, 9, 11, 12, 13];
     return spellcasterIndices.includes(Number(classId));
   });
 
@@ -202,6 +203,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
           const eq = item.equipment;
           this.characterForm.get('equipment')?.patchValue({
             armorId: eq.armorId,
+            shieldId: eq.shieldId,
             hasShieldEquipped: eq.hasShieldEquipped,
             primaryWeaponId: eq.primarySlot?.[0]?.weaponId,
             secondaryWeaponId: eq.secondarySlot?.[0]?.weaponId,
@@ -398,7 +400,8 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
         spellSaveDC: 10,
         spellAttackBonus: 0,
         spellSlots: this.createEmptySpellSlots(),
-        spells: []
+        spells: [],
+        spellIds: []
       },
       state: {
         currentHp: 10,
@@ -459,6 +462,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
     const eqForm = rawValues.equipment;
     const equipment: Equipment = {
       armorId: eqForm.armorId || undefined,
+      shieldId: eqForm.shieldId || undefined,
       hasShieldEquipped: eqForm.hasShieldEquipped || false,
       primarySlot: eqForm.primaryWeaponId ? [{ weaponId: eqForm.primaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
       secondarySlot: eqForm.secondaryWeaponId ? [{ weaponId: eqForm.secondaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
@@ -483,6 +487,11 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
         character.state.currentHp = character.state.maxHp;
       }
       character.state.hitDie = character.hp.hitDie;
+    }
+
+    // Ensure spellIds are synced from spells array if it exists
+    if (character.spellcasting && Array.isArray(character.spellcasting.spells)) {
+      character.spellcasting.spellIds = character.spellcasting.spells.map((s: any) => s.id);
     }
 
     return character;

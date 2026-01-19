@@ -6,7 +6,7 @@
         <span class="text-sm">
           <strong>Armor:</strong> {{ getArmorName(character().equipment!.armorId!) }}
           @if (character().equipment?.hasShieldEquipped) {
-            (+ Shield)
+            (+ {{ character().equipment?.shieldId ? getShieldName(character().equipment!.shieldId!) : 'Shield' }})
           }
         </span>
       </div>
@@ -16,7 +16,7 @@
       <div class="flex align-items-center gap-2">
         <i class="pi pi-shield text-primary"></i>
         <span class="text-sm">
-          <strong>Shield Equipped</strong>
+          <strong>{{ character().equipment?.shieldId ? getShieldName(character().equipment!.shieldId!) : 'Shield' }} Equipped</strong>
         </span>
       </div>
     </p-card>

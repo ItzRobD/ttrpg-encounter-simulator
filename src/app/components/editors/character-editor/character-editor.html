@@ -122,11 +122,8 @@
                 <p-select id="armor" [options]="armorOptions()" formControlName="armorId" optionLabel="name" optionValue="id" placeholder="Select Armor" [showClear]="true" appendTo="body"></p-select>
               </div>
               <div class="col-12 md:col-6">
-                <!-- Shield is now part of armorId or handled by hasShieldEquipped checkbox -->
-                <label class="font-bold block mb-1 text-secondary">Shield Info</label>
-                <div class="p-2 border-1 surface-border border-round surface-50 text-sm italic">
-                  Shields are handled via the "Equip Shield" toggle below.
-                </div>
+                <label for="shield" class="font-bold block mb-1">Shield</label>
+                <p-select id="shield" [options]="shieldOptions()" formControlName="shieldId" optionLabel="name" optionValue="id" placeholder="Select Shield" [showClear]="true" appendTo="body"></p-select>
               </div>
             </div>
 

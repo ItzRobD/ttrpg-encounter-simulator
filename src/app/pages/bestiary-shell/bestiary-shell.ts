@@ -14,6 +14,8 @@ import { MonsterEditorComponent } from '../../components/editors/monster-editor/
 import { Monster, Entity } from '../../models';
 import { CombatantService } from '../../services/combatant.service';
 
+import { TabsModule } from 'primeng/tabs';
+
 @Component({
   selector: 'app-bestiary-shell',
   imports: [
@@ -26,7 +28,8 @@ import { CombatantService } from '../../services/combatant.service';
     SharedTable,
     EntityCard,
     MonsterEditorComponent,
-    ToastModule
+    ToastModule,
+    TabsModule
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './bestiary-shell.html',
@@ -47,6 +50,13 @@ export class BestiaryShell implements OnInit {
   public readonly searchTerm = signal('');
   public readonly isEditorVisible = signal(false);
   public readonly monsterToEdit = signal<Monster | null>(null);
+  public readonly activeTab = signal('all');
+
+  onTabChange(event: string | number | undefined): void {
+    if (typeof event === 'string') {
+      this.activeTab.set(event);
+    }
+  }
 
   ngOnInit(): void {
     this.monsterService.getSummaries().subscribe();

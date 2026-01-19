@@ -29,6 +29,8 @@ export interface CharacterSummary extends EntitySummary {
   class?: string; // Virtual property for UI display
   level: number;
   isSpellcaster: boolean;
+  armorId?: number | string;
   armorName?: string;
+  weaponIds?: (number | string)[];
   weapons?: string[];
 }

@@ -21,13 +21,24 @@ export class EntityEquipment {
   ];
 
   getWeaponName(weaponId: number | string): string {
-    const summary = this.equipmentService.summaries().find(s => s.id.toString() === weaponId.toString());
+    const summary = this.equipmentService.summaries().find(s =>
+      s.id.toString() === weaponId.toString() && s.type === 'Weapon'
+    );
     return summary ? summary.name : `Weapon #${weaponId}`;
   }
 
   getArmorName(armorId: number | string): string {
-    const summary = this.equipmentService.summaries().find(s => s.id.toString() === armorId.toString());
-    return summary ? summary.name : `Armor #${armorId}`;
+    const summary = this.equipmentService.summaries().find(s =>
+      s.id.toString() === armorId.toString() && (s.type === 'Armor' || s.type === 'Shield')
+    );
+    return summary ? summary.name : `Armor/Shield #${armorId}`;
+  }
+
+  getShieldName(shieldId: number | string): string {
+    const summary = this.equipmentService.summaries().find(s =>
+      s.id.toString() === shieldId.toString() && s.type === 'Shield'
+    );
+    return summary ? summary.name : `Shield #${shieldId}`;
   }
 
   formatModifiers(modifiers: any): string {

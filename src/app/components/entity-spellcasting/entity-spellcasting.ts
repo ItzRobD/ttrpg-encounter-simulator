@@ -27,7 +27,7 @@ export class EntitySpellcasting {
     const leveledGroups: { [level: number]: Spell[] } = {};
     const innateGroups: { [usage: string]: Spell[] } = {};
 
-    sc.spells.forEach((spell) => {
+    (sc.spells || []).forEach((spell) => {
       if (spell.isInnate) {
         const usage = this.getInnateUsageLabel(spell.maxCastsPerDay);
         if (!innateGroups[usage]) {
