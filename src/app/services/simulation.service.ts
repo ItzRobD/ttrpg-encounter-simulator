@@ -1,7 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { SimulationLog, SimulationResult, EncounterConfig, SimulationEvent, EventType, SimulationConfig, isMonster,
-  isCharacter, SimulationPayload, Entity, Monster, Character, SimulationStatusResponse, SimulationStatus
+  isCharacter, SimulationPayload, Entity, Monster, Character, SimulationStatusResponse, SimulationStatus, ApiResponse
 } from '../models';
 import { SimulationOptions } from '../models/simoptions.model';
 import { CombatantService } from './combatant.service';
@@ -158,7 +158,7 @@ export class SimulationService {
       .pipe(
         switchMap(response => {
           if (response.status === 202) {
-            const body = response.body as any;
+            const body = response.body as ApiResponse<{ simulation_id: string }>;
             const simulationId = body?.data?.simulation_id;
             if (simulationId) {
               this._currentSimulationId.set(simulationId);
@@ -195,7 +195,7 @@ export class SimulationService {
     const statusUrl = `${environment.apiUrl}/simulation/status/${id}`;
 
     return timer(0, 2000).pipe(
-      switchMap(() => this.http.get<any>(statusUrl)),
+      switchMap(() => this.http.get<unknown>(statusUrl)),
       map(response => {
         // Map keys to camelCase
         const mapped = this.mapperService.mapKeys(response) as SimulationStatusResponse;

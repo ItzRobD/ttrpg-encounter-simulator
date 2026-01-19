@@ -19,6 +19,7 @@ import { AbilityScoreEditorComponent } from '../ability-score-editor/ability-sco
 import { SpellcastingEditorComponent } from '../spellcasting-editor/spellcasting-editor';
 import { getProficiencyBonus } from '../../../shared/utils/dnd-utils';
 import { EquipmentService } from '../../../services/equipment.service';
+import {MapperService} from '../../../services/mapper.service';
 
 @Component({
   selector: 'app-character-editor',
@@ -44,6 +45,9 @@ import { EquipmentService } from '../../../services/equipment.service';
 export class CharacterEditorComponent extends BaseEditorDirective<Character> implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly equipmentService = inject(EquipmentService);
+  protected readonly mapperService = inject(MapperService);
+  protected readonly Race = Race;
+  protected readonly Number = Number;
 
   public hpDisplay = signal<string>('10 (1d10 + 0)');
 
@@ -68,12 +72,11 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
   public characterForm: FormGroup = this.fb.group({
     id: [null],
     name: ['', [Validators.required]],
-    race: [Race.Human, [Validators.required]],
+    raceId: [this.mapperService.getRaceId(Race.Human), [Validators.required]],
     dragonbornColor: [null],
-    class: [Class.Fighter, [Validators.required]],
+    classId: [this.mapperService.getClassId(Class.Fighter), [Validators.required]],
     level: [1, [Validators.required, Validators.min(1), Validators.max(20)]],
     proficiencyBonus: [2],
-    classId: [null],
     hp: this.fb.group({
       hpSetMethod: [0], // SetValue
       value: [10, [Validators.required, Validators.min(1)]],
@@ -131,27 +134,24 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
     })
   });
 
-  private classValue = toSignal(this.characterForm.get('class')!.valueChanges, { initialValue: this.characterForm.get('class')?.value });
+  private classValue = toSignal(this.characterForm.get('classId')!.valueChanges, { initialValue: this.characterForm.get('classId')?.value });
 
   public isSpellcaster = computed(() => {
-    const className = this.classValue();
-    if (!className) return false;
-    const classIndex = Object.values(Class).indexOf(className);
+    const classId = this.classValue();
+    if (classId === null || classId === undefined) return false;
     const spellcasterIndices = [2, 3, 4, 7, 8, 10, 11, 12];
-    return spellcasterIndices.includes(classIndex);
+    return spellcasterIndices.includes(Number(classId));
   });
 
-  protected readonly races = Object.values(Race).map(r => ({ label: r, value: r }));
+  protected readonly races = Object.values(Race).map(r => ({ label: r, value: this.mapperService.getRaceId(r) }));
   protected readonly classes = Object.values(Class)
     .filter(c => c !== Class.Artificer)
-    .map(c => ({ label: c, value: c }));
+    .map(c => ({ label: c, value: this.mapperService.getClassId(c) }));
   protected readonly dragonbornColors = Object.values(DragonbornColor).map(c => ({ label: c, value: c }));
   protected readonly damageTypes = Object.values(DamageType).map(dt => ({ label: dt.charAt(0).toUpperCase() + dt.slice(1), value: dt }));
   protected readonly resistanceTypes = Object.values(ResistanceType)
     .filter(rt => rt !== ResistanceType.None)
     .map(rt => ({ label: rt.charAt(0).toUpperCase() + rt.slice(1), value: rt }));
-
-  protected readonly Race = Race;
 
   get asConfigGroup(): FormGroup {
     return this.characterForm.get('asConfig') as FormGroup;
@@ -193,7 +193,9 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
           });
         }
 
-        this.characterForm.patchValue(item, { emitEvent: false });
+        this.characterForm.patchValue({
+          ...item
+        }, { emitEvent: false });
 
         // Patch equipment specifically if it's in the character model format
         if (item.equipment) {
@@ -281,18 +283,15 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
       this.calculateSpellcasting();
     });
 
-    this.characterForm.get('race')?.valueChanges.subscribe(race => {
-      if (race !== Race.Dragonborn) {
+    this.characterForm.get('raceId')?.valueChanges.subscribe(raceId => {
+      const dragonbornId = this.mapperService.getRaceId(Race.Dragonborn);
+      if (Number(raceId) !== dragonbornId) {
         this.characterForm.get('dragonbornColor')?.setValue(null, { emitEvent: false });
       }
     });
 
-    this.characterForm.get('class')?.valueChanges.subscribe(className => {
-      if (className) {
-        const classIndex = Object.values(Class).indexOf(className);
-        if (classIndex !== -1) {
-          this.characterForm.patchValue({ classId: classIndex + 1 });
-        }
+    this.characterForm.get('classId')?.valueChanges.subscribe(classId => {
+      if (classId !== null && classId !== undefined) {
         this.calculateSpellcasting();
       }
     });
@@ -363,8 +362,8 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
     return 'characters';
   }
 
-  private createEmptySpellSlots(): any {
-    const slots: any = {};
+  private createEmptySpellSlots(): Record<number, FormGroup> {
+    const slots: Record<number, FormGroup> = {};
     for (let i = 1; i <= 9; i++) {
       slots[i] = this.fb.group({ current: [0], max: [0] });
     }
@@ -374,9 +373,9 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
   private resetForm() {
     this.resistancesArray.clear();
     this.characterForm.reset({
-      race: Race.Human,
+      raceId: this.mapperService.getRaceId(Race.Human),
       dragonbornColor: null,
-      class: Class.Fighter,
+      classId: this.mapperService.getClassId(Class.Fighter),
       level: 1,
       proficiencyBonus: 2,
       hp: {
@@ -417,63 +416,90 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
 
   onSave(): void {
     if (this.characterForm.valid) {
-      const rawValues = this.characterForm.getRawValue();
-      const character = { ...rawValues };
-
-      // Ensure isCustom is set
-      character.isCustom = true;
-
-      // Ensure AC is removed
-      delete character.ac;
-
-      // Ensure dragonbornColor is removed if not Dragonborn
-      if (character.race !== Race.Dragonborn) {
-        delete character.dragonbornColor;
-      }
-
-      // Ensure isSpellcaster is removed if it somehow got in
-      delete character.isSpellcaster;
-
-      // Convert resistances array to object
-      const resistanceObj: any = {};
-      character.state.resistances.forEach((res: any) => {
-        resistanceObj[res.damageType] = res.resistanceType;
-      });
-      character.state.resistances = resistanceObj;
-
-      // Transform equipment form values to Equipment model
-      const eqForm = rawValues.equipment;
-      const equipment: Equipment = {
-        armorId: eqForm.armorId || undefined,
-        hasShieldEquipped: eqForm.hasShieldEquipped || false,
-        primarySlot: eqForm.primaryWeaponId ? [{ weaponId: eqForm.primaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
-        secondarySlot: eqForm.secondaryWeaponId ? [{ weaponId: eqForm.secondaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
-        rangedSlot: eqForm.rangedWeaponId ? [{ weaponId: eqForm.rangedWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
-      };
-      character.equipment = equipment;
-
-      if (!this.itemToEdit()) {
-        character.state.currentHp = character.hp.value;
-        character.state.maxHp = character.hp.value;
-        character.state.tempHp = 0;
-        character.state.hitDie = character.hp.hitDie;
-        character.state.conditions = {};
-        character.state.deathSaves = { successes: 0, failures: 0 };
-        character.state.isStable = true;
-        character.state.isDead = false;
-        character.state.initiative = 0;
-      } else {
-        // Update state if HP changed
-        character.state.maxHp = character.hp.value;
-        if (character.state.currentHp > character.state.maxHp) {
-          character.state.currentHp = character.state.maxHp;
-        }
-        character.state.hitDie = character.hp.hitDie;
-      }
-
+      const character = this.prepareCharacterObject();
       this.saveEntity(character);
     } else {
       this.characterForm.markAllAsTouched();
     }
+  }
+
+  /**
+   * Helper to prepare the character object from form values.
+   * Useful for both saving and testing/exporting.
+   */
+  private prepareCharacterObject(): Character {
+    const rawValues = this.characterForm.getRawValue();
+    const character = { ...rawValues };
+
+    // Ensure isCustom is set
+    character.isCustom = true;
+
+    // Ensure AC is removed (calculated from equipment/stats)
+    delete character.ac;
+
+    // Ensure dragonbornColor is removed if not Dragonborn
+    const dragonbornId = this.mapperService.getRaceId(Race.Dragonborn);
+    if (Number(character.raceId) !== dragonbornId) {
+      delete character.dragonbornColor;
+    }
+
+    // Ensure isSpellcaster is removed if it somehow got in
+    delete character.isSpellcaster;
+
+    // Convert resistances array to object
+    const resistanceObj: Record<string, ResistanceType> = {};
+    if (character.state.resistances && Array.isArray(character.state.resistances)) {
+      character.state.resistances.forEach((res: { damageType: string; resistanceType: ResistanceType }) => {
+        resistanceObj[res.damageType] = res.resistanceType;
+      });
+    }
+    character.state.resistances = resistanceObj;
+
+    // Transform equipment form values to Equipment model
+    const eqForm = rawValues.equipment;
+    const equipment: Equipment = {
+      armorId: eqForm.armorId || undefined,
+      hasShieldEquipped: eqForm.hasShieldEquipped || false,
+      primarySlot: eqForm.primaryWeaponId ? [{ weaponId: eqForm.primaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
+      secondarySlot: eqForm.secondaryWeaponId ? [{ weaponId: eqForm.secondaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
+      rangedSlot: eqForm.rangedWeaponId ? [{ weaponId: eqForm.rangedWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
+    };
+    character.equipment = equipment;
+
+    if (!this.itemToEdit()) {
+      character.state.currentHp = character.hp.value;
+      character.state.maxHp = character.hp.value;
+      character.state.tempHp = 0;
+      character.state.hitDie = character.hp.hitDie;
+      character.state.conditions = {};
+      character.state.deathSaves = { successes: 0, failures: 0 };
+      character.state.isStable = true;
+      character.state.isDead = false;
+      character.state.initiative = 0;
+    } else {
+      // Update state if HP changed
+      character.state.maxHp = character.hp.value;
+      if (character.state.currentHp > character.state.maxHp) {
+        character.state.currentHp = character.state.maxHp;
+      }
+      character.state.hitDie = character.hp.hitDie;
+    }
+
+    return character;
+  }
+
+  /**
+   * Exports the current character as a JSON file for testing.
+   */
+  exportToJson(): void {
+    const character = this.prepareCharacterObject();
+    const serializedCharacter = this.mapperService.serializeKeys(character);
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(serializedCharacter, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `${character.name || 'character'}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   }
 }

@@ -31,10 +31,10 @@
             <div class="grid">
               <div class="col-12 md:col-3">
                 <label for="race" class="font-bold block mb-1">Race</label>
-                <p-select id="race" [options]="races" formControlName="race" optionLabel="label" optionValue="value" placeholder="Select Race" appendTo="body"></p-select>
+                <p-select id="race" [options]="races" formControlName="raceId" optionLabel="label" optionValue="value" placeholder="Select Race" appendTo="body"></p-select>
               </div>
 
-              @if (characterForm.get('race')?.value === Race.Dragonborn) {
+              @if (Number(characterForm.get('raceId')?.value) === mapperService.getRaceId(Race.Dragonborn)) {
                 <div class="col-12 md:col-3">
                   <label for="dragonbornColor" class="font-bold block mb-1">Color</label>
                   <p-select id="dragonbornColor" [options]="dragonbornColors" formControlName="dragonbornColor" optionLabel="label" optionValue="value" placeholder="Select Color" appendTo="body"></p-select>
@@ -43,7 +43,7 @@
 
               <div class="col-12 md:col-3">
                 <label for="class" class="font-bold block mb-1">Class</label>
-                <p-select id="class" [options]="classes" formControlName="class" optionLabel="label" optionValue="value" placeholder="Select Class" appendTo="body"></p-select>
+                <p-select id="class" [options]="classes" formControlName="classId" optionLabel="label" optionValue="value" placeholder="Select Class" appendTo="body"></p-select>
               </div>
 
               <div class="col-12 md:col-3">
@@ -175,9 +175,14 @@
       <p-message severity="error" [text]="error()!" class="block mt-3"></p-message>
     }
 
-    <div class="flex justify-content-end gap-2 mt-4">
-      <p-button label="Cancel" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="close()" [disabled]="loading()"></p-button>
-      <p-button [label]="itemToEdit() ? 'Update' : 'Create'" [icon]="loading() ? 'pi pi-spin pi-spinner' : 'pi pi-check'" (onClick)="onSave()" [disabled]="loading()"></p-button>
+    <div class="flex justify-content-between align-items-center mt-4">
+      <div>
+        <p-button label="Export JSON" icon="pi pi-download" severity="info" [text]="true" (onClick)="exportToJson()" tooltipPosition="top" pTooltip="Download character data as JSON for testing"></p-button>
+      </div>
+      <div class="flex gap-2">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="close()" [disabled]="loading()"></p-button>
+        <p-button [label]="itemToEdit() ? 'Update' : 'Create'" [icon]="loading() ? 'pi pi-spin pi-spinner' : 'pi pi-check'" (onClick)="onSave()" [disabled]="loading()"></p-button>
+      </div>
     </div>
   </form>
 </p-dialog>

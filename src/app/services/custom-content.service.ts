@@ -110,14 +110,14 @@ export class CustomContentService {
     };
 
     const targetSignal = signalMap[type];
-    targetSignal.update(items => {
+    (targetSignal as any).update((items: any[]) => {
       const index = items.findIndex(i => i.id === entity.id);
       if (index > -1) {
         const newItems = [...items];
-        newItems[index] = entity as any;
+        newItems[index] = entity;
         return newItems;
       }
-      return [...items, entity as any];
+      return [...items, entity];
     });
 
     // Refresh limits if needed (though backend is source of truth,
@@ -133,8 +133,8 @@ export class CustomContentService {
       equipment: this._customEquipment
     };
 
-    const targetSignal = signalMap[type];
-    (targetSignal as any).update((items: any[]) => items.filter(i => i.id !== id));
+    const targetSignal = signalMap[type] as any;
+    targetSignal.update((items: any[]) => items.filter((i: any) => i.id !== id));
     this.subscriptionService.fetchLimits();
   }
 

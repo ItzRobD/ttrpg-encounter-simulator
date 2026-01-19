@@ -21,6 +21,7 @@ import { CharacterService } from '../../services/character.service';
 import { EquipmentService } from '../../services/equipment.service';
 import { CrFormatPipe } from '../../pipes/cr-format.pipe';
 import { EntityService } from '../../services/entity.service.interface';
+import { MapperService } from '../../services/mapper.service';
 import {
   Entity,
   EntitySummary,
@@ -60,6 +61,7 @@ export class SharedTable {
   private readonly equipmentService = inject(EquipmentService);
   private readonly spellsService = inject(SpellsService);
   private readonly breakpointObserver = inject(BreakpointObserver);
+  protected readonly mapperService = inject(MapperService);
 
   public readonly mode = input<'monster' | 'character' | 'equipment' | 'spells'>('monster');
   public readonly searchTerm = input('');

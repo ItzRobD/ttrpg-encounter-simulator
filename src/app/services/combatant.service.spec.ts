@@ -34,10 +34,10 @@ describe('CombatantService', () => {
   const mockCharacter = {
     ...mockMonster,
     name: 'Fighter',
-    class: Class.Fighter,
-    race: Race.Human,
+    classId: 5, // Fighter
+    raceId: 4, // Human
     level: 1
-  } as Character;
+  } as unknown as Character;
 
   beforeEach(() => {
     localStorageSpy = {

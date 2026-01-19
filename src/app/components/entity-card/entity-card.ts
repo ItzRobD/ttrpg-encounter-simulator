@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
+import { MapperService } from '../../services/mapper.service';
 import {
   Character,
   Class,
@@ -62,6 +63,7 @@ import { EquipmentService } from '../../services/equipment.service';
 })
 export class EntityCard {
   private readonly equipmentService = inject(EquipmentService);
+  protected readonly mapperService = inject(MapperService);
   protected readonly DiceType = DiceType;
   public readonly gradientStop = input<string>('50%');
   public readonly entity = input.required<Entity>();

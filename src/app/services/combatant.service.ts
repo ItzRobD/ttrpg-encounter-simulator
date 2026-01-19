@@ -186,7 +186,9 @@ export class CombatantService {
       id: 100,
       instanceId: 0,
       name: 'Bob',
+      raceId: 4, // Human
       race: Race.Human,
+      classId: 5, // Fighter
       class: Class.Fighter,
       level: 1,
       asConfig: {
@@ -443,7 +445,9 @@ export class CombatantService {
       id: 1,
       instanceId: 0,
       name: 'Valerius the Brave',
+      raceId: 4, // Human
       race: Race.Human,
+      classId: 7, // Paladin
       class: Class.Paladin,
       level: 5,
       asConfig: {

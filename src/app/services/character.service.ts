@@ -112,22 +112,11 @@ export class CharacterService implements EntityService<Character, CharacterSumma
           }
 
           return rawData.map((c) => {
-            const charData = c as Record<string, unknown>;
-            const mapped = this.mapperService.mapKeys(c) as Record<string, unknown>;
-
-            // Map IDs to Enums (1-based index)
-            if (charData['race_id']) {
-              const raceId = charData['race_id'] as number;
-              mapped['race'] = Object.values(Race)[raceId - 1] as Race;
-              mapped['raceId'] = raceId;
-            }
-            if (charData['class_id']) {
-              const classId = charData['class_id'] as number;
-              mapped['class'] = Object.values(Class)[classId - 1] as Class;
-              mapped['classId'] = classId;
-            }
-
-            return mapped as unknown as CharacterSummary;
+            const mapped = this.mapperService.mapKeys(c) as CharacterSummary;
+            // Inject display names for components that still expect .race and .class
+            mapped.race = this.mapperService.getRaceName(mapped.raceId);
+            mapped.class = this.mapperService.getClassName(mapped.classId);
+            return mapped;
           });
         }),
         tap((summaries) => {
@@ -163,21 +152,9 @@ export class CharacterService implements EntityService<Character, CharacterSumma
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        const respRecord = response as Record<string, unknown>;
-        const mapped = this.mapperService.mapKeys(response) as unknown as Character;
-
-        // Map IDs to Enums if they are still IDs
-        if (respRecord['race_id'] && typeof mapped.race !== 'string') {
-          const raceId = respRecord['race_id'] as number;
-          mapped.race = Object.values(Race)[raceId - 1] as Race;
-          mapped.raceId = raceId;
-        }
-        if (respRecord['class_id'] && typeof mapped.class !== 'string') {
-          const classId = respRecord['class_id'] as number;
-          mapped.class = Object.values(Class)[classId - 1] as Class;
-          mapped.classId = classId;
-        }
-
+        const mapped = this.mapperService.mapKeys(response) as Character;
+        mapped.race = this.mapperService.getRaceName(mapped.raceId);
+        mapped.class = this.mapperService.getClassName(mapped.classId);
         return mapped;
       }),
       tap((character) => {

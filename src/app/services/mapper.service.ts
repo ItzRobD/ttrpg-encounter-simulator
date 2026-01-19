@@ -1,10 +1,55 @@
 import { Injectable } from '@angular/core';
-import { Entity, EventType, SimulationEvent, SimulationLog, TimelineNode } from '../models';
+import { Entity, EventType, SimulationEvent, SimulationLog, TimelineNode, Race, Class, WeaponSlotData } from '../models';
 
 @Injectable({
   providedIn: 'root',
 })
 export class MapperService {
+  private readonly raceMap: Record<Race, number> = {
+    [Race.Dwarf]: 0,
+    [Race.Dragonborn]: 1,
+    [Race.Elf]: 2,
+    [Race.Halfling]: 3,
+    [Race.Human]: 4,
+    [Race.Gnome]: 5,
+    [Race.HalfElf]: 6,
+    [Race.HalfOrc]: 7,
+    [Race.Tiefling]: 8
+  };
+
+  private readonly classMap: Record<Class, number> = {
+    [Class.Artificer]: 0,
+    [Class.Barbarian]: 1,
+    [Class.Bard]: 2,
+    [Class.Cleric]: 3,
+    [Class.Druid]: 4,
+    [Class.Fighter]: 5,
+    [Class.Monk]: 6,
+    [Class.Paladin]: 7,
+    [Class.Ranger]: 8,
+    [Class.Rogue]: 9,
+    [Class.Sorcerer]: 10,
+    [Class.Warlock]: 11,
+    [Class.Wizard]: 12
+  };
+  public getRaceName(raceId: number): string {
+    const entry = Object.entries(this.raceMap).find(([_, id]) => id === raceId);
+    return entry ? entry[0] : 'Unknown Race';
+  }
+
+  public getClassName(classId: number): string {
+    const entry = Object.entries(this.classMap).find(([_, id]) => id === classId);
+    return entry ? entry[0] : 'Unknown Class';
+  }
+
+  public getRaceId(race: Race): number {
+    return this.raceMap[race];
+  }
+
+  public getClassId(clazz: Class): number {
+    return this.classMap[clazz];
+  }
+
   /**
    * Transforms a raw gzipped JSON log into a hierarchical tree for the UI.
    * Expects the events array.
@@ -119,15 +164,17 @@ export class MapperService {
       result[camelKey] = this.mapKeys(response[key]);
     });
 
-    // Handle class_id and race_id explicitly to ensure both snake_case and camelCase keys are available
-    // for type guards and mapping logic that might look for either.
-    if (response['class_id'] !== undefined) {
-      result['class_id'] = response['class_id'];
-      result['classId'] = response['class_id'];
-    }
+    // Ensure raceId and classId are present and numeric
     if (response['race_id'] !== undefined) {
-      result['race_id'] = response['race_id'];
-      result['raceId'] = response['race_id'];
+      result['raceId'] = Number(response['race_id']);
+    } else if (response['race'] !== undefined && typeof response['race'] === 'string') {
+      result['raceId'] = this.raceMap[response['race'] as Race] ?? 0;
+    }
+
+    if (response['class_id'] !== undefined) {
+      result['classId'] = Number(response['class_id']);
+    } else if (response['class'] !== undefined && typeof response['class'] === 'string') {
+      result['classId'] = this.classMap[response['class'] as Class] ?? 0;
     }
 
     // Explicitly ensure AC and HP are mapped if they exist in the response
@@ -166,14 +213,14 @@ export class MapperService {
     // 2. Map Equipment
     const rawEquipment = response['equipment'] as Record<string, unknown> | undefined;
     if (rawEquipment) {
-      const mapWeaponSlot = (slotData: unknown[]): any[] => {
+      const mapWeaponSlot = (slotData: unknown[]): WeaponSlotData[] => {
         if (!Array.isArray(slotData)) return [];
         return slotData.map(item => {
           const itemRecord = item as Record<string, unknown>;
           return {
-            weaponId: itemRecord['weapon_id'] || itemRecord['id'],
+            weaponId: itemRecord['weapon_id'] as string | number || itemRecord['id'] as string | number,
             isProficient: !!itemRecord['is_proficient'],
-            modifiers: this.mapKeys(itemRecord['modifiers'] || {})
+            modifiers: this.mapKeys(itemRecord['modifiers'] || {}) as any
           };
         });
       };
@@ -413,14 +460,16 @@ export class MapperService {
   /**
    * Recursively converts object keys from camelCase to snake_case for the backend.
    */
-  serializeKeys(obj: any): any {
+  serializeKeys<T>(obj: T): any {
     if (Array.isArray(obj)) {
       return obj.map((v) => this.serializeKeys(v));
     } else if (obj !== null && typeof obj === 'object') {
-      const result: any = {};
+      const result: Record<string, any> = {};
+
       Object.keys(obj).forEach((key) => {
         let snakeKey = key;
 
+        const typedObj = obj as Record<string, any>;
         // Special mappings for D&D acronyms to prevent over-segmentation
         // (e.g., spellSaveDC -> spell_save_dc instead of spell_save_d_c)
         if (key === 'spellSaveDC') {
@@ -467,7 +516,7 @@ export class MapperService {
           }
         }
 
-        result[snakeKey] = this.serializeKeys(obj[key]);
+        result[snakeKey] = this.serializeKeys(typedObj[key]);
       });
       return result;
     }

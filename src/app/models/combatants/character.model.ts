@@ -11,23 +11,23 @@ import {
 import {Entity, EntitySummary} from './entity.model';
 
 export interface Character extends Entity {
-  race: Race;
+  raceId: number;
+  race?: string; // Virtual property for UI display
   dragonbornColor?: DragonbornColor;
-  class: Class;
+  classId: number;
+  class?: string; // Virtual property for UI display
   level: number;
-  classId?: number;
-  raceId?: number;
   equipment?: Equipment;
   specialAbilities?: SpecialAbilities;
 }
 
 export interface CharacterSummary extends EntitySummary {
-  race: Race;
+  raceId: number;
+  race?: string; // Virtual property for UI display
   dragonbornColor?: DragonbornColor;
-  class: Class;
+  classId: number;
+  class?: string; // Virtual property for UI display
   level: number;
-  classId?: number;
-  raceId?: number;
   isSpellcaster: boolean;
   armorName?: string;
   weapons?: string[];
