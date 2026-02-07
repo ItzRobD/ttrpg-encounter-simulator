@@ -1,6 +1,9 @@
 package core
 
-import "strings"
+import (
+	"math"
+	"strings"
+)
 
 type Ability string
 
@@ -46,7 +49,7 @@ type AbilityScores struct {
 	Charisma     int `json:"charisma"`
 }
 
-func (as *AbilityScores) GetScore(ability Ability) int {
+func (as *AbilityScores) Get(ability Ability) int {
 	switch ability {
 	case AbilityStrength:
 		return as.Strength
@@ -85,7 +88,35 @@ type AbilityScoresProficiencies struct {
 	Charisma     bool `json:"charisma"`
 }
 
-func (as *AbilityScoresProficiencies) GetScore(ability Ability) bool {
+func (as *AbilityScoresProficiencies) Get(ability Ability) bool {
+	switch ability {
+	case AbilityStrength:
+		return as.Strength
+	case AbilityDexterity:
+		return as.Dexterity
+	case AbilityConstitution:
+		return as.Constitution
+	case AbilityIntelligence:
+		return as.Intelligence
+	case AbilityWisdom:
+		return as.Wisdom
+	case AbilityCharisma:
+		return as.Charisma
+	default:
+		return false
+	}
+}
+
+type SaveProficiencies struct {
+	Strength     bool `json:"strength"`
+	Dexterity    bool `json:"dexterity"`
+	Constitution bool `json:"constitution"`
+	Intelligence bool `json:"intelligence"`
+	Wisdom       bool `json:"wisdom"`
+	Charisma     bool `json:"charisma"`
+}
+
+func (as *SaveProficiencies) Get(ability Ability) bool {
 	switch ability {
 	case AbilityStrength:
 		return as.Strength
@@ -115,16 +146,20 @@ func NewAbilityScoresProficiencies(strength, dexterity, constitution, intelligen
 	}
 }
 
-type AbilityScoresConfig struct {
+type Abilities struct {
 	AbilityScores AbilityScores              `json:"ability_scores"`
 	Proficiencies AbilityScoresProficiencies `json:"proficiencies"`
 }
 
-type SaveProficiencies struct {
-	Strength     int `json:"strength"`
-	Dexterity    int `json:"dexterity"`
-	Constitution int `json:"constitution"`
-	Intelligence int `json:"intelligence"`
-	Wisdom       int `json:"wisdom"`
-	Charisma     int `json:"charisma"`
+func (a *Abilities) GetScore(ability Ability) int {
+	return a.AbilityScores.Get(ability)
+}
+
+func (a *Abilities) GetIsProficientInAbility(ability Ability) bool {
+	return a.Proficiencies.Get(ability)
+}
+
+func (a *Abilities) GetAbilityModifier(ability Ability) int {
+	score := a.AbilityScores.Get(ability)
+	return int(math.Floor(float64(score-10) / 2.0))
 }

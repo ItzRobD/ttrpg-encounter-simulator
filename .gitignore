@@ -107,5 +107,20 @@ fabric.properties
 .env
 
 #jet folder
-/5e-encounter-simulator/
+/.gen/5e-encounter-simulator/
 .gen/
+
+# Don't upload backend test data
+*.json
+*.http
+*.zip
+*.csv
+*.sql
+
+# Don't upload plan data but allow readme
+*.md
+*.txt
+!readme.md
+
+# Scripts
+*.py

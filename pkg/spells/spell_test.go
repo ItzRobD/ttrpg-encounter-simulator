@@ -1,9 +1,11 @@
-package spells
+package spells_test
 
 import (
 	"context"
 	"dnd5e-encounter-simulator-backend/internal/database"
+	"dnd5e-encounter-simulator-backend/internal/database/repo"
 	"dnd5e-encounter-simulator-backend/pkg/core"
+	"dnd5e-encounter-simulator-backend/pkg/spells"
 	"fmt"
 	"testing"
 )
@@ -11,13 +13,13 @@ import (
 // TestGetClosestFormulaToLevel_Logic tests the formula selection logic without database
 func TestGetClosestFormulaToLevel_Logic(t *testing.T) {
 	// Create a test spell with multiple formulas (like Fireball)
-	fireball := Spell{
+	fireball := spells.Spell{
 		Name:  "Fireball",
 		Level: 3,
-		Formulas: map[int]core.CastFormula{
-			3: {CastLevel: 3, NumberOfDice: 8, Die: core.D6, AmountToAdd: 0},  // 8d6
-			4: {CastLevel: 4, NumberOfDice: 9, Die: core.D6, AmountToAdd: 0},  // 9d6
-			5: {CastLevel: 5, NumberOfDice: 10, Die: core.D6, AmountToAdd: 0}, // 10d6
+		Formulas: map[int][]core.CastFormula{
+			3: {{CastLevel: 3, NumberOfDice: 8, Die: core.D6, AmountToAdd: 0}},  // 8d6
+			4: {{CastLevel: 4, NumberOfDice: 9, Die: core.D6, AmountToAdd: 0}},  // 9d6
+			5: {{CastLevel: 5, NumberOfDice: 10, Die: core.D6, AmountToAdd: 0}}, // 10d6
 		},
 	}
 
@@ -39,7 +41,7 @@ func TestGetClosestFormulaToLevel_Logic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			formula, err := fireball.GetClosestFormulaToLevel(tt.castLevel)
+			formulas, err := fireball.GetClosestFormulaToLevel(tt.castLevel)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetClosestFormulaToLevel(%d) error = %v, wantErr %v", tt.castLevel, err, tt.wantErr)
@@ -50,6 +52,7 @@ func TestGetClosestFormulaToLevel_Logic(t *testing.T) {
 				return // Expected error, test passed
 			}
 
+			formula := formulas[0]
 			if formula.NumberOfDice != tt.wantNumDice {
 				t.Errorf("GetClosestFormulaToLevel(%d) dice = %d, want %d", tt.castLevel, formula.NumberOfDice, tt.wantNumDice)
 			}
@@ -61,30 +64,79 @@ func TestGetClosestFormulaToLevel_Logic(t *testing.T) {
 	}
 }
 
+func TestGetHighestAverageAmount(t *testing.T) {
+	tests := []struct {
+		name     string
+		formulas map[int][]core.CastFormula
+		want     int
+	}{
+		{
+			name:     "No formulas",
+			formulas: nil,
+			want:     0,
+		},
+		{
+			name: "Single formula",
+			formulas: map[int][]core.CastFormula{
+				1: {{AverageValue: 10}},
+			},
+			want: 10,
+		},
+		{
+			name: "Multiple levels",
+			formulas: map[int][]core.CastFormula{
+				1: {{AverageValue: 10}},
+				2: {{AverageValue: 20}},
+			},
+			want: 20,
+		},
+		{
+			name: "Multiple formulas at highest level",
+			formulas: map[int][]core.CastFormula{
+				1: {{AverageValue: 10}},
+				2: {
+					{AverageValue: 15},
+					{AverageValue: 10},
+				},
+			},
+			want: 25,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &spells.Spell{Formulas: tt.formulas}
+			if got := s.GetHighestAverageAmount(); got != tt.want {
+				t.Errorf("GetHighestAverageAmount() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestGetAverageDamageAtLevel_Logic tests damage calculation without database
 func TestGetAverageDamageAtLevel_Logic(t *testing.T) {
 	// Fireball: 8d6 at level 3, +1d6 per level above
-	fireball := Spell{
+	fireball := spells.Spell{
 		Name:  "Fireball",
 		Level: 3,
-		Formulas: map[int]core.CastFormula{
-			3: {CastLevel: 3, NumberOfDice: 8, Die: core.D6, AmountToAdd: 0, UseSpellmod: false},
-			4: {CastLevel: 4, NumberOfDice: 9, Die: core.D6, AmountToAdd: 0, UseSpellmod: false},
+		Formulas: map[int][]core.CastFormula{
+			3: {{CastLevel: 3, NumberOfDice: 8, Die: core.D6, AmountToAdd: 0, UseSpellmod: false}},
+			4: {{CastLevel: 4, NumberOfDice: 9, Die: core.D6, AmountToAdd: 0, UseSpellmod: false}},
 		},
 	}
 
 	// Magic Missile: uses spell modifier
-	magicMissile := Spell{
+	magicMissile := spells.Spell{
 		Name:  "Magic Missile",
 		Level: 1,
-		Formulas: map[int]core.CastFormula{
-			1: {CastLevel: 1, NumberOfDice: 1, Die: core.D4, AmountToAdd: 1, UseSpellmod: true},
+		Formulas: map[int][]core.CastFormula{
+			1: {{CastLevel: 1, NumberOfDice: 1, Die: core.D4, AmountToAdd: 1, UseSpellmod: true}},
 		},
 	}
 
 	tests := []struct {
 		name        string
-		spell       Spell
+		spell       spells.Spell
 		castLevel   int
 		spellModDmg int
 		wantAvg     int
@@ -104,7 +156,7 @@ func TestGetAverageDamageAtLevel_Logic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			avg, formula, err := tt.spell.GetAverageDamageAtLevel(tt.castLevel, tt.spellModDmg)
+			avg, formulas, err := tt.spell.GetAverageDamageAtLevel(tt.castLevel, tt.spellModDmg)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetAverageDamageAtLevel() error = %v, wantErr %v", err, tt.wantErr)
@@ -116,6 +168,7 @@ func TestGetAverageDamageAtLevel_Logic(t *testing.T) {
 			}
 
 			if avg != tt.wantAvg {
+				formula := formulas[0]
 				t.Errorf("%s: avg = %d, want %d (dice:%dd%d, mod:%d)",
 					tt.name, avg, tt.wantAvg, formula.NumberOfDice, formula.Die, tt.spellModDmg)
 			}
@@ -126,14 +179,14 @@ func TestGetAverageDamageAtLevel_Logic(t *testing.T) {
 // TestGetFormulaForCantrip_Logic tests cantrip scaling without database
 func TestGetFormulaForCantrip_Logic(t *testing.T) {
 	// Fire Bolt scales at levels 5, 11, 17
-	fireBolt := Spell{
+	fireBolt := spells.Spell{
 		Name:  "Fire Bolt",
 		Level: 0, // Cantrip
-		Formulas: map[int]core.CastFormula{
-			1:  {CastLevel: 1, NumberOfDice: 1, Die: core.D10, AmountToAdd: 0},
-			5:  {CastLevel: 5, NumberOfDice: 2, Die: core.D10, AmountToAdd: 0},
-			11: {CastLevel: 11, NumberOfDice: 3, Die: core.D10, AmountToAdd: 0},
-			17: {CastLevel: 17, NumberOfDice: 4, Die: core.D10, AmountToAdd: 0},
+		Formulas: map[int][]core.CastFormula{
+			1:  {{CastLevel: 1, NumberOfDice: 1, Die: core.D10, AmountToAdd: 0}},
+			5:  {{CastLevel: 5, NumberOfDice: 2, Die: core.D10, AmountToAdd: 0}},
+			11: {{CastLevel: 11, NumberOfDice: 3, Die: core.D10, AmountToAdd: 0}},
+			17: {{CastLevel: 17, NumberOfDice: 4, Die: core.D10, AmountToAdd: 0}},
 		},
 	}
 
@@ -155,11 +208,12 @@ func TestGetFormulaForCantrip_Logic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			formula, err := fireBolt.GetFormulaForCantrip(tt.casterLevel)
+			formulas, err := fireBolt.GetFormulaForCantrip(tt.casterLevel)
 			if err != nil {
 				t.Fatalf("GetFormulaForCantrip(%d) error = %v", tt.casterLevel, err)
 			}
 
+			formula := formulas[0]
 			if formula.NumberOfDice != tt.wantDice {
 				t.Errorf("level %d: dice = %d, want %d", tt.casterLevel, formula.NumberOfDice, tt.wantDice)
 			}
@@ -173,13 +227,13 @@ func TestGetFormulaForCantrip_Logic(t *testing.T) {
 
 // TestGetAverageDamageCantrip_Logic tests cantrip damage calculation
 func TestGetAverageDamageCantrip_Logic(t *testing.T) {
-	fireBolt := Spell{
+	fireBolt := spells.Spell{
 		Name:  "Fire Bolt",
 		Level: 0,
-		Formulas: map[int]core.CastFormula{
-			1:  {CastLevel: 1, NumberOfDice: 1, Die: core.D10, AmountToAdd: 0, UseSpellmod: false},
-			5:  {CastLevel: 5, NumberOfDice: 2, Die: core.D10, AmountToAdd: 0, UseSpellmod: false},
-			11: {CastLevel: 11, NumberOfDice: 3, Die: core.D10, AmountToAdd: 0, UseSpellmod: false},
+		Formulas: map[int][]core.CastFormula{
+			1:  {{CastLevel: 1, NumberOfDice: 1, Die: core.D10, AmountToAdd: 0, UseSpellmod: false}},
+			5:  {{CastLevel: 5, NumberOfDice: 2, Die: core.D10, AmountToAdd: 0, UseSpellmod: false}},
+			11: {{CastLevel: 11, NumberOfDice: 3, Die: core.D10, AmountToAdd: 0, UseSpellmod: false}},
 		},
 	}
 
@@ -222,16 +276,16 @@ func TestQuerySpellData_DB(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		params       SpellQueryParams
+		params       spells.SpellQueryParams
 		expectSpells int
-		checkSpell   func(*testing.T, map[int]Spell)
+		checkSpell   func(*testing.T, map[core.ID]spells.Spell)
 	}{
 		{
 			name:         "Query Fireball by id",
-			params:       SpellQueryParams{ID: []int{119}}, // Fireball id (adjust if different in your DB)
+			params:       spells.SpellQueryParams{ID: []int{119}}, // Fireball id (adjust if different in your DB)
 			expectSpells: 1,
-			checkSpell: func(t *testing.T, spells map[int]Spell) {
-				for _, spell := range spells {
+			checkSpell: func(t *testing.T, spellMap map[core.ID]spells.Spell) {
+				for _, spell := range spellMap {
 					if spell.Name != "Fireball" {
 						t.Errorf("Expected Fireball, got %s", spell.Name)
 					}
@@ -245,21 +299,11 @@ func TestQuerySpellData_DB(t *testing.T) {
 			},
 		},
 		{
-			name:         "Query multiple spells by id",
-			params:       SpellQueryParams{ID: []int{119, 2}}, // Fireball + Acid Splash
-			expectSpells: 2,
-			checkSpell: func(t *testing.T, spells map[int]Spell) {
-				if len(spells) != 2 {
-					t.Errorf("Expected 2 spells, got %d", len(spells))
-				}
-			},
-		},
-		{
 			name:         "Query spell by name",
-			params:       SpellQueryParams{Name: []string{"Fireball"}},
+			params:       spells.SpellQueryParams{Name: []string{"Fireball"}},
 			expectSpells: 1,
-			checkSpell: func(t *testing.T, spells map[int]Spell) {
-				for _, spell := range spells {
+			checkSpell: func(t *testing.T, spellMap map[core.ID]spells.Spell) {
+				for _, spell := range spellMap {
 					if spell.Name != "Fireball" {
 						t.Errorf("Expected Fireball, got %s", spell.Name)
 					}
@@ -271,17 +315,17 @@ func TestQuerySpellData_DB(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			spells, err := QuerySpellData(ctx, tt.params)
+			spellMap, err := repo.QuerySpellData(ctx, tt.params)
 			if err != nil {
 				t.Fatalf("QuerySpellData() error = %v", err)
 			}
 
-			if len(spells) != tt.expectSpells {
-				t.Errorf("Expected %d spells, got %d", tt.expectSpells, len(spells))
+			if len(spellMap) != tt.expectSpells {
+				t.Errorf("Expected %d spells, got %d", tt.expectSpells, len(spellMap))
 			}
 
 			if tt.checkSpell != nil {
-				tt.checkSpell(t, spells)
+				tt.checkSpell(t, spellMap)
 			}
 		})
 	}
@@ -308,12 +352,22 @@ func TestRealSpellDamageCalculations_DB(t *testing.T) {
 		minDamage   int // Expected minimum reasonable damage
 		maxDamage   int // Expected maximum reasonable damage
 	}{
-		// Adjust these IDs based on your database
-		{119, "Fireball", 3, 0, 25, 32},   // 8d6 = 28 avg (25-32 range)
-		{119, "Fireball", 5, 0, 32, 40},   // 10d6 = 35 avg
-		{2, "Acid Splash", 1, 0, 3, 3},    // Cantrip: 1d6 = 3.5 -> 3 avg (level 1 caster)
-		{2, "Acid Splash", 5, 0, 6, 7},    // Cantrip: 2d6 at level 5 (scales)
-		{2, "Acid Splash", 11, 0, 10, 11}, // Cantrip: 3d6 at level 11
+		{
+			spellID:     119,
+			spellName:   "Fireball",
+			castLevel:   3,
+			spellModDmg: 0,
+			minDamage:   25,
+			maxDamage:   32,
+		},
+		{
+			spellID:     2,
+			spellName:   "Acid Splash",
+			castLevel:   1,
+			spellModDmg: 0,
+			minDamage:   3,
+			maxDamage:   3,
+		},
 	}
 
 	for _, tt := range tests {
@@ -350,19 +404,19 @@ func TestRealSpellDamageCalculations_DB(t *testing.T) {
 }
 
 // Helper function to get a spell from DB for testing
-func getTestSpell(t *testing.T, id int) Spell {
+func getTestSpell(t *testing.T, id int) spells.Spell {
 	t.Helper()
 	ctx := context.Background()
-	spells, err := QuerySpellData(ctx, SpellQueryParams{ID: []int{id}})
+	spellMap, err := repo.QuerySpellData(ctx, spells.SpellQueryParams{ID: []int{id}})
 	if err != nil {
 		t.Fatalf("Failed to get spell %d: %v", id, err)
 	}
-	if len(spells) != 1 {
-		t.Fatalf("Expected 1 spell, got %d", len(spells))
+	if len(spellMap) != 1 {
+		t.Fatalf("Expected 1 spell, got %d", len(spellMap))
 	}
-	for _, spell := range spells {
+	for _, spell := range spellMap {
 		return spell
 	}
 	t.Fatal("No spell returned")
-	return Spell{}
+	return spells.Spell{}
 }

@@ -1,55 +1,101 @@
 package core
 
-import (
-	"fmt"
-)
+import "strings"
 
-type TargetType int
+type Decision string
 
 const (
-	TTDamage TargetType = iota
-	TTHealing
+	DecisionAttack    Decision = "attack"
+	DecisionHeal      Decision = "heal"
+	DecisionLegendary Decision = "legendary"
 )
 
-type AIRequestType int
+type ActionPreference string
 
 const (
-	AIReqNormalAction AIRequestType = iota
-	AIReqLegendaryAction
-	AIReqOffhandAttack
-	AIReqDragonbornBreathWeapon
-	AIReqDeathEffect
-	AIReqRetaliatoryEffect
+	APAttack       ActionPreference = "attack"        // Prefers melee attack, heals if emergency need
+	APRanged       ActionPreference = "ranged_attack" // Prefers ranged attack, heals if emergency need
+	APHeal         ActionPreference = "heal"          // Prefers healing if allies under threshold
+	APSpell        ActionPreference = "spell"         // Prefers casting spells, heals if emergency need
+	APSlayer       ActionPreference = "slayer"        // Prefers attack, ignores allies in need of healing
+	APSlayerRanged ActionPreference = "slayer_ranged" // Prefers ranged attack, ignores allies in need of healing
+	APSlayerSpell  ActionPreference = "slayer_spell"  // Prefers casting spells, ignores allies in need of healing
 )
 
-type AIRequest struct {
-	Actor              Entity
-	ActorType          EntityType
-	ActorID            int
-	Target             Entity
-	TargetID           int
-	ActionType         ActionType
-	SpellChoice        *SpellChoice
-	HealRequest        *HealRequest
-	WeaponSlot         WeaponSlot
-	UseVersatile       bool
-	ActionIndex        int // Monsters only
-	Advantage          AdvantageType
-	Request            AIRequestType
-	SimOptions         *SimulationOptions
-	LayingOnHandsValue int
-	EventParentID      string
+func (ap *ActionPreference) IsSlayer() bool {
+	return *ap == APSlayer || *ap == APSlayerSpell || *ap == APSlayerRanged
 }
 
-func (r *AIRequest) Validate() error {
-	if r.Actor == nil {
-		return fmt.Errorf("actor cannot be nil")
+func (ap *ActionPreference) IsHealer() bool {
+	return *ap == APHeal
+}
+
+type TargetPriority string
+
+const (
+	PriorityNone          TargetPriority = "none"
+	PriorityLowestHP      TargetPriority = "lowest_hp"
+	PriorityMostDamaged   TargetPriority = "most_damaged"
+	PriorityLeastDamaged  TargetPriority = "least_damaged"
+	PrioritySpellcaster   TargetPriority = "spellcaster"
+	PriorityHealer        TargetPriority = "healer"
+	PriorityHighestScaler TargetPriority = "highest_scaler"
+	PriorityLowestScaler  TargetPriority = "lowest_scaler"
+	PriorityHighestMaxHP  TargetPriority = "highest_max_hp"
+	PriorityLowestMaxHP   TargetPriority = "lowest_max_hp"
+)
+
+func MakeTargetPriority(s string) TargetPriority {
+	switch strings.ToLower(s) {
+	case "lowest_hp", "lowest hp":
+		return PriorityLowestHP
+	case "most_damaged", "most damaged":
+		return PriorityMostDamaged
+	case "spellcaster":
+		return PrioritySpellcaster
+	case "healer":
+		return PriorityHealer
+	case "highest_scaler", "highest scaler":
+		return PriorityHighestScaler
+	case "lowest_scaler", "lowest scaler":
+		return PriorityLowestScaler
+	default:
+		return PriorityNone
 	}
-	if r.ActionType == ATHeal && r.HealRequest == nil && r.SpellChoice == nil && r.LayingOnHandsValue == 0 {
-		return fmt.Errorf("healing request must provide either a heal request, a spell, or an ability value")
+}
+
+type SpellPriority string
+
+const (
+	SPNoPreference       SpellPriority = "no preference"
+	SPHighestLevel       SpellPriority = "highest level"
+	SPLowestLevel        SpellPriority = "lowest level"
+	SPCantrip            SpellPriority = "highest cantrip"
+	SPRandomCantrip      SpellPriority = "random cantrip"
+	SPRandomLeveledSpell SpellPriority = "random leveled spell"
+	SPAreaOfEffect       SpellPriority = "area of effect"
+	SPHighestDamage      SpellPriority = "highest damage"
+)
+
+func MakeSpellPriority(s string) SpellPriority {
+	switch s {
+	case "no preference":
+		return SPNoPreference
+	case "highest level":
+		return SPHighestLevel
+	case "lowest level":
+		return SPLowestLevel
+	case "highest cantrip":
+		return SPCantrip
+	case "random cantrip":
+		return SPRandomCantrip
+	case "random leveled spell":
+		return SPRandomLeveledSpell
+	case "area of effect":
+		return SPAreaOfEffect
+	case "highest damage":
+		return SPHighestDamage
+	default:
+		return SPNoPreference
 	}
-	if r.TargetID == -1 {
-		return fmt.Errorf("target id was not selected")
-	}
-	return nil
 }
