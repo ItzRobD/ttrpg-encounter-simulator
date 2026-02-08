@@ -4,6 +4,6 @@ export * from './conditions.model';
 export * from './combat.model';
 export * from './spells.model';
 export * from './equipment.model';
-export * from './special-abilities.model';
-export * from './monster-actions.model';
+export * from './feature.model';
+export * from './actor-metadata.model';
 export * from './api-response.model';

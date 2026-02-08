@@ -89,22 +89,22 @@
               ></p-button>
             </div>
             <div class="flex flex-column gap-3">
-              @for (e of combatantService.characters(); track e.instanceId) {
+              @for (a of combatantService.characters(); track a.instanceId) {
                 @if (isCombatantsCollapsed()) {
                   <div
                     class="p-2 border-1 surface-border border-round text-center surface-100 font-bold"
-                    pTooltip="{{ e.name }}"
+                    pTooltip="{{ a.name }}"
                   >
-                    {{ e.name.substring(0, 2).toUpperCase() }}
+                    {{ a.name.substring(0, 2).toUpperCase() }}
                   </div>
                 } @else {
-                  <app-entity-card
-                    [entity]="e"
-                    [projectedState]="timelineService.projectedState().get(e.instanceId) || e.state"
+                  <app-actor-card
+                    [actor]="a"
+                    [projectedState]="timelineService.projectedState().get(a.instanceId) || a.state"
                     [hideState]="false"
                     [showDelete]="true"
                     (delete)="combatantService.removeCombatant($event)"
-                  ></app-entity-card>
+                  ></app-actor-card>
                 }
               } @empty {
                 @if (!isCombatantsCollapsed()) {
@@ -141,22 +141,22 @@
               ></p-button>
             </div>
             <div class="flex flex-column gap-3">
-              @for (e of combatantService.monsters(); track e.instanceId) {
+              @for (a of combatantService.monsters(); track a.instanceId) {
                 @if (isCombatantsCollapsed()) {
                   <div
                     class="p-2 border-1 border-red-200 border-round text-center bg-red-50 text-red-700 font-bold"
-                    pTooltip="{{ e.name }}"
+                    pTooltip="{{ a.name }}"
                   >
-                    {{ e.name.substring(0, 2).toUpperCase() }}
+                    {{ a.name.substring(0, 2).toUpperCase() }}
                   </div>
                 } @else {
-                  <app-entity-card
-                    [entity]="e"
-                    [projectedState]="timelineService.projectedState().get(e.instanceId) || e.state"
+                  <app-actor-card
+                    [actor]="a"
+                    [projectedState]="timelineService.projectedState().get(a.instanceId) || a.state"
                     [hideState]="false"
                     [showDelete]="true"
                     (delete)="combatantService.removeCombatant($event)"
-                  ></app-entity-card>
+                  ></app-actor-card>
                 }
               } @empty {
                 @if (!isCombatantsCollapsed()) {
@@ -176,14 +176,23 @@
       <div class="p-2 md:p-4 border-1 surface-border border-round h-full min-h-20rem">
         <div class="flex justify-content-between align-items-center mb-4">
           <h3 class="text-xl font-semibold m-0">Simulation Results</h3>
-          <p-button
-            label="Run Simulation"
-            icon="pi pi-play"
-            severity="success"
-            [loading]="simulationService.loading()"
-            [disabled]="combatantService.count() === 0"
-            (onClick)="simulationService.createSimulation()"
-          ></p-button>
+          <div class="flex gap-2">
+            <p-button
+              icon="pi pi-download"
+              label="Fetch Debug Sim"
+              (onClick)="fetchSpecificSimulation()"
+              severity="secondary"
+              [pTooltip]="'Fetch simulation 019bd86e-2316-725e-a606-790f4631b8ce'"
+            ></p-button>
+            <p-button
+              label="Run Simulation"
+              icon="pi pi-play"
+              severity="success"
+              [loading]="simulationService.loading()"
+              [disabled]="combatantService.count() === 0"
+              (onClick)="simulationService.createSimulation()"
+            ></p-button>
+          </div>
         </div>
 
         @if (simulationService.simulationResult(); as result) {
@@ -209,12 +218,12 @@
   [(visible)]="isOptionsVisible"
 ></app-simulation-options>
 
-<app-entity-selector-dialog
+<app-actor-selector-dialog
   [(visible)]="isCharacterSelectorVisible"
   mode="character"
-></app-entity-selector-dialog>
+></app-actor-selector-dialog>
 
-<app-entity-selector-dialog
+<app-actor-selector-dialog
   [(visible)]="isMonsterSelectorVisible"
   mode="monster"
-></app-entity-selector-dialog>
+></app-actor-selector-dialog>

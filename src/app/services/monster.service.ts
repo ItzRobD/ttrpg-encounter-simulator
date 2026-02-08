@@ -1,11 +1,11 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Monster, MonsterSummary} from '../models';
+import { Actor, ActorSummary } from '../models';
 import { environment } from '../../environments/environment';
 import { catchError, map, Observable, of, retry, tap, throwError } from 'rxjs';
 
 import { MapperService } from './mapper.service';
-import {EntityService} from './entity.service.interface';
+import {ActorService} from './actor.service.interface';
 import { CustomContentService } from './custom-content.service';
 
 import { ApiResponse } from '../models';
@@ -13,32 +13,35 @@ import { ApiResponse } from '../models';
 @Injectable({
   providedIn: 'root',
 })
-export class MonsterService implements EntityService<Monster, MonsterSummary> {
+export class MonsterService implements ActorService<Actor, ActorSummary> {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/monsters`;
 
   private readonly mapperService = inject(MapperService);
   private readonly customContentService = inject(CustomContentService);
 
-  private readonly _monsters = signal<Monster[]>([]);
+  private readonly _monsters = signal<Actor[]>([]);
   public readonly monsters = computed(() => {
-    return [...this.customContentService.customMonsters(), ...this._monsters()];
+    return [...(this.customContentService.customMonsters() as unknown as Actor[]), ...this._monsters()];
   });
 
-  private readonly _summaries = signal<MonsterSummary[]>([]);
+  private readonly _summaries = signal<ActorSummary[]>([]);
   public readonly summaries = computed(() => {
-    const customSummaries: MonsterSummary[] = this.customContentService.customMonsters().map(m => ({
+    const customSummaries: ActorSummary[] = (this.customContentService.customMonsters() as unknown as Actor[]).map(m => ({
       id: m.id,
       name: m.name,
       isCustom: true,
-      cr: m.cr,
-      type: m.type,
-      size: m.size,
+      cr: m.metadata?.cr || 0,
+      type: (m.metadata?.type as any) || 'Unknown',
+      size: (m.metadata?.size as any) || 'Medium',
       ac: m.ac || 0,
-      isLegendary: m.isLegendary,
-      isSpellcaster: m.isSpellcaster
-    }));
-    return [...customSummaries, ...this._summaries()];
+      isLegendary: !!m.metadata?.isLegendary,
+      isSpellcaster: !!m.metadata?.spellcasterMetadata?.isSpellcaster,
+      isInnateCaster: !!m.metadata?.spellcasterMetadata?.isInnateCaster
+    } as any));
+    const result = [...customSummaries, ...this._summaries()];
+    console.log('[MonsterService] summaries computed signal triggered, total:', result.length);
+    return result;
   });
 
   private readonly _loading = signal(false);
@@ -47,32 +50,32 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
   private readonly _error = signal<string | null>(null);
   public readonly error = this._error.asReadonly();
 
-  private readonly _selectedEntity = signal<Monster | null>(null);
-  public readonly selectedEntity = this._selectedEntity.asReadonly();
+  private readonly _selectedActor = signal<Actor | null>(null);
+  public readonly selectedActor = this._selectedActor.asReadonly();
 
   // Selected Monster alias
-  public readonly selectedMonster = this.selectedEntity;
+  public readonly selectedMonster = this.selectedActor;
 
   // Deprecated naming for backward compatibility if needed, but we'll update usages
   public get monsterSummaries() { return this.summaries; }
   public get selectedBestiaryMonster() { return this.selectedMonster; }
 
   // Backward compatibility method
-  selectMonster(monster: Monster | null): void {
-    this.selectEntity(monster);
+  selectMonster(monster: Actor | null): void {
+    this.selectActor(monster);
   }
 
   deleteMonster(id: string | number): Observable<void> {
-    return this.customContentService.deleteEntity('monsters', id).pipe(
+    return this.customContentService.deleteActor('monsters', id).pipe(
       tap(() => {
-        if (this._selectedEntity()?.id === id) {
-          this._selectedEntity.set(null);
+        if (this._selectedActor()?.id === id) {
+          this._selectedActor.set(null);
         }
       })
     );
   }
 
-  getSummaries(forceRefresh = false): Observable<MonsterSummary[]> {
+  getSummaries(forceRefresh = false): Observable<ActorSummary[]> {
     if (!forceRefresh && this._summaries().length > 0) {
       return of(this._summaries());
     }
@@ -87,26 +90,33 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
           delay: environment.httpRetryDelay
         }),
         map((response) => {
-          let rawData: unknown[] = [];
-          if (response && typeof response === 'object') {
-            const data = response.data;
-            if (data) {
-              if (Array.isArray(data)) {
-                rawData = data;
-              } else {
-                // Handle dictionary format in data
-                rawData = Object.values(data as Record<string, unknown>);
-              }
-            } else if (response && 'monsters' in (response as unknown as Record<string, unknown>)) {
-              rawData = Object.values((response as unknown as Record<string, Record<string, unknown>>)['monsters']);
+          let rawData: any[] = [];
+          const responseData = (response as any).data || response;
+
+          if (Array.isArray(responseData)) {
+            rawData = responseData;
+          } else if (responseData && typeof responseData === 'object') {
+            rawData = Object.values(responseData);
+          }
+
+          return rawData.map((m: any) => {
+            if (m.metadata) {
+              // Actor style summary
+              return {
+                id: m.id || m.ID,
+                name: m.name,
+                isCustom: !!m.isCustom,
+                cr: m.metadata.cr,
+                type: m.metadata.type,
+                size: m.metadata.size,
+                ac: m.ac || 0,
+                isLegendary: !!m.metadata.isLegendary,
+                isSpellcaster: !!m.metadata.spellcasterMetadata?.isSpellcaster,
+                isInnateCaster: !!m.metadata.spellcasterMetadata?.isInnateCaster
+              } as any;
             }
-          }
-
-          if (rawData.length === 0 && Array.isArray(response)) {
-            rawData = response as unknown[];
-          }
-
-          return rawData.map((m) => this.mapperService.mapKeys(m)) as MonsterSummary[];
+            return m as ActorSummary;
+          });
         }),
         tap((summaries) => {
           this._summaries.set(summaries);
@@ -121,14 +131,14 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
   }
 
   // Keep old method name for compatibility during migration
-  getMonsterSummaries(forceRefresh = false): Observable<MonsterSummary[]> {
+  getMonsterSummaries(forceRefresh = false): Observable<ActorSummary[]> {
     return this.getSummaries(forceRefresh);
   }
 
   /**
    * Fetches all monsters from the backend.
    */
-  getMonsters(): Observable<Monster[]> {
+  getMonsters(): Observable<Actor[]> {
     this._loading.set(true);
     this._error.set(null);
     return this.http.get<ApiResponse<unknown>>(this.apiUrl).pipe(
@@ -143,7 +153,7 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
         } else if (response && 'monsters' in (response as unknown as Record<string, unknown>)) {
           rawData = Object.values((response as unknown as Record<string, Record<string, unknown>>)['monsters']);
         }
-        return rawData.map(m => this.mapperService.mapKeys(m) as Monster);
+        return rawData as Actor[];
       }),
       tap((monsters) => {
         this._monsters.set(monsters);
@@ -157,12 +167,13 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
     );
   }
 
-  selectEntityByID(id: string): Observable<Monster> {
+  selectActorByID(id: string): Observable<Actor> {
     // Try finding in custom monsters first
     const customMonster = this.customContentService.customMonsters().find(m => m.id.toString() === id);
     if (customMonster) {
-      this._selectedEntity.set(customMonster);
-      return of(customMonster);
+      const actor = customMonster as unknown as Actor;
+      this._selectedActor.set(actor);
+      return of(actor);
     }
 
     this._loading.set(true);
@@ -172,9 +183,12 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
         count: environment.httpRetryCount,
         delay: environment.httpRetryDelay
       }),
-      map(response => this.mapperService.mapKeys(response) as Monster),
+      map(response => {
+        const data = (response as any)?.data || response;
+        return data as Actor;
+      }),
       tap((monster) => {
-        this._selectedEntity.set(monster);
+        this._selectedActor.set(monster);
         this._loading.set(false);
       }),
       catchError((err) => {
@@ -186,15 +200,15 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
   }
 
   // Keep old method name for compatibility during migration
-  selectBestiaryMonsterByID(id: string): Observable<Monster> {
-    return this.selectEntityByID(id);
+  selectBestiaryMonsterByID(id: string): Observable<Actor> {
+    return this.selectActorByID(id);
   }
 
   /**
    * Creates a new monster.
    */
-  createMonster(monster: Partial<Monster>): Observable<Monster> {
-    return this.http.post<Monster>(this.apiUrl, monster).pipe(
+  createMonster(monster: Partial<Actor>): Observable<Actor> {
+    return this.http.post<Actor>(this.apiUrl, monster).pipe(
       tap((newMonster) => {
         this._monsters.update((m) => [...m, newMonster]);
       })
@@ -241,7 +255,7 @@ export class MonsterService implements EntityService<Monster, MonsterSummary> {
     this._error.set(null);
   }
 
-  selectEntity(entity: Monster | null): void {
-    this._selectedEntity.set(entity);
+  selectActor(actor: Actor | null): void {
+    this._selectedActor.set(actor);
   }
 }

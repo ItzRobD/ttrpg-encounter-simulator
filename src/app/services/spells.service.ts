@@ -92,7 +92,8 @@ export class SpellsService {
   }
 
   private mapSummaries(resp: ApiResponse<unknown> | unknown[]): SpellSummary[] {
-    const rawData = this.mapperService.mapKeys(resp);
+    console.log('[SpellsService] mapSummaries input:', resp);
+    const rawData = resp;
 
     if (Array.isArray(rawData)) {
       return rawData as SpellSummary[];
@@ -100,7 +101,7 @@ export class SpellsService {
 
     if (rawData && typeof rawData === 'object') {
       // If it's a dictionary of spells
-      return Object.values(rawData as Record<string, SpellSummary>);
+      return Object.values(rawData as any as Record<string, SpellSummary>);
     }
 
     return [];
@@ -118,7 +119,7 @@ export class SpellsService {
         delay: environment.httpRetryDelay
       }),
       map((response) => {
-        const mapped = this.mapperService.mapKeys(response);
+        const mapped = response;
         const spells = Array.isArray(mapped) ? mapped : (mapped && typeof mapped === 'object' ? Object.values(mapped) : []);
         return spells as Spell[];
       }),
@@ -134,7 +135,7 @@ export class SpellsService {
     );
   }
 
-  selectSpellByID(id: string): Observable<Spell> {
+  selectActorByID(id: string): Observable<Spell> {
     // Try finding in custom spells first
     const customSpell = this.customContentService.customSpells().find(s => s.id.toString() === id);
     if (customSpell) {
@@ -144,12 +145,32 @@ export class SpellsService {
 
     this._loading.set(true);
     this._error.set(null);
-    return this.http.get<unknown>(`${this.apiUrl}/${id}`).pipe(
+    return this.http.get<ApiResponse<Record<string, Spell>>>(`${this.apiUrl}/${id}`).pipe(
       retry({
         count: environment.httpRetryCount,
         delay: environment.httpRetryDelay
       }),
-      map(response => this.mapperService.mapKeys(response) as Spell),
+      map(response => {
+        // Handle dictionary response { "119": { ... } }
+        // Note: MapperService.mapKeys might have already unwrapped the outer 'data' envelope
+        // or the response might still be { data: { "119": { ... } } } if MapperService didn't unwrap it.
+
+        let data = (response as any)?.data || response;
+
+        // If it's a dictionary of spells
+        if (data && typeof data === 'object' && !Array.isArray(data) && !data.id && !data.name) {
+          const keys = Object.keys(data);
+          // If the key is the ID, return the value
+          if (keys.includes(id)) {
+            return data[id];
+          }
+          // Fallback: if there's only one key and it's numeric/id-like
+          if (keys.length === 1 && !isNaN(Number(keys[0]))) {
+            return data[keys[0]];
+          }
+        }
+        return data as Spell;
+      }),
       tap((spell) => {
         this._selectedSpell.set(spell);
         this._loading.set(false);
@@ -166,12 +187,12 @@ export class SpellsService {
     this._error.set(null);
   }
 
-  selectSpell(spell: Spell | null): void {
-    this._selectedSpell.set(spell);
+  selectActor(actor: Spell | null): void {
+    this._selectedSpell.set(actor);
   }
 
   deleteSpell(id: string | number): Observable<void> {
-    return this.customContentService.deleteEntity('spells', id).pipe(
+    return this.customContentService.deleteActor('spells', id).pipe(
       tap(() => {
         if (this._selectedSpell()?.id === id) {
           this._selectedSpell.set(null);

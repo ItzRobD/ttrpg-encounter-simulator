@@ -15,8 +15,8 @@ import { TabsModule } from 'primeng/tabs';
 import { FluidModule } from 'primeng/fluid';
 import { AccordionModule } from 'primeng/accordion';
 import { BaseEditorDirective } from '../base-editor.directive';
-import { Monster, MonsterSize, MonsterType, DiceType, DamageType, SpecialAbilities, CasterType, Ability, ResistanceType} from '../../../models';
-import { CustomEntityType } from '../../../services/custom-content.service';
+import { MonsterSize, MonsterType, DiceType, DamageType, CasterType, Ability, ResistanceType, Actor} from '../../../models';
+import { CustomActorType } from '../../../services/custom-content.service';
 import { AbilityScoreEditorComponent } from '../ability-score-editor/ability-score-editor';
 import { SpellcastingEditorComponent } from '../spellcasting-editor/spellcasting-editor';
 import { getProficiencyBonus } from '../../../shared/utils/dnd-utils';
@@ -45,7 +45,7 @@ import { environment } from '../../../../environments/environment';
   templateUrl: './monster-editor.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MonsterEditorComponent extends BaseEditorDirective<Monster> implements OnInit {
+export class MonsterEditorComponent extends BaseEditorDirective<Actor> implements OnInit {
   private readonly fb = inject(FormBuilder);
 
   public monsterForm: FormGroup = this.fb.group({
@@ -207,12 +207,17 @@ export class MonsterEditorComponent extends BaseEditorDirective<Monster> impleme
         this.legendaryActions.clear({ emitEvent: false });
         this.resistancesArray.clear({ emitEvent: false });
 
+        const monsterActions = (item as any).monsterActions || {
+          actions: (item as any).actions || [],
+          legendaryActions: (item as any).legendaryActions || []
+        };
+
         // Add actions
-        if (item.monsterActions?.actions) {
-          item.monsterActions.actions.forEach(a => this.addAction(a));
+        if (monsterActions.actions) {
+          monsterActions.actions.forEach((a: any) => this.addAction(a));
         }
-        if (item.monsterActions?.legendaryActions) {
-          item.monsterActions.legendaryActions.forEach(la => this.addLegendaryAction(la));
+        if (monsterActions.legendaryActions) {
+          monsterActions.legendaryActions.forEach((la: any) => this.addLegendaryAction(la));
         }
 
         // Handle resistances array
@@ -360,7 +365,7 @@ export class MonsterEditorComponent extends BaseEditorDirective<Monster> impleme
     }
   }
 
-  protected override getEntityType(): CustomEntityType {
+  protected override getActorType(): CustomActorType {
     return 'monsters';
   }
 
@@ -555,7 +560,7 @@ export class MonsterEditorComponent extends BaseEditorDirective<Monster> impleme
         monster.state.resistances = resistanceObj;
       }
 
-      this.saveEntity(monster);
+      this.saveActor(monster);
     } else {
       this.monsterForm.markAllAsTouched();
     }

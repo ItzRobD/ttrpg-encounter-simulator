@@ -1,14 +1,15 @@
 import {
-  AbilityScores,
   Action,
   DamageResistances,
   DamageType,
-  DiceType, Entity,
+  DiceType,
   MultiattackOption,
   ResistanceType,
-  SpecialAbilities,
   Weapon,
-  EquipmentItem
+  EquipmentItem,
+  Actor,
+  Feature,
+  AbilityScores
 } from '../../models';
 
 /**
@@ -37,7 +38,7 @@ export function getAbilityScoreEntries(scores: AbilityScores): AbilityScoreEntry
 
   return order.map((key) => ({
     key,
-    shortName: getAbilityScoreShortName(key),
+    shortName: getAbilityScoreShortName(key as string),
     value: scores[key],
     modifier: getModifier(scores[key]),
   }));
@@ -104,11 +105,14 @@ export function generateActionDescription(action: Action): string {
 /**
  * Formats a multiattack routine into a readable string.
  */
-export function formatMultiattack(entityName: string, options: MultiattackOption[], allActions: Action[]): string {
+export function formatMultiattack(actorName: string, options: MultiattackOption[], allActions: Action[]): string {
   if (options.length === 0) return '';
 
   const parts = options.map((opt) => {
-    const action = allActions.find((a) => a.actionId === opt.actionId);
+    const action = allActions.find((a) => {
+      const aId = (a.actionId || (a as any).id || (a as any).ID)?.toString();
+      return aId === opt.actionId?.toString();
+    });
     const actionName = action ? action.name : 'Unknown Action';
     return `${opt.count} times with ${actionName}`;
   });
@@ -122,7 +126,7 @@ export function formatMultiattack(entityName: string, options: MultiattackOption
     joinedParts = parts.slice(0, -1).join(', ') + ', and ' + parts.slice(-1);
   }
 
-  return `Multiattack: The ${entityName} attacks ${joinedParts}.`;
+  return `Multiattack: The ${actorName} attacks ${joinedParts}.`;
 }
 
 /**
@@ -141,9 +145,13 @@ export function formatMonsterAction(action: Action): string {
     });
   }
 
-  let base = `${formatModifier(toHit)} to hit.`;
+  let base = '';
+  if (toHit > 0) {
+    base = `${formatModifier(toHit)} to hit. `;
+  }
+
   if (parts.length > 0) {
-    base += ` Hit: ${parts.join(' ')}.`;
+    base += `Hit: ${parts.join(' ')}.`;
   }
 
   if (action.hasDC) {
@@ -248,10 +256,11 @@ export interface AbilityScoreEntry {
 /**
  * Returns the relevant ability modifier for a weapon based on its properties.
  */
-export function getWeaponAbilityModifier(e: Entity, weapon: Weapon): number {
-  if (!e.asConfig?.abilityScores) return 0;
-  const str = getModifier(e.asConfig.abilityScores.strength);
-  const dex = getModifier(e.asConfig.abilityScores.dexterity);
+export function getWeaponAbilityModifier(actor: Actor, weapon: Weapon): number {
+  const abilities = actor.abilities || (actor as any).asConfig;
+  if (!abilities?.abilityScores) return 0;
+  const str = getModifier(abilities.abilityScores.strength);
+  const dex = getModifier(abilities.abilityScores.dexterity);
 
   if (weapon.properties.isRanged || weapon.properties.isOnlyRanged) return dex;
   if (weapon.properties.isFinesse) return Math.max(str, dex);
@@ -261,182 +270,78 @@ export function getWeaponAbilityModifier(e: Entity, weapon: Weapon): number {
 /**
  * Formats a weapon's full stat line.
  */
-export function formatWeaponData(e: Entity, weapon: Weapon): string {
-  const levelOrCr = 'level' in e ? (e as { level: number }).level : (e as unknown as { cr: number }).cr || 1;
+export function formatWeaponData(actor: Actor, weapon: Weapon): string {
+  const levelOrCr = 'level' in actor ? (actor as any).level : (actor as any).metadata?.cr || 1;
   const proficiency = getProficiencyBonus(levelOrCr);
-  const abilityMod = getWeaponAbilityModifier(e, weapon);
+  const abilityMod = getWeaponAbilityModifier(actor, weapon);
 
   // To Hit: Ability Mod + Proficiency (if proficient) + Weapon Magic Bonus
   const isProficient = weapon.isProficient !== undefined ? weapon.isProficient : true;
-  const toHit = abilityMod + (isProficient ? proficiency : 0) + weapon.modifiers.attackBonus;
+  const toHit = abilityMod + (isProficient ? proficiency : 0) + (weapon.modifiers?.attackBonus || 0);
 
   // Damage Dice String: e.g., "1d8+3"
-  // Note: In D&D, damage bonus usually includes the Ability Mod + Magic Bonus
   let diceStr = '';
   let avgDmg = 0;
 
   if (weapon.damageBlocks && weapon.damageBlocks.length > 0) {
     const components = weapon.damageBlocks.map((c, i) => {
       // For the first component, we add the ability modifier and magic damage bonus
-      const bonus = i === 0 ? abilityMod + weapon.modifiers.damageBonus : 0;
-      const totalBonus = c.amountToAdd + bonus;
+      const bonus = i === 0 ? abilityMod + (weapon.modifiers?.damageBonus || 0) : 0;
+      const totalBonus = (c.modifier || 0) + bonus;
       avgDmg += Math.floor(c.numberOfDice * (c.die / 2 + 0.5) + totalBonus);
       return formatDice(c.numberOfDice, c.die, totalBonus) + (c.damageType ? ` ${c.damageType}` : '');
     });
     diceStr = components.join(' + ');
-  } else {
-    const totalDmgBonus = abilityMod + weapon.modifiers.damageBonus;
-    diceStr = formatDice(weapon.numberOfDice, weapon.die, totalDmgBonus);
-    avgDmg = Math.floor(weapon.numberOfDice * (weapon.die / 2 + 0.5) + totalDmgBonus);
   }
 
-  return `${weapon.name}. ${formatModifier(toHit)} to hit. Damage: ${avgDmg} (${diceStr}) ${
-    weapon.damageBlocks && weapon.damageBlocks.length > 0 ? '' : weapon.damageType
-  } damage.`.replace(/\s+/g, ' ');
+  return `${weapon.name}. ${formatModifier(toHit)} to hit. Damage: ${avgDmg} (${diceStr}).`.replace(/\s+/g, ' ');
 }
 
 /**
  * Returns a detail string for an equipment item based on its type.
  */
 export function getEquipmentDetail(item: EquipmentItem): string {
-  if ('damageBlocks' in item && item.damageBlocks && item.damageBlocks.length > 0) {
-    return item.damageBlocks
-      .map((c) => `${formatDice(c.numberOfDice, c.die, c.amountToAdd)} ${c.damageType}`)
+  const inner = (item as any).weapon || (item as any).armor || item;
+
+  // Weapon damage handling: rely exclusively on damageBlocks
+  if ('damageBlocks' in inner && Array.isArray(inner.damageBlocks)) {
+    if (inner.damageBlocks.length === 0) return 'No damage details';
+
+    return inner.damageBlocks
+      .map((c: any) => {
+        const dicePart = formatDice(c.numberOfDice, c.die, c.modifier || 0);
+        const typePart = c.damageType ? ` ${c.damageType}` : '';
+        return `${dicePart}${typePart}`;
+      })
       .join(' + ');
-  } else if ('damageType' in item) {
-    // Weapon
-    return `${formatDice((item as Weapon).numberOfDice, (item as Weapon).die, 0)} ${
-      (item as Weapon).damageType
-    }`;
-  } else {
-    // Armor
-    return `AC ${(item as any).ac}`;
   }
+
+  // Armor AC handling
+  if ('ac' in inner) {
+    let detail = `AC ${inner.ac}`;
+    if (inner.modifier && inner.modifier !== 0) {
+      detail += ` (${formatModifier(inner.modifier)})`;
+    }
+    return detail;
+  }
+
+  return 'No detail available';
 }
 
 /**
  * Returns an array of Title Case names of active special abilities.
  */
-export function getSpecialAbilityNames(abilities: SpecialAbilities | undefined): string[] {
-  const names: string[] = [];
-  if (!abilities) return names;
-
-  const entries = Object.entries(abilities);
-  for (const [key, value] of entries) {
-    if (value === false || value === 0 || value === 'D0' || value === DiceType.D0) continue;
-
-    // These are the specific keys that have numeric/complex values
-    const complexKeys = [
-      'legendaryResistanceCount',
-      'divineEminenceNumDice',
-      'martialAdvantageNumDice',
-      'sneakAttackNumDice',
-      'regenerationValue',
-      'relentlessThreshold',
-      'berserkThreshold',
-      'limitedMagicImmunityLevel',
-      'deathBurstNumDice',
-      'deathThroesNumDice',
-      'fireAuraNumDice',
-      'heatedBodyNumDice',
-      'corrosiveFormNumDice',
-      'consumeLifeDie'
-    ];
-
-    if (complexKeys.includes(key)) {
-      // Map back to a readable name
-      let name = '';
-      switch (key) {
-        case 'legendaryResistanceCount': name = 'Legendary Resistance'; break;
-        case 'divineEminenceNumDice': name = 'Divine Eminence'; break;
-        case 'martialAdvantageNumDice': name = 'Martial Advantage'; break;
-        case 'sneakAttackNumDice': name = 'Sneak Attack'; break;
-        case 'regenerationValue': name = 'Regeneration'; break;
-        case 'relentlessThreshold': name = 'Relentless'; break;
-        case 'berserkThreshold': name = 'Berserk'; break;
-        case 'limitedMagicImmunityLevel': name = 'Limited Magic Immunity'; break;
-        case 'deathBurstNumDice': name = 'Death Burst'; break;
-        case 'deathThroesNumDice': name = 'Death Throes'; break;
-        case 'fireAuraNumDice': name = 'Fire Aura'; break;
-        case 'heatedBodyNumDice': name = 'Heated Body'; break;
-        case 'corrosiveFormNumDice': name = 'Corrosive Form'; break;
-        case 'consumeLifeDie': name = 'Consume Life'; break;
-      }
-      if (name) names.push(name);
-    } else if (value === true) {
-      names.push(formatCamelCase(key));
-    }
-  }
-  return names;
+export function getSpecialAbilityNames(features: Feature[] | undefined): string[] {
+  if (!features) return [];
+  return features.map(f => f.name);
 }
 
 /**
  * Formats monster special abilities into an array of readable strings.
  */
-export function getFormattedSpecialAbilities(abilities: SpecialAbilities | undefined): string[] {
-  const formatted: string[] = [];
-
-  if (!abilities) return formatted;
-
-  const entries = Object.entries(abilities);
-
-  for (const [key, value] of entries) {
-    // Skip if value is false, 0, or D0
-    if (value === false || value === 0 || value === 'D0' || value === DiceType.D0) continue;
-
-    switch (key) {
-      case 'legendaryResistanceCount':
-        formatted.push(`Legendary Resistance: ${value} Uses`);
-        break;
-      case 'divineEminenceNumDice':
-        formatted.push(`Divine Eminence: ${value}d6`);
-        break;
-      case 'martialAdvantageNumDice':
-        formatted.push(`Martial Advantage: ${value}d6`);
-        break;
-      case 'sneakAttackNumDice':
-        formatted.push(`Sneak Attack: ${value}d6`);
-        break;
-      case 'regenerationValue':
-        formatted.push(`Regeneration: ${value} HP`);
-        break;
-      case 'relentlessThreshold':
-        formatted.push(`Relentless: <=${value} HP`);
-        break;
-      case 'berserkThreshold':
-        formatted.push(`Berserk: ${value} HP`);
-        break;
-      case 'limitedMagicImmunityLevel':
-        formatted.push(`Limited Magic Immunity: Level ${value} or lower`);
-        break;
-      case 'deathBurstNumDice':
-        formatted.push(`Death Burst (DC ${abilities.deathBurstDC}): ${value}d8 ${abilities.deathBurstDamageType || ''}`);
-        break;
-      case 'deathThroesNumDice':
-        formatted.push(`Death Throes (DC ${abilities.deathThroesDC}): ${value}d6`);
-        break;
-      case 'fireAuraNumDice':
-        formatted.push(`Fire Aura: ${value}d6`);
-        break;
-      case 'heatedBodyNumDice':
-        formatted.push(`Heated Body: ${value}d10`);
-        break;
-      case 'corrosiveFormNumDice':
-        formatted.push(`Corrosive Form: ${value}d8`);
-        break;
-      case 'consumeLifeDie':
-        formatted.push(`Consume Life: 3d${value}`);
-        break;
-      default:
-        // Handle boolean traits
-        if (value === true) {
-          formatted.push(formatCamelCase(key));
-        }
-        break;
-    }
-  }
-
-  return formatted;
+export function getFormattedSpecialAbilities(features: Feature[] | undefined): string[] {
+  if (!features) return [];
+  return features.map(f => `${f.name}: ${f.description}`);
 }
 
 /**

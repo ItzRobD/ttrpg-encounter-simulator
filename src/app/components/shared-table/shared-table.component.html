@@ -158,6 +158,9 @@
                 @if (item.isSpellcaster) {
                   <i class="pi pi-bolt text-blue-500 text-xs" pTooltip="Spellcaster"></i>
                 }
+                @if (item.isInnateCaster) {
+                  <i class="pi pi-sparkles text-cyan-500 text-xs" pTooltip="Innate Caster"></i>
+                }
               } @else if (mode() === 'spells') {
                 @if (item.isConcentration) {
                   <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
@@ -224,12 +227,15 @@
       @if (isMobile()) {
         <td>
           <div class="flex gap-1 justify-content-end">
-            @if (mode() === 'monster') {
+            @if (mode() === 'monster' || mode() === 'character') {
               @if (item.isLegendary) {
                 <i class="pi pi-star-fill text-yellow-500 text-xs" pTooltip="Legendary"></i>
               }
               @if (item.isSpellcaster) {
                 <i class="pi pi-bolt text-blue-500 text-xs" pTooltip="Spellcaster"></i>
+              }
+              @if (item.isInnateCaster) {
+                <i class="pi pi-sparkles text-cyan-500 text-xs" pTooltip="Innate Caster"></i>
               }
             } @else if (mode() === 'spells') {
               @if (item.isConcentration) {

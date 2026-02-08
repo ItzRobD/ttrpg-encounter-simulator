@@ -3,6 +3,7 @@ import {TimelineService} from '../../services/timeline.service';
 import {SimulationService} from '../../services/simulation.service';
 import {Tab, TabList, Tabs} from 'primeng/tabs';
 import {MapperService} from '../../services/mapper.service';
+import {SimulationStateService} from '../../services/simulation-state.service';
 import {TreeTableModule} from 'primeng/treetable';
 import {SliderModule} from 'primeng/slider';
 import {FormsModule} from '@angular/forms';
@@ -33,13 +34,14 @@ import {formatDice} from '../../shared/utils/dnd-utils';
 export class SimulationResults {
   public readonly simulationService = inject(SimulationService);
   public readonly timelineService = inject(TimelineService);
+  public readonly stateService = inject(SimulationStateService);
   private readonly mapperService = inject(MapperService);
   private readonly titleCasePipe = inject(TitleCasePipe);
 
   protected readonly EventType = EventType;
 
   protected readonly treeNodes = computed(() => {
-    const log = this.timelineService.selectedSimulationLog();
+    const log = this.stateService.selectedSimulationLog();
     if (!log) return [];
 
     // log.events is already mapped to camelCase by SimulationService
@@ -48,8 +50,19 @@ export class SimulationResults {
 
   protected readonly logIndicies = computed(() => {
     const result = this.simulationService.simulationResult();
+    if (!result) return [];
+
+    // Use individualResults if available, otherwise fallback to logs array
+    if (result.individualResults && result.individualResults.length > 0) {
+      return result.individualResults.map((_, i) => i);
+    }
+
     const count = result?.count ?? 0;
     return Array.from({ length: count }, (_, i) => i);
+  });
+
+  protected readonly performance = computed(() => {
+    return this.simulationService.simulationResult()?.performance;
   });
 
   onTabChange(value: string | number | undefined): void {
@@ -63,6 +76,10 @@ export class SimulationResults {
 
   isEventActive(id: string): boolean {
     return this.timelineService.activeEvent()?.id === id;
+  }
+
+  logEvent(event: SimulationEvent): void {
+    console.log('Simulation Event:', event);
   }
 
   getEventLabel(event: SimulationEvent): string {

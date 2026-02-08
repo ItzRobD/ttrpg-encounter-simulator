@@ -1,15 +1,15 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { SimulationLog, SimulationResult, EncounterConfig, SimulationEvent, EventType, SimulationConfig, isMonster,
-  isCharacter, SimulationPayload, Entity, Monster, Character, SimulationStatusResponse, SimulationStatus, ApiResponse
+import { SimulationLog, SimulationResult, EncounterConfig, SimulationEvent, EventType, SimulationConfig,
+  SimulationPayload, Actor, SimulationStatusResponse, SimulationStatus, ApiResponse, IndividualResult, isMonster, isCharacter
 } from '../models';
 import { SimulationOptions } from '../models/simoptions.model';
 import { CombatantService } from './combatant.service';
 import { MapperService } from './mapper.service';
-import { TimelineService } from './timeline.service';
+import { SimulationStateService } from './simulation-state.service';
 import { environment } from '../../environments/environment';
-import { finalize, map, switchMap, takeWhile, tap, delay, repeat } from 'rxjs/operators';
-import { catchError, from, Observable, retry, throwError, timer, of } from 'rxjs';
+import { filter, finalize, map, switchMap, take, takeWhile, tap } from 'rxjs/operators';
+import { catchError, Observable, throwError, timer, of } from 'rxjs';
 import {MonsterConfig} from '../models/configs/monster-config.model';
 
 @Injectable({
@@ -19,15 +19,11 @@ export class SimulationService {
   private readonly http = inject(HttpClient);
   private readonly combatantService = inject(CombatantService);
   private readonly mapperService = inject(MapperService);
+  private readonly stateService = inject(SimulationStateService);
 
-  private readonly _simulationResult = signal<SimulationResult | null>(null);
-  readonly simulationResult = this._simulationResult.asReadonly();
-
-  private readonly _loading = signal(false);
-  readonly loading = this._loading.asReadonly();
-
-  private readonly _error = signal<string | null>(null);
-  readonly error = this._error.asReadonly();
+  readonly simulationResult = this.stateService.simulationResult;
+  readonly loading = this.stateService.loading;
+  readonly error = this.stateService.error;
 
   private readonly _options = signal<SimulationOptions>(this.getDefaultOptions());
   readonly options = this._options.asReadonly();
@@ -37,8 +33,6 @@ export class SimulationService {
 
   private readonly _currentSimulationId = signal<string | null>(null);
   readonly currentSimulationId = this._currentSimulationId.asReadonly();
-
-  private readonly timelineService = inject(TimelineService);
 
   private getDefaultConfig(): SimulationConfig {
     return {
@@ -102,12 +96,12 @@ export class SimulationService {
     return response.json();
   }
 
-  makeSimulationPayload(combatants: Entity[]): SimulationPayload | null {
-    const monsters = combatants.filter(e => isMonster(e)) as Monster[];
-    const characters = combatants.filter(e => isCharacter(e)) as Character[];
+  makeSimulationPayload(combatants: Actor[]): SimulationPayload | null {
+    const monsters = combatants.filter(e => isMonster(e)) as Actor[];
+    const characters = combatants.filter(e => isCharacter(e)) as Actor[];
 
     if (monsters.length === 0 || characters.length === 0) {
-      this._error.set('No monsters or characters to simulate.');
+      this.stateService.setError('No monsters or characters to simulate.');
       return null;
     }
 
@@ -130,7 +124,7 @@ export class SimulationService {
 
     return {
       base_options: this.options(),
-      character_configs: characterConfigs as Character[],
+      character_configs: characterConfigs as Actor[],
       monster_ids: monsterIds,
       monster_configs: monsterConfigs,
       lair_config: null,
@@ -144,8 +138,8 @@ export class SimulationService {
     const combatants = this.combatantService.combatants();
     if (combatants.length === 0) return;
 
-    this._loading.set(true);
-    this._error.set(null);
+    this.stateService.setLoading(true);
+    this.stateService.setError(null);
     this._currentSimulationId.set(null);
 
     const url = `${environment.apiUrl}/simulation/create`;
@@ -153,14 +147,11 @@ export class SimulationService {
     const payload = this.makeSimulationPayload(combatants);
 
     if (!payload) {
-      this._loading.set(false);
+      this.stateService.setLoading(false);
       return;
     }
 
-    // Transform the payload to snake_case before sending
-    const snakePayload = this.mapperService.serializeKeys(payload);
-
-    this.http.post(url, { payload: snakePayload }, { observe: 'response' })
+    this.http.post(url, { payload }, { observe: 'response' })
       .pipe(
         switchMap(response => {
           if (response.status === 202) {
@@ -172,41 +163,36 @@ export class SimulationService {
             }
           }
           // If not 202 or no ID, handle as legacy or error
-          this._error.set('Failed to start simulation: No simulation ID received.');
+          this.stateService.setError('Failed to start simulation: No simulation ID received.');
           return throwError(() => new Error('No simulation ID'));
         }),
         catchError((err) => {
           console.error('Simulation request error:', err);
-          this._error.set('Simulation request failed. Please check your connection or try again later.');
-          this._loading.set(false);
+          this.stateService.setError('Simulation request failed. Please check your connection or try again later.');
+          this.stateService.setLoading(false);
           return throwError(() => err);
         })
       )
       .subscribe({
         next: (result) => {
           if (result && result.logs && result.logs.length > 0) {
-            this._simulationResult.set(result);
-            this._loading.set(false);
+            this.stateService.setSimulationResult(result);
+            this.stateService.setLoading(false);
             console.log('Simulation complete', result);
           }
         },
         error: (err) => {
           console.error('Simulation failed', err);
-          this._loading.set(false);
+          this.stateService.setLoading(false);
         }
       });
   }
 
-  private pollSimulationStatus(id: string): Observable<SimulationResult> {
+  pollSimulationStatus(id: string): Observable<SimulationResult> {
     const statusUrl = `${environment.apiUrl}/simulation/status/${id}`;
 
     return timer(0, 2000).pipe(
-      switchMap(() => this.http.get<unknown>(statusUrl)),
-      map(response => {
-        // Map keys to camelCase
-        const mapped = this.mapperService.mapKeys(response) as SimulationStatusResponse;
-        return mapped;
-      }),
+      switchMap(() => this.http.get<SimulationStatusResponse>(statusUrl)),
       // Continue polling until status is Completed or Failed
       takeWhile(status =>
         status.status !== SimulationStatus.Completed &&
@@ -218,61 +204,61 @@ export class SimulationService {
           return this.fetchSimulationResult(id);
         } else if (status.status === SimulationStatus.Failed || status.error) {
           const errorMessage = status.error || 'Simulation failed on the server.';
-          this._error.set(errorMessage);
+          this.stateService.setError(errorMessage);
           return throwError(() => new Error(errorMessage));
         }
-        // Still pending/running, return empty or wait for next timer tick
         return of(null);
       }),
-      // Filter out nulls (pending ticks) so subscribe only gets the final result
-      takeWhile(result => result === null, true),
-      map(result => result as SimulationResult),
-      // We want to stop the timer once we have a result
-      finalize(() => {
-        // Optional cleanup
-      })
-    ).pipe(
-      // Ensure we only emit the final result
-      map(res => res),
+      filter((result): result is SimulationResult => result !== null),
+      take(1),
       catchError(err => {
-        this._error.set('Error polling simulation status.');
+        if (err.message && err.message.includes('missing individualResults')) {
+          this.stateService.setError('Simulation completed but returned invalid data structure.');
+        } else if (this.stateService.error() === null) {
+          this.stateService.setError('Error polling simulation status.');
+        }
         return throwError(() => err);
       })
-    ).pipe(
-      // Filter to only emit the actual SimulationResult
-      switchMap(res => res ? of(res) : [])
     );
   }
 
-  private fetchSimulationResult(id: string): Observable<SimulationResult> {
+  public fetchSimulationResult(id: string): Observable<SimulationResult> {
     const resultUrl = `${environment.apiUrl}/simulation/results/${id}`;
     return this.http.get<any>(resultUrl).pipe(
       map(response => {
-        // Map keys to camelCase first to handle the 'data' and 'results' nesting consistently
-        const mappedResponse = this.mapperService.mapKeys(response) as any;
-
-        // The backend structure is now: { data: { results: { individual_results: [...], ... }, ... } }
-        const data = mappedResponse?.results;
+        // The backend structure is now: { data: { results: { individual_results: [...], ... }, actor_configs: { ... } } }
+        const unwrapped = response?.data || response;
+        const data = unwrapped?.results || unwrapped;
+        const actorConfigs = unwrapped?.actorConfigs;
 
         if (!data || !Array.isArray(data.individualResults)) {
-          console.error('Invalid simulation result structure:', mappedResponse);
-          throw new Error('Invalid simulation result structure');
+          console.error('Invalid simulation result structure. Full response:', response);
+          throw new Error('Invalid simulation result structure: missing individualResults');
         }
 
         // Convert the backend "IndividualResult" (which has a 'logs' array of events)
-        // into the frontend "SimulationLog" structure.
-        const logs: SimulationLog[] = data.individualResults.map((res: any) => ({
-          entities: [], // If the backend provides entities per run, extract them here
-          events: res.logs || []
+        // into the frontend "SimulationLog" structure for backward compatibility/UI.
+        const simulationLogs: SimulationLog[] = data.individualResults.map((res: any) => ({
+          actors: [], // We'll populate this if needed, but TimelineService will use initialState
+          events: res.logs || [],
+          initialState: res.initialState // Pass along individual run initial state if present
         }));
 
         const simulationResult: SimulationResult = {
           ...data,
-          logs: logs,
-          count: data.totalRuns || logs.length
+          actorConfigs: actorConfigs,
+          logs: simulationLogs,
+          count: data.totalRuns || simulationLogs.length
         };
 
         return simulationResult;
+      }),
+      tap(result => {
+        this.stateService.setSimulationResult(result);
+        if (result.logs.length > 0) {
+          // Default to the logs of the first run
+          this.stateService.setSelectedSimulationLog(result.logs[0]);
+        }
       })
     );
   }
@@ -281,11 +267,11 @@ export class SimulationService {
    * Clears any current error state.
    */
   clearError(): void {
-    this._error.set(null);
+    this.stateService.setError(null);
   }
 
   clearResult(): void {
-    this._simulationResult.set(null);
+    this.stateService.setSimulationResult(null);
   }
 
   /**
@@ -304,14 +290,12 @@ export class SimulationService {
         throw new Error('Invalid dummy data: expected an object with a logs array.');
       }
 
-      this._simulationResult.set(result);
+      this.stateService.setSimulationResult(result);
       if (result.logs.length > 0) {
-        this.timelineService.setSelectedSimulationLog(result.logs[0]);
-        // Also update combatant service if needed, though usually the entity card
-        // in simulation mode might be showing entities from the log
+        // Dummy data might not have individualResults, so we use logs[0]
+        this.stateService.setSelectedSimulationLog(result.logs[0]);
       }
       console.log('Dummy simulation data seeded:', result);
-      console.log('Entities in seeded log:', result.logs[0]?.entities);
     } catch (err) {
       console.error('Failed to seed dummy simulation data', err);
     }

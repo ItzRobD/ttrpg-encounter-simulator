@@ -13,8 +13,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
 import { FluidModule } from 'primeng/fluid';
 import { BaseEditorDirective } from '../base-editor.directive';
-import { Character, Class, Race, Ability, CasterType, DragonbornColor, DamageType, ResistanceType, AbilityScores, Weapon, Armor, WeaponSlot, Equipment } from '../../../models';
-import { CustomEntityType } from '../../../services/custom-content.service';
+import { Class, Race, Ability, CasterType, DragonbornColor, DamageType, ResistanceType, AbilityScores, Weapon, Armor, WeaponSlot, Equipment, Actor } from '../../../models';
+import { CustomActorType } from '../../../services/custom-content.service';
 import { AbilityScoreEditorComponent } from '../ability-score-editor/ability-score-editor';
 import { SpellcastingEditorComponent } from '../spellcasting-editor/spellcasting-editor';
 import { getProficiencyBonus } from '../../../shared/utils/dnd-utils';
@@ -42,7 +42,7 @@ import {MapperService} from '../../../services/mapper.service';
   templateUrl: './character-editor.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CharacterEditorComponent extends BaseEditorDirective<Character> implements OnInit {
+export class CharacterEditorComponent extends BaseEditorDirective<Actor> implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly equipmentService = inject(EquipmentService);
   protected readonly mapperService = inject(MapperService);
@@ -360,7 +360,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
     }
   }
 
-  protected override getEntityType(): CustomEntityType {
+  protected override getActorType(): CustomActorType {
     return 'characters';
   }
 
@@ -420,7 +420,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
   onSave(): void {
     if (this.characterForm.valid) {
       const character = this.prepareCharacterObject();
-      this.saveEntity(character);
+      this.saveActor(character);
     } else {
       this.characterForm.markAllAsTouched();
     }
@@ -430,9 +430,32 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
    * Helper to prepare the character object from form values.
    * Useful for both saving and testing/exporting.
    */
-  private prepareCharacterObject(): Character {
+  private prepareCharacterObject(): Actor {
     const rawValues = this.characterForm.getRawValue();
-    const character = { ...rawValues };
+    const character = { ...rawValues } as any;
+
+    // Ensure metadata is populated for new Actor model
+    if (!character.metadata) {
+      character.metadata = {
+        level: character.level || 1,
+        classId: character.classId || 0,
+        raceId: character.raceId || 0,
+        spellcasterMetadata: {
+          isSpellcaster: !!character.spellcasting,
+          spellcastingLevel: character.spellcasting?.casterLevel || character.level || 1,
+          spellcastingAbility: character.spellcasting?.ability
+        }
+      };
+    }
+
+    // Map properties needed by backend ActorConfig
+    character.actorType = 'character';
+    character.side = 'character';
+    character.abilities = character.abilities || {
+      abilityScores: character.asConfig?.abilityScores,
+      proficiencies: character.asConfig?.proficiencies
+    };
+    character.hpConfig = character.hpConfig || character.hp;
 
     // Ensure isCustom is set
     character.isCustom = true;
@@ -487,6 +510,11 @@ export class CharacterEditorComponent extends BaseEditorDirective<Character> imp
         character.state.currentHp = character.state.maxHp;
       }
       character.state.hitDie = character.hp.hitDie;
+    }
+
+    // Backend expects hit_dice as a map: { "10": 8 }
+    if (character.hp.hitDie && character.hp.numberOfDice) {
+      character.hp.hitDice = { [character.hp.hitDie.toString()]: character.hp.numberOfDice };
     }
 
     // Ensure spellIds are synced from spells array if it exists

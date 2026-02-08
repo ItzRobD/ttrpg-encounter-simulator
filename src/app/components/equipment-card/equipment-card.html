@@ -8,15 +8,16 @@
           @if (isWeapon()) {
             Weapon
           } @else if (isArmor()) {
-            {{ item().name.toLowerCase().includes('shield') ? 'Shield' : 'Armor' }}
+            {{ (item().name || '').toLowerCase().includes('shield') ? 'Shield' : 'Armor' }}
           }
         </span>
       </div>
       @if (isArmor()) {
+        @let armor = asArmor(item());
         <div class="flex flex-column align-items-end">
-          <span class="text-xl font-bold">AC {{ asArmor(item()).ac }}</span>
-          @if (asArmor(item()).minimumStrength > 0) {
-            <span class="text-xs text-500">Min Str: {{ asArmor(item()).minimumStrength }}</span>
+          <span class="text-xl font-bold">AC {{ armor?.ac }}</span>
+          @if (armor && armor.minimumStr > 0) {
+            <span class="text-xs text-500">Min Str: {{ armor.minimumStr }}</span>
           }
         </div>
       }
@@ -33,9 +34,17 @@
               <span class="text-lg font-semibold">{{ getEquipmentDetail(weapon) }}</span>
             </div>
           </div>
-          <div class="flex flex-column align-items-end">
-            <span class="text-xs font-bold uppercase text-600">Attack Bonus</span>
-            <span class="text-lg font-semibold">{{ formatModifier(weapon.modifiers.attackBonus) }}</span>
+          <div class="flex flex-row gap-4 align-items-end">
+            <div class="flex flex-column align-items-end">
+              <span class="text-xs font-bold uppercase text-600">Attack Bonus</span>
+              <span class="text-lg font-semibold">{{ formatModifier(weapon?.modifiers?.attackBonus || 0) }}</span>
+            </div>
+            @if (weapon?.modifiers?.damageBonus) {
+              <div class="flex flex-column align-items-end">
+                <span class="text-xs font-bold uppercase text-600">Dmg Bonus</span>
+                <span class="text-lg font-semibold">{{ formatModifier(weapon.modifiers.damageBonus) }}</span>
+              </div>
+            }
           </div>
         </div>
 
@@ -63,10 +72,29 @@
       </div>
     }
 
-    <!-- Armor Details (Placeholder if more info needed) -->
+    <!-- Armor Details -->
     @if (isArmor()) {
-       <!-- Armor currently only has AC and Min Strength, which are in header -->
-       <p class="text-sm text-600 italic">No additional properties for this item.</p>
+      @let armor = asArmor(item());
+      <div class="flex flex-column gap-2 mt-2">
+        <div class="grid">
+          <div class="col-6 flex flex-column gap-1">
+            <span class="text-xs font-bold uppercase text-600">Dex Bonus</span>
+            <span class="text-sm">
+              {{ armor?.dexBonus ? 'Yes' : 'No' }}
+              @if (armor?.dexBonus && armor?.maxBonus) {
+                <span class="text-500 text-xs">(Max 2)</span>
+              }
+            </span>
+          </div>
+          <div class="col-6 flex flex-column gap-1">
+            <span class="text-xs font-bold uppercase text-600">Modifier</span>
+            <span class="text-sm">{{ formatModifier(armor?.modifier || 0) }}</span>
+          </div>
+        </div>
+        @if (!armor?.dexBonus && armor?.minimumStr === 0 && armor?.modifier === 0) {
+          <p class="text-sm text-600 italic m-0">No additional properties for this item.</p>
+        }
+      </div>
     }
   </div>
 </p-card>

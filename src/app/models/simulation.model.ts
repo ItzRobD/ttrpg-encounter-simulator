@@ -1,4 +1,4 @@
-import { Entity, ResistanceType} from './combatants';
+import { Actor, ResistanceType} from './combatants';
 import {SimulationOptions} from './simoptions.model';
 import {CharacterConfig} from './configs/character-config.model';
 import {MonsterConfig} from './configs/monster-config.model';
@@ -114,8 +114,9 @@ export interface TimelineNode {
 }
 
 export interface SimulationLog {
-  entities: Entity[];
+  actors: Actor[];
   events: SimulationEvent[];
+  initialState?: Record<string, any>;
 }
 
 export interface IndividualResult {
@@ -124,6 +125,14 @@ export interface IndividualResult {
   rounds: number;
   seed: { seed1: number; seed2: number };
   logs: SimulationEvent[];
+  initialState?: Record<string, any>;
+}
+
+export interface SimulationPerformance {
+  executionTimeMs: number;
+  executionTimeHuman: string;
+  memoryAllocatedMb: number;
+  peakGoroutines: number;
 }
 
 export interface SimulationResult {
@@ -134,6 +143,9 @@ export interface SimulationResult {
   averageRounds: number;
   winRatePercentage: number;
   individualResults: IndividualResult[];
+  performance?: SimulationPerformance;
+  initialState?: Record<string, any>;
+  actorConfigs?: any;
   // For UI compatibility, we'll map the logs from the first run or flatten them
   logs: SimulationLog[];
   count: number;
@@ -160,9 +172,10 @@ export interface SimulationStatusResponse {
 
 export interface SimulationPayload {
   base_options: SimulationOptions;
-  character_configs: Entity[];
+  character_configs: any[];
   monster_ids: number[];
-  monster_configs: MonsterConfig[];
+  monster_configs: any[];
+  actor_configs?: any[];
   lair_config: any;
   number_of_runs: number;
   max_rounds: number;

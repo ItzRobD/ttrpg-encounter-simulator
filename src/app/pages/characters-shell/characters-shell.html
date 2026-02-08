@@ -98,9 +98,9 @@
         </div>
 
         <div class="flex flex-column gap-3">
-          @if (characterService.selectedCharacter(); as character) {
-            <app-entity-card [entity]="character" [hideState]="true"
-                             [startExpanded]="true"></app-entity-card>
+          @if (characterService.selectedCharacter(); as a) {
+            <app-actor-card [actor]="a" [hideState]="true"
+                             [startExpanded]="true"></app-actor-card>
           } @else {
             <p class="text-600 italic">Select a character from the list to view its details.</p>
           }

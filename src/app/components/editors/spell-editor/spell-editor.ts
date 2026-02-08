@@ -14,7 +14,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TooltipModule } from 'primeng/tooltip';
 import { BaseEditorDirective } from '../base-editor.directive';
 import { Spell, CastingTime, SpellType, LevelType, DamageType, SpellFormula, DiceType, Ability, SaveSuccessEffect } from '../../../models';
-import { CustomEntityType } from '../../../services/custom-content.service';
+import { CustomActorType } from '../../../services/custom-content.service';
 import { FluidModule } from 'primeng/fluid';
 
 @Component({
@@ -136,16 +136,23 @@ export class SpellEditorComponent extends BaseEditorDirective<Spell> implements 
     effect(() => {
       const item = this.itemToEdit();
       if (item) {
-        // Disable levelType change watcher temporarily if needed,
-        // but here we just want to ensure we don't trigger clear unnecessarily
-        this.formulas.clear({ emitEvent: false });
-        if (item.formulas) {
-          Object.entries(item.formulas).forEach(([level, formula]) => {
-            this.addFormula(Number(level), formula);
-          });
-        }
-        this.spellForm.patchValue(item, { emitEvent: false });
-      } else {
+      // Disable levelType change watcher temporarily if needed,
+      // but here we just want to ensure we don't trigger clear unnecessarily
+      this.formulas.clear({ emitEvent: false });
+
+      const formulas = item.formulas;
+      if (formulas) {
+        Object.entries(formulas).forEach(([level, formulaArray]) => {
+          if (Array.isArray(formulaArray)) {
+            formulaArray.forEach(f => this.addFormula(Number(level), f));
+          } else {
+            // Handle potentially non-array format if it still exists in custom data
+            this.addFormula(Number(level), formulaArray as any);
+          }
+        });
+      }
+      this.spellForm.patchValue(item, { emitEvent: false });
+    } else {
         this.spellForm.reset({
           level: 0,
           spellType: 'damage',
@@ -166,7 +173,7 @@ export class SpellEditorComponent extends BaseEditorDirective<Spell> implements 
   ngOnInit(): void {
   }
 
-  protected override getEntityType(): CustomEntityType {
+  protected override getActorType(): CustomActorType {
     return 'spells';
   }
 
@@ -199,24 +206,29 @@ export class SpellEditorComponent extends BaseEditorDirective<Spell> implements 
 
     const rawValue = this.spellForm.getRawValue();
 
-    // Map formulas array back to Record<number, SpellFormula>
-    const formulasRecord: Record<number, SpellFormula> = {};
+    // Map formulas array back to Record<number, SpellFormula[]>
+    const formulasRecord: Record<number, SpellFormula[]> = {};
     rawValue.formulas.forEach((f: any) => {
       const avg = (f.numberOfDice * (f.die + 1) / 2) + f.amountToAdd;
-      formulasRecord[f.castLevel] = {
+      const formula = {
         ...f,
         averageValue: Number(avg.toFixed(1))
       };
+
+      if (!formulasRecord[f.castLevel]) {
+        formulasRecord[f.castLevel] = [];
+      }
+      formulasRecord[f.castLevel].push(formula);
     });
 
-    const entity: Spell = {
+    const actor: Spell = {
       ...rawValue,
       formulas: formulasRecord
     };
 
     // Ensure numeric values are correct
-    entity.level = Number(entity.level);
+    actor.level = Number(actor.level);
 
-    this.saveEntity(entity);
+    this.saveActor(actor);
   }
 }

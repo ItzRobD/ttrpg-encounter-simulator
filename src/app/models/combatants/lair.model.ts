@@ -1,4 +1,4 @@
-import {Action} from '../core';
+import {Action} from './actor.model';
 
 export interface Lair {
   name: string;

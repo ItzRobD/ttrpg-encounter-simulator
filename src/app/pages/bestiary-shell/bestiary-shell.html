@@ -103,8 +103,8 @@
         </div>
 
         <div class="flex flex-column gap-3">
-          @if (monsterService.selectedMonster(); as monster) {
-            <app-entity-card [entity]="monster" [hideState]="true" [startExpanded]="true"></app-entity-card>
+          @if (monsterService.selectedMonster(); as a) {
+            <app-actor-card [actor]="a" [hideState]="true" [startExpanded]="true"></app-actor-card>
           } @else {
             <p class="text-600 italic">Select a monster from the list to view its details.</p>
           }

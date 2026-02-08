@@ -25,9 +25,15 @@ export interface AbilityScoreProficiency {
   intelligence: boolean;
   wisdom: boolean;
   charisma: boolean;
+  [key: string]: boolean;
 }
 
 export interface AsConfig {
+  abilityScores: AbilityScores;
+  proficiencies: AbilityScoreProficiency;
+}
+
+export interface Abilities {
   abilityScores: AbilityScores;
   proficiencies: AbilityScoreProficiency;
 }

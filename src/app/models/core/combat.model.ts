@@ -25,10 +25,10 @@ export enum ResistanceType {
 }
 
 export type DamageResistances = {
-  [dt in DamageType]: ResistanceType;
+  [dt in DamageType]: ResistanceType | { resistance: ResistanceType; breakers: string[] };
 };
 
-export interface EntityState {
+export interface ActorState {
   currentHp: number;
   maxHp: number;
   tempHp: number;
@@ -39,4 +39,7 @@ export interface EntityState {
   isStable: boolean;
   isDead: boolean;
   initiative: number;
+  healThreshold?: number;
+  concentration?: any;
+  hasActedThisTurn?: boolean;
 }

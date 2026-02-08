@@ -1,4 +1,4 @@
-import {Monster} from '../combatants';
+import {Actor} from '../combatants';
 
-export interface MonsterConfig extends Monster {
+export interface MonsterConfig extends Actor {
 }

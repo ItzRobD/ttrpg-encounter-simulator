@@ -2,10 +2,10 @@ import {computed, inject, Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {environment} from '../../environments/environment';
 import {MapperService} from './mapper.service';
-import {Character, CharacterSummary, Class, EquipmentSummary, Race, WeaponSlotData, Spell, Armor} from '../models';
+import { Actor, ActorSummary, Armor } from '../models';
 import {catchError, forkJoin, Observable, of, retry, tap, throwError} from 'rxjs';
 import {map, switchMap} from 'rxjs/operators';
-import {EntityService} from './entity.service.interface';
+import {ActorService} from './actor.service.interface';
 import { CustomContentService } from './custom-content.service';
 import { EquipmentService } from './equipment.service';
 import { SpellsService } from './spells.service';
@@ -15,7 +15,7 @@ import { ApiResponse } from '../models';
 @Injectable({
   providedIn: 'root',
 })
-export class CharacterService implements EntityService<Character, CharacterSummary> {
+export class CharacterService implements ActorService<Actor, ActorSummary> {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/characters`;
 
@@ -25,18 +25,20 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   private readonly equipmentService = inject(EquipmentService);
   private readonly spellsService = inject(SpellsService);
 
-  private readonly _characters = signal<Character[]>([]);
+  private readonly _characters = signal<Actor[]>([]);
   public readonly characters = computed(() => {
-    return [...this.customContentService.customCharacters(), ...this._characters()];
+    return [...(this.customContentService.customCharacters() as unknown as Actor[]), ...this._characters()];
   });
 
-  private readonly _summaries = signal<CharacterSummary[]>([]);
+  private readonly _summaries = signal<ActorSummary[]>([]);
   public readonly summaries = computed(() => {
-    const customSummaries: CharacterSummary[] = this.customContentService.customCharacters().map(c => {
+    const customSummaries: ActorSummary[] = (this.customContentService.customCharacters() as unknown as Actor[]).map(c => {
       let armorName = undefined;
       const eq = c.equipment;
+      const metadata = c.metadata;
+
       if (eq?.armorId) {
-        const armorSummary = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) =>
+        const armorSummary = (this.equipmentService.summaries() as any[]).find((s: any) =>
           s.id.toString() === eq.armorId!.toString() && (s.type === 'Armor' || s.type === 'Shield')
         );
         armorName = armorSummary ? armorSummary.name : `Armor #${eq.armorId}`;
@@ -45,7 +47,7 @@ export class CharacterService implements EntityService<Character, CharacterSumma
       if (eq?.hasShieldEquipped) {
         let shieldName = 'Shield';
         if (eq.shieldId) {
-          const shieldSummary = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) =>
+          const shieldSummary = (this.equipmentService.summaries() as any[]).find((s: any) =>
             s.id.toString() === eq.shieldId!.toString() && s.type === 'Shield'
           );
           shieldName = shieldSummary ? shieldSummary.name : `Shield #${eq.shieldId}`;
@@ -55,14 +57,14 @@ export class CharacterService implements EntityService<Character, CharacterSumma
 
       const weaponNames: string[] = [];
       if (eq) {
-        const primaryIds = (eq.primarySlot || []).map(w => w.weaponId);
-        const secondaryIds = (eq.secondarySlot || []).map(w => w.weaponId);
-        const rangedIds = (eq.rangedSlot || []).map(w => w.weaponId);
+        const primaryIds = (eq.primarySlot || []).map((w: any) => w.weaponId);
+        const secondaryIds = (eq.secondarySlot || []).map((w: any) => w.weaponId);
+        const rangedIds = (eq.rangedSlot || []).map((w: any) => w.weaponId);
 
         const allWeaponIds = [...primaryIds, ...secondaryIds, ...rangedIds];
 
         allWeaponIds.forEach(id => {
-          const ws = (this.equipmentService.summaries() as EquipmentSummary[]).find((s: EquipmentSummary) =>
+          const ws = (this.equipmentService.summaries() as any[]).find((s: any) =>
             s.id.toString() === id.toString() && s.type === 'Weapon'
           );
           weaponNames.push(ws ? ws.name : `Weapon #${id}`);
@@ -73,15 +75,16 @@ export class CharacterService implements EntityService<Character, CharacterSumma
         id: c.id,
         name: c.name,
         isCustom: true,
-        race: c.race,
-        class: c.class,
-        level: c.level,
-        classId: c.classId,
-        raceId: c.raceId,
-        isSpellcaster: !!c.spellcasting,
+        race: this.mapperService.getRaceName(metadata?.raceId || 0),
+        class: this.mapperService.getClassName(metadata?.classId || 0),
+        level: metadata?.level || 1,
+        classId: metadata?.classId || 0,
+        raceId: metadata?.raceId || 0,
+        isSpellcaster: !!metadata?.spellcasterMetadata?.isSpellcaster,
+        isInnateCaster: !!metadata?.spellcasterMetadata?.isInnateCaster,
         armorName: armorName,
         weapons: weaponNames
-      };
+      } as any;
     });
     return [...customSummaries, ...this._summaries()];
   });
@@ -92,16 +95,16 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   private readonly _error = signal<string | null>(null);
   public readonly error = this._error.asReadonly();
 
-  private readonly _selectedEntity = signal<Character | null>(null);
-  public readonly selectedEntity = this._selectedEntity.asReadonly();
+  private readonly _selectedActor = signal<Actor | null>(null);
+  public readonly selectedActor = this._selectedActor.asReadonly();
 
   // Selected Character alias
-  public readonly selectedCharacter = this.selectedEntity;
+  public readonly selectedCharacter = this.selectedActor;
 
   // Deprecated naming
   public get characterSummaries() { return this.summaries; }
 
-  getSummaries(forceRefresh = false): Observable<CharacterSummary[]> {
+  getSummaries(forceRefresh = false): Observable<ActorSummary[]> {
     if (!forceRefresh && this._summaries().length > 0) {
       return of(this._summaries());
     }
@@ -115,22 +118,20 @@ export class CharacterService implements EntityService<Character, CharacterSumma
           delay: environment.httpRetryDelay
         }),
         map((response) => {
-          let rawData: unknown[] = [];
-          if (response && typeof response === 'object') {
-            const data = response.data;
-            if (data) {
-              rawData = Array.isArray(data) ? data : Object.values(data as Record<string, unknown>);
-            } else if (response && 'characters' in (response as unknown as Record<string, unknown>)) {
-              rawData = Object.values((response as unknown as Record<string, Record<string, unknown>>)['characters']);
-            }
+          console.log('[CharacterService] getSummaries raw response:', response);
+          let rawData: any[] = [];
+          const responseData = (response as any).data || response;
+
+          if (Array.isArray(responseData)) {
+            rawData = responseData;
+          } else if (responseData && typeof responseData === 'object') {
+            rawData = Object.values(responseData);
           }
 
-          if (rawData.length === 0 && Array.isArray(response)) {
-            rawData = response as unknown[];
-          }
+          console.log('[CharacterService] getSummaries extracted rawData:', rawData);
 
-          return rawData.map((c) => {
-            const mapped = this.mapperService.mapKeys(c) as CharacterSummary;
+          const mapped = rawData.map((c) => {
+            const mapped = c as any;
             // Inject display names for components that still expect .race and .class
             mapped.race = this.mapperService.getRaceName(mapped.raceId);
             mapped.class = this.mapperService.getClassName(mapped.classId);
@@ -160,7 +161,7 @@ export class CharacterService implements EntityService<Character, CharacterSumma
             }
 
             if (mapped.weaponIds && Array.isArray(mapped.weaponIds)) {
-              mapped.weapons = mapped.weaponIds.map(id => {
+              mapped.weapons = mapped.weaponIds.map((id: string | number) => {
                 const weapon = this.equipmentService.summaries().find(s =>
                   s.id.toString() === id.toString() && s.type === 'Weapon'
                 );
@@ -168,8 +169,10 @@ export class CharacterService implements EntityService<Character, CharacterSumma
               });
             }
 
-            return mapped;
+            return mapped as ActorSummary;
           });
+          console.log('[CharacterService] getSummaries mapped result:', mapped);
+          return mapped;
         }),
         tap((summaries) => {
           this._summaries.set(summaries);
@@ -184,16 +187,16 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   }
 
   // Deprecated
-  getCharacterSummaries(forceRefresh = false): Observable<CharacterSummary[]> {
+  getCharacterSummaries(forceRefresh = false): Observable<ActorSummary[]> {
     return this.getSummaries(forceRefresh);
   }
 
-  selectEntityByID(id: string): Observable<Character> {
+  selectActorByID(id: string): Observable<Actor> {
     // Try finding in custom characters first
     const customCharacter = this.customContentService.customCharacters().find(c => c.id.toString() === id);
     if (customCharacter) {
-      return this.hydrateCharacter(customCharacter).pipe(
-        tap(hydrated => this._selectedEntity.set(hydrated))
+      return this.hydrateCharacter(customCharacter as unknown as Actor).pipe(
+        tap(hydrated => this._selectedActor.set(hydrated))
       );
     }
 
@@ -205,14 +208,12 @@ export class CharacterService implements EntityService<Character, CharacterSumma
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        const mapped = this.mapperService.mapKeys(response) as Character;
-        mapped.race = this.mapperService.getRaceName(mapped.raceId);
-        mapped.class = this.mapperService.getClassName(mapped.classId);
-        return mapped;
+        const data = (response as any)?.data || response;
+        return data as Actor;
       }),
       switchMap(character => this.hydrateCharacter(character)),
       tap((character) => {
-        this._selectedEntity.set(character);
+        this._selectedActor.set(character);
         this._loading.set(false);
       }),
       catchError((err) => {
@@ -226,16 +227,18 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   /**
    * Hydrates character spells and equipment using respective services
    */
-  private hydrateCharacter(character: Character): Observable<Character> {
+  private hydrateCharacter(character: Actor): Observable<Actor> {
     const hydrationTasks: Observable<unknown>[] = [];
 
     // 1. Hydrate Spells
     const spellcasting = character.spellcasting;
-    if (spellcasting && spellcasting.spellIds && spellcasting.spellIds.length > 0) {
+    const spellIds = character.knownSpellIDs || (character.spellcasting as any)?.spellIds;
+
+    if (spellIds && spellIds.length > 0) {
       // If not already hydrated
-      if (!spellcasting.spells || spellcasting.spells.length !== spellcasting.spellIds.length) {
-        const spellRequests = spellcasting.spellIds.map(id =>
-          this.spellsService.selectSpellByID(id.toString()).pipe(
+      if (!(spellcasting as any)?.spells || (spellcasting as any).spells.length !== (spellIds as any).length) {
+        const spellRequests = (spellIds as any).map((id: any) =>
+          this.spellsService.selectActorByID(id.toString()).pipe(
             catchError(err => {
               console.error(`Failed to hydrate spell ${id}`, err);
               return of(null);
@@ -243,8 +246,17 @@ export class CharacterService implements EntityService<Character, CharacterSumma
           )
         );
         hydrationTasks.push(forkJoin(spellRequests).pipe(
-          tap(spells => {
-            character.spellcasting!.spells = spells.filter((s): s is Spell => s !== null);
+          tap((spells: any) => {
+            if (!character.spellcasting) {
+              (character as any).spellcasting = {
+                casterType: (character.metadata?.spellcasterMetadata?.isSpellcaster ? 'full' : 'none') as any,
+                casterLevel: character.metadata?.spellcasterMetadata?.spellcastingLevel || 1,
+                spellSlots: {},
+                spellSaveDC: 10,
+                spellAttackBonus: 0
+              };
+            }
+            (character.spellcasting as any).spells = spells.filter((s: any) => s !== null);
           })
         ));
       }
@@ -286,20 +298,20 @@ export class CharacterService implements EntityService<Character, CharacterSumma
   }
 
   // Deprecated
-  selectCharacterByID(id: string): Observable<Character> {
-    return this.selectEntityByID(id);
+  selectCharacterByID(id: string): Observable<Actor> {
+    return this.selectActorByID(id);
   }
 
-  selectEntity(entity: Character | null): void {
-    this._selectedEntity.set(entity);
+  selectActor(actor: Actor | null): void {
+    this._selectedActor.set(actor);
   }
 
   deleteCharacter(id: string | number): Observable<void> {
     this._loading.set(true);
-    return this.customContentService.deleteEntity('characters', id).pipe(
+    return this.customContentService.deleteActor('characters', id).pipe(
       tap(() => {
-        if (this._selectedEntity()?.id === id) {
-          this._selectedEntity.set(null);
+        if (this._selectedActor()?.id === id) {
+          this._selectedActor.set(null);
         }
         this._loading.set(false);
       }),

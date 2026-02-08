@@ -1,8 +1,6 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import {
-  Entity,
-  Monster,
-  Character,
+  ActorSummary,
   Race,
   Class,
   ResistanceType,
@@ -13,10 +11,10 @@ import {
   MonsterType,
   Condition,
   CasterType,
-  SpecialAbilities,
   LevelType,
   isCharacter,
-  isMonster
+  isMonster,
+  Actor
 } from '../models';
 import { environment } from '../../environments/environment';
 import { LocalStorageService } from './local-storage.service';
@@ -28,8 +26,8 @@ export class CombatantService {
   private readonly localStorage = inject(LocalStorageService);
   private readonly ENCOUNTER_STORAGE_KEY = 'dnd5e_active_encounter';
 
-  private readonly _combatants = signal<Entity[]>(
-    this.localStorage.getItem<Entity[]>(this.ENCOUNTER_STORAGE_KEY) || []
+  private readonly _combatants = signal<Actor[]>(
+    this.localStorage.getItem<Actor[]>(this.ENCOUNTER_STORAGE_KEY) || []
   );
 
   // Public readonly signals
@@ -38,11 +36,11 @@ export class CombatantService {
   readonly count = computed(() => this._combatants().length);
 
   readonly monsters = computed(() =>
-    this._combatants().filter((e): e is Monster => isMonster(e))
+    this._combatants().filter((e): e is Actor => isMonster(e))
   );
 
   readonly characters = computed(() =>
-    this._combatants().filter((e): e is Character => isCharacter(e))
+    this._combatants().filter((e): e is Actor => isCharacter(e))
   );
 
   constructor() {
@@ -60,18 +58,18 @@ export class CombatantService {
   }
 
   /**
-   * Adds a new entity to the encounter if limits allow.
+   * Adds a new actor to the encounter if limits allow.
    * Fluid limits:
    * 1. Overall total (maxTotal) is the primary constraint.
    * 2. Characters are hard-capped at maxCharacters.
    * 3. Monsters can fill any remaining capacity up to maxTotal.
    *    (e.g., if maxTotal is 23 and characters are 0, you can have 23 monsters).
    */
-  addCombatant(entity: Entity): boolean {
-    const isChar = isCharacter(entity);
+  addCombatant(actor: Actor): boolean {
+    const isChar = isCharacter(actor);
     const currentCharacters = this.characters().length;
 
-    // Check that we're below the max entities
+    // Check that we're below the max actors
     if (this.count() >= environment.limits.maxTotal) return false;
 
     // Check if we're already at the max number of characters
@@ -81,7 +79,7 @@ export class CombatantService {
     // the remaining capacity as requested (fluid behavior).
 
     const newCombatant = {
-      ...entity,
+      ...actor,
       instanceId: this.getNextInstanceId()
     };
 
@@ -90,51 +88,36 @@ export class CombatantService {
   }
 
   /**
-   * Adds an entity to the simulator from the library (characters or bestiary).
-   * This method clones the entity and initializes it for combat simulation.
+   * Adds an actor to the simulator from the library (characters or bestiary).
+   * This method clones the actor and initializes it for combat simulation.
    */
-  addToSimulator(entity: Entity): boolean {
-    const isChar = isCharacter(entity);
+  addToSimulator(actor: Actor): boolean {
+    const isChar = isCharacter(actor);
 
     // Create a fresh copy with combat-ready state
-    const combatEntity: Entity = {
-      ...entity,
+    const combatActor: Actor = {
+      ...actor,
       instanceId: 0, // Will be set by addCombatant
       state: {
-        ...entity.state,
+        ...actor.state,
         // Initialize HP if not already set
-        currentHp: entity.state?.currentHp || entity.hp?.hpAverage || entity.hp?.value || 1,
-        maxHp: entity.state?.maxHp || entity.hp?.hpAverage || entity.hp?.value || 1,
+        currentHp: actor.state?.currentHp || actor.hpConfig?.hpAverage || actor.hp?.hpAverage || actor.hp?.value || 1,
+        maxHp: actor.state?.maxHp || actor.hpConfig?.hpAverage || actor.hp?.hpAverage || actor.hp?.value || 1,
         tempHp: 0,
         initiative: 0,
         isStable: true,
         isDead: false,
         conditions: Object.values(Condition).reduce((acc, curr) => ({ ...acc, [curr]: false }), {} as Record<Condition, boolean>),
         deathSaves: { successes: 0, failures: 0 },
-        resistances: entity.state?.resistances || Object.values(DamageType).reduce((acc, curr) => ({ ...acc, [curr]: ResistanceType.None }), {} as Record<DamageType, ResistanceType>),
+        resistances: actor.state?.resistances || actor.resistances || Object.values(DamageType).reduce((acc, curr) => ({ ...acc, [curr]: ResistanceType.None }), {} as Record<DamageType, ResistanceType>),
       }
     };
 
-    // Re-ensure type-specific properties are present if they might have been lost or to help type guards
-    if (isChar && isCharacter(combatEntity)) {
-      const charEntity = combatEntity as Character;
-      const originalChar = entity as Character;
-      if (!charEntity.class && originalChar.class) {
-        charEntity.class = originalChar.class;
-      }
-      if (!charEntity.classId && originalChar.classId) {
-        charEntity.classId = originalChar.classId;
-      }
-      if (!charEntity.level && originalChar.level) {
-        charEntity.level = originalChar.level;
-      }
-    }
-
-    return this.addCombatant(combatEntity);
+    return this.addCombatant(combatActor);
   }
 
   /**
-   * Removes an entity from the encounter by its unique instanceId.
+   * Removes an actor from the encounter by its unique instanceId.
    */
   removeCombatant(instanceId: number): void {
     this._combatants.update(list => list.filter(e => e.instanceId !== instanceId));
@@ -150,7 +133,7 @@ export class CombatantService {
   /**
    * Updates a specific combatant.
    */
-  updateCombatant(instanceId: number, updates: Partial<Entity>): void {
+  updateCombatant(instanceId: number, updates: Partial<Actor>): void {
     this._combatants.update(list =>
       list.map(e => e.instanceId === instanceId ? { ...e, ...updates } : e)
     );

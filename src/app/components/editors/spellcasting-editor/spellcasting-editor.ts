@@ -103,8 +103,8 @@ export class SpellcastingEditorComponent implements OnInit, OnChanges {
     }
 
     this.loadingSpells.set(true);
-    this.spellsService.selectSpellByID(summary.id.toString()).subscribe({
-      next: (fullSpell) => {
+    this.spellsService.selectActorByID(summary.id.toString()).subscribe({
+      next: (fullSpell: any) => {
         const updatedSpells = [...currentSpells, fullSpell];
         this.group().get('spells')?.setValue(updatedSpells);
         this.selectedSummary = null;

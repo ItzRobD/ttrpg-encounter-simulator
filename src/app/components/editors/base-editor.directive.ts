@@ -1,5 +1,5 @@
 import { Directive, inject, input, output, signal } from '@angular/core';
-import { CustomContentService, CustomEntityType } from '../../services/custom-content.service';
+import { CustomContentService, CustomActorType } from '../../services/custom-content.service';
 import { SubscriptionService } from '../../services/subscription.service';
 import { Observable, finalize } from 'rxjs';
 
@@ -20,9 +20,9 @@ export abstract class BaseEditorDirective<T extends { id?: string | number; name
   public readonly error = signal<string | null>(null);
 
   /**
-   * Abstract method for getting the entity type (monsters, spells, etc.)
+   * Abstract method for getting the actor type (monsters, spells, etc.)
    */
-  protected abstract getEntityType(): CustomEntityType;
+  protected abstract getActorType(): CustomActorType;
 
   /**
    * Closes the dialog
@@ -35,8 +35,8 @@ export abstract class BaseEditorDirective<T extends { id?: string | number; name
   /**
    * Generic save method
    */
-  protected saveEntity(entity: T): void {
-    const type = this.getEntityType();
+  protected saveActor(actor: T): void {
+    const type = this.getActorType();
 
     // Check limits for new items only
     if (!this.itemToEdit() && !this.subscriptionService.canCreate(type)) {
@@ -47,7 +47,7 @@ export abstract class BaseEditorDirective<T extends { id?: string | number; name
     this.loading.set(true);
     this.error.set(null);
 
-    this.customContentService.saveEntity(type, entity)
+    this.customContentService.saveActor(type, actor)
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => {

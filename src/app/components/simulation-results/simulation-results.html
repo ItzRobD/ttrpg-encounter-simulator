@@ -1,12 +1,20 @@
 <div class="flex flex-column h-full">
   <!-- Log Tabs -->
-  <p-tabs [value]="0" (valueChange)="onTabChange($event)" class="mb-3">
-    <p-tablist>
-      @for (index of logIndicies(); track index) {
-        <p-tab [value]="index">Log {{ index + 1 }}</p-tab>
-      }
-    </p-tablist>
-  </p-tabs>
+  <div class="flex justify-content-between align-items-center mb-2">
+    <p-tabs [value]="0" (valueChange)="onTabChange($event)" class="flex-1">
+      <p-tablist>
+        @for (index of logIndicies(); track index) {
+          <p-tab [value]="index">Run {{ index + 1 }}</p-tab>
+        }
+      </p-tablist>
+    </p-tabs>
+
+    @if (performance(); as perf) {
+      <div class="text-xs text-500 font-mono px-3" [pTooltip]="'Memory: ' + (perf.memoryAllocatedMb | number:'1.2-2') + 'MB, Goroutines: ' + perf.peakGoroutines">
+        Simulated in {{ perf.executionTimeHuman }}
+      </div>
+    }
+  </div>
 
   <!-- Hierarchical Event List -->
   <div class="flex-1 overflow-auto border-1 surface-border border-round bg-card">
@@ -25,9 +33,15 @@
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-rowNode let-rowData="rowData">
-        <tr [class.bg-primary-reverse]="isEventActive(rowData.id)" class="transition-colors">
+        <tr
+          [class.bg-primary-reverse]="isEventActive(rowData.id)"
+          class="transition-colors cursor-pointer"
+          [pTooltip]="rowData.id"
+          [tooltipPosition]="'top'"
+          (click)="logEvent(rowData)"
+        >
           <td style="width: 280px">
-            <p-treeTableToggler [rowNode]="rowNode"></p-treeTableToggler>
+            <p-treeTableToggler [rowNode]="rowNode" (click)="$event.stopPropagation()"></p-treeTableToggler>
             <i
               [class]="
                 rowData.type === EventType.Round
@@ -47,7 +61,7 @@
             </span>
           </td>
           <td style="width: 150px">
-            @if (rowData.data.actor; as actor) {
+            @if (rowData.data?.actor; as actor) {
               <span class="text-sm font-medium">
                 {{ actor.name }}
               </span>
@@ -64,7 +78,7 @@
   </div>
 
   <!-- Timeline Scrubber -->
-  @if (timelineService.selectedSimulationLog(); as log) {
+  @if (stateService.selectedSimulationLog(); as log) {
     <div class="mt-4 pt-4 border-top-1 surface-border bg-card">
       <div class="flex align-items-center gap-3 mb-2 px-2">
         <span class="text-xs font-mono text-500">0</span>
@@ -84,7 +98,9 @@
         @if (timelineService.activeEvent(); as active) {
           <div class="text-xs text-500 italic">
             Active: {{ getEventLabel(active) }}
-            {{ active.data.actor ? 'by ' + active.data.actor.name : '' }}
+            @if (active.data.actor; as actor) {
+              by {{ actor.name }}
+            }
           </div>
         }
       </div>

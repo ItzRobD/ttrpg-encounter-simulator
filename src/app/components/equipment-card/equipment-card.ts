@@ -13,23 +13,38 @@ import { TagModule } from 'primeng/tag';
   styleUrl: './equipment-card.css',
 })
 export class EquipmentCard {
-  public readonly item = input.required<Weapon | Armor>();
+  public readonly item = input.required<Weapon | Armor | any>();
 
-  protected readonly isWeapon = computed(() => 'damageBlocks' in this.item() || 'die' in this.item());
-  protected readonly isArmor = computed(() => 'ac' in this.item() && !('die' in this.item()) && !('damageBlocks' in this.item()));
+  protected readonly innerItem = computed(() => {
+    const item = this.item();
+    if (!item) return null;
+    return item.weapon || item.armor || item;
+  });
 
-  asWeapon(item: Weapon | Armor): Weapon {
-    return item as Weapon;
+  protected readonly isWeapon = computed(() => {
+    const inner = this.innerItem();
+    return !!inner && ('damageBlocks' in inner);
+  });
+
+  protected readonly isArmor = computed(() => {
+    const inner = this.innerItem();
+    return !!inner && ('ac' in inner) && !this.isWeapon();
+  });
+
+  asWeapon(item: any): Weapon {
+    return this.innerItem() as Weapon;
   }
 
-  asArmor(item: Weapon | Armor): Armor {
-    return item as Armor;
+  asArmor(item: any): Armor {
+    return this.innerItem() as Armor;
   }
 
   protected readonly weaponProperties = computed(() => {
     if (!this.isWeapon()) return [];
-    const w = this.asWeapon(this.item());
+    const w = this.asWeapon(null);
     const props: string[] = [];
+    if (!w?.properties) return props;
+
     if (w.properties.isVersatile) props.push('Versatile');
     if (w.properties.isFinesse) props.push('Finesse');
     if (w.properties.isRanged) props.push('Ranged');
@@ -42,8 +57,10 @@ export class EquipmentCard {
 
   protected readonly weaponModifiers = computed(() => {
     if (!this.isWeapon()) return [];
-    const w = this.asWeapon(this.item());
+    const w = this.asWeapon(null);
     const mods: string[] = [];
+    if (!w?.modifiers) return mods;
+
     if (w.modifiers.isMagic) mods.push('Magic');
     if (w.modifiers.isSilvered) mods.push('Silvered');
     if (w.modifiers.isAdamantine) mods.push('Adamantine');

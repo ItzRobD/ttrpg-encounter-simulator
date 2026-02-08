@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
 import {SharedTable} from "../../components/shared-table/shared-table.component";
 import {Button} from "primeng/button";
-import {EntityCard} from "../../components/entity-card/entity-card";
+import {ActorCard} from "../../components/actor-card/actor-card.component";
 import {IconField} from "primeng/iconfield";
 import {InputIcon} from "primeng/inputicon";
 import {InputText} from "primeng/inputtext";
@@ -10,7 +10,7 @@ import {ConfirmationService, MessageService} from 'primeng/api';
 import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {ToastModule} from 'primeng/toast';
 import {CharacterService} from '../../services/character.service';
-import {Character, CharacterSummary, Entity} from '../../models';
+import { Actor, ActorSummary } from '../../models';
 import {CharacterEditorComponent} from '../../components/editors/character-editor/character-editor';
 import {CombatantService} from '../../services/combatant.service';
 
@@ -19,7 +19,7 @@ import {CombatantService} from '../../services/combatant.service';
   imports: [
       SharedTable,
       Button,
-      EntityCard,
+      ActorCard,
       IconField,
       InputIcon,
       InputText,
@@ -47,7 +47,7 @@ export class CharactersShell implements OnInit {
 
   public readonly searchTerm = signal('');
   public readonly isEditorVisible = signal(false);
-  public readonly characterToEdit = signal<Character | null>(null);
+  public readonly characterToEdit = signal<Actor | null>(null);
 
   ngOnInit(): void {
     this.characterService.getSummaries().subscribe();
@@ -67,12 +67,12 @@ export class CharactersShell implements OnInit {
     this.isEditorVisible.set(true);
   }
 
-  onEditCharacter(character: Character): void {
+  onEditCharacter(character: Actor): void {
     this.characterToEdit.set(character);
     this.isEditorVisible.set(true);
   }
 
-  onDeleteCharacter(character: Character | CharacterSummary): void {
+  onDeleteCharacter(character: Actor | ActorSummary): void {
     this.confirmationService.confirm({
       message: `Are you sure you want to delete ${character.name}? This action cannot be undone.`,
       header: 'Confirm Deletion',
@@ -84,7 +84,7 @@ export class CharactersShell implements OnInit {
     });
   }
 
-  onAddToSimulator(character: Entity): void {
+  onAddToSimulator(character: Actor): void {
     const success = this.combatantService.addToSimulator(character);
     if (success) {
       this.messageService.add({

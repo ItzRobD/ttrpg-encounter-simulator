@@ -9,9 +9,9 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { SharedTable } from '../../components/shared-table/shared-table.component';
 import { MonsterService } from '../../services/monster.service';
-import { EntityCard } from '../../components/entity-card/entity-card';
+import { ActorCard } from '../../components/actor-card/actor-card.component';
 import { MonsterEditorComponent } from '../../components/editors/monster-editor/monster-editor';
-import { Monster, Entity } from '../../models';
+import { Actor, ActorSummary } from '../../models';
 import { CombatantService } from '../../services/combatant.service';
 
 import { TabsModule } from 'primeng/tabs';
@@ -26,7 +26,7 @@ import { TabsModule } from 'primeng/tabs';
     InputTextModule,
     ConfirmDialogModule,
     SharedTable,
-    EntityCard,
+    ActorCard,
     MonsterEditorComponent,
     ToastModule,
     TabsModule
@@ -49,7 +49,7 @@ export class BestiaryShell implements OnInit {
   private readonly messageService = inject(MessageService);
   public readonly searchTerm = signal('');
   public readonly isEditorVisible = signal(false);
-  public readonly monsterToEdit = signal<Monster | null>(null);
+  public readonly monsterToEdit = signal<Actor | null>(null);
   public readonly activeTab = signal('all');
 
   onTabChange(event: string | number | undefined): void {
@@ -67,12 +67,12 @@ export class BestiaryShell implements OnInit {
     this.isEditorVisible.set(true);
   }
 
-  onEditMonster(monster: Monster): void {
+  onEditMonster(monster: Actor): void {
     this.monsterToEdit.set(monster);
     this.isEditorVisible.set(true);
   }
 
-  onDeleteMonster(monster: Monster): void {
+  onDeleteMonster(monster: Actor): void {
     this.confirmationService.confirm({
       message: `Are you sure you want to delete ${monster.name}? This action cannot be undone.`,
       header: 'Confirm Deletion',
@@ -93,7 +93,7 @@ export class BestiaryShell implements OnInit {
     this.searchTerm.set('');
   }
 
-  onAddToSimulator(monster: Entity): void {
+  onAddToSimulator(monster: Actor): void {
     const success = this.combatantService.addToSimulator(monster);
     if (success) {
       this.messageService.add({

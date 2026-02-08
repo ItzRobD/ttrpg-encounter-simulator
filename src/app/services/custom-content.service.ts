@@ -3,16 +3,16 @@ import { LocalStorageService } from './local-storage.service';
 import { SubscriptionService } from './subscription.service';
 import { HttpClient } from '@angular/common/http';
 import {
-  Monster, MonsterSummary,
-  Character, CharacterSummary,
   Spell, SpellSummary,
   EquipmentItem, EquipmentSummary,
-  UserTier
+  UserTier,
+  Actor,
+  ActorSummary
 } from '../models';
 import { Observable, of, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export type CustomEntityType = 'monsters' | 'characters' | 'spells' | 'equipment';
+export type CustomActorType = 'monsters' | 'characters' | 'spells' | 'equipment';
 
 @Injectable({
   providedIn: 'root'
@@ -23,8 +23,8 @@ export class CustomContentService {
   private readonly http = inject(HttpClient);
 
   // Local signals for each type
-  private readonly _customMonsters = signal<Monster[]>([]);
-  private readonly _customCharacters = signal<Character[]>([]);
+  private readonly _customMonsters = signal<Actor[]>([]);
+  private readonly _customCharacters = signal<Actor[]>([]);
   private readonly _customSpells = signal<Spell[]>([]);
   private readonly _customEquipment = signal<EquipmentItem[]>([]);
 
@@ -55,8 +55,8 @@ export class CustomContentService {
   private loadInitialData() {
     // For now, always load from local storage as we might have guest data
     // TODO: Later, if premium, we might want to fetch from API and merge or replace
-    const monsters = this.localStorage.getItem<Monster[]>('custom_monsters') || [];
-    const characters = this.localStorage.getItem<Character[]>('custom_characters') || [];
+    const monsters = this.localStorage.getItem<Actor[]>('custom_monsters') || [];
+    const characters = this.localStorage.getItem<Actor[]>('custom_characters') || [];
     const spells = this.localStorage.getItem<Spell[]>('custom_spells') || [];
     const equipment = this.localStorage.getItem<EquipmentItem[]>('custom_equipment') || [];
 
@@ -67,32 +67,32 @@ export class CustomContentService {
   }
 
   /**
-   * Saves a custom entity.
+   * Saves a custom actor.
    * Handles LocalStorage for free users and API for premium users.
    */
-  saveEntity<T extends { id?: string | number, isCustom?: boolean }>(type: CustomEntityType, entity: T): Observable<T> {
-    entity.isCustom = true;
+  saveActor<T extends { id?: string | number, isCustom?: boolean }>(type: CustomActorType, actor: T): Observable<T> {
+    actor.isCustom = true;
 
     if (this.subscriptionService.isPremium()) {
       // If it has a local ID, remove it before sending to API so server can generate a fresh one
-      if (entity.id && typeof entity.id === 'string' && entity.id.startsWith('local-')) {
-        delete entity.id;
+      if (actor.id && typeof actor.id === 'string' && actor.id.startsWith('local-')) {
+        delete actor.id;
       }
-      return this.saveToApi(type, entity);
+      return this.saveToApi(type, actor);
     } else {
       // For local storage, if no ID, generate one (since there is no backend)
-      if (!entity.id) {
-        entity.id = `local-${crypto.randomUUID()}`;
+      if (!actor.id) {
+        actor.id = `local-${crypto.randomUUID()}`;
       }
-      this.saveToLocal(type, entity as T & { id: string | number });
-      return of(entity as T & { id: string | number });
+      this.saveToLocal(type, actor as T & { id: string | number });
+      return of(actor as T & { id: string | number });
     }
   }
 
   /**
-   * Deletes a custom entity.
+   * Deletes a custom actor.
    */
-  deleteEntity(type: CustomEntityType, id: string | number): Observable<void> {
+  deleteActor(type: CustomActorType, id: string | number): Observable<void> {
     if (this.subscriptionService.isPremium()) {
       return this.deleteFromApi(type, id);
     } else {
@@ -101,7 +101,7 @@ export class CustomContentService {
     }
   }
 
-  private saveToLocal<T extends { id: string | number }>(type: CustomEntityType, entity: T) {
+  private saveToLocal<T extends { id: string | number }>(type: CustomActorType, actor: T) {
     const signalMap = {
       monsters: this._customMonsters,
       characters: this._customCharacters,
@@ -111,13 +111,13 @@ export class CustomContentService {
 
     const targetSignal = signalMap[type];
     (targetSignal as any).update((items: any[]) => {
-      const index = items.findIndex(i => i.id === entity.id);
+      const index = items.findIndex(i => i.id === actor.id);
       if (index > -1) {
         const newItems = [...items];
-        newItems[index] = entity;
+        newItems[index] = actor;
         return newItems;
       }
-      return [...items, entity];
+      return [...items, actor];
     });
 
     // Refresh limits if needed (though backend is source of truth,
@@ -125,7 +125,7 @@ export class CustomContentService {
     this.subscriptionService.fetchLimits();
   }
 
-  private deleteFromLocal(type: CustomEntityType, id: string | number) {
+  private deleteFromLocal(type: CustomActorType, id: string | number) {
      const signalMap = {
       monsters: this._customMonsters,
       characters: this._customCharacters,
@@ -138,9 +138,9 @@ export class CustomContentService {
     this.subscriptionService.fetchLimits();
   }
 
-  private saveToApi<T extends { id?: string | number }>(type: CustomEntityType, entity: T): Observable<T> {
+  private saveToApi<T extends { id?: string | number }>(type: CustomActorType, actor: T): Observable<T> {
     const url = `${environment.apiUrl}/custom/${type}`;
-    return this.http.post<T>(url, entity).pipe(
+    return this.http.post<T>(url, actor).pipe(
       tap(saved => {
         // Also update local signals so UI is snappy
         this.saveToLocal(type, saved as T & { id: string | number });
@@ -148,7 +148,7 @@ export class CustomContentService {
     );
   }
 
-  private deleteFromApi(type: CustomEntityType, id: string | number): Observable<void> {
+  private deleteFromApi(type: CustomActorType, id: string | number): Observable<void> {
     const url = `${environment.apiUrl}/custom/${type}/${id}`;
     return this.http.delete<void>(url).pipe(
       tap(() => {

@@ -67,9 +67,15 @@ export interface Spell {
   isAutoHit: boolean;
   levelType: LevelType;
   spellDC: SpellDC;
+  apiUrl?: string;
   isInnate?: boolean;
   maxCastsPerDay?: number;
-  formulas?: Record<number, SpellFormula>;
+  formulas?: Record<number, SpellFormula[]>;
+}
+
+export interface InnateSpell extends Spell {
+  maxUses: number;
+  remainingUses: number;
 }
 
 export interface SpellFormula {

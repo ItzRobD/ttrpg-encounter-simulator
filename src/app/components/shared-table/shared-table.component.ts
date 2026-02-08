@@ -20,32 +20,27 @@ import { CommonModule } from '@angular/common';
 import { CharacterService } from '../../services/character.service';
 import { EquipmentService } from '../../services/equipment.service';
 import { CrFormatPipe } from '../../pipes/cr-format.pipe';
-import { EntityService } from '../../services/entity.service.interface';
+import { ActorService } from '../../services/actor.service.interface';
 import { MapperService } from '../../services/mapper.service';
 import {
-  Entity,
-  EntitySummary,
-  MonsterSummary,
-  CharacterSummary,
-  EquipmentSummary,
-  Monster,
-  Character,
+  ActorSummary,
+  Actor,
   EquipmentItem, SpellSummary, Spell
 } from '../../models';
 import {SpellsService} from '../../services/spells.service';
 
 type SupportedService =
-  | EntityService<Monster, MonsterSummary>
-  | EntityService<Character, CharacterSummary>
+  | ActorService<Actor, ActorSummary>
+  | ActorService<Actor, ActorSummary>
   | (Omit<EquipmentService, 'selectedItem' | 'selectItem'> & {
-      selectedEntity: Signal<EquipmentItem | null>;
-      selectEntity: (item: EquipmentItem | null) => void;
-      selectEntityByID: (id: string) => Observable<EquipmentItem>;
+      selectedActor: Signal<EquipmentItem | null>;
+      selectActor: (item: EquipmentItem | null) => void;
+      selectActorByID: (id: string) => Observable<EquipmentItem>;
     })
   | (Omit<SpellsService, 'selectedSpell' | 'selectSpell'> & {
-      selectedEntity: Signal<Spell | null>;
-      selectEntity: (spell: Spell | null) => void;
-      selectEntityByID: (id: string) => Observable<Spell>;
+      selectedActor: Signal<Spell | null>;
+      selectActor: (spell: Spell | null) => void;
+      selectActorByID: (id: string) => Observable<Spell>;
     });
 
 @Component({
@@ -68,7 +63,7 @@ export class SharedTable {
   public readonly categoryFilter = input<string>('all');
   public readonly showAddToSimulator = input(false);
 
-  public readonly addToSimulator = output<Entity>();
+  public readonly addToSimulator = output<Actor>();
 
   public readonly activeService = computed<SupportedService>(() => {
     switch (this.mode()) {
@@ -78,19 +73,19 @@ export class SharedTable {
         const service = this.equipmentService;
         return {
           ...service,
-          selectedEntity: service.selectedItem,
-          selectEntity: service.selectItem.bind(service),
-          selectEntityByID: (id: string) => service.selectItemByID(id, 'Weapon') // Defaulting to Weapon for now
-        } as unknown as SupportedService;
+          selectedActor: service.selectedItem,
+          selectActor: (actor: any) => service.selectItem(actor),
+          selectActorByID: (id: string) => service.selectItemByID(id, 'Weapon') // Defaulting to Weapon for now
+        } as any;
       }
       case 'spells': {
         const service = this.spellsService;
         return {
           ...service,
-          selectedEntity: service.selectedSpell,
-          selectEntity: service.selectSpell.bind(service),
-          selectEntityByID: (id: string) => service.selectSpellByID(id)
-        } as unknown as SupportedService;
+          selectedActor: service.selectedSpell,
+          selectActor: (actor: any) => service.selectActor(actor),
+          selectActorByID: (id: string) => service.selectActorByID(id)
+        } as any;
       }
     }
   });
@@ -134,24 +129,23 @@ export class SharedTable {
     const term = this.searchTerm().toLowerCase().trim();
     const category = this.categoryFilter().toLowerCase();
 
-    let items: (MonsterSummary | CharacterSummary | EquipmentSummary | SpellSummary)[] = summaries;
+    console.log(`[SharedTable] filteredItems mode=${this.mode()}, total summaries:`, summaries.length);
+
+    let items: ActorSummary[] = summaries;
 
     // 1. Category Filtering
     if (category !== 'all') {
       items = items.filter((i: any) => {
         if (this.mode() === 'monster') {
-          const m = i as MonsterSummary;
-          if (category === 'srd') return !m.isCustom;
-          if (category === 'custom') return !!m.isCustom;
+          if (category === 'srd') return !i.isCustom;
+          if (category === 'custom') return !!i.isCustom;
         } else if (this.mode() === 'equipment') {
-          const eq = i as EquipmentSummary;
-          if (category === 'armor') return eq.type === 'Armor' || eq.type === 'Shield';
-          if (category === 'weapons') return eq.type === 'Weapon';
+          if (category === 'armor') return i.type === 'Armor' || i.type === 'Shield';
+          if (category === 'weapons') return i.type === 'Weapon';
         } else if (this.mode() === 'spells') {
-          const s = i as SpellSummary;
-          if (category === 'damage') return s.spellType === 'damage';
-          if (category === 'healing') return s.spellType === 'healing';
-          if (category === 'utility') return s.spellType === 'other';
+          if (category === 'damage') return i.spellType === 'damage';
+          if (category === 'healing') return i.spellType === 'healing';
+          if (category === 'utility') return i.spellType === 'other';
         }
         return true;
       });
@@ -162,11 +156,11 @@ export class SharedTable {
       return items;
     }
 
-    return (items as (MonsterSummary | CharacterSummary | EquipmentSummary | SpellSummary)[]).filter((i) => {
+    return (items as ActorSummary[]).filter((i) => {
       const basicMatch = i.name.toLowerCase().includes(term);
 
       if (this.mode() === 'monster') {
-        const m = i as MonsterSummary;
+        const m = i as any;
         return (
           basicMatch ||
           m.type?.toLowerCase().includes(term) ||
@@ -174,18 +168,19 @@ export class SharedTable {
           m.cr?.toString().includes(term) ||
           m.ac?.toString().includes(term) ||
           (m.isLegendary && 'legendary'.includes(term)) ||
-          (m.isSpellcaster && 'spellcaster'.includes(term))
+          ((m.isSpellcaster || m.isInnateCaster) && 'spellcaster'.includes(term))
         );
       } else if (this.mode() === 'character') {
-        const c = i as CharacterSummary;
+        const c = i as any;
         return (
           basicMatch ||
           c.race?.toLowerCase().includes(term) ||
           c.class?.toLowerCase().includes(term) ||
-          c.level?.toString().includes(term)
+          c.level?.toString().includes(term) ||
+          ((c.isSpellcaster || c.isInnateCaster) && 'spellcaster'.includes(term))
         );
       } else if (this.mode() === 'equipment') {
-        const eq = i as EquipmentSummary;
+        const eq = i as any;
         const propertyMatch = eq.properties ? (
           (eq.properties.isVersatile && 'versatile'.includes(term)) ||
           (eq.properties.isFinesse && 'finesse'.includes(term)) ||
@@ -202,7 +197,7 @@ export class SharedTable {
           propertyMatch
         );
       } else if (this.mode() === 'spells') {
-        const spell = i as SpellSummary;
+        const spell = i as any;
         return (
           basicMatch ||
           spell.spellType?.toLowerCase().includes(term) ||
@@ -220,16 +215,16 @@ export class SharedTable {
 
   public readonly selectedSummary = computed(() => {
     const service = this.activeService();
-    const selected = service.selectedEntity();
+    const selected = service.selectedActor();
     if (!selected) return null;
     return service.summaries().find((s) => (s as { id: number }).id === (selected as { id: number }).id) || null;
   });
 
-  onRowSelect(event: { data?: MonsterSummary | CharacterSummary | EquipmentSummary | SpellSummary | (MonsterSummary | CharacterSummary | EquipmentSummary | SpellSummary)[] }): void {
+  onRowSelect(event: { data?: ActorSummary | (ActorSummary)[] }): void {
     const summary = event.data;
     if (!summary || Array.isArray(summary)) return;
 
-    const id = (summary as { id?: number }).id;
+    const id = (summary as { id?: number | string }).id;
     if (id === undefined || id === null) {
       console.error('Cannot select row: summary.id is undefined or null', summary);
       return;
@@ -239,33 +234,37 @@ export class SharedTable {
     const mode = this.mode();
 
     if (mode === 'monster' || mode === 'character') {
-      (service as EntityService<Entity, EntitySummary>).selectEntityByID(id.toString()).pipe(take(1)).subscribe();
+      (service as ActorService<Actor, ActorSummary>).selectActorByID(id.toString()).pipe(take(1)).subscribe();
     } else if (mode === 'equipment') {
-      const eqSummary = summary as EquipmentSummary;
-      this.equipmentService.selectItemByID(id.toString(), eqSummary.type).pipe(take(1)).subscribe();
+      const eqSummary = summary as any;
+      this.equipmentService.selectItemByID(id.toString(), eqSummary.type).pipe(take(1)).subscribe(item => {
+        console.log('[SharedTable] Equipment item loaded:', item);
+      });
     } else if (mode === 'spells') {
-      this.spellsService.selectSpellByID(id.toString()).pipe(take(1)).subscribe();
+      this.spellsService.selectActorByID(id.toString()).pipe(take(1)).subscribe();
     }
+
+    console.log(`[SharedTable] Selected ${mode} summary:`, summary);
   }
 
   onRowUnselect(): void {
-    this.activeService().selectEntity(null);
+    this.activeService().selectActor(null);
   }
 
-  onAddToSimulatorClick(event: Event, summary: MonsterSummary | CharacterSummary): void {
+  onAddToSimulatorClick(event: Event, summary: ActorSummary): void {
     event.stopPropagation();
 
     const service = this.activeService();
-    const id = (summary as { id?: number }).id;
+    const id = (summary as { id?: number | string }).id;
     if (id === undefined || id === null) return;
 
     const mode = this.mode();
     if (mode === 'monster' || mode === 'character') {
-      const entityService = service as EntityService<Entity, EntitySummary>;
-      entityService.selectEntityByID(id.toString()).pipe(take(1)).subscribe({
+      const actorService = service as ActorService<Actor, ActorSummary>;
+      actorService.selectActorByID(id.toString()).pipe(take(1)).subscribe({
         next: () => {
-          const entity = entityService.selectedEntity();
-          if (entity) this.addToSimulator.emit(entity);
+          const actor = actorService.selectedActor();
+          if (actor) this.addToSimulator.emit(actor);
         }
       });
     }

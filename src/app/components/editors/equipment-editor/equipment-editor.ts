@@ -13,7 +13,7 @@ import { TabsModule } from 'primeng/tabs';
 import { FluidModule } from 'primeng/fluid';
 import { BaseEditorDirective } from '../base-editor.directive';
 import { Weapon, Armor, EquipmentItem, DiceType, DamageType } from '../../../models';
-import { CustomEntityType } from '../../../services/custom-content.service';
+import { CustomActorType } from '../../../services/custom-content.service';
 
 @Component({
   selector: 'app-equipment-editor',
@@ -110,7 +110,7 @@ export class EquipmentEditorComponent extends BaseEditorDirective<EquipmentItem>
 
   ngOnInit(): void {}
 
-  protected override getEntityType(): CustomEntityType {
+  protected override getActorType(): CustomActorType {
     return 'equipment';
   }
 
@@ -150,11 +150,11 @@ export class EquipmentEditorComponent extends BaseEditorDirective<EquipmentItem>
   onSave(): void {
     if (this.activeTab() === 'weapon') {
       if (this.weaponForm.valid) {
-        this.saveEntity(this.weaponForm.value);
+        this.saveActor(this.weaponForm.value);
       }
     } else {
       if (this.armorForm.valid) {
-        this.saveEntity(this.armorForm.value);
+        this.saveActor(this.armorForm.value);
       }
     }
   }

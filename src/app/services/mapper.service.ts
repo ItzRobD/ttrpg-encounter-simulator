@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Entity, EventType, SimulationEvent, SimulationLog, TimelineNode, Race, Class, WeaponSlotData } from '../models';
+import { Actor, ActorSummary, Race, Class, SimulationEvent, TimelineNode, EventType } from '../models';
 
 @Injectable({
   providedIn: 'root',
@@ -32,6 +32,7 @@ export class MapperService {
     [Class.Warlock]: 12,
     [Class.Wizard]: 13
   };
+
   public getRaceName(raceId: number): string {
     const entry = Object.entries(this.raceMap).find(([_, id]) => id === raceId);
     return entry ? entry[0] : 'Unknown Race';
@@ -59,8 +60,8 @@ export class MapperService {
   }
 
   /**
-   * Recursively converts object keys from PascalCase to camelCase.
-   * Special handling for Monster data from backend.
+   * Recursively converts object keys from snake_case to camelCase.
+   * Handles response envelopes (data, details) and common D&D abbreviations.
    */
   mapKeys(obj: unknown): unknown {
     if (Array.isArray(obj)) {
@@ -69,14 +70,13 @@ export class MapperService {
       const record = obj as Record<string, unknown>;
 
       // Resolve unified response envelopes: { data: { ... } } or { data: { data: { ... } } }
-      // including { data: { details: { data: { ... } } } }
       let current = record;
       while (current && typeof current === 'object' && !Array.isArray(current)) {
-        if (current['data'] !== undefined) {
+        if (current['data'] !== undefined && current['id'] === undefined && current['ID'] === undefined && current['type'] === undefined && current['name'] === undefined && current['spell_type'] === undefined) {
           current = current['data'] as Record<string, unknown>;
-        } else if (current['details'] !== undefined && typeof current['details'] === 'object') {
+        } else if (current['details'] !== undefined && typeof current['details'] === 'object' && current['id'] === undefined && current['ID'] === undefined && current['type'] === undefined) {
           const details = current['details'] as Record<string, unknown>;
-          if (details['data'] !== undefined) {
+          if (details['data'] !== undefined && details['id'] === undefined && details['type'] === undefined) {
             current = details['data'] as Record<string, unknown>;
           } else {
             break;
@@ -90,414 +90,15 @@ export class MapperService {
         return this.mapKeys(current);
       }
 
-      // Handle entities directly (from seeds or timelines)
-      if (record['as_config'] && typeof record['as_config'] === 'object') {
-        const data = record as Record<string, unknown>;
-        if (data['monster_actions'] || data['actions']) {
-          return this.mapMonsterResponse(data);
-        }
-        if (data['class_id'] !== undefined || data['class']) {
-          return this.mapCharacterResponse(data);
-        }
-      }
-
-      // Handle spells directly
-      if (record['spell_type'] !== undefined || record['casting_time'] !== undefined || record['spell_dc'] !== undefined || record['formulas'] !== undefined || record['spellType'] !== undefined || record['is_concentration'] !== undefined || record['isConcentration'] !== undefined) {
-        return this.mapSpellResponse(record as Record<string, unknown>);
-      }
-
-      // Handle weapons and armor directly (they might not have as_config)
-      if (record['damage_blocks'] && record['properties'] && record['modifiers']) {
-        // This looks like a Weapon
-        const result: Record<string, unknown> = {};
-        Object.keys(record).forEach((key) => {
-          const camelKey = this.toCamelCase(key);
-          result[camelKey] = this.mapKeys(record[key]);
-        });
-        return result;
-      }
-
-      if (record['ac'] !== undefined && record['minimum_strength'] !== undefined) {
-        // This looks like Armor
-        const result: Record<string, unknown> = {};
-        Object.keys(record).forEach((key) => {
-          const camelKey = this.toCamelCase(key);
-          result[camelKey] = this.mapKeys(record[key]);
-        });
-        return result;
-      }
-
-      // Special case for dictionary of objects (e.g., { "119": { ... } })
-      const entries = Object.entries(record);
-      if (entries.length > 0 && typeof entries[0][1] === 'object' && entries[0][1] !== null) {
-        // Check if the first value looks like a spell or entity
-        const firstVal = entries[0][1] as Record<string, unknown>;
-        if (firstVal['spell_type'] !== undefined || firstVal['casting_time'] !== undefined || firstVal['spell_dc'] !== undefined || firstVal['formulas'] !== undefined || firstVal['spellType'] !== undefined || firstVal['is_concentration'] !== undefined || firstVal['isConcentration'] !== undefined) {
-          // If there's only one entry, it might be a single spell wrapped in its ID
-          if (entries.length === 1) {
-            return this.mapSpellResponse(firstVal);
-          }
-
-          const result: Record<string, unknown> = {};
-          entries.forEach(([k, v]) => {
-            result[k] = this.mapSpellResponse(v as Record<string, unknown>);
-          });
-          return result;
-        }
-      }
-
-      // Fallback for objects already inside the mappers or simpler objects
       const result: Record<string, unknown> = {};
-      Object.keys(record).forEach((key) => {
+      Object.keys(current).forEach((key) => {
         const camelKey = this.toCamelCase(key);
-        result[camelKey] = this.mapKeys(record[key]);
+        result[camelKey] = this.mapKeys(current[key]);
       });
 
       return result;
     }
     return obj;
-  }
-
-  /**
-   * Specifically handles the mapping of the Character response from the backend.
-   */
-  private mapCharacterResponse(response: Record<string, unknown>): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-
-    Object.keys(response).forEach((key) => {
-      const camelKey = this.toCamelCase(key);
-      result[camelKey] = this.mapKeys(response[key]);
-    });
-
-    // Ensure raceId and classId are present and numeric
-    if (response['race_id'] !== undefined) {
-      result['raceId'] = Number(response['race_id']);
-    } else if (response['race'] !== undefined && typeof response['race'] === 'string') {
-      result['raceId'] = this.raceMap[response['race'] as Race] ?? 0;
-    }
-
-    if (response['class_id'] !== undefined) {
-      result['classId'] = Number(response['class_id']);
-    } else if (response['class'] !== undefined && typeof response['class'] === 'string') {
-      result['classId'] = this.classMap[response['class'] as Class] ?? 0;
-    }
-
-    // Explicitly ensure AC and HP are mapped if they exist in the response
-    if (response['ac'] !== undefined) result['ac'] = response['ac'];
-    if (response['hp'] !== undefined) result['hp'] = this.mapKeys(response['hp']);
-
-    // Ensure armorId and weaponIds are present in the summary if this is a summary
-    if (response['armor_id'] !== undefined) result['armorId'] = response['armor_id'];
-    if (response['weapon_ids'] !== undefined) result['weaponIds'] = response['weapon_ids'];
-
-    // Map as_config directly to asConfig
-    if (response['as_config']) {
-      result['asConfig'] = this.mapKeys(response['as_config']);
-    }
-
-    // 1. Map Spellcasting if present
-    const rawSpellcasting = response['spellcasting'] as Record<string, unknown> | undefined;
-    const knownSpells = response['known_spells'] as (string | number)[] | undefined;
-
-    if (rawSpellcasting || knownSpells) {
-      const spellIds: (string | number)[] = knownSpells || (rawSpellcasting ? (rawSpellcasting['spell_ids'] || rawSpellcasting['known_spells'] || []) as (string | number)[] : []);
-
-      let casterType = 'none';
-      let casterLevel = 0;
-      let spellSlots: Record<number, { current: number; max: number }> = {};
-      let spellSaveDC = 0;
-      let spellAttackBonus = 0;
-
-      if (rawSpellcasting) {
-        casterType = ((rawSpellcasting['caster_type'] as string) || 'none').toLowerCase();
-        casterLevel = (rawSpellcasting['casting_level'] as number) || 0;
-        spellSaveDC = (rawSpellcasting['save_dc'] as number) || 0;
-        spellAttackBonus = (rawSpellcasting['attack_modifier'] as number) || 0;
-
-        const rawSlots = rawSpellcasting['spell_slots'] as Record<string, number> | undefined;
-        if (rawSlots) {
-          Object.entries(rawSlots).forEach(([level, max]) => {
-            spellSlots[Number(level)] = { current: max, max: max };
-          });
-        }
-      }
-
-      result['spellcasting'] = {
-        casterType,
-        casterLevel,
-        spellSlots,
-        spellIds,
-        spellSaveDC,
-        spellAttackBonus
-      };
-    }
-
-    // 2. Map Equipment
-    const rawEquipment = response['equipment'] as Record<string, unknown> | undefined;
-    if (rawEquipment) {
-      const mapWeaponSlot = (slotData: unknown[]): WeaponSlotData[] => {
-        if (!Array.isArray(slotData)) return [];
-        return slotData.map(item => {
-          const itemRecord = item as Record<string, unknown>;
-          return {
-            weaponId: itemRecord['weapon_id'] as string | number || itemRecord['id'] as string | number,
-            isProficient: !!itemRecord['is_proficient'],
-            modifiers: this.mapKeys(itemRecord['modifiers'] || {}) as any
-          };
-        });
-      };
-
-      result['equipment'] = {
-        armorId: rawEquipment['armor_id'],
-        shieldId: rawEquipment['shield_id'],
-        hasShieldEquipped: !!rawEquipment['has_shield_equipped'],
-        primarySlot: mapWeaponSlot(rawEquipment['primary_slot'] as unknown[]),
-        secondarySlot: mapWeaponSlot(rawEquipment['secondary_slot'] as unknown[]),
-        rangedSlot: mapWeaponSlot(rawEquipment['ranged_slot'] as unknown[])
-      };
-
-      if (rawEquipment['armor_data']) {
-        (result['equipment'] as any).armor = this.mapKeys(rawEquipment['armor_data']);
-      }
-      if (rawEquipment['shield_data']) {
-        (result['equipment'] as any).shield = this.mapKeys(rawEquipment['shield_data']);
-      }
-    }
-
-    // 3. Map Resistances
-    const resistances: Record<string, string> = {};
-    const rawResistances = (response['resistances'] || {}) as Record<string, { resistance?: string }>;
-    Object.entries(rawResistances).forEach(([type, data]) => {
-      resistances[type] = (data.resistance || 'none').toLowerCase();
-    });
-
-    // 4. Map Special Abilities
-    if (response['special_abilities']) {
-      result['specialAbilities'] = this.mapKeys(response['special_abilities']);
-    }
-
-    // 5. Ensure state exists
-    result['state'] = {
-      ...(result['state'] as Record<string, unknown>),
-      resistances: resistances,
-      conditions: {},
-      deathSaves: { successes: 0, failures: 0 },
-      isStable: false,
-      isDead: false
-    };
-
-    return result;
-  }
-
-  /**
-   * Specifically handles the mapping of the Spell response from the backend.
-   */
-  private mapSpellResponse(response: Record<string, unknown>): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-
-    Object.keys(response).forEach((key) => {
-      if (key === 'formulas' || key === 'spell_dc' || key === 'casting_time' || key === 'description' || key === 'level') return;
-      const camelKey = this.toCamelCase(key);
-      result[camelKey] = this.mapKeys(response[key]);
-    });
-
-    // Handle level explicitly - sometimes it comes as a string from some backends or partials
-    if (response['level'] !== undefined) {
-      result['level'] = Number(response['level']);
-    }
-
-    // Handle description explicitly to avoid any weird recursive mapping if it contains underscores (unlikely but safe)
-    if (response['description'] !== undefined) {
-      result['description'] = response['description'];
-    }
-
-    // Handle Formulas - converting map keys to numbers and values to camelCase
-    if (response['formulas'] && typeof response['formulas'] === 'object') {
-      const rawFormulas = response['formulas'] as Record<string, unknown>;
-      const formulas: Record<number, unknown> = {};
-
-      Object.entries(rawFormulas).forEach(([key, value]) => {
-        formulas[Number(key)] = this.mapKeys(value);
-      });
-      result['formulas'] = formulas;
-    }
-
-    // Handle spell_dc explicitly
-    if (response['spell_dc'] && typeof response['spell_dc'] === 'object') {
-      result['spellDC'] = this.mapKeys(response['spell_dc']);
-    } else if (response['spellDC'] && typeof response['spellDC'] === 'object') {
-      // Already camelCased but might need internal mapping
-      result['spellDC'] = this.mapKeys(response['spellDC']);
-    }
-
-    // Handle casting_time explicitly
-    if (response['casting_time'] !== undefined) {
-      result['castingTime'] = response['casting_time'];
-    }
-
-    // Explicitly map range if present (it's often missing or differently named in backend)
-    if (response['range'] !== undefined) {
-      result['range'] = response['range'];
-    }
-
-    return result;
-  }
-
-  /**
-   * Specifically handles the mapping of the complex Monster response from the backend.
-   */
-  private mapMonsterResponse(response: Record<string, unknown>): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-
-    Object.keys(response).forEach((key) => {
-      // Avoid recursive mapping of large arrays/objects we handle manually below
-      if (['actions', 'legendary_actions', 'multiattacks', 'resistances', 'spellcasting', 'hp', 'details'].includes(key)) {
-        return;
-      }
-      const camelKey = this.toCamelCase(key);
-      result[camelKey] = this.mapKeys(response[key]);
-    });
-
-    // Handle details nesting if present directly in the object
-    if (response['details'] && typeof response['details'] === 'object') {
-       const details = response['details'] as Record<string, unknown>;
-       if (details['data']) {
-          return this.mapMonsterResponse(details['data'] as Record<string, unknown>);
-       }
-    }
-
-    // Map as_config directly to asConfig
-    if (response['as_config']) {
-      result['asConfig'] = this.mapKeys(response['as_config']);
-    }
-
-    // Map HP
-    if (response['hp']) {
-      result['hp'] = this.mapKeys(response['hp']);
-    }
-
-    // 1. Map Actions
-    const rawActions = (response['actions'] || []) as unknown[];
-    const actions = Array.isArray(rawActions) ? rawActions.map((a) => {
-      const mappedAction = this.mapKeys(a) as Record<string, unknown>;
-      // Map damage_blocks if present to damageBlocks
-      if ((a as Record<string, unknown>)['damage_blocks']) {
-        mappedAction['damageBlocks'] = this.mapKeys((a as Record<string, unknown>)['damage_blocks']);
-      }
-      return mappedAction;
-    }) : [];
-
-    // 2. Map Multiattacks
-    const rawMultiattacks = (response['multiattacks'] || []) as unknown[];
-    const multiattacks = Array.isArray(rawMultiattacks) ? rawMultiattacks.map((m) => this.mapKeys(m)) : [];
-
-    // 3. Map Legendary Actions
-    const rawLegendary = (response['legendary_actions'] || []) as unknown[];
-    const legendaryActions = Array.isArray(rawLegendary) ? rawLegendary.map((la) => {
-      const mapped = this.mapKeys(la) as Record<string, unknown>;
-      if (mapped['action']) {
-        const action = this.mapKeys(mapped['action']) as Record<string, unknown>;
-        return { ...action, cost: mapped['cost'] };
-      }
-      return mapped;
-    }) : [];
-
-    // 4. Map Resistances
-    const resistances: Record<string, string> = {};
-    const rawResistances = (response['resistances'] || {}) as Record<string, { resistance?: string } | string>;
-    Object.entries(rawResistances).forEach(([type, data]) => {
-      if (typeof data === 'string') {
-        resistances[type] = data.toLowerCase();
-      } else {
-        resistances[type] = (data.resistance || 'none').toLowerCase();
-      }
-    });
-
-    // 5. Assemble the monsterActions structure
-    const rechargeActions: Record<number, number> = {};
-    actions.forEach((a) => {
-      const action = a as Record<string, unknown>;
-      if ((action['rechargeValue'] as number) > 0) {
-        rechargeActions[action['actionId'] as number] = action['rechargeValue'] as number;
-      }
-    });
-
-    result['monsterActions'] = {
-      actions: actions,
-      multiattacks: multiattacks,
-      legendaryActions: legendaryActions,
-      rechargeActions: rechargeActions
-    };
-
-    // 6. Map Spellcasting
-    const rawSpellcasting = response['spellcasting'] as Record<string, unknown> | undefined;
-    if (rawSpellcasting) {
-      const spells = ((rawSpellcasting['leveled_spells'] || rawSpellcasting['known_spells'] || []) as unknown[]).map((s) => this.mapKeys(s));
-      const innateSpells = ((rawSpellcasting['innate_spells'] || []) as unknown[]).map((is) => {
-        const innateRecord = is as Record<string, unknown>;
-        const spell = this.mapKeys(innateRecord['Spell'] || innateRecord['spell'] || innateRecord) as Record<string, unknown>;
-        return {
-          ...spell,
-          isInnate: true,
-          maxCastsPerDay: innateRecord['MaxCastsPerDay'] !== undefined ? innateRecord['MaxCastsPerDay'] : (innateRecord['max_casts_per_day'] !== undefined ? innateRecord['max_casts_per_day'] : -1)
-        };
-      });
-
-      const slots: Record<number, { current: number; max: number }> = {};
-      if (rawSpellcasting['spell_slots']) {
-        Object.entries(rawSpellcasting['spell_slots'] as Record<string, number>).forEach(([level, max]) => {
-          slots[Number(level)] = { current: max, max: max };
-        });
-      }
-
-      result['spellcasting'] = {
-        casterType: ((rawSpellcasting['caster_type'] as string) || 'full').toLowerCase(),
-        casterLevel: (rawSpellcasting['casting_level'] as number) || 0,
-        spellSlots: slots,
-        spells: [...spells, ...innateSpells],
-        spellSaveDC: (rawSpellcasting['save_dc'] as number) || 0,
-        spellAttackBonus: (rawSpellcasting['attack_modifier'] as number) || 0
-      };
-    } else if (response['spellcasting_config']) {
-      // Fallback for older monster format if any
-      const oldSpellcasting = response['spellcasting_config'] as Record<string, unknown>;
-      const spells = ((oldSpellcasting['LeveledSpells'] || []) as unknown[]).map((s) => this.mapKeys(s));
-      const innateSpells = ((oldSpellcasting['InnateSpells'] || []) as unknown[]).map((is) => {
-        const innateRecord = is as Record<string, unknown>;
-        const spell = this.mapKeys(innateRecord['Spell'] || innateRecord['spell'] || {}) as Record<string, unknown>;
-        return {
-          ...spell,
-          isInnate: true,
-          maxCastsPerDay: innateRecord['MaxCastsPerDay'] !== undefined ? innateRecord['MaxCastsPerDay'] : (innateRecord['max_casts_per_day'] !== undefined ? innateRecord['max_casts_per_day'] : -1)
-        };
-      });
-      const slots: Record<number, { current: number; max: number }> = {};
-      if (oldSpellcasting['SpellSlots']) {
-        Object.entries(oldSpellcasting['SpellSlots'] as Record<string, number>).forEach(([level, max]) => {
-          slots[Number(level)] = { current: max, max: max };
-        });
-      }
-      result['spellcasting'] = {
-        casterType: 'full',
-        casterLevel: (oldSpellcasting['CastingLevel'] as number) || 0,
-        spellSlots: slots,
-        spells: [...spells, ...innateSpells],
-        spellSaveDC: (oldSpellcasting['SaveDC'] as number) || 0,
-        spellAttackBonus: (oldSpellcasting['AttackModifier'] as number) || 0
-      };
-    }
-
-    // 7. Ensure state exists
-    result['state'] = {
-      ...(result['state'] as Record<string, unknown>),
-      resistances: resistances,
-      conditions: {},
-      deathSaves: { successes: 0, failures: 0 },
-      isStable: false,
-      isDead: false
-    };
-
-    return result;
   }
 
   /**
@@ -510,25 +111,12 @@ export class MapperService {
       const result: Record<string, any> = {};
       const typedObj = obj as Record<string, any>;
 
-      // SPECIAL HANDLING: If this is an object that contains 'spellcasting',
-      // we want to replace 'spellcasting' with 'known_spells' (array of IDs)
-      if (typedObj['spellcasting'] !== undefined && typeof typedObj['spellcasting'] === 'object') {
-        const sc = typedObj['spellcasting'];
-        const spellIds = sc.spellIds || (Array.isArray(sc.spells) ? sc.spells.map((s: any) => s.id) : []);
+      Object.keys(typedObj).forEach((key) => {
+        // Hydrated objects that shouldn't be sent back as full objects if IDs are present
+        if (key === 'armor' && typedObj['armorId']) return;
+        if (key === 'shield' && typedObj['shieldId']) return;
+        if (key === 'spellcasting') return; // Handled as known_spells in specific flows if needed
 
-        Object.keys(typedObj).forEach((key) => {
-          if (key === 'spellcasting' || key === 'armor' || key === 'shield') return; // Stripping hydrated data
-          const snakeKey = this.camelToSnake(key);
-          result[snakeKey] = this.serializeKeys(typedObj[key]);
-        });
-
-        result['known_spells'] = spellIds;
-        return result;
-      }
-
-      Object.keys(obj).forEach((key) => {
-        if (key === 'armor' && typedObj['armorId']) return; // Skip hydrated armor if armorId is present
-        if (key === 'shield' && typedObj['shieldId']) return; // Skip hydrated shield if shieldId is present
         const snakeKey = this.camelToSnake(key);
         result[snakeKey] = this.serializeKeys(typedObj[key]);
       });
@@ -538,22 +126,28 @@ export class MapperService {
   }
 
   private camelToSnake(key: string): string {
-    // Special mappings for D&D acronyms to prevent over-segmentation
-    if (key === 'spellSaveDC') return 'spell_save_dc';
-    if (key === 'spellAttackBonus') return 'spell_attack_bonus';
-    if (key === 'useHPAverageMonster') return 'use_hp_average_monster';
-    if (key === 'useHPAverageCharacter') return 'use_hp_average_character';
-    if (key === 'aoeHitsAllEnemies') return 'aoe_hits_all_enemies';
-    if (key === 'useWeightedAI') return 'use_weighted_ai';
-    if (key === 'debugAI') return 'debug_ai';
-    if (key === 'instanceId') return 'instance_id';
-    if (key === 'classId') return 'class_id';
-    if (key === 'raceId') return 'race_id';
-    if (key === 'armorId') return 'armor_id';
-    if (key === 'shieldId') return 'shield_id';
-    if (key === 'weaponId') return 'weapon_id';
+    // Special mappings for D&D acronyms and specific fields
+    const specialMappings: Record<string, string> = {
+      'spellSaveDC': 'spell_save_dc',
+      'spellAttackBonus': 'spell_attack_bonus',
+      'instanceId': 'instance_id',
+      'classId': 'class_id',
+      'raceId': 'race_id',
+      'armorId': 'armor_id',
+      'shieldId': 'shield_id',
+      'weaponId': 'weapon_id',
+      'hpSetMethod': 'hp_set_method',
+      'numberOfDice': 'number_of_dice',
+      'isConcentration': 'is_concentration',
+      'castingTime': 'casting_time',
+      'spellType': 'spell_type',
+      'isRitual': 'is_ritual',
+      'isTouch': 'is_touch',
+      'isAOE': 'is_aoe'
+    };
 
-    // General conversion: camelCase -> snake_case
+    if (specialMappings[key]) return specialMappings[key];
+
     let tempKey = key;
     tempKey = tempKey.replace(/DC/g, 'Dc');
     tempKey = tempKey.replace(/HP/g, 'Hp');
@@ -569,108 +163,114 @@ export class MapperService {
   }
 
   /**
-   * Robust PascalCase to camelCase converter that handles dnd specific abbreviations.
+   * Robust snake_case/PascalCase to camelCase converter.
    */
   private toCamelCase(str: string): string {
-    if (str === 'ID') return 'id';
-    if (str === 'AC') return 'ac';
-    if (str === 'HP') return 'hp';
-    if (str === 'CR') return 'cr';
-    if (str === 'AbilityScores' || str === 'ability_scores') return 'abilityScores';
-    if (str === 'AbilityScoreProf' || str === 'ability_score_prof') return 'abilityScoreProficiency';
-    if (str === 'DC') return 'dc';
-    if (str === 'dice_count') return 'numberOfDice';
-    if (str === 'hp_method') return 'hpSetMethod';
+    // Exact match overrides
+    const overrides: Record<string, string> = {
+      'ID': 'id',
+      'AC': 'ac',
+      'HP': 'hp',
+      'CR': 'cr',
+      'DC': 'dc',
+      'ability_scores': 'abilityScores',
+      'ability_score_prof': 'abilityScoreProficiency',
+      'dice_count': 'numberOfDice',
+      'number_of_dice': 'numberOfDice',
+      'hp_method': 'hpSetMethod',
+      'hp_set_method': 'hpSetMethod',
+      'class_id': 'classId',
+      'race_id': 'raceId',
+      'armor_id': 'armorId',
+      'shield_id': 'shieldId',
+      'weapon_id': 'weaponId',
+      'instance_id': 'instanceId',
+      'monster_actions': 'monsterActions',
+      'as_config': 'asConfig',
+      'is_custom': 'isCustom',
+      'spell_dc': 'spellDC',
+      'casting_time': 'castingTime',
+      'spell_type': 'spellType',
+      'is_concentration': 'isConcentration',
+      'is_ritual': 'isRitual',
+      'is_touch': 'isTouch',
+      'is_aoe': 'isAOE',
+      'on_success': 'onSuccess',
+      'actor_type': 'actorType',
+      'hp_config': 'hpConfig',
+      'equipment_configs': 'equipmentConfigs',
+      'known_spell_ids': 'knownSpellIDs',
+      'custom_equipment': 'customEquipment',
+      'custom_spells': 'customSpells',
+      'spell_actions': 'spellActions',
+      'spellcasting_config': 'spellcasting',
+      'action_preference': 'actionPreference',
+      'secondary_action_preference': 'secondaryActionPreference',
+      'target_priority': 'targetPriority',
+      'secondary_target_priority': 'secondaryTargetPriority',
+      'spellcaster_metadata': 'spellcasterMetadata',
+      'is_spellcaster': 'isSpellcaster',
+      'is_innate_caster': 'isInnateCaster',
+      'spellcasting_ability': 'spellcastingAbility',
+      'spellcasting_level': 'spellcastingLevel',
+      'is_legendary': 'isLegendary',
+      'max_legendary_actions': 'maxLegendaryActions',
+      'average_offensive_value': 'averageOffensiveValue',
+      'highest_offensive_value': 'highestOffensiveValue',
+      'hit_dice': 'hitDice',
+      'amount_to_add': 'amountToAdd',
+      'use_spellmod': 'useSpellMod',
+      'level_type': 'levelType',
+      'minimum_str': 'minimumStr',
+      'damage_blocks': 'damageBlocks',
+      'dice_block': 'damageBlocks',
+      'leveled_spells': 'leveledSpells',
+      'innate_spells': 'innateSpells',
+      'save_dc': 'saveDC',
+      'attack_modifier': 'attackModifier',
+      'is_silvered': 'isSilvered',
+      'is_adamantine': 'isAdamantine',
+      'is_cold_forged_iron': 'isColdForgedIron',
+      'is_versatile': 'isVersatile',
+      'is_finesse': 'isFinesse',
+      'is_ranged': 'isRanged',
+      'is_heavy': 'isHeavy',
+      'is_two_handed': 'isTwoHanded',
+      'is_light': 'isLight',
+      'is_thrown': 'isThrown',
+      'is_only_ranged': 'isOnlyRanged',
+      'attack_bonus': 'attackBonus',
+      'damage_bonus': 'damageBonus',
+      'dex_bonus': 'dexBonus',
+      'max_bonus': 'maxBonus',
+      'is_innate': 'isInnate',
+      'max_casts_per_day': 'maxCastsPerDay'
+    };
 
-    // Handle snake_case specifically for spell_dc and other dnd fields
-    if (str === 'on_success') return 'onSuccess';
-    if (str === 'spell_dc') return 'spellDC';
-    if (str === 'casting_time') return 'castingTime';
-    if (str === 'spell_type') return 'spellType';
-    if (str === 'level_type') return 'levelType';
-    if (str === 'is_concentration') return 'isConcentration';
-    if (str === 'is_ritual') return 'isRitual';
-    if (str === 'is_touch') return 'isTouch';
-    if (str === 'is_aoe') return 'isAOE';
-    if (str === 'has_dc') return 'hasDC';
-    if (str === 'is_auto_hit') return 'isAutoHit';
-    if (str === 'damage_blocks') return 'damageBlocks';
+    if (overrides[str]) return overrides[str];
 
-    // SpellFormula fields
-    if (str === 'cast_level') return 'castLevel';
-    if (str === 'number_of_dice') return 'numberOfDice';
-    if (str === 'amount_to_add' || str === 'modifier') return 'amountToAdd';
-    if (str === 'use_spellmod') return 'useSpellMod';
-    if (str === 'damage_type') return 'damageType';
-    if (str === 'average_value') return 'averageValue';
+    // Standard snake_case to camelCase
+    let result = str.toLowerCase().replace(/(_[a-z])/g, (g) => g.toUpperCase().replace('_', ''));
 
-    // Handle PascalCase explicitly for SpellFormulas (Fallback for older backend versions)
-    if (str === 'CastLevel') return 'castLevel';
-    if (str === 'NumberOfDice') return 'numberOfDice';
-    if (str === 'Die') return 'die';
-    if (str === 'AmountToAdd') return 'amountToAdd';
-    if (str === 'UseSpellmod') return 'useSpellMod';
-    if (str === 'DamageType') return 'damageType';
-    if (str === 'AverageValue') return 'averageValue';
+    // Handle PascalCase or already camelCase but with D&D acronyms
+    result = result.replace(/Ac(?=[A-Z]|$)/g, 'AC');
+    result = result.replace(/Hp(?=[A-Z]|$)/g, 'HP');
+    result = result.replace(/Dc(?=[A-Z]|$)/g, 'DC');
 
-    let result = str;
-
-    // Handle snake_case
-    if (result.includes('_')) {
-      result = result.replace(/_([a-z0-9])/g, (g) => g[1].toUpperCase());
-    }
-
-    // Handle common acronyms at the end of strings (e.g., SequenceID -> SequenceId, MaxHP -> MaxHp)
-    if (result === 'OriginalHP') return 'originalHp';
-    if (result === 'FinalHP') return 'finalHp';
-    if (result === 'OriginalTempHP') return 'originalTempHp';
-    if (result === 'FinalTempHP') return 'finalTempHp';
-    if (result === 'OriginalDamage') return 'originalDamage';
-    if (result === 'FinalDamage') return 'finalDamage';
-
-    if (result.endsWith('ID')) {
-      result = result.slice(0, -2) + 'Id';
-    } else if (result.endsWith('HP')) {
-      result = result.slice(0, -2) + 'Hp';
-    } else if (result.endsWith('AC')) {
-      result = result.slice(0, -2) + 'Ac';
-    }
-
-    // Handle acronyms at the start of strings (e.g., HPValue -> hpValue)
-    if (result.startsWith('HP')) {
-      result = 'hp' + result.slice(2);
-    } else if (result.startsWith('AC')) {
-      result = 'ac' + result.slice(2);
-    } else if (result.startsWith('DC')) {
-      result = 'dc' + result.slice(2);
-    } else if (result.endsWith('DC')) {
-      result = result.slice(0, -2) + 'DC';
-    }
-
-    // Lowercase the first character for standard camelCase
-    const finalResult = result.charAt(0).toLowerCase() + result.slice(1);
-
-    // Final check for common dnd fields that might have slipped through
-    if (finalResult === 'castingTime') return 'castingTime';
-    if (finalResult === 'spellType') return 'spellType';
-    if (finalResult === 'levelType') return 'levelType';
-
-    return finalResult;
+    // Ensure first character is lowercase
+    return result.charAt(0).toLowerCase() + result.slice(1);
   }
 
   /**
    * Builds a hierarchical tree from a flat list of events.
-   * Structure: Round -> Turn (SequenceID) -> Event -> Sub-events (ParentID)
    */
   private buildTree(events: SimulationEvent[]): TimelineNode[] {
     const roundsMap = new Map<number, TimelineNode>();
     const turnsMap = new Map<string, TimelineNode>();
     const nodesMap = new Map<string, TimelineNode>();
 
-    // 1. Pre-create nodes for all actual events to facilitate hierarchy lookup
     const filteredEvents = events.filter(event => {
       return !(event.type === EventType.DamageModified && !event.data.wasModified);
-
     });
 
     filteredEvents.forEach((event) => {
@@ -682,19 +282,11 @@ export class MapperService {
     filteredEvents.forEach((event) => {
       const node = nodesMap.get(event.id)!;
 
-      // 0. SPECIAL CASE: Death events with no parent are treated as root nodes
-      if (event.type === EventType.Death && !event.parentId) {
+      if ((event.type === EventType.Death || event.type === EventType.Victory) && !event.parentId) {
         rootNodes.push(node);
         return;
       }
 
-      // 0. SPECIAL CASE: Victory events with no parent are treated as root nodes
-      if (event.type === EventType.Victory && !event.parentId) {
-        rootNodes.push(node);
-        return;
-      }
-
-      // 2. Ensure Round node exists
       if (!roundsMap.has(event.round)) {
         const roundNode: TimelineNode = {
           data: {
@@ -711,7 +303,6 @@ export class MapperService {
       }
       const roundNode = roundsMap.get(event.round)!;
 
-      // 3. Handle Turns (grouped by sequenceId)
       if (event.sequenceId) {
         if (!turnsMap.has(event.sequenceId)) {
           const turnNode: TimelineNode = {
@@ -732,20 +323,12 @@ export class MapperService {
         }
         const turnNode = turnsMap.get(event.sequenceId)!;
 
-        // 4. Attach to hierarchy
-        // If it has a parentId, and that parent is NOT the turn itself, nest it
-        if (
-          event.parentId &&
-          event.parentId !== event.sequenceId &&
-          nodesMap.has(event.parentId)
-        ) {
+        if (event.parentId && event.parentId !== event.sequenceId && nodesMap.has(event.parentId)) {
           nodesMap.get(event.parentId)!.children?.push(node);
         } else {
-          // Top-level action within a turn
           turnNode.children?.push(node);
         }
       } else {
-        // Events without a sequence (like Initiative) go directly under the round
         if (event.parentId && nodesMap.has(event.parentId)) {
           nodesMap.get(event.parentId)!.children?.push(node);
         } else {

@@ -6,14 +6,14 @@ import { map } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageModule } from 'primeng/message';
-import { EntityCard } from '../../components/entity-card/entity-card';
+import { ActorCard } from '../../components/actor-card/actor-card.component';
 import { CombatantService } from '../../services/combatant.service';
 import { SimulationService } from '../../services/simulation.service';
 import { environment } from '../../../environments/environment';
 import {TimelineService} from '../../services/timeline.service';
 import {SimulationResults} from '../../components/simulation-results/simulation-results';
 import { SimulationOptionsComponent } from '../../components/simulation-options/simulation-options';
-import { EntitySelectorDialog } from '../../components/entity-selector-dialog/entity-selector-dialog';
+import { ActorSelectorDialog } from '../../components/actor-selector-dialog/actor-selector-dialog.component';
 
 @Component({
   selector: 'app-simulator-shell',
@@ -23,10 +23,10 @@ import { EntitySelectorDialog } from '../../components/entity-selector-dialog/en
     ButtonModule,
     TooltipModule,
     MessageModule,
-    EntityCard,
+    ActorCard,
     SimulationResults,
     SimulationOptionsComponent,
-    EntitySelectorDialog
+    ActorSelectorDialog
   ],
   templateUrl: './simulator-shell.html',
   styles: [
@@ -64,5 +64,10 @@ export class SimulatorShell {
 
   toggleOptions() {
     this.isOptionsVisible.update(v => !v);
+  }
+
+  fetchSpecificSimulation(): void {
+    const id = '019bde1b-ce8a-7608-ac82-0864a78441cc';
+    this.simulationService.fetchSimulationResult(id).subscribe();
   }
 }

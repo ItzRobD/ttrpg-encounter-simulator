@@ -2,7 +2,7 @@ import { Component, input, computed } from '@angular/core';
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
-import { Spell } from '../../models';
+import { Spell, SpellFormula } from '../../models';
 
 @Component({
   selector: 'app-spell-card',
@@ -49,8 +49,13 @@ export class SpellCard {
     const formulas = this.item().formulas;
     if (!formulas) return [];
 
-    return Object.entries(formulas)
-      .map(([key, value]) => ({ level: Number(key), formula: value }))
-      .sort((a, b) => a.level - b.level);
+    const result: { level: number, formulas: SpellFormula[] }[] = [];
+    Object.entries(formulas).forEach(([key, value]) => {
+      const level = Number(key);
+      const formulaArray = Array.isArray(value) ? value : [value as unknown as SpellFormula];
+      result.push({ level, formulas: formulaArray });
+    });
+
+    return result.sort((a, b) => a.level - b.level);
   });
 }

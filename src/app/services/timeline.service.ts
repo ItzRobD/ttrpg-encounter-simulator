@@ -1,26 +1,29 @@
 import {computed, inject, Injectable, signal, WritableSignal} from '@angular/core';
-import {EntityState, EventType, SimulationLog} from '../models';
+import { ActorState, EventType, SimulationLog, Actor, ActorSummary } from '../models';
 import {CombatantService} from './combatant.service';
+import {SimulationStateService} from './simulation-state.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TimelineService {
   private readonly combatantService = inject(CombatantService);
-  private readonly _selectedSimulationLog = signal<SimulationLog | null>(null);
-  readonly selectedSimulationLog = this._selectedSimulationLog.asReadonly();
+  private readonly stateService = inject(SimulationStateService);
+
+  readonly selectedSimulationLog = this.stateService.selectedSimulationLog;
 
   readonly activeEvent = computed(() => {
-    const log = this._selectedSimulationLog();
+    const log = this.selectedSimulationLog();
     const index = this._currentTimelineIndex();
-    if (!log || index < 0 || index >= log.events.length) {
+    const events = log?.events;
+    if (!events || index < 0 || index >= events.length) {
       return null;
     }
-    return log.events[index];
+    return events[index];
   });
 
   setSelectedSimulationLog(log: SimulationLog | null): void {
-    this._selectedSimulationLog.set(log);
+    this.stateService.setSelectedSimulationLog(log);
     this._scrubberIndex.set(0);
     this._currentTimelineIndex.set(0);
   }
@@ -31,9 +34,10 @@ export class TimelineService {
    * The list of events that the user can scrub through (Rounds, Turns, Choices).
    */
   readonly scrubbableEvents = computed(() => {
-    const log = this._selectedSimulationLog();
-    if (!log) return [];
-    return log.events.filter(e =>
+    const log = this.selectedSimulationLog();
+    const events = log?.events;
+    if (!events) return [];
+    return events.filter(e =>
       e.type === EventType.Round ||
       e.type === EventType.Turn ||
       e.type === EventType.Choice ||
@@ -57,10 +61,12 @@ export class TimelineService {
 
     // Sync the internal event index
     const scrubbable = this.scrubbableEvents();
-    if (scrubbable[index]) {
-      const log = this._selectedSimulationLog();
-      if (log) {
-        const fullIndex = log.events.findIndex(e => e.id === scrubbable[index].id);
+    const event = scrubbable[index];
+    if (event) {
+      const log = this.selectedSimulationLog();
+      const events = log?.events;
+      if (events) {
+        const fullIndex = events.findIndex(e => e.id === event.id);
         if (fullIndex !== -1) {
           this._currentTimelineIndex.set(fullIndex);
         }
@@ -81,24 +87,54 @@ export class TimelineService {
   }
 
   readonly projectedState = computed(() => {
-    const log = this._selectedSimulationLog();
+    const log = this.selectedSimulationLog();
+    const simResult = this.stateService.simulationResult();
+
     if (!log) {
-      return new Map<number, EntityState>();
+      return new Map<number, ActorState>();
     }
 
     const events = log.events;
+    if (!events) {
+      return new Map<number, ActorState>();
+    }
     const index = this._currentTimelineIndex();
 
-    const stateMap = new Map<number, EntityState>();
+    const stateMap = new Map<number, ActorState>();
 
-    // 1. Initialize with starting states from the log's entities
-    log.entities.forEach(c => {
-      stateMap.set(c.instanceId, { ...c.state });
-    });
+    // 1. Initialize with starting states
+    // Try to use the initialState from the selected log (run-specific) or from the overall simulation result
+    const initialState = log.initialState || simResult?.initialState;
+    if (initialState) {
+      Object.entries(initialState).forEach(([id, data]: [string, any]) => {
+        const instanceId = parseInt(id, 10);
+        if (data.state) {
+          // Deep clone the state and provide defaults for missing required fields
+          const baseState = {
+            conditions: {},
+            deathSaves: { successes: 0, failures: 0 },
+            resistances: {},
+            tempHp: 0,
+            initiative: 0,
+            isStable: true,
+            isDead: false,
+            ...data.state
+          };
+          stateMap.set(instanceId, baseState);
+        }
+      });
+    } else if (log.actors) {
+      // Fallback to log.actors (backward compatibility)
+      log.actors.forEach(c => {
+        stateMap.set(c.instanceId, { ...c.state });
+      });
+    }
 
     // 2. Replay events up to the current index
     for (let i = 0; i <= index && i < events.length; i++) {
       const event = events[i];
+      if (!event.data) continue;
+
       switch (event.type) {
         // TODO: Conditions, death saves
         case EventType.HPModified: {
