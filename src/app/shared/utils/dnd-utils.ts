@@ -80,17 +80,6 @@ export function generateActionDescription(action: Action): string {
       const part = `${avgDmg} (${diceStr}) ${comp.damageType} damage`;
       parts.push(index === 0 ? part : `plus ${part}`);
     });
-  } else if ((action as any).numberOfDice) {
-    // Fallback for legacy data
-    const diceStr = formatDice(
-      (action as any).numberOfDice,
-      (action as any).die,
-      (action as any).amountToAdd
-    );
-    const avgDmg = Math.floor(
-      (action as any).numberOfDice * ((action as any).die / 2 + 0.5) + (action as any).amountToAdd
-    );
-    parts.push(`${avgDmg} (${diceStr}) ${(action as any).damageType} damage`);
   }
   const damageStr = parts.join(' ');
 
@@ -257,7 +246,7 @@ export interface AbilityScoreEntry {
  * Returns the relevant ability modifier for a weapon based on its properties.
  */
 export function getWeaponAbilityModifier(actor: Actor, weapon: Weapon): number {
-  const abilities = actor.abilities || (actor as any).asConfig;
+  const abilities = actor.abilities;
   if (!abilities?.abilityScores) return 0;
   const str = getModifier(abilities.abilityScores.strength);
   const dex = getModifier(abilities.abilityScores.dexterity);

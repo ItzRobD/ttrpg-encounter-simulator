@@ -97,8 +97,8 @@ export class SimulationService {
   }
 
   makeSimulationPayload(combatants: Actor[]): SimulationPayload | null {
-    const monsters = combatants.filter(e => isMonster(e)) as Actor[];
-    const characters = combatants.filter(e => isCharacter(e)) as Actor[];
+    const monsters = combatants.filter(a => isMonster(a)) as Actor[];
+    const characters = combatants.filter(a => isCharacter(a)) as Actor[];
 
     if (monsters.length === 0 || characters.length === 0) {
       this.stateService.setError('No monsters or characters to simulate.');

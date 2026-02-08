@@ -36,11 +36,11 @@ export class CombatantService {
   readonly count = computed(() => this._combatants().length);
 
   readonly monsters = computed(() =>
-    this._combatants().filter((e): e is Actor => isMonster(e))
+    this._combatants().filter((a): a is Actor => isMonster(a))
   );
 
   readonly characters = computed(() =>
-    this._combatants().filter((e): e is Actor => isCharacter(e))
+    this._combatants().filter((a): a is Actor => isCharacter(a))
   );
 
   constructor() {
@@ -54,7 +54,7 @@ export class CombatantService {
   private getNextInstanceId(): number {
     const current = this._combatants();
     if (current.length === 0) return 1;
-    return Math.max(...current.map(e => e.instanceId)) + 1;
+    return Math.max(...current.map(a => a.instanceId)) + 1;
   }
 
   /**
@@ -120,7 +120,7 @@ export class CombatantService {
    * Removes an actor from the encounter by its unique instanceId.
    */
   removeCombatant(instanceId: number): void {
-    this._combatants.update(list => list.filter(e => e.instanceId !== instanceId));
+    this._combatants.update(list => list.filter(a => a.instanceId !== instanceId));
   }
 
   /**
@@ -135,7 +135,7 @@ export class CombatantService {
    */
   updateCombatant(instanceId: number, updates: Partial<Actor>): void {
     this._combatants.update(list =>
-      list.map(e => e.instanceId === instanceId ? { ...e, ...updates } : e)
+      list.map(a => a.instanceId === instanceId ? { ...a, ...updates } : a)
     );
   }
 
