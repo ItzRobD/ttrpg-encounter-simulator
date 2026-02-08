@@ -1,0 +1,69 @@
+<div class="flex flex-column gap-1 w-full mt-2">
+  @if (actor().equipment?.armorId) {
+    <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+      <div class="flex align-items-center gap-2">
+        <i class="pi pi-shield text-primary"></i>
+        <span class="text-sm">
+          <strong>Armor:</strong> {{ getArmorName(actor().equipment!.armorId!) }}
+          @if (actor().equipment?.hasShieldEquipped) {
+            (+ {{ actor().equipment?.shieldId ? getShieldName(actor().equipment!.shieldId!) : 'Shield' }})
+          }
+        </span>
+      </div>
+    </p-card>
+  } @else if (actor().equipment?.hasShieldEquipped) {
+    <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+      <div class="flex align-items-center gap-2">
+        <i class="pi pi-shield text-primary"></i>
+        <span class="text-sm">
+          <strong>{{ actor().equipment?.shieldId ? getShieldName(actor().equipment!.shieldId!) : 'Shield' }} Equipped</strong>
+        </span>
+      </div>
+    </p-card>
+  }
+
+  @for (slot of weaponSlots; track slot.key) {
+    @if (slot.key === 'Primary' && actor().equipment?.primarySlot; as weaponList) {
+      @for (weapon of weaponList; track weapon.weaponId) {
+        <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+          <div class="flex align-items-center gap-2">
+            <i class="pi pi-bolt text-primary"></i>
+            <span class="text-sm">
+              <strong>{{ slot.label }}:</strong>
+              {{ getWeaponName(weapon.weaponId) }}{{ formatModifiers(weapon.modifiers) }}
+              @if (weapon.isProficient) { <span class="text-xs text-color-secondary ml-1">(Proficient)</span> }
+            </span>
+          </div>
+        </p-card>
+      }
+    }
+    @if (slot.key === 'Secondary' && actor().equipment?.secondarySlot; as weaponList) {
+      @for (weapon of weaponList; track weapon.weaponId) {
+        <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+          <div class="flex align-items-center gap-2">
+            <i class="pi pi-bolt text-primary"></i>
+            <span class="text-sm">
+              <strong>{{ slot.label }}:</strong>
+              {{ getWeaponName(weapon.weaponId) }}{{ formatModifiers(weapon.modifiers) }}
+              @if (weapon.isProficient) { <span class="text-xs text-color-secondary ml-1">(Proficient)</span> }
+            </span>
+          </div>
+        </p-card>
+      }
+    }
+    @if (slot.key === 'Ranged' && actor().equipment?.rangedSlot; as weaponList) {
+      @for (weapon of weaponList; track weapon.weaponId) {
+        <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+          <div class="flex align-items-center gap-2">
+            <i class="pi pi-bolt text-primary"></i>
+            <span class="text-sm">
+              <strong>{{ slot.label }}:</strong>
+              {{ getWeaponName(weapon.weaponId) }}{{ formatModifiers(weapon.modifiers) }}
+              @if (weapon.isProficient) { <span class="text-xs text-color-secondary ml-1">(Proficient)</span> }
+            </span>
+          </div>
+        </p-card>
+      }
+    }
+  }
+</div>
