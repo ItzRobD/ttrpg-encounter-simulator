@@ -13,7 +13,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
 import { FluidModule } from 'primeng/fluid';
 import { BaseEditorDirective } from '../base-editor.directive';
-import { Class, Race, Ability, CasterType, DragonbornColor, DamageType, ResistanceType, AbilityScores, Weapon, Armor, WeaponSlot, Equipment, Actor } from '../../../models';
+import { Class, Race, Ability, CasterType, DragonbornColor, DamageType, ResistanceType, AbilityScores, Weapon, Armor, WeaponSlot, Equipment, Actor, EquipmentConfig } from '../../../models';
 import { CustomActorType } from '../../../services/custom-content.service';
 import { AbilityScoreEditorComponent } from '../ability-score-editor/ability-score-editor';
 import { SpellcastingEditorComponent } from '../spellcasting-editor/spellcasting-editor';
@@ -121,6 +121,12 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
       spellSlots: this.fb.group(this.createEmptySpellSlots()),
       spells: [[]]
     }),
+    behavior: this.fb.group({
+      actionPreference: ['balanced'],
+      targetPriority: ['no_preference'],
+      secondaryActionPreference: ['balanced'],
+      secondaryTargetPriority: ['no_preference']
+    }),
     state: this.fb.group({
       currentHp: [10],
       maxHp: [10],
@@ -154,12 +160,30 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
     .filter(rt => rt !== ResistanceType.None)
     .map(rt => ({ label: rt.charAt(0).toUpperCase() + rt.slice(1), value: rt }));
 
+  protected readonly actionPreferences = [
+    { label: 'Melee', value: 'melee' },
+    { label: 'Ranged', value: 'ranged' },
+    { label: 'Spell', value: 'spell' },
+    { label: 'Balanced', value: 'balanced' }
+  ];
+
+  protected readonly targetPriorities = [
+    { label: 'Lowest HP', value: 'lowest_hp' },
+    { label: 'Highest Threat', value: 'highest_threat' },
+    { label: 'Spellcaster', value: 'spellcaster' },
+    { label: 'No Preference', value: 'no_preference' }
+  ];
+
   get asConfigGroup(): FormGroup {
     return this.characterForm.get('asConfig') as FormGroup;
   }
 
   get spellcastingGroup(): FormGroup {
     return this.characterForm.get('spellcasting') as FormGroup;
+  }
+
+  get behaviorGroup(): FormGroup {
+    return this.characterForm.get('behavior') as FormGroup;
   }
 
   get resistancesArray(): FormArray {
@@ -403,6 +427,12 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
         spells: [],
         spellIds: []
       },
+      behavior: {
+        actionPreference: 'balanced',
+        targetPriority: 'no_preference',
+        secondaryActionPreference: 'balanced',
+        secondaryTargetPriority: 'no_preference'
+      },
       state: {
         currentHp: 10,
         maxHp: 10,
@@ -432,97 +462,105 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
    */
   private prepareCharacterObject(): Actor {
     const rawValues = this.characterForm.getRawValue();
-    const character = { ...rawValues } as any;
 
-    // Ensure metadata is populated for new Actor model
-    if (!character.metadata) {
-      character.metadata = {
-        level: character.level || 1,
-        classId: character.classId || 0,
-        raceId: character.raceId || 0,
+    // Create a clean Actor object
+    const character: Partial<Actor> = {
+      id: rawValues.id,
+      name: rawValues.name,
+      actorType: 'character',
+      side: 'character',
+      abilities: rawValues.asConfig,
+      hpConfig: {
+        ...rawValues.hp,
+        value: rawValues.hp.value,
+        modifier: rawValues.hp.modifier,
+        hitDice: { [rawValues.hp.hitDie.toString()]: rawValues.hp.numberOfDice }
+      },
+      metadata: {
+        level: rawValues.level,
+        cr: Math.ceil(rawValues.level / 4), // Rough CR estimation for characters
+        classId: rawValues.classId,
+        raceId: rawValues.raceId,
+        dragonbornColor: rawValues.dragonbornColor,
         spellcasterMetadata: {
-          isSpellcaster: !!character.spellcasting,
-          spellcastingLevel: character.spellcasting?.casterLevel || character.level || 1,
-          spellcastingAbility: character.spellcasting?.ability
+          isSpellcaster: this.isSpellcaster(),
+          spellcastingLevel: rawValues.spellcasting.casterLevel,
+          spellcastingAbility: rawValues.spellcasting.ability
         }
-      };
-    }
-
-    // Map properties needed by backend ActorConfig
-    character.actorType = 'character';
-    character.side = 'character';
-    character.abilities = character.abilities || {
-      abilityScores: character.asConfig?.abilityScores,
-      proficiencies: character.asConfig?.proficiencies
+      },
+      behavior: rawValues.behavior,
+      isCustom: true
     };
-    character.hpConfig = character.hpConfig || character.hp;
 
-    // Ensure isCustom is set
-    character.isCustom = true;
-
-    // Ensure AC is removed (calculated from equipment/stats)
-    delete character.ac;
-
-    // Ensure dragonbornColor is removed if not Dragonborn
+    // Clean up dragonborn color if not applicable
     const dragonbornId = this.mapperService.getRaceId(Race.Dragonborn);
-    if (Number(character.raceId) !== dragonbornId) {
-      delete character.dragonbornColor;
+    if (Number(character.metadata?.raceId) !== dragonbornId) {
+      delete character.metadata?.dragonbornColor;
     }
 
-    // Ensure isSpellcaster is removed if it somehow got in
-    delete character.isSpellcaster;
+    // Equipment configuration
+    const eqForm = rawValues.equipment;
+    const equipmentConfigs: EquipmentConfig[] = [];
 
-    // Convert resistances array to object
-    const resistanceObj: Record<string, ResistanceType> = {};
-    if (character.state.resistances && Array.isArray(character.state.resistances)) {
-      character.state.resistances.forEach((res: { damageType: string; resistanceType: ResistanceType }) => {
+    if (eqForm.armorId) {
+      equipmentConfigs.push({ id: eqForm.armorId, type: 'armor', slot: 'armor' });
+    }
+    if (eqForm.shieldId && eqForm.hasShieldEquipped) {
+      equipmentConfigs.push({ id: eqForm.shieldId, type: 'shield', slot: 'secondary' });
+    }
+    if (eqForm.primaryWeaponId) {
+      equipmentConfigs.push({ id: eqForm.primaryWeaponId, type: 'weapon', slot: 'primary' });
+    }
+    if (eqForm.secondaryWeaponId) {
+      equipmentConfigs.push({ id: eqForm.secondaryWeaponId, type: 'weapon', slot: 'secondary' });
+    }
+    if (eqForm.rangedWeaponId) {
+      equipmentConfigs.push({ id: eqForm.rangedWeaponId, type: 'weapon', slot: 'ranged' });
+    }
+    character.equipmentConfigs = equipmentConfigs;
+
+    // Spells
+    if (character.metadata?.spellcasterMetadata?.isSpellcaster) {
+      character.knownSpellIDs = (rawValues.spellcasting.spells || []).map((s: any) => Number(s.id));
+    }
+    character.customSpells = []; // For character mocks
+
+    // Cleanup legacy fields
+    delete (character as any).spellcasting;
+    delete (character as any).equipment;
+    delete (character as any).hp;
+    delete (character as any).asConfig;
+
+    // Build the final state (needed for simulator, but often omitted in static mocks)
+    const resistanceObj: Record<string, any> = {};
+    if (rawValues.state.resistances && Array.isArray(rawValues.state.resistances)) {
+      rawValues.state.resistances.forEach((res: { damageType: string; resistanceType: ResistanceType }) => {
         resistanceObj[res.damageType] = res.resistanceType;
       });
     }
-    character.state.resistances = resistanceObj;
 
-    // Transform equipment form values to Equipment model
-    const eqForm = rawValues.equipment;
-    const equipment: Equipment = {
-      armorId: eqForm.armorId || undefined,
-      shieldId: eqForm.shieldId || undefined,
-      hasShieldEquipped: eqForm.hasShieldEquipped || false,
-      primarySlot: eqForm.primaryWeaponId ? [{ weaponId: eqForm.primaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
-      secondarySlot: eqForm.secondaryWeaponId ? [{ weaponId: eqForm.secondaryWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
-      rangedSlot: eqForm.rangedWeaponId ? [{ weaponId: eqForm.rangedWeaponId, isProficient: true, modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false } }] : [],
+    const state = {
+      ...rawValues.state,
+      maxHp: rawValues.hp.value,
+      hitDie: rawValues.hp.hitDie,
+      resistances: resistanceObj
     };
-    character.equipment = equipment;
 
-    if (!this.itemToEdit()) {
-      character.state.currentHp = character.hp.value;
-      character.state.maxHp = character.hp.value;
-      character.state.tempHp = 0;
-      character.state.hitDie = character.hp.hitDie;
-      character.state.conditions = {};
-      character.state.deathSaves = { successes: 0, failures: 0 };
-      character.state.isStable = true;
-      character.state.isDead = false;
-      character.state.initiative = 0;
-    } else {
-      // Update state if HP changed
-      character.state.maxHp = character.hp.value;
-      if (character.state.currentHp > character.state.maxHp) {
-        character.state.currentHp = character.state.maxHp;
-      }
-      character.state.hitDie = character.hp.hitDie;
+    if (!rawValues.id) {
+      state.currentHp = state.maxHp;
+      state.tempHp = 0;
+      state.conditions = {};
+      state.deathSaves = { successes: 0, failures: 0 };
+      state.isStable = true;
+      state.isDead = false;
+      state.initiative = 0;
+    } else if (state.currentHp > state.maxHp) {
+      state.currentHp = state.maxHp;
     }
 
-    // Backend expects hit_dice as a map: { "10": 8 }
-    if (character.hp.hitDie && character.hp.numberOfDice) {
-      character.hp.hitDice = { [character.hp.hitDie.toString()]: character.hp.numberOfDice };
-    }
+    character.state = state;
 
-    // Ensure spellIds are synced from spells array if it exists
-    if (character.spellcasting && Array.isArray(character.spellcasting.spells)) {
-      character.spellcasting.spellIds = character.spellcasting.spells.map((s: any) => s.id);
-    }
-
-    return character;
+    return character as Actor;
   }
 
   /**
@@ -530,11 +568,16 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
    */
   exportToJson(): void {
     const character = this.prepareCharacterObject();
-    const serializedCharacter = this.mapperService.serializeKeys(character);
+
+    // For the v2 export mock, we want a cleaner version without the runtime state
+    const exportObj = { ...character };
+    delete (exportObj as any).state;
+
+    const serializedCharacter = this.mapperService.serializeKeys(exportObj);
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(serializedCharacter, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `${character.name || 'character'}.json`);
+    downloadAnchorNode.setAttribute("download", `${character.name || 'character'}_v2.json`);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();

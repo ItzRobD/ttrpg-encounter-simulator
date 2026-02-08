@@ -15,12 +15,13 @@ import { TabsModule } from 'primeng/tabs';
 import { FluidModule } from 'primeng/fluid';
 import { AccordionModule } from 'primeng/accordion';
 import { BaseEditorDirective } from '../base-editor.directive';
-import { MonsterSize, MonsterType, DiceType, DamageType, CasterType, Ability, ResistanceType, Actor} from '../../../models';
+import { MonsterSize, MonsterType, DiceType, DamageType, CasterType, Ability, ResistanceType, Actor, Action } from '../../../models';
 import { CustomActorType } from '../../../services/custom-content.service';
 import { AbilityScoreEditorComponent } from '../ability-score-editor/ability-score-editor';
 import { SpellcastingEditorComponent } from '../spellcasting-editor/spellcasting-editor';
 import { getProficiencyBonus } from '../../../shared/utils/dnd-utils';
 import { environment } from '../../../../environments/environment';
+import { MapperService } from '../../../services/mapper.service';
 
 @Component({
   selector: 'app-monster-editor',
@@ -47,6 +48,7 @@ import { environment } from '../../../../environments/environment';
 })
 export class MonsterEditorComponent extends BaseEditorDirective<Actor> implements OnInit {
   private readonly fb = inject(FormBuilder);
+  protected readonly mapperService = inject(MapperService);
 
   public monsterForm: FormGroup = this.fb.group({
     id: [null],
@@ -127,6 +129,12 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
       sneakAttackNumDice: [0],
       undeadFortitude: [false]
     }),
+    behavior: this.fb.group({
+      actionPreference: ['balanced'],
+      targetPriority: ['no_preference'],
+      secondaryActionPreference: ['balanced'],
+      secondaryTargetPriority: ['no_preference']
+    }),
     monsterActions: this.fb.group({
       actions: this.fb.array([]),
       multiattacks: [[]],
@@ -171,6 +179,20 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
     .map(rt => ({ label: rt.charAt(0).toUpperCase() + rt.slice(1), value: rt }));
   protected readonly abilities = Object.values(Ability).map(a => ({ label: a.charAt(0).toUpperCase() + a.slice(1), value: a }));
 
+  protected readonly actionPreferences = [
+    { label: 'Melee', value: 'melee' },
+    { label: 'Ranged', value: 'ranged' },
+    { label: 'Spell', value: 'spell' },
+    { label: 'Balanced', value: 'balanced' }
+  ];
+
+  protected readonly targetPriorities = [
+    { label: 'Lowest HP', value: 'lowest_hp' },
+    { label: 'Highest Threat', value: 'highest_threat' },
+    { label: 'Spellcaster', value: 'spellcaster' },
+    { label: 'No Preference', value: 'no_preference' }
+  ];
+
   get actions(): FormArray {
     return this.monsterForm.get('monsterActions.actions') as FormArray;
   }
@@ -189,6 +211,10 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
 
   get spellcastingGroup(): FormGroup {
     return this.monsterForm.get('spellcasting') as FormGroup;
+  }
+
+  get behaviorGroup(): FormGroup {
+    return this.monsterForm.get('behavior') as FormGroup;
   }
 
   get specialAbilitiesGroup(): FormGroup {
@@ -533,36 +559,173 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
 
   onSave(): void {
     if (this.monsterForm.valid) {
-      const monster = this.monsterForm.getRawValue();
-
-      // Ensure state is properly initialized for a new monster
-      if (!this.itemToEdit()) {
-        monster.state = {
-          currentHp: monster.hp.value,
-          maxHp: monster.hp.value,
-          tempHp: 0,
-          hitDie: monster.hp.hitDie,
-          conditions: {},
-          deathSaves: { successes: 0, failures: 0 },
-          resistances: {},
-          isStable: true,
-          isDead: false,
-          initiative: 0
-        };
-      }
-
-      // Convert resistances array to object
-      if (monster.state && monster.state.resistances) {
-        const resistanceObj: any = {};
-        monster.state.resistances.forEach((res: any) => {
-          resistanceObj[res.damageType] = res.resistanceType;
-        });
-        monster.state.resistances = resistanceObj;
-      }
-
+      const monster = this.prepareMonsterObject();
       this.saveActor(monster);
     } else {
       this.monsterForm.markAllAsTouched();
     }
+  }
+
+  private prepareMonsterObject(): Actor {
+    const rawValues = this.monsterForm.getRawValue();
+
+    // Create a clean Actor object
+    const monster: Partial<Actor> = {
+      id: rawValues.id,
+      name: rawValues.name,
+      actorType: 'monster',
+      side: 'monster',
+      ac: rawValues.ac,
+      abilities: rawValues.asConfig,
+      hpConfig: {
+        ...rawValues.hp,
+        value: rawValues.hp.value,
+        modifier: rawValues.hp.modifier,
+        hitDice: { [rawValues.hp.hitDie.toString()]: rawValues.hp.numberOfDice }
+      },
+      metadata: {
+        cr: rawValues.cr,
+        level: rawValues.cr, // Monsters often use CR as level for some calcs
+        size: rawValues.size,
+        type: rawValues.type,
+        isLegendary: rawValues.isLegendary,
+        maxLegendaryActions: rawValues.isLegendary ? 3 : 0, // Default to 3 if legendary
+        spellcasterMetadata: {
+          isSpellcaster: rawValues.isSpellcaster,
+          isInnateCaster: rawValues.isInnateSpellcaster,
+          spellcastingAbility: rawValues.spellcasting.ability,
+          spellcastingLevel: rawValues.spellcasting.casterLevel
+        }
+      },
+      behavior: rawValues.behavior,
+      actions: [],
+      features: [],
+      isCustom: true
+    };
+
+    // Map actions
+    if (rawValues.monsterActions?.actions) {
+      monster.actions?.push(...rawValues.monsterActions.actions);
+    }
+    if (rawValues.monsterActions?.legendaryActions) {
+      rawValues.monsterActions.legendaryActions.forEach((la: any) => {
+        monster.actions?.push({
+          ...la,
+          isLegendary: true
+        });
+      });
+    }
+
+    // Add multiattacks if any
+    if (rawValues.monsterActions?.multiattacks?.length > 0) {
+      monster.actions?.push({
+        name: 'Multiattack',
+        description: 'The monster makes multiple attacks.',
+        multiattack: rawValues.monsterActions.multiattacks
+      } as Action);
+    }
+
+    // Map special abilities to features
+    const specialAbilities = rawValues.specialAbilities;
+    Object.entries(specialAbilities).forEach(([key, value]) => {
+      if (value === true || (typeof value === 'number' && value > 0)) {
+        monster.features?.push({
+          id: key,
+          name: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+          description: `Has the ${key} trait.`,
+          data: { value }
+        });
+      }
+    });
+
+    // Special handling for Consume Life Die
+    if (specialAbilities.consumeLifeDie && specialAbilities.consumeLifeDie !== DiceType.D0) {
+      let feature = monster.features?.find(f => f.id === 'consumeLife');
+      if (!feature) {
+        feature = { id: 'consumeLife', name: 'Consume Life', description: 'Has the Consume Life trait.', data: {} };
+        monster.features?.push(feature);
+      }
+      if (feature.data) feature.data['die'] = specialAbilities.consumeLifeDie;
+    }
+
+    // Special handling for Death Burst/Throes
+    if (specialAbilities.deathBurstNumDice > 0) {
+      monster.features?.push({
+        id: 'deathBurst',
+        name: 'Death Burst',
+        description: `Death Burst for ${specialAbilities.deathBurstNumDice} dice.`,
+        data: { numDice: specialAbilities.deathBurstNumDice, damageType: specialAbilities.deathBurstDamageType, dc: specialAbilities.deathBurstDC }
+      });
+    }
+    if (specialAbilities.deathThroesNumDice > 0) {
+      monster.features?.push({
+        id: 'deathThroes',
+        name: 'Death Throes',
+        description: `Death Throes for ${specialAbilities.deathThroesNumDice} dice.`,
+        data: { numDice: specialAbilities.deathThroesNumDice, dc: specialAbilities.deathThroesDC }
+      });
+    }
+
+    // Resistances
+    const resistanceObj: Record<string, any> = {};
+    if (rawValues.state?.resistances && Array.isArray(rawValues.state.resistances)) {
+      rawValues.state.resistances.forEach((res: any) => {
+        resistanceObj[res.damageType] = res.resistanceType;
+      });
+    }
+    monster.resistances = resistanceObj as any;
+
+    // Spells
+    if (monster.metadata?.spellcasterMetadata?.isSpellcaster || monster.metadata?.spellcasterMetadata?.isInnateCaster) {
+      monster.knownSpellIDs = (rawValues.spellcasting.spells || []).map((s: any) => Number(s.id));
+    }
+    monster.customSpells = [];
+
+    // Cleanup legacy fields
+    delete (monster as any).spellcasting;
+    delete (monster as any).monsterActions;
+    delete (monster as any).hp;
+    delete (monster as any).asConfig;
+
+    // Final state
+    if (!this.itemToEdit()) {
+      monster.state = {
+        currentHp: rawValues.hp.value,
+        maxHp: rawValues.hp.value,
+        tempHp: 0,
+        hitDie: rawValues.hp.hitDie,
+        conditions: {} as any,
+        deathSaves: { successes: 0, failures: 0 },
+        resistances: resistanceObj as any,
+        isStable: true,
+        isDead: false,
+        initiative: 0
+      };
+    } else {
+      monster.state = {
+        ...this.itemToEdit()?.state,
+        resistances: resistanceObj as any
+      } as any;
+    }
+
+    return monster as Actor;
+  }
+
+  /**
+   * Exports the current monster as a JSON file for testing.
+   */
+  exportToJSON(): void {
+    const monster = this.prepareMonsterObject();
+    const exportObj = { ...monster };
+    delete (exportObj as any).state;
+
+    const serializedMonster = this.mapperService.serializeKeys(exportObj);
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(serializedMonster, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `${monster.name || 'monster'}_v2.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   }
 }

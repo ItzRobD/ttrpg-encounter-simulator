@@ -16,6 +16,7 @@
         <p-tab value="1">Resistances</p-tab>
         <p-tab value="2">Equipment</p-tab>
         <p-tab value="3" [disabled]="!isSpellcaster()">Spellcasting</p-tab>
+        <p-tab value="4">Behavior</p-tab>
       </p-tablist>
 
       <p-tabpanels>
@@ -164,6 +165,30 @@
               <p class="text-secondary mt-2 mb-0">The selected class does not have spellcasting abilities.</p>
             </div>
           }
+        </p-tabpanel>
+
+        <!-- Tab 4: Behavior -->
+        <p-tabpanel value="4">
+          <div [formGroup]="behaviorGroup" class="flex flex-column gap-3 mt-3">
+            <div class="grid">
+              <div class="col-12 md:col-6">
+                <label for="actionPreference" class="font-bold block mb-1">Primary Action Preference</label>
+                <p-select id="actionPreference" formControlName="actionPreference" [options]="actionPreferences" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+              </div>
+              <div class="col-12 md:col-6">
+                <label for="targetPriority" class="font-bold block mb-1">Primary Target Priority</label>
+                <p-select id="targetPriority" formControlName="targetPriority" [options]="targetPriorities" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+              </div>
+              <div class="col-12 md:col-6">
+                <label for="secondaryActionPreference" class="font-bold block mb-1">Secondary Action Preference</label>
+                <p-select id="secondaryActionPreference" formControlName="secondaryActionPreference" [options]="actionPreferences" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+              </div>
+              <div class="col-12 md:col-6">
+                <label for="secondaryTargetPriority" class="font-bold block mb-1">Secondary Target Priority</label>
+                <p-select id="secondaryTargetPriority" formControlName="secondaryTargetPriority" [options]="targetPriorities" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+              </div>
+            </div>
+          </div>
         </p-tabpanel>
       </p-tabpanels>
     </p-tabs>

@@ -115,7 +115,11 @@ export class MapperService {
         // Hydrated objects that shouldn't be sent back as full objects if IDs are present
         if (key === 'armor' && typedObj['armorId']) return;
         if (key === 'shield' && typedObj['shieldId']) return;
-        if (key === 'spellcasting') return; // Handled as known_spells in specific flows if needed
+        if (key === 'spellcasting') return;
+        if (key === 'hp') return;
+        if (key === 'asConfig') return;
+        if (key === 'equipment' && typedObj['equipmentConfigs']) return;
+        if (key === 'monsterActions') return;
 
         const snakeKey = this.camelToSnake(key);
         result[snakeKey] = this.serializeKeys(typedObj[key]);
@@ -128,6 +132,8 @@ export class MapperService {
   private camelToSnake(key: string): string {
     // Special mappings for D&D acronyms and specific fields
     const specialMappings: Record<string, string> = {
+      'ID': 'id',
+      'id': 'ID',
       'spellSaveDC': 'spell_save_dc',
       'spellAttackBonus': 'spell_attack_bonus',
       'instanceId': 'instance_id',
@@ -136,7 +142,10 @@ export class MapperService {
       'armorId': 'armor_id',
       'shieldId': 'shield_id',
       'weaponId': 'weapon_id',
-      'hpSetMethod': 'hp_set_method',
+      'knownSpellIDs': 'known_spell_ids',
+      'equipmentConfigs': 'equipment_configs',
+      'spellcasterMetadata': 'spellcaster_metadata',
+      'hpConfig': 'hp_config',
       'numberOfDice': 'number_of_dice',
       'isConcentration': 'is_concentration',
       'castingTime': 'casting_time',

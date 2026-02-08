@@ -21,6 +21,7 @@
           <p-tab value="2">Abilities</p-tab>
           <p-tab value="3">Actions</p-tab>
           <p-tab value="4">Spellcasting</p-tab>
+          <p-tab value="5">Behavior</p-tab>
         </p-tablist>
         <p-tabpanels>
           <!-- Base Stats Tab -->
@@ -501,13 +502,42 @@
               }
             </div>
           </p-tabpanel>
+
+          <!-- Behavior Tab -->
+          <p-tabpanel value="5">
+            <div [formGroup]="behaviorGroup" class="flex flex-column gap-3 mt-3">
+              <div class="grid">
+                <div class="col-12 md:col-6">
+                  <label for="actionPreference" class="font-bold block mb-1">Primary Action Preference</label>
+                  <p-select id="actionPreference" formControlName="actionPreference" [options]="actionPreferences" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+                </div>
+                <div class="col-12 md:col-6">
+                  <label for="targetPriority" class="font-bold block mb-1">Primary Target Priority</label>
+                  <p-select id="targetPriority" formControlName="targetPriority" [options]="targetPriorities" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+                </div>
+                <div class="col-12 md:col-6">
+                  <label for="secondaryActionPreference" class="font-bold block mb-1">Secondary Action Preference</label>
+                  <p-select id="secondaryActionPreference" formControlName="secondaryActionPreference" [options]="actionPreferences" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+                </div>
+                <div class="col-12 md:col-6">
+                  <label for="secondaryTargetPriority" class="font-bold block mb-1">Secondary Target Priority</label>
+                  <p-select id="secondaryTargetPriority" formControlName="secondaryTargetPriority" [options]="targetPriorities" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+                </div>
+              </div>
+            </div>
+          </p-tabpanel>
         </p-tabpanels>
       </p-tabs>
     </p-fluid>
 
-    <div class="flex justify-content-end gap-2 mt-4">
-      <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="close()" [disabled]="loading()"></p-button>
-      <p-button type="submit" label="Save Monster" icon="pi pi-check" [loading]="loading()" [disabled]="monsterForm.invalid"></p-button>
+    <div class="flex justify-content-between align-items-center mt-4">
+      <div>
+        <p-button label="Export JSON" icon="pi pi-download" severity="info" [text]="true" (onClick)="exportToJSON()" tooltipPosition="top" pTooltip="Download monster data as JSON for testing"></p-button>
+      </div>
+      <div class="flex justify-content-end gap-2">
+        <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="close()" [disabled]="loading()"></p-button>
+        <p-button type="submit" label="Save Monster" icon="pi pi-check" [loading]="loading()" [disabled]="monsterForm.invalid"></p-button>
+      </div>
     </div>
   </form>
 </p-dialog>
