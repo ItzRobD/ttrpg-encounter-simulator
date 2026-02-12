@@ -1,14 +1,12 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Actor, ActorSummary } from '../models';
-import { environment } from '../../environments/environment';
-import { catchError, map, Observable, of, retry, tap, throwError } from 'rxjs';
+import {computed, inject, Injectable, signal} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {Actor, ActorSummary, ApiResponse} from '../models';
+import {environment} from '../../environments/environment';
+import {catchError, map, Observable, of, retry, tap, throwError} from 'rxjs';
 
-import { MapperService } from './mapper.service';
+import {MapperService} from './mapper.service';
 import {ActorService} from './actor.service.interface';
-import { CustomContentService } from './custom-content.service';
-
-import { ApiResponse } from '../models';
+import {CustomContentService} from './custom-content.service';
 
 @Injectable({
   providedIn: 'root',
@@ -39,9 +37,8 @@ export class MonsterService implements ActorService<Actor, ActorSummary> {
       isSpellcaster: !!m.metadata?.spellcasterMetadata?.isSpellcaster,
       isInnateCaster: !!m.metadata?.spellcasterMetadata?.isInnateCaster
     } as any));
-    const result = [...customSummaries, ...this._summaries()];
-    console.log('[MonsterService] summaries computed signal triggered, total:', result.length);
-    return result;
+
+    return [...customSummaries, ...this._summaries()];
   });
 
   private readonly _loading = signal(false);

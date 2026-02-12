@@ -118,8 +118,7 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
           delay: environment.httpRetryDelay
         }),
         map((response) => {
-          console.log('[CharacterService] getSummaries raw response:', response);
-          let rawData: any[] = [];
+         let rawData: any[] = [];
           const responseData = (response as any).data || response;
 
           if (Array.isArray(responseData)) {
@@ -127,8 +126,6 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
           } else if (responseData && typeof responseData === 'object') {
             rawData = Object.values(responseData);
           }
-
-          console.log('[CharacterService] getSummaries extracted rawData:', rawData);
 
           const mapped = rawData.map((c) => {
             const mapped = c as any;
@@ -171,7 +168,6 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
 
             return mapped as ActorSummary;
           });
-          console.log('[CharacterService] getSummaries mapped result:', mapped);
           return mapped;
         }),
         tap((summaries) => {

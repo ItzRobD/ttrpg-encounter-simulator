@@ -41,12 +41,6 @@ describe('SimulationMappingDebug', () => {
     const promise = new Promise((resolve, reject) => {
       (service as any).fetchSimulationResult(simulationId).subscribe({
         next: (result: any) => {
-          console.log('Mapping SUCCESSFUL');
-          console.log('Result Summary:', {
-            totalRuns: result.totalRuns,
-            logsCount: result.logs?.length,
-            firstLogEvents: result.logs?.[0]?.events?.length
-          });
           expect(result).toBeTruthy();
           expect(result.totalRuns).toBeGreaterThan(0);
           expect(result.logs.length).toBeGreaterThan(0);

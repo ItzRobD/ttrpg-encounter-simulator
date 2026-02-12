@@ -21,10 +21,8 @@ export const mappingInterceptor: HttpInterceptorFn = (req, next) => {
   return next(modifiedReq).pipe(
     map(event => {
       if (event instanceof HttpResponse && event.body) {
-        console.log(`[MappingInterceptor] Raw response from ${req.url}:`, event.body);
         // Map the response body to camelCase
         const camelBody = mapperService.mapKeys(event.body);
-        console.log(`[MappingInterceptor] Mapped response from ${req.url}:`, camelBody);
         return event.clone({ body: camelBody });
       }
       return event;

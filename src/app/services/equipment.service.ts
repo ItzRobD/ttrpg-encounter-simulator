@@ -89,8 +89,7 @@ export class EquipmentService {
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        console.log('[EquipmentService] getSummaries weapons raw response:', response);
-        // Response format: { count: 35, data: [ { id: "", name: "Rapier", weapon: { ... } }, ... ] }
+       // Response format: { count: 35, data: [ { id: "", name: "Rapier", weapon: { ... } }, ... ] }
         const data = Array.isArray(response) ? response : (response?.data || []);
         const weapons = data.map((item: any) => {
           const weaponData = item.weapon || {};
@@ -118,7 +117,6 @@ export class EquipmentService {
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        console.log('[EquipmentService] getSummaries armor raw response:', response);
         // Response format: { count: 13, data: [ { id: "", name: "Padded Armor", armor: { ... } }, ... ] }
         const data = Array.isArray(response) ? response : (response?.data || []);
         const armorList = data.map((item: any) => {

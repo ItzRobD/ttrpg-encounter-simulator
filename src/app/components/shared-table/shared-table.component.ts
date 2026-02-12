@@ -129,8 +129,6 @@ export class SharedTable {
     const term = this.searchTerm().toLowerCase().trim();
     const category = this.categoryFilter().toLowerCase();
 
-    console.log(`[SharedTable] filteredItems mode=${this.mode()}, total summaries:`, summaries.length);
-
     let items: ActorSummary[] = summaries;
 
     // 1. Category Filtering
@@ -237,14 +235,11 @@ export class SharedTable {
       (service as ActorService<Actor, ActorSummary>).selectActorByID(id.toString()).pipe(take(1)).subscribe();
     } else if (mode === 'equipment') {
       const eqSummary = summary as any;
-      this.equipmentService.selectItemByID(id.toString(), eqSummary.type).pipe(take(1)).subscribe(item => {
-        console.log('[SharedTable] Equipment item loaded:', item);
-      });
+      this.equipmentService.selectItemByID(id.toString(), eqSummary.type).pipe(take(1)).subscribe();
     } else if (mode === 'spells') {
       this.spellsService.selectActorByID(id.toString()).pipe(take(1)).subscribe();
     }
 
-    console.log(`[SharedTable] Selected ${mode} summary:`, summary);
   }
 
   onRowUnselect(): void {

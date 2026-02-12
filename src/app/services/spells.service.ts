@@ -92,7 +92,6 @@ export class SpellsService {
   }
 
   private mapSummaries(resp: ApiResponse<unknown> | unknown[]): SpellSummary[] {
-    console.log('[SpellsService] mapSummaries input:', resp);
     const rawData = resp;
 
     if (Array.isArray(rawData)) {
