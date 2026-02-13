@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -25,6 +26,7 @@ import { FluidModule } from 'primeng/fluid';
     ReactiveFormsModule,
     DialogModule,
     ButtonModule,
+    SplitButtonModule,
     InputTextModule,
     TextareaModule,
     InputNumberModule,

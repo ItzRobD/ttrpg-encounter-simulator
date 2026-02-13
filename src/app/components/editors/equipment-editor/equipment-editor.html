@@ -118,7 +118,14 @@
 
           <div class="flex justify-content-end gap-2 mt-4">
             <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="close()" [disabled]="loading()"></p-button>
-            <p-button type="submit" label="Save Weapon" icon="pi pi-check" [loading]="loading()" [disabled]="weaponForm.invalid"></p-button>
+
+            <p-splitButton
+              [label]="primarySaveLabel()"
+              [icon]="loading() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+              (onClick)="onSaveAttempt()"
+              [model]="saveOptions()"
+              [disabled]="loading() || weaponForm.invalid">
+            </p-splitButton>
           </div>
         </form>
       </p-tabpanel>
@@ -178,7 +185,14 @@
 
           <div class="flex justify-content-end gap-2 mt-4">
             <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="close()" [disabled]="loading()"></p-button>
-            <p-button type="submit" label="Save Armor" icon="pi pi-check" [loading]="loading()" [disabled]="armorForm.invalid"></p-button>
+
+            <p-splitButton
+              [label]="primarySaveLabel()"
+              [icon]="loading() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+              (onClick)="onSaveAttempt()"
+              [model]="saveOptions()"
+              [disabled]="loading() || armorForm.invalid">
+            </p-splitButton>
           </div>
         </form>
       </p-tabpanel>

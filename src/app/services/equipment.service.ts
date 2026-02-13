@@ -75,6 +75,15 @@ export class EquipmentService {
   // Selected Equipment alias
   public readonly selectedEquipment = this.selectedItem;
 
+  constructor() {
+    // Listen for cloud content changes to refresh the UI
+    this.customContentService.apiContentChange$.subscribe(({ type }) => {
+      if (type === 'equipment') {
+        this.getSummaries(true).subscribe();
+      }
+    });
+  }
+
   getSummaries(forceRefresh = false): Observable<EquipmentSummary[]> {
     if (!forceRefresh && this._summaries().length > 0) {
       return of(this._summaries());

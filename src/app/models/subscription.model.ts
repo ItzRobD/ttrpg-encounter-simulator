@@ -11,11 +11,9 @@ export interface UsageStats {
 
 export interface UserLimits {
   userId?: string;
-  tier: UserTier;
-  usage: {
-    monsters: UsageStats;
-    characters: UsageStats;
-    spells: UsageStats;
-    equipment: UsageStats;
-  };
+  tier: UserTier | string;
+  characters: UsageStats;
+  equipment: UsageStats;
+  monsters: UsageStats;
+  spells: UsageStats;
 }

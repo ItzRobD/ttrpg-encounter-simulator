@@ -163,20 +163,17 @@ export enum SimulationStatus {
 }
 
 export interface SimulationStatusResponse {
-  simulation_id: string;
+  simulationId: string;
   status: SimulationStatus;
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
   error?: string;
 }
 
 export interface SimulationPayload {
   base_options: SimulationOptions;
-  character_configs: any[];
-  monster_ids: number[];
-  monster_configs: any[];
   actor_configs?: any[];
-  lair_config: any;
+  monster_ids: number[];
   number_of_runs: number;
   max_rounds: number;
   include_logs: boolean;

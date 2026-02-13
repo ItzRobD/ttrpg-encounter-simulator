@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
@@ -22,6 +23,7 @@ import { CustomActorType } from '../../../services/custom-content.service';
     ReactiveFormsModule,
     DialogModule,
     ButtonModule,
+    SplitButtonModule,
     InputTextModule,
     InputNumberModule,
     SelectModule,

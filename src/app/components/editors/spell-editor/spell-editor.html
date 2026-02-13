@@ -227,13 +227,14 @@
         (onClick)="close()"
         [disabled]="loading()"
       ></p-button>
-      <p-button
-        type="submit"
-        label="Save Spell"
-        icon="pi pi-check"
-        [loading]="loading()"
-        [disabled]="spellForm.invalid"
-      ></p-button>
+
+      <p-splitButton
+        [label]="primarySaveLabel()"
+        [icon]="loading() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+        (onClick)="onSaveAttempt()"
+        [model]="saveOptions()"
+        [disabled]="loading() || spellForm.invalid">
+      </p-splitButton>
     </div>
   </form>
 </p-dialog>

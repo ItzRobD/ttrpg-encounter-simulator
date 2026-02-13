@@ -57,6 +57,15 @@ export class MonsterService implements ActorService<Actor, ActorSummary> {
   public get monsterSummaries() { return this.summaries; }
   public get selectedBestiaryMonster() { return this.selectedMonster; }
 
+  constructor() {
+    // Listen for cloud content changes to refresh the UI
+    this.customContentService.apiContentChange$.subscribe(({ type }) => {
+      if (type === 'monsters') {
+        this.getSummaries(true).subscribe();
+      }
+    });
+  }
+
   // Backward compatibility method
   selectMonster(monster: Actor | null): void {
     this.selectActor(monster);

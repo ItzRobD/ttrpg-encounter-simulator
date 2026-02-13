@@ -120,6 +120,7 @@ export class MapperService {
         if (key === 'asConfig') return;
         if (key === 'equipment' && typedObj['equipmentConfigs']) return;
         if (key === 'monsterActions') return;
+        if (key === 'state') return;
 
         const snakeKey = this.camelToSnake(key);
         result[snakeKey] = this.serializeKeys(typedObj[key]);

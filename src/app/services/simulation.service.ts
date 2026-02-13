@@ -106,28 +106,28 @@ export class SimulationService {
     }
 
     const monsterIds: number[] = [];
-    const monsterConfigs: MonsterConfig[] = [];
+    const actorConfigs: any[] = [];
 
+    // Process Monsters
     for (const m of monsters) {
       if (!m.isCustom) {
         monsterIds.push(+m.id);
       } else {
-        monsterConfigs.push(m as MonsterConfig);
+        const { state, ...config } = m;
+        actorConfigs.push(config);
       }
     }
 
-    // Ensure character spellcasting is lightweight if it contains hydrated spells
-    const characterConfigs = characters.map(c => {
-      // serializeKeys will now handle the transformation of spellcasting to known_spells
-      return c;
-    });
+    // Process Characters
+    for (const c of characters) {
+      const { state, ...config } = c;
+      actorConfigs.push(config);
+    }
 
     return {
       base_options: this.options(),
-      character_configs: characterConfigs as Actor[],
+      actor_configs: actorConfigs,
       monster_ids: monsterIds,
-      monster_configs: monsterConfigs,
-      lair_config: null,
       number_of_runs: this.config().numberOfRuns,
       max_rounds: this.config().maxRounds,
       include_logs: this.config().includeLogs,
@@ -155,8 +155,8 @@ export class SimulationService {
       .pipe(
         switchMap(response => {
           if (response.status === 202) {
-            const body = response.body as ApiResponse<{ simulation_id: string }>;
-            const simulationId = body?.data?.simulation_id;
+            const body = response.body as any;
+            const simulationId = body?.data?.simulationId || body?.simulationId;
             if (simulationId) {
               this._currentSimulationId.set(simulationId);
               return this.pollSimulationStatus(simulationId);

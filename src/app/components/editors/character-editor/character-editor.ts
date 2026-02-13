@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
@@ -28,6 +29,7 @@ import {MapperService} from '../../../services/mapper.service';
     ReactiveFormsModule,
     DialogModule,
     ButtonModule,
+    SplitButtonModule,
     InputTextModule,
     InputNumberModule,
     SelectModule,

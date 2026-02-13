@@ -46,6 +46,15 @@ export class SpellsService {
   private _error = signal<string | null>(null);
   public readonly error = this._error.asReadonly();
 
+  constructor() {
+    // Listen for cloud content changes to refresh the UI
+    this.customContentService.apiContentChange$.subscribe(({ type }) => {
+      if (type === 'spells') {
+        this.getSummaries(true).subscribe();
+      }
+    });
+  }
+
   getSummaries(forceRefresh = false): Observable<SpellSummary[]> {
     if (!forceRefresh && this._summaries().length > 0) {
       return of(this._summaries());

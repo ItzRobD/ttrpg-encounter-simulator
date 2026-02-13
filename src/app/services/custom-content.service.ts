@@ -9,7 +9,7 @@ import {
   Actor,
   ActorSummary
 } from '../models';
-import { Observable, of, tap } from 'rxjs';
+import { Observable, of, tap, Subject } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export type CustomActorType = 'monsters' | 'characters' | 'spells' | 'equipment';
@@ -33,6 +33,10 @@ export class CustomContentService {
   public readonly customCharacters = this._customCharacters.asReadonly();
   public readonly customSpells = this._customSpells.asReadonly();
   public readonly customEquipment = this._customEquipment.asReadonly();
+
+  // Notification for API changes
+  private readonly _apiContentChange = new Subject<{type: CustomActorType, action: 'save' | 'delete'}>();
+  public readonly apiContentChange$ = this._apiContentChange.asObservable();
 
   constructor() {
     this.loadInitialData();
@@ -64,16 +68,28 @@ export class CustomContentService {
     this._customCharacters.set(characters);
     this._customSpells.set(spells);
     this._customEquipment.set(equipment);
+
+    // Sync initial limits for free tier
+    this.subscriptionService.updateLocalUsage('monsters', monsters.length);
+    this.subscriptionService.updateLocalUsage('characters', characters.length);
+    this.subscriptionService.updateLocalUsage('spells', spells.length);
+    this.subscriptionService.updateLocalUsage('equipment', equipment.length);
   }
 
   /**
    * Saves a custom actor.
    * Handles LocalStorage for free users and API for premium users.
    */
-  saveActor<T extends { id?: string | number, isCustom?: boolean }>(type: CustomActorType, actor: T): Observable<T> {
+  saveActor<T extends { id?: string | number, isCustom?: boolean }>(
+    type: CustomActorType,
+    actor: T,
+    forceTarget?: 'local' | 'api'
+  ): Observable<T> {
     actor.isCustom = true;
 
-    if (this.subscriptionService.isPremium()) {
+    const useApi = forceTarget ? forceTarget === 'api' : this.subscriptionService.isPremium();
+
+    if (useApi) {
       // If it has a local ID, remove it before sending to API so server can generate a fresh one
       if (actor.id && typeof actor.id === 'string' && actor.id.startsWith('local-')) {
         delete actor.id;
@@ -117,7 +133,10 @@ export class CustomContentService {
         newItems[index] = actor;
         return newItems;
       }
-      return [...items, actor];
+      const newItems = [...items, actor];
+      // Update usage limit if it's a new item
+      this.subscriptionService.updateLocalUsage(type, newItems.length);
+      return newItems;
     });
 
     // Refresh limits if needed (though backend is source of truth,
@@ -134,25 +153,52 @@ export class CustomContentService {
     };
 
     const targetSignal = signalMap[type] as any;
-    targetSignal.update((items: any[]) => items.filter((i: any) => i.id !== id));
+    targetSignal.update((items: any[]) => {
+      const newItems = items.filter((i: any) => i.id !== id);
+      this.subscriptionService.updateLocalUsage(type, newItems.length);
+      return newItems;
+    });
     this.subscriptionService.fetchLimits();
   }
 
   private saveToApi<T extends { id?: string | number }>(type: CustomActorType, actor: T): Observable<T> {
-    const url = `${environment.apiUrl}/custom/${type}`;
+    let url = `${environment.apiUrl}/custom/${type}`;
+
+    // Specific endpoints for types if they don't follow the generic pattern
+    if (type === 'characters') {
+      url = `${environment.apiUrl}/characters/save`;
+    } else if (type === 'monsters') {
+      url = `${environment.apiUrl}/monsters`;
+    } else if (type === 'spells') {
+      url = `${environment.apiUrl}/spells`;
+    } else if (type === 'equipment') {
+      url = `${environment.apiUrl}/equipment`;
+    }
+
     return this.http.post<T>(url, actor).pipe(
-      tap(saved => {
-        // Also update local signals so UI is snappy
-        this.saveToLocal(type, saved as T & { id: string | number });
+      tap(() => {
+        // Notify that a cloud item has changed so services can refresh
+        this._apiContentChange.next({ type, action: 'save' });
       })
     );
   }
 
   private deleteFromApi(type: CustomActorType, id: string | number): Observable<void> {
-    const url = `${environment.apiUrl}/custom/${type}/${id}`;
+    let url = `${environment.apiUrl}/custom/${type}/${id}`;
+
+    if (type === 'characters') {
+      url = `${environment.apiUrl}/characters/delete/${id}`;
+    } else if (type === 'monsters') {
+      url = `${environment.apiUrl}/monsters/${id}`;
+    } else if (type === 'spells') {
+      url = `${environment.apiUrl}/spells/${id}`;
+    } else if (type === 'equipment') {
+      url = `${environment.apiUrl}/equipment/${id}`;
+    }
+
     return this.http.delete<void>(url).pipe(
       tap(() => {
-        this.deleteFromLocal(type, id);
+        this._apiContentChange.next({ type, action: 'delete' });
       })
     );
   }

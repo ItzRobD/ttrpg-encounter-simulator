@@ -2,7 +2,7 @@ import {computed, inject, Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {environment} from '../../environments/environment';
 import {MapperService} from './mapper.service';
-import { Actor, ActorSummary, Armor } from '../models';
+import { Actor, ActorSummary, Armor, Weapon } from '../models';
 import {catchError, forkJoin, Observable, of, retry, tap, throwError} from 'rxjs';
 import {map, switchMap} from 'rxjs/operators';
 import {ActorService} from './actor.service.interface';
@@ -100,6 +100,15 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
 
   // Selected Character alias
   public readonly selectedCharacter = this.selectedActor;
+
+  constructor() {
+    // Listen for cloud content changes to refresh the UI
+    this.customContentService.apiContentChange$.subscribe(({ type }) => {
+      if (type === 'characters') {
+        this.getSummaries(true).subscribe();
+      }
+    });
+  }
 
   // Deprecated naming
   public get characterSummaries() { return this.summaries; }
@@ -258,7 +267,36 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
       }
     }
 
-    // 2. Hydrate Armor
+    // 2. Hydrate Armor and Weapons from EquipmentConfigs if equipment object is missing
+    if (character.equipmentConfigs && (!character.equipment || (!character.equipment.armorId && !character.equipment.primarySlot))) {
+      if (!character.equipment) {
+        character.equipment = { hasShieldEquipped: false };
+      }
+
+      character.equipmentConfigs.forEach(config => {
+        if (config.type === 'armor') {
+          character.equipment!.armorId = config.id;
+        } else if (config.type === 'shield') {
+          character.equipment!.shieldId = config.id;
+          character.equipment!.hasShieldEquipped = true;
+        } else if (config.type === 'weapon') {
+          const slotData: any = {
+            weaponId: config.id,
+            isProficient: true, // Assume proficient for custom chars
+            modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false }
+          };
+          if (config.slot === 'primary') {
+            character.equipment!.primarySlot = [slotData];
+          } else if (config.slot === 'secondary') {
+            character.equipment!.secondarySlot = [slotData];
+          } else if (config.slot === 'ranged') {
+            character.equipment!.rangedSlot = [slotData];
+          }
+        }
+      });
+    }
+
+    // 3. Hydrate Armor
     if (character.equipment?.armorId && !character.equipment.armor) {
       hydrationTasks.push(this.equipmentService.selectItemByID(character.equipment.armorId.toString(), 'Armor').pipe(
         tap(armor => {
@@ -271,7 +309,7 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
       ));
     }
 
-    // 3. Hydrate Shield
+    // 4. Hydrate Shield
     if (character.equipment?.shieldId && !character.equipment.shield) {
       hydrationTasks.push(this.equipmentService.selectItemByID(character.equipment.shieldId.toString(), 'Shield').pipe(
         tap(shield => {
@@ -283,6 +321,29 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
         })
       ));
     }
+
+    // 5. Hydrate Weapons
+    const weaponSlots = [
+      character.equipment?.primarySlot,
+      character.equipment?.secondarySlot,
+      character.equipment?.rangedSlot
+    ].filter(slot => slot && slot.length > 0);
+
+    weaponSlots.forEach(slot => {
+      slot!.forEach(ws => {
+        if (ws.weaponId && !(ws as any).weapon) {
+          hydrationTasks.push(this.equipmentService.selectItemByID(ws.weaponId.toString(), 'Weapon').pipe(
+            tap(weapon => {
+              (ws as any).weapon = weapon as Weapon;
+            }),
+            catchError(err => {
+              console.error(`Failed to hydrate weapon ${ws.weaponId}`, err);
+              return of(null);
+            })
+          ));
+        }
+      });
+    });
 
     if (hydrationTasks.length === 0) {
       return of(character);
