@@ -122,6 +122,7 @@ func (aid *AIDirector) SelectAction(a *actor.Actor, d core.Decision, ed *Encount
 			}
 			intents = append(intents, intent)
 		}
+		return intents
 	}
 
 	// Main action

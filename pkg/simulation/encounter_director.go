@@ -297,7 +297,8 @@ func (ed *EncounterDirector) SimulateRound() (core.VictoryStatus, error) {
 		victory = ed.checkVictoryConditions()
 		if victory != core.VictoryStatusNone {
 			ed.LogEvent(events.EventVictory, nil, map[string]interface{}{
-				"victory": victory,
+				"winner": victory,
+				"rounds": ed.CurrentRound,
 			})
 			return victory, nil
 		}
@@ -311,7 +312,8 @@ func (ed *EncounterDirector) SimulateRound() (core.VictoryStatus, error) {
 	victory = ed.checkVictoryConditions()
 	if victory != core.VictoryStatusNone {
 		ed.LogEvent(events.EventVictory, nil, map[string]interface{}{
-			"victory": victory,
+			"winner": victory,
+			"rounds": ed.CurrentRound,
 		})
 	}
 
@@ -329,10 +331,13 @@ func (ed *EncounterDirector) ExecuteLegendaryActions(currentTurnActorID int) err
 	// instead of always using the first one.
 	var selectedLegendaryActor *actor.Actor
 	for _, id := range ed.LegendaryActorIDs {
-		a := ed.Actors[id]
+		a, ok := ed.Actors[id]
+		if !ok {
+			continue
+		}
 		// Legendary actors can't act after their turn or if they're dead
 		if currentTurnActorID == id ||
-			a.StateManager.GetHealthState(a.IsCharacter()) == core.HealthStateDead ||
+			a.StateManager.CurrentHP <= 0 ||
 			!a.StateManager.CanActConditions() {
 			continue
 		}
@@ -343,7 +348,17 @@ func (ed *EncounterDirector) ExecuteLegendaryActions(currentTurnActorID int) err
 	}
 	if selectedLegendaryActor == nil {
 		for _, id := range ed.LegendaryActorIDs {
-			a := ed.Actors[id]
+			a, ok := ed.Actors[id]
+			if !ok {
+				continue
+			}
+			// Legendary actors can't act after their turn or if they're dead
+			if currentTurnActorID == id ||
+				a.StateManager.CurrentHP <= 0 ||
+				!a.StateManager.CanActConditions() {
+				continue
+			}
+
 			if a.StateManager.LegendaryActionUsedCount >= a.StateManager.MaxLegendaryActions {
 				continue
 			}
@@ -354,6 +369,9 @@ func (ed *EncounterDirector) ExecuteLegendaryActions(currentTurnActorID int) err
 					selectedLegendaryActor = a
 					break
 				}
+			}
+			if selectedLegendaryActor != nil {
+				break
 			}
 		}
 	}
@@ -371,6 +389,10 @@ func (ed *EncounterDirector) ExecuteLegendaryActions(currentTurnActorID int) err
 	if len(intents) > 1 {
 		intents = intents[:1]
 	}
+
+	id := ed.LogEvent(events.EventLegendaryAction, selectedLegendaryActor, nil)
+	ed.EventContext.PushParent(id)
+	defer ed.EventContext.PopParent()
 
 	ed.LogEvent(events.EventDecisionStart, selectedLegendaryActor, map[string]interface{}{
 		"decision": core.DecisionLegendary,

@@ -16,6 +16,7 @@ import (
 
 func GetAllWeaponData(ctx context.Context) ([]equipment.Equipment, error) {
 	stmt := SELECT(
+		EquipmentWeapons.ID,
 		EquipmentWeapons.Name,
 		EquipmentWeapons.IsVersatile,
 		EquipmentWeapons.IsFinesse,
@@ -38,7 +39,9 @@ func GetAllWeaponData(ctx context.Context) ([]equipment.Equipment, error) {
 	for rows.Next() {
 		var w equipment.Equipment
 		w.Weapon = &equipment.Weapon{}
+		var srdID int
 		err = rows.Scan(
+			&srdID,
 			&w.Name,
 			&w.Weapon.Properties.IsVersatile,
 			&w.Weapon.Properties.IsFinesse,
@@ -52,6 +55,9 @@ func GetAllWeaponData(ctx context.Context) ([]equipment.Equipment, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
+
+		w.ID = core.MakeID(strconv.Itoa(srdID))
+
 		results = append(results, w)
 	}
 
@@ -60,6 +66,7 @@ func GetAllWeaponData(ctx context.Context) ([]equipment.Equipment, error) {
 
 func GetAllArmorData(ctx context.Context) ([]equipment.Equipment, error) {
 	stmt := SELECT(
+		EquipmentArmor.ID,
 		EquipmentArmor.Name,
 		EquipmentArmor.ArmorClass,
 		EquipmentArmor.DexBonus,
@@ -78,7 +85,9 @@ func GetAllArmorData(ctx context.Context) ([]equipment.Equipment, error) {
 	for rows.Next() {
 		var a equipment.Equipment
 		a.Armor = &equipment.Armor{}
+		var srdID int
 		err = rows.Scan(
+			&srdID,
 			&a.Name,
 			&a.Armor.ArmorClass,
 			&a.Armor.DexBonus,
@@ -88,6 +97,9 @@ func GetAllArmorData(ctx context.Context) ([]equipment.Equipment, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
+
+		a.ID = core.MakeID(strconv.Itoa(srdID))
+
 		results = append(results, a)
 	}
 	return results, nil

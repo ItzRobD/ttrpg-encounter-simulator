@@ -15,9 +15,9 @@ func RegisterRoutes(r *gin.Engine) {
 		api.GET("/monsters/:id", handlers.GetMonsterByID)
 		api.GET("/monsters/summaries", handlers.GetMonsterSummaries)
 		//
-		//api.GET("/characters/:id", handlers.GetCharacterByID)
-		//api.GET("/characters/summaries", handlers.GetCharacterSummaries)
-		//api.POST("/characters/save", handlers.SaveCharacter)
+		api.GET("/characters/:id", handlers.GetCharacterByID)
+		api.GET("/characters/summaries", handlers.GetCharacterSummaries)
+		api.POST("/characters/save", handlers.SaveCharacter)
 
 		api.GET("/equipment/weapons/:id", handlers.GetWeaponByID)
 		api.GET("/equipment/weapons", handlers.GetWeaponSummaries)
@@ -32,9 +32,9 @@ func RegisterRoutes(r *gin.Engine) {
 
 		api.GET("/users/limits", handlers.GetUserLimits)
 
-		//api.POST("/simulation/create", handlers.CreateSimulation)
-		//api.GET("/simulation/status/:id", handlers.GetSimulationStatusByID)
-		//api.GET("/simulation/results/:id", handlers.GetSimulationResultsByID)
+		api.POST("/simulation/create", handlers.CreateSimulation)
+		api.GET("/simulation/status/:id", handlers.GetSimulationStatusByID)
+		api.GET("/simulation/results/:id", handlers.GetSimulationResultsByID)
 	}
 
 }

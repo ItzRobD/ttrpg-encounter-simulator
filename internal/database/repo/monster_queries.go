@@ -20,15 +20,16 @@ import (
 )
 
 type MonsterSummary struct {
-	ID            string  `json:"id"`
-	Name          string  `json:"name"`
-	CR            float64 `json:"cr"`
-	Type          string  `json:"type"`
-	Size          string  `json:"size"`
-	AC            int     `json:"ac"`
-	IsLegendary   bool    `json:"is_legendary"`
-	IsSpellcaster bool    `json:"is_spellcaster"`
-	IsCustom      bool    `json:"is_custom"`
+	ID             string  `json:"id"`
+	Name           string  `json:"name"`
+	CR             float64 `json:"cr"`
+	Type           string  `json:"type"`
+	Size           string  `json:"size"`
+	AC             int     `json:"ac"`
+	IsLegendary    bool    `json:"is_legendary"`
+	IsSpellcaster  bool    `json:"is_spellcaster"`
+	IsInnateCaster bool    `json:"is_innate_caster"`
+	IsCustom       bool    `json:"is_custom"`
 }
 
 func GetMonsterSummaries(ctx context.Context) (map[core.ID]MonsterSummary, error) {
@@ -55,6 +56,7 @@ func GetMonsterSummariesSRD(ctx context.Context) (map[core.ID]MonsterSummary, er
 		Monsters.ArmorClass,
 		Monsters.IsLegendary,
 		Monsters.IsSpellcaster,
+		Monsters.IsInnateCaster,
 	).FROM(Monsters)
 
 	query, args := stmt.Sql()
@@ -76,6 +78,7 @@ func GetMonsterSummariesSRD(ctx context.Context) (map[core.ID]MonsterSummary, er
 			&m.AC,
 			&m.IsLegendary,
 			&m.IsSpellcaster,
+			&m.IsInnateCaster,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan monster summary: %w", err)

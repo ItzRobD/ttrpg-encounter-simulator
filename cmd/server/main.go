@@ -3,6 +3,7 @@ package main
 import (
 	"dnd5e-encounter-simulator-backend/internal/api"
 	"dnd5e-encounter-simulator-backend/internal/database"
+	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"log"
 	"net/http"
 
@@ -26,6 +27,10 @@ func main() {
 	defer database.CloseDb()
 
 	log.Println("Server starting...")
+
+	// 2. Initialize Worker Pool
+	simulation.InitWorkerPool(4)
+	defer simulation.ShutdownWorkerPool()
 
 	r := gin.Default()
 	r.Use(cors.Default())

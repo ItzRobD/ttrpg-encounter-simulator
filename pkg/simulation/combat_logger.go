@@ -196,6 +196,8 @@ func (cl *CombatLogger) formatEvent(event events.TimelineEvent) string {
 	case events.EventVictory:
 		data := event.Data.(map[string]interface{})
 		return fmt.Sprintf("=== VICTORY: %v Side Wins! (Rounds: %v) ===", data["winner"], data["rounds"])
+	case events.EventLegendaryAction:
+		return fmt.Sprintf(">>> Legendary Action: %s", actorName)
 	case events.EventMessage:
 		data := event.Data.(map[string]interface{})
 		return fmt.Sprintf("> %s", data["message"])
