@@ -57,19 +57,19 @@
               class="mr-2 text-primary"
             ></i>
             <span [class.font-bold]="rowData.type === EventType.Round || rowData.type === EventType.Turn">
-              {{ getEventLabel(rowData) }}
+              {{ getEventLabel(rowData) | snakeToSpace }}
             </span>
           </td>
           <td style="width: 150px">
-            @if (rowData.data?.actor; as actor) {
+            @if (rowData.actor; as actor) {
               <span class="text-sm font-medium">
-                {{ actor.name }}
+                {{ actor.name }} ({{ actor.instanceId }})
               </span>
             }
           </td>
           <td>
             <span class="text-sm text-700">
-              {{ getEventDetails(rowData) }}
+              {{ getEventDetails(rowData) | titlecase }}
             </span>
           </td>
         </tr>
@@ -98,8 +98,8 @@
         @if (timelineService.activeEvent(); as active) {
           <div class="text-xs text-500 italic">
             Active: {{ getEventLabel(active) }}
-            @if (active.data.actor; as actor) {
-              by {{ actor.name }}
+            @if (active.actor; as actor) {
+              by {{ actor.name }} ({{ actor.instanceId }})
             }
           </div>
         }

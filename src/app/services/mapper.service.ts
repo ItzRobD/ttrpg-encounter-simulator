@@ -280,7 +280,7 @@ export class MapperService {
     const nodesMap = new Map<string, TimelineNode>();
 
     const filteredEvents = events.filter(event => {
-      return !(event.type === EventType.DamageModified && !event.data.wasModified);
+      return !(event.type === EventType.DamageModified && !event.data?.wasModified);
     });
 
     filteredEvents.forEach((event) => {
@@ -321,9 +321,9 @@ export class MapperService {
               type: EventType.Turn,
               id: event.sequenceId,
               sequenceId: event.sequenceId,
+              actor: event.actor,
               data: {
-                actor: event.data.actor,
-                note: `Turn: ${event.data.actor?.name || 'Unknown'}`,
+                note: `Turn: ${event.actor?.name || 'Unknown'}`,
               },
             },
             children: [],

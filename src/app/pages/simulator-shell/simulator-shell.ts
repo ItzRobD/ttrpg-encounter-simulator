@@ -67,7 +67,7 @@ export class SimulatorShell {
   }
 
   fetchSpecificSimulation(): void {
-    const id = '019bde1b-ce8a-7608-ac82-0864a78441cc';
+    const id = '019c54bc-bcce-7464-82ad-0d11abae7436';
     this.simulationService.fetchSimulationResult(id).subscribe();
   }
 }

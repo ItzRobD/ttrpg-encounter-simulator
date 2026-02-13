@@ -15,7 +15,7 @@ export interface RollResult {
   id: string;
   rollType: string;
   numberOfDice: number;
-  die: string;
+  dice: string;
   finalRollValue: number;
   finalRolls: number[];
   modifier: number;
@@ -32,7 +32,7 @@ export interface RollResult {
 
 export interface DiceRoll {
   numberOfDice: number;
-  die: number;
+  dice: number;
   modifier: number;
   total: number;
   results: number[];
@@ -47,6 +47,17 @@ export interface EventData {
   diceRoll?: DiceRoll; // Used in 'attack' and 'savingthrow' types
   choiceType?: string;
   choice?: string | null;
+  decision?: string;
+  actionName?: string;
+  result?: {
+    modificationValue: number;
+    didHealHp: boolean;
+    didHealTempHp: boolean;
+    didHpDamage: boolean;
+    didTempDamage: boolean;
+    newHp: number;
+    originalHp: number;
+  };
   scores?: {
     utilityScore: number;
     factors: { [key: string]: number } | null;
@@ -68,7 +79,7 @@ export interface EventData {
   rounds?: number;
   name?: string;
   numberOfDice?: number;
-  die?: string;
+  dice?: string;
   damageType?: string;
   attackBonus?: number;
   damageBonus?: number;
@@ -84,7 +95,7 @@ export enum EventType {
   Attack = 'attack',
   DamageRoll = 'damageroll',
   SavingThrow = 'savingthrow',
-  HPModified = 'hpmodified',
+  HPModified = 'hp_modified',
   DamageModified = 'damagemodified',
   Round = 'round',
   Turn = 'turn',
@@ -92,13 +103,18 @@ export enum EventType {
   Unconscious = 'unconscious',
   Victory = 'victory',
   Equipment = 'equipment',
+  DecisionStart = 'decision_start',
+  ActionStart = 'action_start',
+  Resolution = 'resolution',
+  AttackRoll = 'attack_roll',
 }
 
 export interface SimulationEvent {
   round: number;
   id: string;
   type: EventType;
-  data: EventData;
+  actor?: CombatantReference;
+  data?: EventData;
   timestamp?: string;
   sequenceId?: string; // Groups events into a "Turn"
   parentId?: string;   // Defines hierarchy (e.g. Attack -> Damage)
@@ -149,6 +165,12 @@ export interface SimulationResult {
   // For UI compatibility, we'll map the logs from the first run or flatten them
   logs: SimulationLog[];
   count: number;
+}
+
+export interface SimulationResponse {
+  createdAt: string;
+  results: SimulationResult;
+  actorConfigs: Record<string, any>;
 }
 
 export interface SimulationRequest {

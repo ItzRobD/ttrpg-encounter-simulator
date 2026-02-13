@@ -12,6 +12,7 @@ import {ButtonModule} from 'primeng/button';
 import {TooltipModule} from 'primeng/tooltip';
 import {DiceType, EventType, SimulationEvent} from '../../models';
 import {formatDice} from '../../shared/utils/dnd-utils';
+import {SnakeToSpacePipe} from '../../pipes/snake-to-space.pipe';
 
 @Component({
   selector: 'app-simulation-results',
@@ -26,6 +27,7 @@ import {formatDice} from '../../shared/utils/dnd-utils';
     SliderModule,
     ButtonModule,
     TooltipModule,
+    SnakeToSpacePipe,
   ],
   providers: [TitleCasePipe],
   templateUrl: './simulation-results.html',
@@ -52,13 +54,7 @@ export class SimulationResults {
     const result = this.simulationService.simulationResult();
     if (!result) return [];
 
-    // Use individualResults if available, otherwise fallback to logs array
-    if (result.individualResults && result.individualResults.length > 0) {
-      return result.individualResults.map((_, i) => i);
-    }
-
-    const count = result?.count ?? 0;
-    return Array.from({ length: count }, (_, i) => i);
+    return result.individualResults.map((_, i) => i);
   });
 
   protected readonly performance = computed(() => {
@@ -83,13 +79,14 @@ export class SimulationResults {
   }
 
   getEventLabel(event: SimulationEvent): string {
+    const data = event.data || {};
     switch (event.type) {
       case EventType.Round:
         return `Round ${event.round}`;
       case EventType.Turn:
         return 'Turn';
       case EventType.Choice:
-        return `${this.titleCasePipe.transform(event.data.choiceType)} Choice`;
+        return `${this.titleCasePipe.transform(data.choiceType)} Choice`;
       case EventType.SavingThrow:
         return `Saving Throw`;
       case EventType.DamageRoll:
@@ -98,6 +95,14 @@ export class SimulationResults {
         return `Damage Modified`;
       case EventType.HPModified:
         return `HP Modified`;
+      case EventType.DecisionStart:
+        return `Decision`;
+      case EventType.ActionStart:
+        return `Action`;
+      case EventType.AttackRoll:
+        return `Attack Roll`;
+      case EventType.Resolution:
+        return `Resolution`;
       case EventType.Death:
         return `Death`;
       case EventType.Unconscious:
@@ -107,28 +112,29 @@ export class SimulationResults {
       case EventType.Equipment:
         return `Weapon`;
       default:
-        return this.titleCasePipe.transform(event.type);
+        return this.titleCasePipe.transform(event.type.replace(/_/g, ' '));
     }
   }
 
   getEventDetails(event: SimulationEvent): string {
     let details: string;
+    const data = event.data || {};
 
     if (event.type === EventType.Choice) {
-      if (event.data.choiceType === 'target') {
-        details = event.data.target?.name || event.data.choice || event.data.note || 'None';
-      } else if (event.data.choiceType === 'action') {
-        details = event.data.choice?.includes('damage') ? 'Damage' : 'Healing';
+      if (data.choiceType === 'target') {
+        details = data.target?.name || data.choice || data.note || 'None';
+      } else if (data.choiceType === 'action') {
+        details = data.choice?.includes('damage') ? 'Damage' : 'Healing';
       } else {
-        details = event.data.choice || event.data.note || '';
+        details = data.choice || data.note || '';
       }
     } else {
-      details = event.data.note || event.data.choice || '';
+      details = data.note || data.choice || '';
     }
 
     if (event.type === EventType.Initiative) {
-      const modifier = event.data.roll?.modifier
-      const value = event.data.roll?.total
+      const modifier = data.roll?.modifier
+      const value = data.roll?.total
       if (modifier !== undefined && value !== undefined && modifier !== 0) {
         details = `Initiative Roll: ${value} + ${modifier}`;
       } else if (value !== undefined) {
@@ -141,67 +147,78 @@ export class SimulationResults {
     }
 
     if (event.type === EventType.Attack) {
-      const isHit = event.data.diceRoll?.success;
-      const defType = event.data.attackType === 'melee' ? 'AC' : 'DC';
-      const hitStatus = isHit ? `Hit vs ${event.data.diceRoll?.targetValue} ${defType}` : 'Missed';
+      const isHit = data.diceRoll?.success;
+      const defType = data.attackType === 'melee' ? 'AC' : 'DC';
+      const hitStatus = isHit ? `Hit vs ${data.diceRoll?.targetValue} ${defType}` : 'Missed';
       details = `${details} ${hitStatus}`.trim();
     }
 
     if (event.type === EventType.Death || event.type === EventType.Unconscious) {
-      if (event.data.target) {
-        details = `${event.data.target.name} ${event.type === EventType.Death ? 'died' : 'fell unconscious'}`;
+      if (data.target) {
+        details = `${data.target.name} ${event.type === EventType.Death ? 'died' : 'fell unconscious'}`;
       }
     }
 
-    if (event.type === EventType.SavingThrow) {
-      const isSuccess = event.data.diceRoll?.success;
-      const targetDC = event.data.diceRoll?.targetValue;
-      const status = isSuccess ? `Success vs DC ${targetDC}` : `Failed vs DC ${targetDC}`;
-      details = `${details} ${status}`.trim();
-    }
-
-    if (event.type === EventType.Victory) {
-      const winners = this.titleCasePipe.transform(event.data.winner);
-      details = `${winners} won in ${event.data.rounds} rounds`
-    }
-
     if (event.type === EventType.HPModified) {
-      const value = event.data.value;
-      const targetName = event.data.target?.name || 'HP';
-      if (value !== undefined) {
-        const verb = value > 0 ? 'increased' : 'decreased';
-        details = `${targetName} ${verb} by ${Math.abs(value)}`;
+      const modification = data.result?.modificationValue;
+      const targetName = data.target?.name || 'HP';
+      if (modification !== undefined) {
+        const verb = data.result?.didHealHp ? 'increased' : 'decreased';
+        details = `${targetName} ${verb} by ${Math.abs(modification)}`;
       } else {
         details = `${targetName} modified`;
       }
     }
 
-    if (event.type === EventType.Equipment) {
-      if (event.data.die && event.data.name && event.data.numberOfDice) {
-        const weaponName = event.data.name;
-        const dieValue = parseInt(event.data.die, 10);
-        const diceType = dieValue as DiceType;
-        const properties = event.data.properties || [];
-        const modifiers = event.data.modifiers || [];
-        const propString = properties.length > 0 ? ` (${properties.map(p => this.titleCasePipe.transform(p)).join(', ')})` : '';
-        const modString = modifiers.length > 0 ? ` (${modifiers.map(m => this.titleCasePipe.transform(m)).join(', ')})` : '';
+    if (event.type === EventType.DecisionStart) {
+      details = data.decision || '';
+    }
 
-        details = `${weaponName} - ${formatDice(
-          event.data.numberOfDice,
+    if (event.type === EventType.ActionStart) {
+      details = data.actionName || '';
+    }
+
+    if (event.type === EventType.Resolution) {
+      details = '';
+    }
+
+    if (event.type === EventType.AttackRoll || event.type === EventType.SavingThrow || event.type === EventType.DamageRoll) {
+      const roll = data.roll;
+      if (roll) {
+        const dieValue = parseInt(roll.dice, 10);
+        const diceType = isNaN(dieValue) ? DiceType.D20 : dieValue as DiceType;
+        const damageType = this.titleCasePipe.transform(data.damageType || roll.rollType) || '';
+
+        details = `Total: ${roll.total}, Dice: ${formatDice(
+          roll.numberOfDice,
           diceType,
-          event.data.damageBonus,
-        )} ${event.data.damageType}${propString}${modString}`;``;
+          roll.modifier
+        )} ${damageType}`.trim();
+
+        if (event.type === EventType.SavingThrow || event.type === EventType.AttackRoll) {
+          const isSuccess = roll.isSuccess;
+          const targetDC = data.diceRoll?.targetValue || roll.total; // Fallback if diceRoll missing
+          const label = event.type === EventType.SavingThrow ? 'vs DC' : 'vs AC';
+          const status = isSuccess ? `Success ${label} ${targetDC}` : `Failed ${label} ${targetDC}`;
+          details = `${details} (${status})`;
+        }
       }
     }
 
-    if (event.data.roll) {
-      const dieValue = parseInt(event.data.roll.die, 10);
+    if (event.type === EventType.Victory) {
+      if (data.winner) {
+        details = `${data.winner} won the combat`;
+      }
+    }
+
+    if (data.roll) {
+      const dieValue = parseInt(data.roll.dice, 10);
       const diceType = dieValue as DiceType;
-      const damageType = this.titleCasePipe.transform(event.data.damageType) || '';
-      details += ` Total: ${event.data.roll.total}, Dice: ${formatDice(
-        event.data.roll.numberOfDice,
+      const damageType = this.titleCasePipe.transform(data.damageType) || '';
+      details += ` Total: ${data.roll.total}, Dice: ${formatDice(
+        data.roll.numberOfDice,
         diceType,
-        event.data.roll.modifier
+        data.roll.modifier
       )} ${damageType}`;
     }
 

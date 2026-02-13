@@ -1,9 +1,9 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { SimulationLog, SimulationResult, EncounterConfig, SimulationEvent, EventType, SimulationConfig,
-  SimulationPayload, Actor, SimulationStatusResponse, SimulationStatus, ApiResponse, IndividualResult, isMonster, isCharacter
+import { SimulationLog, SimulationResult, SimulationEvent, EventType, SimulationConfig,
+  SimulationPayload, Actor, SimulationStatusResponse, SimulationStatus, IndividualResult, isMonster, isCharacter, SimulationResponse
 } from '../models';
-import { SimulationOptions } from '../models/simoptions.model';
+import { SimulationOptions } from '../models';
 import { CombatantService } from './combatant.service';
 import { MapperService } from './mapper.service';
 import { SimulationStateService } from './simulation-state.service';
@@ -226,29 +226,28 @@ export class SimulationService {
     const resultUrl = `${environment.apiUrl}/simulation/results/${id}`;
     return this.http.get<any>(resultUrl).pipe(
       map(response => {
-        // The backend structure is now: { data: { results: { individual_results: [...], ... }, actor_configs: { ... } } }
-        const unwrapped = response?.data || response;
-        const data = unwrapped?.results || unwrapped;
-        const actorConfigs = unwrapped?.actorConfigs;
+        // The mappingInterceptor might have already unwrapped the 'data' envelope
+        const data = (response?.results) ? response : response?.data;
 
-        if (!data || !Array.isArray(data.individualResults)) {
+        if (!data?.results || !Array.isArray(data.results.individualResults)) {
           console.error('Invalid simulation result structure. Full response:', response);
           throw new Error('Invalid simulation result structure: missing individualResults');
         }
 
-        // Convert the backend "IndividualResult" (which has a 'logs' array of events)
-        // into the frontend "SimulationLog" structure for backward compatibility/UI.
-        const simulationLogs: SimulationLog[] = data.individualResults.map((res: any) => ({
-          actors: [], // We'll populate this if needed, but TimelineService will use initialState
+        const results = data.results;
+        const actorConfigs = data.actorConfigs;
+
+        const simulationLogs: SimulationLog[] = results.individualResults.map((res: any) => ({
+          actors: [],
           events: res.logs || [],
-          initialState: res.initialState // Pass along individual run initial state if present
+          initialState: res.initialState
         }));
 
         const simulationResult: SimulationResult = {
-          ...data,
+          ...results,
           actorConfigs: actorConfigs,
           logs: simulationLogs,
-          count: data.totalRuns || simulationLogs.length
+          count: results.totalRuns || simulationLogs.length
         };
 
         return simulationResult;
@@ -256,7 +255,6 @@ export class SimulationService {
       tap(result => {
         this.stateService.setSimulationResult(result);
         if (result.logs.length > 0) {
-          // Default to the logs of the first run
           this.stateService.setSelectedSimulationLog(result.logs[0]);
         }
       })
@@ -279,20 +277,32 @@ export class SimulationService {
    */
   async seedDummyData(): Promise<void> {
     try {
-      const response = await fetch('/timeline_output.json');
+      const response = await fetch('/sim_result_response.json');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const rawResult = await response.json();
-      const result = this.mapperService.mapKeys(rawResult) as SimulationResult;
 
-      if (!result || !Array.isArray(result.logs)) {
-        throw new Error('Invalid dummy data: expected an object with a logs array.');
-      }
+      // Map the full response structure
+      const mappedResponse = this.mapperService.mapKeys(rawResult) as { data: SimulationResponse };
+      const data = mappedResponse.data;
+
+      // Extract and format using the same logic as fetchSimulationResult
+      const simulationLogs: SimulationLog[] = data.results.individualResults.map((res: any) => ({
+        actors: [],
+        events: res.logs || [],
+        initialState: res.initialState
+      }));
+
+      const result: SimulationResult = {
+        ...data.results,
+        actorConfigs: data.actorConfigs,
+        logs: simulationLogs,
+        count: data.results.totalRuns || simulationLogs.length
+      };
 
       this.stateService.setSimulationResult(result);
       if (result.logs.length > 0) {
-        // Dummy data might not have individualResults, so we use logs[0]
         this.stateService.setSelectedSimulationLog(result.logs[0]);
       }
       console.log('Dummy simulation data seeded:', result);
