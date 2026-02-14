@@ -97,9 +97,9 @@ type SimulationOptions struct {
 	AOETargetThreshold             int                       `json:"aoe_target_threshold,omitempty"`
 	MultiattackPolicy              MultiattackFollowUpPolicy `json:"multiattack_policy,omitempty"`
 	ActionSelectionPolicy          ActionSelectionPolicy     `json:"action_selection_policy,omitempty"`
-	DebugEnableMonsterTurns        bool                      `json:"debug_enable_monster_turns,omitempty"`
-	DebugEnableCharacterTurns      bool                      `json:"debug_enable_character_turns,omitempty"`
-	DebugEnableLairTurns           bool                      `json:"debug_enable_lair_turns,omitempty"`
+	DisableMonsterTurns            bool                      `json:"disable_monster_turns,omitempty"`
+	DisableCharacterTurns          bool                      `json:"disable_character_turns,omitempty"`
+	DisableLairTurns               bool                      `json:"disable_lair_turns,omitempty"`
 }
 
 type HPModificationResult struct {

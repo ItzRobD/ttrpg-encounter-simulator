@@ -41,6 +41,8 @@ func TestAIDirector_SelectTarget(t *testing.T) {
 	}
 
 	// With high weight on low HP, Weakling should be selected
+	// In the weighted AI, we need to ensure visibility is set to visible for HP factor to work
+	ed.SimOptions.HPVisibilityMode = core.HPVisible
 	targetIDs := aid.SelectTarget(a, targets, core.TTDamage, ed)
 	if len(targetIDs) == 0 || targetIDs[0] != 2 {
 		t.Errorf("Expected target 2 (Weakling), got %v", targetIDs)

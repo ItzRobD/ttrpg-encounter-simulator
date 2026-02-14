@@ -267,15 +267,15 @@ func (ed *EncounterDirector) SimulateRound() (core.VictoryStatus, error) {
 
 	for _, actorID := range ed.TurnOrder {
 
-		if !ed.SimOptions.DebugEnableCharacterTurns && ed.Actors[actorID].IsCharacter() {
+		if ed.SimOptions.DisableCharacterTurns && ed.Actors[actorID].IsCharacter() {
 			continue
 		}
 
-		if !ed.SimOptions.DebugEnableMonsterTurns && ed.Actors[actorID].IsMonster() {
+		if ed.SimOptions.DisableMonsterTurns && ed.Actors[actorID].IsMonster() {
 			continue
 		}
 
-		if !ed.SimOptions.DebugEnableLairTurns && ed.Actors[actorID].IsLair() {
+		if ed.SimOptions.DisableLairTurns && ed.Actors[actorID].IsLair() {
 			continue
 		}
 
