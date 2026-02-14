@@ -92,6 +92,7 @@ type SimulationOptions struct {
 	UseWeightedAI                  bool                      `json:"use_weighted_ai"`
 	DebugAI                        bool                      `json:"debug_ai"`
 	IncludeStateSnapshots          bool                      `json:"include_state_snapshots"`
+	MaxLoggedRuns                  int                       `json:"max_logged_runs"`
 	HPVisibilityMode               HPVisibilityMode          `json:"hp_visibility_mode"`
 	EnableMonsterNoise             bool                      `json:"enable_monster_noise"`
 	MonsterNoiseWeight             float64                   `json:"monster_noise_weight"`
