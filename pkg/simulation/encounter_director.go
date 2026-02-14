@@ -7,6 +7,7 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"fmt"
 	"math/rand/v2"
+	"reflect"
 	"sort"
 	"time"
 )
@@ -43,8 +44,9 @@ type EncounterDirector struct {
 	SimOptions *core.SimulationOptions
 
 	// Logging
-	EventContext *events.EventContext
-	CombatLog    []events.TimelineEvent
+	EventContext     *events.EventContext
+	CombatLog        []events.TimelineEvent
+	LastLoggedStates map[int]events.ActorSnapshot
 }
 
 // NewEncounterDirector initializes a new director with a shared RNG source.
@@ -62,6 +64,7 @@ func NewEncounterDirector(seed core.Seed, options *core.SimulationOptions) *Enco
 		CurrentRound:      0,
 		EventContext:      events.NewEventContext(),
 		CombatLog:         make([]events.TimelineEvent, 0),
+		LastLoggedStates:  make(map[int]events.ActorSnapshot),
 	}
 	ed.Adjudicator = NewReferee(ed)
 	ed.registerSRDFeatures()
@@ -694,6 +697,46 @@ func (ed *EncounterDirector) LogEvent(eventType events.EventType, a *actor.Actor
 			InstanceID: a.InstanceID,
 			Type:       a.ActorType,
 			Side:       a.Side,
+		}
+	}
+
+	// Capture actor state snapshots if enabled and event is relevant
+	if ed.SimOptions != nil && ed.SimOptions.IncludeStateSnapshots {
+		relevantEvents := map[events.EventType]bool{
+			events.EventHPModified:       true,
+			events.EventDamageRoll:       true,
+			events.EventHealRoll:         true,
+			events.EventConditionAdded:   true,
+			events.EventConditionRemoved: true,
+			events.EventActionStart:      true,
+			events.EventTurnStart:        true,
+			events.EventDeath:            true,
+			events.EventCombatStart:      true,
+			events.EventVictory:          true,
+			events.EventUnconscious:      true,
+		}
+
+		if relevantEvents[eventType] {
+			delta := make(map[int]events.ActorSnapshot)
+			for id, act := range ed.Actors {
+				currentState := events.ActorSnapshot{
+					CurrentHP:   act.StateManager.CurrentHP,
+					TempHP:      act.StateManager.TempHP,
+					Conditions:  act.StateManager.Conditions.GetActive(),
+					HealthState: act.StateManager.HealthState,
+				}
+
+				// Only include if it changed since last log
+				lastState, exists := ed.LastLoggedStates[id]
+				if !exists || !reflect.DeepEqual(currentState, lastState) {
+					delta[id] = currentState
+					ed.LastLoggedStates[id] = currentState
+				}
+			}
+
+			if len(delta) > 0 {
+				timelineEvent.ActorStates = delta
+			}
 		}
 	}
 

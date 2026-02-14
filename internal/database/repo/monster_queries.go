@@ -323,28 +323,31 @@ func hydrateActionDataSRD(ctx context.Context, cfg *actor.ActorConfig, id int) e
 			WHERE(MonsterAttackBonusBlocks.ActionID.EQ(Int(int64(action.ID.Int()))))
 
 		queryDmgBlocks, argsDmgBlocks := stmtDmgBlocks.Sql()
-		rowsDmgBlocks, err := database.Query(ctx, queryDmgBlocks, argsDmgBlocks...)
+		err = func() error {
+			rows, err := database.Query(ctx, queryDmgBlocks, argsDmgBlocks...)
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var dmgBlock core.DiceBlock
+				err = rows.Scan(
+					&dmgBlock.NumberOfDice,
+					&dmgBlock.Die,
+					&dmgBlock.Modifier,
+					&action.AttackBonus,
+					&dmgBlock.DamageType,
+				)
+				if err != nil {
+					return err
+				}
+				action.DiceBlock = append(action.DiceBlock, dmgBlock)
+			}
+			return nil
+		}()
 		if err != nil {
 			return fmt.Errorf("failed to query monster damage blocks for action %s: %w", action.ID, err)
 		}
-
-		for rowsDmgBlocks.Next() {
-			var dmgBlock core.DiceBlock
-			err = rowsDmgBlocks.Scan(
-				&dmgBlock.NumberOfDice,
-				&dmgBlock.Die,
-				&dmgBlock.Modifier,
-				&action.AttackBonus,
-				&dmgBlock.DamageType,
-			)
-			if err != nil {
-				rowsDmgBlocks.Close()
-				return fmt.Errorf("failed to scan monster damage block: %w", err)
-			}
-
-			action.DiceBlock = append(action.DiceBlock, dmgBlock)
-		}
-		rowsDmgBlocks.Close()
 
 		// DC Damage Blocks
 		stmtDcDmgBlocks := SELECT(
@@ -356,27 +359,30 @@ func hydrateActionDataSRD(ctx context.Context, cfg *actor.ActorConfig, id int) e
 			WHERE(MonsterDcDamageBlocks.ActionID.EQ(Int(int64(action.ID.Int()))))
 
 		queryDcDmgBlocks, argsDcDmgBlocks := stmtDcDmgBlocks.Sql()
-		rowsDcDmgBlocks, err := database.Query(ctx, queryDcDmgBlocks, argsDcDmgBlocks...)
+		err = func() error {
+			rows, err := database.Query(ctx, queryDcDmgBlocks, argsDcDmgBlocks...)
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var dmgBlock core.DiceBlock
+				err = rows.Scan(
+					&dmgBlock.NumberOfDice,
+					&dmgBlock.Die,
+					&dmgBlock.Modifier,
+					&dmgBlock.DamageType,
+				)
+				if err != nil {
+					return err
+				}
+				action.DiceBlock = append(action.DiceBlock, dmgBlock)
+			}
+			return nil
+		}()
 		if err != nil {
 			return fmt.Errorf("failed to query monster DC damage blocks for action %s: %w", action.ID, err)
 		}
-
-		for rowsDcDmgBlocks.Next() {
-			var dmgBlock core.DiceBlock
-			err = rowsDcDmgBlocks.Scan(
-				&dmgBlock.NumberOfDice,
-				&dmgBlock.Die,
-				&dmgBlock.Modifier,
-				&dmgBlock.DamageType,
-			)
-			if err != nil {
-				rowsDcDmgBlocks.Close()
-				return fmt.Errorf("failed to scan monster DC damage block: %w", err)
-			}
-
-			action.DiceBlock = append(action.DiceBlock, dmgBlock)
-		}
-		rowsDcDmgBlocks.Close()
 
 		// Calculate Average Damage for AI
 		for _, db := range action.DiceBlock {

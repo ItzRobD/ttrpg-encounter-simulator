@@ -91,6 +91,7 @@ type SimulationOptions struct {
 	AlwaysUseSneakAttack           bool                      `json:"always_use_sneak_attack"`
 	UseWeightedAI                  bool                      `json:"use_weighted_ai"`
 	DebugAI                        bool                      `json:"debug_ai"`
+	IncludeStateSnapshots          bool                      `json:"include_state_snapshots"`
 	HPVisibilityMode               HPVisibilityMode          `json:"hp_visibility_mode"`
 	EnableMonsterNoise             bool                      `json:"enable_monster_noise"`
 	MonsterNoiseWeight             float64                   `json:"monster_noise_weight"`
