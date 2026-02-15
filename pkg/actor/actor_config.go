@@ -8,11 +8,12 @@ import (
 
 type ActorConfig struct {
 	// Base data
-	ID        string         `json:"ID"`
-	Name      string         `json:"name"`
-	Side      core.Side      `json:"side"`
-	ActorType core.ActorType `json:"actor_type"`
-	IsCustom  bool           `json:"is_custom"`
+	ID         string         `json:"ID"`
+	InstanceID int            `json:"instance_id"`
+	Name       string         `json:"name"`
+	Side       core.Side      `json:"side"`
+	ActorType  core.ActorType `json:"actor_type"`
+	IsCustom   bool           `json:"is_custom"`
 
 	// Raw Stats
 	Abilities core.Abilities `json:"abilities"`

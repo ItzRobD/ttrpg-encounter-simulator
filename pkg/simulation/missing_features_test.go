@@ -184,29 +184,22 @@ func TestHandleDwarvenResilience(t *testing.T) {
 		}
 	})
 
-	t.Run("Dwarven Resilience does not grant advantage against fire", func(t *testing.T) {
+	t.Run("Dwarven Resilience handles missing AttackContext gracefully", func(t *testing.T) {
 		opts := &roll_manager.RollOptions{Advantage: core.RollNormal}
 		ctx := &FeatureContext{
 			SaveContext: &SaveContext{
 				Options: opts,
 			},
-			AttackContext: &AttackContext{
-				Action: &core.Action{
-					HasDC: true,
-					DiceBlock: []core.DiceBlock{
-						{DamageType: core.DamageFire},
-					},
-				},
-			},
+			// AttackContext is nil
 		}
 
 		err := ed.HandleSaveAdvantage(dwarf, dwarf.Features[0], core.HookOnSelfSavingThrow, ctx)
 		if err != nil {
-			t.Fatalf("HandleSaveAdvantage failed: %v", err)
+			t.Fatalf("HandleSaveAdvantage failed on nil AttackContext: %v", err)
 		}
 
 		if opts.Advantage != core.RollNormal {
-			t.Error("Did not expect advantage against fire save")
+			t.Error("Did not expect advantage when AttackContext is missing")
 		}
 	})
 }

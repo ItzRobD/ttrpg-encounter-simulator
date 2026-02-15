@@ -125,10 +125,18 @@ func (ed *EncounterDirector) registerSRDFeatures() {
 
 // AddActor adds a hydrated actor to the simulation and assigns a unique InstanceID.
 func (ed *EncounterDirector) AddActor(a *actor.Actor) {
-	// Simple auto-increment for InstanceID
-	instanceID := len(ed.Actors) + 1
-	a.InstanceID = instanceID
-	ed.Actors[instanceID] = a
+	if a.InstanceID == 0 {
+		// Calculate next ID based on existing actors.
+		// If no actors exist, it will start at 1.
+		maxID := 0
+		for id := range ed.Actors {
+			if id > maxID {
+				maxID = id
+			}
+		}
+		a.InstanceID = maxID + 1
+	}
+	ed.Actors[a.InstanceID] = a
 
 	// Account for lair specific needs
 	if ed.HasLair && a.ActorType == core.ActorTypeLair {
@@ -145,7 +153,7 @@ func (ed *EncounterDirector) AddActor(a *actor.Actor) {
 
 	// Maintain a separate list of legendary actors
 	if a.Metadata.IsLegendary {
-		ed.LegendaryActorIDs = append(ed.LegendaryActorIDs, instanceID)
+		ed.LegendaryActorIDs = append(ed.LegendaryActorIDs, a.InstanceID)
 		sort.Ints(ed.LegendaryActorIDs)
 	}
 }

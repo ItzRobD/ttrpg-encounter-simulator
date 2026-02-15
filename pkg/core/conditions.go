@@ -69,7 +69,7 @@ func (ec ActorConditions) Remove(c Condition) {
 	if ec == nil {
 		return
 	}
-	delete(ec, c)
+	ec[c] = false
 }
 
 func (ec ActorConditions) Has(c Condition) bool {

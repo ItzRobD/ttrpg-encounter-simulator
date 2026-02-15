@@ -27,7 +27,7 @@ type MultiSimulationResult struct {
 	OtherVictories     int                          `json:"other_victories"`     // Draw or other
 	AverageRounds      float64                      `json:"average_rounds"`
 	WinRatePercentage  float64                      `json:"win_rate_percentage"`
-	CharacterConfigs   map[int]actor.ActorConfig    `json:"character_configs,omitempty"`
+	ActorConfigs       map[int]actor.ActorConfig    `json:"actor_configs,omitempty"`
 	IndividualResults  []IndividualSimulationResult `json:"individual_results,omitempty"`
 	Performance        *PerformanceMetrics          `json:"performance,omitempty"`
 }
@@ -47,6 +47,7 @@ type IndividualSimulationResult struct {
 	Seed             core.Seed                   `json:"seed"`
 	LogsStripped     bool                        `json:"logs_stripped,omitempty"`
 	EncounterResults []IndividualEncounterResult `json:"encounter_results,omitempty"`
+	ActorConfigs     map[int]actor.ActorConfig   `json:"actor_configs,omitempty"`
 }
 
 type ActorInitialState struct {
@@ -79,15 +80,17 @@ type AdventuringDayResult struct {
 	AverageRounds    float64                     `json:"average_rounds"`
 	EncounterResults []IndividualEncounterResult `json:"encounter_results,omitempty"`
 	FinalActorStates map[int]actor.Actor         `json:"final_actor_states,omitempty"`
+	ActorConfigs     map[int]actor.ActorConfig   `json:"actor_configs,omitempty"`
 	Performance      *PerformanceMetrics         `json:"performance,omitempty"`
 }
 
 type IndividualEncounterResult struct {
-	EncounterName string                 `json:"encounter_name"`
-	VictoryStatus core.VictoryStatus     `json:"victory_status"`
-	Rounds        int                    `json:"rounds"`
-	Seed          core.Seed              `json:"seed"`
-	Logs          []events.TimelineEvent `json:"logs,omitempty"`
+	EncounterName string                    `json:"encounter_name"`
+	VictoryStatus core.VictoryStatus        `json:"victory_status"`
+	Rounds        int                       `json:"rounds"`
+	Seed          core.Seed                 `json:"seed"`
+	InitialState  map[int]ActorInitialState `json:"initial_state,omitempty"`
+	Logs          []events.TimelineEvent    `json:"logs,omitempty"`
 }
 
 // RunMultiSimulation executes multiple adventuring day simulations and returns an aggregated result.
@@ -149,6 +152,7 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 				TotalRounds:      totalRounds,
 				Seed:             seed,
 				EncounterResults: dayRes.EncounterResults,
+				ActorConfigs:     dayRes.ActorConfigs,
 			}
 
 			resultsChan <- res
@@ -158,6 +162,7 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 	multiResult := &MultiSimulationResult{
 		TotalRuns:         req.NumberOfRuns,
 		IndividualResults: make([]IndividualSimulationResult, 0, req.NumberOfRuns),
+		ActorConfigs:      make(map[int]actor.ActorConfig),
 	}
 
 	maxLogs := req.BaseOptions.MaxLoggedRuns
@@ -174,6 +179,15 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		select {
 		case res := <-resultsChan:
 			totalRounds += res.TotalRounds
+
+			// Merge ActorConfigs
+			for id, cfg := range res.ActorConfigs {
+				if _, exists := multiResult.ActorConfigs[id]; !exists {
+					multiResult.ActorConfigs[id] = cfg
+				}
+			}
+			// Clear from individual result to save space if not needed there
+			// res.ActorConfigs = nil // Keep it for now as per user request shape
 
 			switch res.VictoryStatus {
 			case core.VictoryStatusCharacters:
@@ -221,19 +235,8 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		multiResult.WinRatePercentage = (float64(multiResult.CharacterVictories) / float64(multiResult.TotalRuns)) * 100
 	}
 
-	// Capture character configs
-	if len(req.CharacterConfigs) > 0 {
-		tempED := NewEncounterDirector(core.Seed{}, &req.BaseOptions)
-		tempSM := NewSetupManager(ctx, tempED.RollManager)
-		multiResult.CharacterConfigs = make(map[int]actor.ActorConfig)
-		for _, cfg := range req.CharacterConfigs {
-			a, err := tempSM.SetupActor(cfg)
-			if err == nil {
-				tempED.AddActor(a)
-				multiResult.CharacterConfigs[a.InstanceID] = cfg
-			}
-		}
-	}
+	// Capture character configs from first run or provided configs
+	// In MultiSimulation, we now aggregate them from all runs.
 
 	var memEnd runtime.MemStats
 	runtime.ReadMemStats(&memEnd)
@@ -259,10 +262,12 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 	dayRNG := rand.New(rand.NewPCG(masterSeed.Seed1, masterSeed.Seed2))
 	im := intermission_manager.NewIntermissionManager(roll_manager.NewRollManager(dayRNG))
 
+	actorConfigs := make(map[int]actor.ActorConfig)
 	var characters []*actor.Actor
 	encounterResults := make([]IndividualEncounterResult, 0)
 	encountersWon := 0
 	totalRounds := 0
+	nextInstanceID := 1
 
 	// Initial character hydration
 	sm := NewSetupManager(ctx, roll_manager.NewRollManager(dayRNG))
@@ -271,7 +276,13 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 		if err != nil {
 			return nil, fmt.Errorf("character hydration failed for %s: %w", cfg.Name, err)
 		}
+		// Assign InstanceID starting from 1 for characters
+		// We ignore any pre-assigned InstanceID from the request to ensure a clean start
+		a.InstanceID = nextInstanceID
+		nextInstanceID++
 		characters = append(characters, a)
+		// Capture the fully hydrated config including the assigned InstanceID
+		actorConfigs[a.InstanceID] = a.ToConfig()
 	}
 
 	for _, encCfg := range req.Encounters {
@@ -287,25 +298,50 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 
 		// Fresh monsters for each encounter
 		for _, mID := range encCfg.MonsterIDs {
-			m, err := sm.SetupActor(actor.ActorConfig{
+			mCfg := actor.ActorConfig{
 				ID:        fmt.Sprintf("%d", mID),
 				ActorType: core.ActorTypeMonster,
 				Side:      core.SideMonsters,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("monster hydration failed for ID %s: %w", mID, err)
 			}
+			m, err := sm.SetupActor(mCfg)
+			if err != nil {
+				return nil, fmt.Errorf("monster hydration failed for ID %d: %w", mID, err)
+			}
+			// Assign a unique InstanceID across the entire adventuring day
+			m.InstanceID = nextInstanceID
+			nextInstanceID++
 			ed.AddActor(m)
+
+			// Capture the fully hydrated config including the assigned InstanceID
+			actorConfigs[m.InstanceID] = m.ToConfig()
 		}
 		for _, mCfg := range encCfg.MonsterConfigs {
 			m, err := sm.SetupActor(mCfg)
 			if err != nil {
 				return nil, fmt.Errorf("monster hydration failed: %w", err)
 			}
+			// Assign a unique InstanceID across the entire adventuring day
+			m.InstanceID = nextInstanceID
+			nextInstanceID++
 			ed.AddActor(m)
+
+			// Capture the fully hydrated config including the assigned InstanceID
+			actorConfigs[m.InstanceID] = m.ToConfig()
 		}
 
 		ed.SetupEncounter()
+
+		// Capture initial state
+		initialState := make(map[int]ActorInitialState)
+		for _, a := range ed.Actors {
+			initialState[a.InstanceID] = ActorInitialState{
+				CurrentHP:   a.StateManager.CurrentHP,
+				MaxHP:       a.StateManager.MaxHP,
+				TempHP:      a.StateManager.TempHP,
+				Conditions:  a.StateManager.Conditions,
+				HealthState: a.StateManager.HealthState,
+			}
+		}
 
 		var victory core.VictoryStatus
 		for round := 0; round < req.MaxRounds; round++ {
@@ -330,11 +366,14 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 			VictoryStatus: victory,
 			Rounds:        ed.CurrentRound,
 			Seed:          encSeed,
+			InitialState:  initialState,
 			Logs:          encLogs,
 		})
 
-		if victory != core.VictoryStatusCharacters {
-			// Party wiped or draw
+		// If party wiped, we stop the adventuring day, but we might want to continue
+		// if the user specifically wants to see all encounters (e.g. for testing).
+		// However, logically the day ends.
+		if victory == core.VictoryStatusMonsters {
 			break
 		}
 
@@ -368,6 +407,7 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 		AverageRounds:    float64(totalRounds) / float64(len(req.Encounters)),
 		EncounterResults: encounterResults,
 		FinalActorStates: finalStates,
+		ActorConfigs:     actorConfigs,
 		Performance: &PerformanceMetrics{
 			ExecutionTimeMs:    time.Since(startTime).Milliseconds(),
 			ExecutionTimeHuman: time.Since(startTime).String(),

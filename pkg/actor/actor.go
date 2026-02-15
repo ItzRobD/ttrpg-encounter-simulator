@@ -103,13 +103,39 @@ func (a *Actor) GetResistances() core.DamageResistances {
 	return res
 }
 
+func (a *Actor) ToConfig() ActorConfig {
+	cfg := ActorConfig{
+		ID:          a.ID.String(),
+		InstanceID:  a.InstanceID,
+		Name:        a.Name,
+		Side:        a.Side,
+		ActorType:   a.ActorType,
+		IsCustom:    a.IsCustom,
+		Abilities:   a.Abilities,
+		HPConfig:    a.HPConfig,
+		AC:          a.AC,
+		Metadata:    a.Metadata,
+		Resistances: a.Resistances,
+		Actions:     a.Actions,
+		Features:    a.Features,
+		Behavior:    a.Behavior,
+	}
+
+	// We don't necessarily need to populate EquipmentConfigs/KnownSpellIDs
+	// because the hydrated Actor already has the Actions and SpellActions derived from them.
+	// But we can include the custom ones if they exist.
+
+	return cfg
+}
+
 func NewActorFromConfig(config *ActorConfig) (*Actor, error) {
 	a := &Actor{
-		ID:        core.MakeID(config.ID),
-		Name:      config.Name,
-		Side:      config.Side,
-		ActorType: config.ActorType,
-		IsCustom:  config.IsCustom,
+		ID:         core.MakeID(config.ID),
+		InstanceID: config.InstanceID,
+		Name:       config.Name,
+		Side:       config.Side,
+		ActorType:  config.ActorType,
+		IsCustom:   config.IsCustom,
 
 		Abilities: config.Abilities,
 		HPConfig:  config.HPConfig,

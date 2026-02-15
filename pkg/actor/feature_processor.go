@@ -115,6 +115,10 @@ func (a *Actor) processClassFeatures() {
 			}
 		}
 
+		// TODO: I added short rests -> need to look through everything that uses short rests, features are complete
+		// TODO: Eldritch blast uses multiple targets at higher levels
+		// TODO: Druid wild shape
+		// TODO: Monk ki points can now be added
 		// TODO: Add below to ED
 		// Action Surge
 		if f.Name == core.SpecAbilityActionSurge {

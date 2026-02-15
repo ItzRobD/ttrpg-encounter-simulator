@@ -972,9 +972,7 @@ func (ed *EncounterDirector) HandleUndeadFortitude(a *actor.Actor, f core.Featur
 func (ed *EncounterDirector) HandleSaveAdvantage(a *actor.Actor, f core.Feature, hook core.HookType, ctx *FeatureContext) error {
 	if ctx == nil ||
 		ctx.SaveContext == nil ||
-		ctx.SaveContext.Options == nil ||
-		ctx.AttackContext == nil ||
-		ctx.AttackContext.Action == nil {
+		ctx.SaveContext.Options == nil {
 		return fmt.Errorf("invalid context for save advantage feature %s", f.Name)
 	}
 
@@ -982,23 +980,25 @@ func (ed *EncounterDirector) HandleSaveAdvantage(a *actor.Actor, f core.Feature,
 		return nil
 	}
 
-	if !ctx.AttackContext.Action.HasDC {
-		return nil
-	}
-
 	shouldGrant := false
 	switch f.Name {
 	case core.SpecAbilityRageStrengthSave:
-		if a.StateManager.IsRaging {
+		if a.StateManager.IsRaging && ctx.AttackContext != nil && ctx.AttackContext.Action != nil {
 			shouldGrant = ctx.AttackContext.Action.DCAbility == core.AbilityStrength
 		}
 	case core.SpecAbilityDangerSense:
-		shouldGrant = ctx.AttackContext.Action.DCAbility == core.AbilityDexterity
+		if ctx.AttackContext != nil && ctx.AttackContext.Action != nil {
+			shouldGrant = ctx.AttackContext.Action.DCAbility == core.AbilityDexterity
+		}
 	case core.SpecAbilitySlipperyMind:
-		shouldGrant = ctx.AttackContext.Action.DCAbility == core.AbilityWisdom
+		if ctx.AttackContext != nil && ctx.AttackContext.Action != nil {
+			shouldGrant = ctx.AttackContext.Action.DCAbility == core.AbilityWisdom
+		}
 	case core.SpecAbilityDwarvenResilience:
-		if ctx.AttackContext.Action.DiceBlock[0].DamageType == core.DamagePoison {
-			shouldGrant = true
+		if ctx.AttackContext != nil && ctx.AttackContext.Action != nil && len(ctx.AttackContext.Action.DiceBlock) > 0 {
+			if ctx.AttackContext.Action.DiceBlock[0].DamageType == core.DamagePoison {
+				shouldGrant = true
+			}
 		}
 	}
 
