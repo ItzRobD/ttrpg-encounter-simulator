@@ -15,8 +15,8 @@ import (
 
 // MultiSimulationRequest defines the parameters for running multiple adventuring day simulations.
 type MultiSimulationRequest struct {
-	AdventuringDay AdventuringDayRequest `json:"adventuring_day"`
-	NumberOfRuns   int                   `json:"number_of_runs"`
+	AdventuringDayRequest
+	NumberOfRuns int `json:"number_of_runs"`
 }
 
 // MultiSimulationResult aggregates the results of multiple adventuring day simulation runs.
@@ -59,6 +59,7 @@ type ActorInitialState struct {
 
 type EncounterConfig struct {
 	Name           string              `json:"name"`
+	MonsterIDs     []int               `json:"monster_ids,omitempty"`
 	MonsterConfigs []actor.ActorConfig `json:"monster_configs"`
 }
 
@@ -109,7 +110,7 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 	}
 	sem := make(chan struct{}, maxConcurrency)
 
-	masterSeed := req.AdventuringDay.BaseOptions.Seed
+	masterSeed := req.BaseOptions.Seed
 	if masterSeed.Seed1 == 0 && masterSeed.Seed2 == 0 {
 		masterSeed = core.Seed{Seed1: uint64(time.Now().UnixNano()), Seed2: 42}
 	}
@@ -123,7 +124,7 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 			defer func() { <-sem }()
 
 			// Clone request and set seed
-			dayReq := req.AdventuringDay
+			dayReq := req.AdventuringDayRequest
 			dayReq.BaseOptions.Seed = seed
 
 			dayRes, err := RunAdventuringDay(ctx, dayReq)
@@ -159,7 +160,7 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		IndividualResults: make([]IndividualSimulationResult, 0, req.NumberOfRuns),
 	}
 
-	maxLogs := req.AdventuringDay.BaseOptions.MaxLoggedRuns
+	maxLogs := req.BaseOptions.MaxLoggedRuns
 	if maxLogs <= 0 {
 		maxLogs = 10
 	}
@@ -177,29 +178,29 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 			switch res.VictoryStatus {
 			case core.VictoryStatusCharacters:
 				multiResult.CharacterVictories++
-				if req.AdventuringDay.IncludeLogs && len(charVicLogs) < maxLogs {
+				if req.IncludeLogs && len(charVicLogs) < maxLogs {
 					charVicLogs = append(charVicLogs, res)
 				} else {
 					res.EncounterResults = nil
-					res.LogsStripped = req.AdventuringDay.IncludeLogs
+					res.LogsStripped = req.IncludeLogs
 					multiResult.IndividualResults = append(multiResult.IndividualResults, res)
 				}
 			case core.VictoryStatusMonsters:
 				multiResult.MonsterVictories++
-				if req.AdventuringDay.IncludeLogs && len(monsterVicLogs) < maxLogs {
+				if req.IncludeLogs && len(monsterVicLogs) < maxLogs {
 					monsterVicLogs = append(monsterVicLogs, res)
 				} else {
 					res.EncounterResults = nil
-					res.LogsStripped = req.AdventuringDay.IncludeLogs
+					res.LogsStripped = req.IncludeLogs
 					multiResult.IndividualResults = append(multiResult.IndividualResults, res)
 				}
 			default:
 				multiResult.OtherVictories++
-				if req.AdventuringDay.IncludeLogs && len(otherVicLogs) < maxLogs {
+				if req.IncludeLogs && len(otherVicLogs) < maxLogs {
 					otherVicLogs = append(otherVicLogs, res)
 				} else {
 					res.EncounterResults = nil
-					res.LogsStripped = req.AdventuringDay.IncludeLogs
+					res.LogsStripped = req.IncludeLogs
 					multiResult.IndividualResults = append(multiResult.IndividualResults, res)
 				}
 			}
@@ -210,7 +211,7 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		}
 	}
 
-	if req.AdventuringDay.IncludeLogs {
+	if req.IncludeLogs {
 		balanced := assembleBalancedLogs(charVicLogs, monsterVicLogs, otherVicLogs, maxLogs)
 		multiResult.IndividualResults = append(multiResult.IndividualResults, balanced...)
 	}
@@ -221,11 +222,11 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 	}
 
 	// Capture character configs
-	if len(req.AdventuringDay.CharacterConfigs) > 0 {
-		tempED := NewEncounterDirector(core.Seed{}, &req.AdventuringDay.BaseOptions)
+	if len(req.CharacterConfigs) > 0 {
+		tempED := NewEncounterDirector(core.Seed{}, &req.BaseOptions)
 		tempSM := NewSetupManager(ctx, tempED.RollManager)
 		multiResult.CharacterConfigs = make(map[int]actor.ActorConfig)
-		for _, cfg := range req.AdventuringDay.CharacterConfigs {
+		for _, cfg := range req.CharacterConfigs {
 			a, err := tempSM.SetupActor(cfg)
 			if err == nil {
 				tempED.AddActor(a)
@@ -285,6 +286,17 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 		}
 
 		// Fresh monsters for each encounter
+		for _, mID := range encCfg.MonsterIDs {
+			m, err := sm.SetupActor(actor.ActorConfig{
+				ID:        fmt.Sprintf("%d", mID),
+				ActorType: core.ActorTypeMonster,
+				Side:      core.SideMonsters,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("monster hydration failed for ID %s: %w", mID, err)
+			}
+			ed.AddActor(m)
+		}
 		for _, mCfg := range encCfg.MonsterConfigs {
 			m, err := sm.SetupActor(mCfg)
 			if err != nil {

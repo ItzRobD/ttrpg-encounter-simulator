@@ -29,11 +29,11 @@ func CreateSimulation(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid number of runs"})
 		return
 	}
-	if req.AdventuringDay.MaxRounds <= 0 {
+	if req.MaxRounds <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid max rounds"})
 		return
 	}
-	if len(req.AdventuringDay.Encounters) < 1 {
+	if len(req.Encounters) < 1 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid number of encounters"})
 		return
 	}
