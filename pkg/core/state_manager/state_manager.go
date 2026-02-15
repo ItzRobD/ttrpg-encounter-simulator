@@ -38,6 +38,13 @@ type StateManager struct {
 	// Death Saves
 	DeathSaveSuccesses int `json:"death_save_successes"`
 	DeathSaveFailures  int `json:"death_save_failures"`
+
+	// Adventuring Day Resources
+	MaxHitDice     map[core.DiceType]int `json:"max_hit_dice"`
+	CurrentHitDice map[core.DiceType]int `json:"current_hit_dice"`
+
+	// Recovery tracking
+	ShortRestRecoveredFeatures []string `json:"short_rest_recovered_features"`
 }
 
 // ResetStateForRoundStart resets the counts for actions, bonus actions, reactions, and legendary actions to zero.
@@ -50,6 +57,49 @@ func (sm *StateManager) ResetStateForRoundStart() {
 func (sm *StateManager) ResetStateForTurnStart() {
 	sm.LegendaryActionUsedCount = 0
 	sm.ReactionUsedCount = 0
+}
+
+// ResetStateForNewEncounter prepares the actor for a new encounter by clearing temporary conditions
+// and resetting action counters, while preserving HP, spell slots, and persistent resources.
+func (sm *StateManager) ResetStateForNewEncounter() {
+	// Reset action counts
+	sm.ResetStateForRoundStart()
+	sm.ResetStateForTurnStart()
+	sm.HasTakenTurnThisCombat = false
+
+	// Clear necessary conditions
+	condToRemove := []core.Condition{
+		core.ConditionGrappled,
+		core.ConditionIncapacitated,
+		core.ConditionParalyzed,
+		core.ConditionPetrified,
+		core.ConditionStunned,
+		core.ConditionFrightened,
+		core.ConditionCharmed,
+		core.ConditionRestrained,
+		core.ConditionBlinded,
+		core.ConditionDeafened,
+		core.ConditionPoisoned,
+		core.ConditionReckless,
+		core.ConditionBerserk,
+	}
+
+	for _, c := range condToRemove {
+		sm.Conditions.Remove(c)
+	}
+	sm.Conditions.Remove(core.ConditionProne)
+	sm.Conditions.Remove(core.ConditionUnconscious)
+	sm.Conditions.Remove(core.ConditionStable)
+
+	// Reset death saves
+	sm.DeathSaveSuccesses = 0
+	sm.DeathSaveFailures = 0
+
+	// Reset attack count (per turn limit)
+	sm.AttackCount = 0
+
+	// Re-evaluate health state
+	sm.HealthState = sm.GetHealthState(true) // Treat as PC for safe state eval
 }
 
 func (sm *StateManager) RemainingLegendaryActionCount() int {
@@ -105,12 +155,14 @@ func (sm *StateManager) ModifyHP(amount int, isTemp bool, isPC bool) core.HPModi
 
 	if amount > 0 {
 		// Healing
+		originalHP := sm.CurrentHP
 		sm.CurrentHP += amount
 		if sm.CurrentHP > sm.MaxHP {
 			sm.CurrentHP = sm.MaxHP
 			res.IsMaxHealth = true
 		}
 		res.DidHealHP = true
+		res.ModificationValue = sm.CurrentHP - originalHP
 		// Reset death saves on healing
 		if sm.CurrentHP > 0 {
 			sm.DeathSaveFailures = 0

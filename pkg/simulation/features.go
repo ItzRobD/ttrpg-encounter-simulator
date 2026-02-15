@@ -171,8 +171,32 @@ func (ed *EncounterDirector) HandleMeleeTouchDamage(a *actor.Actor, f core.Featu
 			dmgRollRes := ed.RollManager.RollDice(f.Data.NumberOfDice, f.Data.Die, opts)
 			dmgValue := dmgRollRes.Total
 
+			dmgType := core.DamageNone
+			if len(f.Data.DamageType) > 0 {
+				dmgType = f.Data.DamageType[0]
+			} else if f.Name == core.SpecAbilityHeatedBody {
+				dmgType = core.DamageFire
+			}
+
+			// We need to parent this to the outcome or action start if possible
+			// But since we are in a hook triggered during resolveDamage,
+			// the EventContext should already have the right parent if ResolveAction/resolveDamage pushed it.
+
+			ed.LogEvent(events.EventDamageRoll, a, map[string]interface{}{
+				"roll":        dmgRollRes,
+				"damage_type": dmgType,
+				"target_id":   ctx.Target.InstanceID,
+			})
+
 			attacker := ctx.Target
-			attacker.StateManager.ModifyHP(-dmgValue, false, attacker.IsCharacter())
+
+			// Apply resistances
+			ed.Adjudicator.applyResistancesToDamage(attacker, &dmgValue, dmgType, attacker.GetResistances())
+
+			hpRes := attacker.StateManager.ModifyHP(-dmgValue, false, attacker.IsCharacter())
+			ed.LogEvent(events.EventHPModified, attacker, map[string]interface{}{
+				"result": hpRes,
+			})
 
 			// Update Stats
 			ed.Statistics.AddDamage(ctx.Target.InstanceID, dmgValue)

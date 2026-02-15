@@ -151,6 +151,24 @@ func TestHandleHeatedBody(t *testing.T) {
 		t.Fatalf("HandleMeleeTouchDamage failed: %v", err)
 	}
 
+	foundDmgRoll := false
+	foundHPMod := false
+	for _, event := range ed.CombatLog {
+		if event.Type == "damage_roll" {
+			foundDmgRoll = true
+		}
+		if event.Type == "hp_modified" {
+			foundHPMod = true
+		}
+	}
+
+	if !foundDmgRoll {
+		t.Error("Expected damage_roll event in combat log")
+	}
+	if !foundHPMod {
+		t.Error("Expected hp_modified event in combat log")
+	}
+
 	if fighter.StateManager.CurrentHP == 50 {
 		t.Error("Fighter should have taken damage from Heated Body")
 	}

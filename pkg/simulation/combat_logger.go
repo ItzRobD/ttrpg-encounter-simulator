@@ -198,6 +198,17 @@ func (cl *CombatLogger) formatEvent(event events.TimelineEvent) string {
 		return fmt.Sprintf("=== VICTORY: %v Side Wins! (Rounds: %v) ===", data["winner"], data["rounds"])
 	case events.EventLegendaryAction:
 		return fmt.Sprintf(">>> Legendary Action: %s", actorName)
+	case events.EventIntermissionHealing:
+		data := event.Data.(map[string]interface{})
+		healing, ok := data["healing"].(map[int]int)
+		if !ok {
+			return "[intermission_healing] Data missing or invalid"
+		}
+		var results []string
+		for id, amount := range healing {
+			results = append(results, fmt.Sprintf("Actor %d: +%d HP", id, amount))
+		}
+		return fmt.Sprintf("[Intermission] Recovery Healing: %s", strings.Join(results, ", "))
 	case events.EventMessage:
 		data := event.Data.(map[string]interface{})
 		return fmt.Sprintf("> %s", data["message"])

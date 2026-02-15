@@ -5,31 +5,29 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/actor"
 	"dnd5e-encounter-simulator-backend/pkg/core"
 	"dnd5e-encounter-simulator-backend/pkg/core/events"
+	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
+	"dnd5e-encounter-simulator-backend/pkg/simulation/intermission_manager"
 	"fmt"
 	"math/rand/v2"
 	"runtime"
 	"time"
 )
 
-// MultiSimulationRequest defines the parameters for running multiple simulations.
+// MultiSimulationRequest defines the parameters for running multiple adventuring day simulations.
 type MultiSimulationRequest struct {
-	BaseOptions  core.SimulationOptions `json:"base_options"`
-	ActorConfigs []actor.ActorConfig    `json:"actor_configs"`
-	MonsterIDs   []int                  `json:"monster_ids"`
-	NumberOfRuns int                    `json:"number_of_runs"`
-	MaxRounds    int                    `json:"max_rounds"`
-	IncludeLogs  bool                   `json:"include_logs"`
+	AdventuringDay AdventuringDayRequest `json:"adventuring_day"`
+	NumberOfRuns   int                   `json:"number_of_runs"`
 }
 
-// MultiSimulationResult aggregates the results of multiple simulation runs.
+// MultiSimulationResult aggregates the results of multiple adventuring day simulation runs.
 type MultiSimulationResult struct {
 	TotalRuns          int                          `json:"total_runs"`
-	CharacterVictories int                          `json:"character_victories"`
-	MonsterVictories   int                          `json:"monster_victories"`
-	OtherVictories     int                          `json:"other_victories"`
+	CharacterVictories int                          `json:"character_victories"` // Entire day won
+	MonsterVictories   int                          `json:"monster_victories"`   // Party wiped at some point
+	OtherVictories     int                          `json:"other_victories"`     // Draw or other
 	AverageRounds      float64                      `json:"average_rounds"`
 	WinRatePercentage  float64                      `json:"win_rate_percentage"`
-	ActorConfigs       map[int]actor.ActorConfig    `json:"actor_configs,omitempty"`
+	CharacterConfigs   map[int]actor.ActorConfig    `json:"character_configs,omitempty"`
 	IndividualResults  []IndividualSimulationResult `json:"individual_results,omitempty"`
 	Performance        *PerformanceMetrics          `json:"performance,omitempty"`
 }
@@ -41,15 +39,14 @@ type PerformanceMetrics struct {
 	PeakGoroutines     int     `json:"peak_goroutines"`
 }
 
-// IndividualSimulationResult holds data for a single simulation run within a multi-run.
+// IndividualSimulationResult holds data for a single adventuring day simulation run.
 type IndividualSimulationResult struct {
-	RunID              int                       `json:"run_id"`
-	VictoryStatus      core.VictoryStatus        `json:"victory_status"`
-	Rounds             int                       `json:"rounds"`
-	Seed               core.Seed                 `json:"seed"`
-	LogsStripped       bool                      `json:"logs_stripped,omitempty"`
-	ActorInitialStates map[int]ActorInitialState `json:"actor_initial_states,omitempty"`
-	Logs               []events.TimelineEvent    `json:"logs,omitempty"`
+	RunID            int                         `json:"run_id"`
+	VictoryStatus    core.VictoryStatus          `json:"victory_status"`
+	TotalRounds      int                         `json:"total_rounds"`
+	Seed             core.Seed                   `json:"seed"`
+	LogsStripped     bool                        `json:"logs_stripped,omitempty"`
+	EncounterResults []IndividualEncounterResult `json:"encounter_results,omitempty"`
 }
 
 type ActorInitialState struct {
@@ -60,7 +57,39 @@ type ActorInitialState struct {
 	HealthState core.HealthState     `json:"health_state"`
 }
 
-// RunMultiSimulation executes multiple simulations and returns an aggregated result.
+type EncounterConfig struct {
+	Name           string              `json:"name"`
+	MonsterConfigs []actor.ActorConfig `json:"monster_configs"`
+}
+
+type AdventuringDayRequest struct {
+	BaseOptions      core.SimulationOptions                   `json:"base_options"`
+	CharacterConfigs []actor.ActorConfig                      `json:"character_configs"`
+	Encounters       []EncounterConfig                        `json:"encounters"`
+	Intermission     intermission_manager.IntermissionOptions `json:"intermission"`
+	MaxRounds        int                                      `json:"max_rounds"`
+	IncludeLogs      bool                                     `json:"include_logs"`
+}
+
+type AdventuringDayResult struct {
+	TotalEncounters  int                         `json:"total_encounters"`
+	EncountersWon    int                         `json:"encounters_won"`
+	SuccessRate      float64                     `json:"success_rate"`
+	AverageRounds    float64                     `json:"average_rounds"`
+	EncounterResults []IndividualEncounterResult `json:"encounter_results,omitempty"`
+	FinalActorStates map[int]actor.Actor         `json:"final_actor_states,omitempty"`
+	Performance      *PerformanceMetrics         `json:"performance,omitempty"`
+}
+
+type IndividualEncounterResult struct {
+	EncounterName string                 `json:"encounter_name"`
+	VictoryStatus core.VictoryStatus     `json:"victory_status"`
+	Rounds        int                    `json:"rounds"`
+	Seed          core.Seed              `json:"seed"`
+	Logs          []events.TimelineEvent `json:"logs,omitempty"`
+}
+
+// RunMultiSimulation executes multiple adventuring day simulations and returns an aggregated result.
 func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*MultiSimulationResult, error) {
 	startTime := time.Now()
 	var memStart runtime.MemStats
@@ -73,87 +102,56 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 	resultsChan := make(chan IndividualSimulationResult, req.NumberOfRuns)
 	errChan := make(chan error, req.NumberOfRuns)
 
-	// Limit concurrency to avoid exhausting resources (like DB connections)
+	// Limit concurrency to avoid exhausting resources
 	maxConcurrency := runtime.GOMAXPROCS(0) * 2
 	if maxConcurrency > 10 {
-		maxConcurrency = 10 // Safe default to avoid DB connection pool exhaustion
+		maxConcurrency = 10
 	}
 	sem := make(chan struct{}, maxConcurrency)
 
-	masterSeed := req.BaseOptions.Seed
+	masterSeed := req.AdventuringDay.BaseOptions.Seed
 	if masterSeed.Seed1 == 0 && masterSeed.Seed2 == 0 {
 		masterSeed = core.Seed{Seed1: uint64(time.Now().UnixNano()), Seed2: 42}
 	}
 	masterRNG := rand.New(rand.NewPCG(masterSeed.Seed1, masterSeed.Seed2))
 
 	for i := 0; i < req.NumberOfRuns; i++ {
-		runSeed := core.Seed{Seed1: masterRNG.Uint64(), Seed2: masterRNG.Uint64()}
+		daySeed := core.Seed{Seed1: masterRNG.Uint64(), Seed2: masterRNG.Uint64()}
 
 		go func(runID int, seed core.Seed) {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			ed := NewEncounterDirector(seed, &req.BaseOptions)
-			sm := NewSetupManager(ctx, ed.RollManager)
+			// Clone request and set seed
+			dayReq := req.AdventuringDay
+			dayReq.BaseOptions.Seed = seed
 
-			for _, cfg := range req.ActorConfigs {
-				a, err := sm.SetupActor(cfg)
-				if err != nil {
-					errChan <- fmt.Errorf("run %d hydration failed for %s: %w", runID, cfg.Name, err)
-					return
-				}
-				ed.AddActor(a)
+			dayRes, err := RunAdventuringDay(ctx, dayReq)
+			if err != nil {
+				errChan <- fmt.Errorf("run %d failed: %w", runID, err)
+				return
 			}
 
-			ed.SetupEncounter()
-
-			// Capture initial states
-			initialStates := make(map[int]ActorInitialState)
-			for id, a := range ed.Actors {
-				// Clone conditions map to prevent simulation runs from modifying initial state results
-				clonedConditions := make(core.ActorConditions)
-				for k, v := range a.StateManager.Conditions {
-					clonedConditions[k] = v
-				}
-
-				initialStates[id] = ActorInitialState{
-					CurrentHP:   a.StateManager.CurrentHP,
-					MaxHP:       a.StateManager.MaxHP,
-					TempHP:      a.StateManager.TempHP,
-					Conditions:  clonedConditions,
-					HealthState: a.StateManager.HealthState,
-				}
-			}
-
-			var victory core.VictoryStatus
-			var err error
-			rounds := 0
-			for round := 0; round < req.MaxRounds; round++ {
-				victory, err = ed.SimulateRound()
-				if err != nil {
-					errChan <- fmt.Errorf("run %d execution failed at round %d: %w", runID, round, err)
-					return
-				}
-				rounds = ed.CurrentRound
-				if victory != core.VictoryStatusNone {
-					break
+			// Determine day-level victory status
+			dayVictory := core.VictoryStatusCharacters
+			totalRounds := 0
+			for _, enc := range dayRes.EncounterResults {
+				totalRounds += enc.Rounds
+				if enc.VictoryStatus != core.VictoryStatusCharacters {
+					dayVictory = enc.VictoryStatus
 				}
 			}
 
 			res := IndividualSimulationResult{
-				RunID:              runID,
-				VictoryStatus:      victory,
-				Rounds:             rounds,
-				Seed:               seed,
-				ActorInitialStates: initialStates,
-			}
-
-			if req.IncludeLogs {
-				res.Logs = ed.ExportTimeline()
+				RunID:            runID,
+				VictoryStatus:    dayVictory,
+				TotalRounds:      totalRounds,
+				Seed:             seed,
+				EncounterResults: dayRes.EncounterResults,
 			}
 
 			resultsChan <- res
-		}(i, runSeed)
+		}(i, daySeed)
 	}
 
 	multiResult := &MultiSimulationResult{
@@ -161,12 +159,11 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		IndividualResults: make([]IndividualSimulationResult, 0, req.NumberOfRuns),
 	}
 
-	maxLogs := req.BaseOptions.MaxLoggedRuns
+	maxLogs := req.AdventuringDay.BaseOptions.MaxLoggedRuns
 	if maxLogs <= 0 {
 		maxLogs = 10
 	}
 
-	// Buckets for balanced logging
 	var charVicLogs []IndividualSimulationResult
 	var monsterVicLogs []IndividualSimulationResult
 	var otherVicLogs []IndividualSimulationResult
@@ -175,34 +172,34 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 	for i := 0; i < req.NumberOfRuns; i++ {
 		select {
 		case res := <-resultsChan:
-			totalRounds += res.Rounds
+			totalRounds += res.TotalRounds
 
 			switch res.VictoryStatus {
 			case core.VictoryStatusCharacters:
 				multiResult.CharacterVictories++
-				if req.IncludeLogs && len(charVicLogs) < maxLogs {
+				if req.AdventuringDay.IncludeLogs && len(charVicLogs) < maxLogs {
 					charVicLogs = append(charVicLogs, res)
 				} else {
-					res.Logs = nil
-					res.LogsStripped = req.IncludeLogs
+					res.EncounterResults = nil
+					res.LogsStripped = req.AdventuringDay.IncludeLogs
 					multiResult.IndividualResults = append(multiResult.IndividualResults, res)
 				}
 			case core.VictoryStatusMonsters:
 				multiResult.MonsterVictories++
-				if req.IncludeLogs && len(monsterVicLogs) < maxLogs {
+				if req.AdventuringDay.IncludeLogs && len(monsterVicLogs) < maxLogs {
 					monsterVicLogs = append(monsterVicLogs, res)
 				} else {
-					res.Logs = nil
-					res.LogsStripped = req.IncludeLogs
+					res.EncounterResults = nil
+					res.LogsStripped = req.AdventuringDay.IncludeLogs
 					multiResult.IndividualResults = append(multiResult.IndividualResults, res)
 				}
 			default:
 				multiResult.OtherVictories++
-				if req.IncludeLogs && len(otherVicLogs) < maxLogs {
+				if req.AdventuringDay.IncludeLogs && len(otherVicLogs) < maxLogs {
 					otherVicLogs = append(otherVicLogs, res)
 				} else {
-					res.Logs = nil
-					res.LogsStripped = req.IncludeLogs
+					res.EncounterResults = nil
+					res.LogsStripped = req.AdventuringDay.IncludeLogs
 					multiResult.IndividualResults = append(multiResult.IndividualResults, res)
 				}
 			}
@@ -213,8 +210,7 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		}
 	}
 
-	// Assemble balanced logs if requested
-	if req.IncludeLogs {
+	if req.AdventuringDay.IncludeLogs {
 		balanced := assembleBalancedLogs(charVicLogs, monsterVicLogs, otherVicLogs, maxLogs)
 		multiResult.IndividualResults = append(multiResult.IndividualResults, balanced...)
 	}
@@ -224,22 +220,20 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		multiResult.WinRatePercentage = (float64(multiResult.CharacterVictories) / float64(multiResult.TotalRuns)) * 100
 	}
 
-	// Capture actor configs for the multi-result (assuming they are consistent across runs)
-	// We'll run a quick setup to get the deterministic instance IDs
-	if len(req.ActorConfigs) > 0 {
-		tempED := NewEncounterDirector(core.Seed{}, &req.BaseOptions)
+	// Capture character configs
+	if len(req.AdventuringDay.CharacterConfigs) > 0 {
+		tempED := NewEncounterDirector(core.Seed{}, &req.AdventuringDay.BaseOptions)
 		tempSM := NewSetupManager(ctx, tempED.RollManager)
-		multiResult.ActorConfigs = make(map[int]actor.ActorConfig)
-		for _, cfg := range req.ActorConfigs {
+		multiResult.CharacterConfigs = make(map[int]actor.ActorConfig)
+		for _, cfg := range req.AdventuringDay.CharacterConfigs {
 			a, err := tempSM.SetupActor(cfg)
 			if err == nil {
 				tempED.AddActor(a)
-				multiResult.ActorConfigs[a.InstanceID] = cfg
+				multiResult.CharacterConfigs[a.InstanceID] = cfg
 			}
 		}
 	}
 
-	// Final performance metrics
 	var memEnd runtime.MemStats
 	runtime.ReadMemStats(&memEnd)
 	multiResult.Performance = &PerformanceMetrics{
@@ -250,6 +244,125 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 	}
 
 	return multiResult, nil
+}
+
+func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*AdventuringDayResult, error) {
+	startTime := time.Now()
+	var memStart runtime.MemStats
+	runtime.ReadMemStats(&memStart)
+
+	masterSeed := req.BaseOptions.Seed
+	if masterSeed.Seed1 == 0 && masterSeed.Seed2 == 0 {
+		masterSeed = core.Seed{Seed1: uint64(time.Now().UnixNano()), Seed2: 42}
+	}
+	dayRNG := rand.New(rand.NewPCG(masterSeed.Seed1, masterSeed.Seed2))
+	im := intermission_manager.NewIntermissionManager(roll_manager.NewRollManager(dayRNG))
+
+	var characters []*actor.Actor
+	encounterResults := make([]IndividualEncounterResult, 0)
+	encountersWon := 0
+	totalRounds := 0
+
+	// Initial character hydration
+	sm := NewSetupManager(ctx, roll_manager.NewRollManager(dayRNG))
+	for _, cfg := range req.CharacterConfigs {
+		a, err := sm.SetupActor(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("character hydration failed for %s: %w", cfg.Name, err)
+		}
+		characters = append(characters, a)
+	}
+
+	for _, encCfg := range req.Encounters {
+		// Each encounter gets its own seed for the director, but derived from dayRNG
+		encSeed := core.Seed{Seed1: dayRNG.Uint64(), Seed2: dayRNG.Uint64()}
+		ed := NewEncounterDirector(encSeed, &req.BaseOptions)
+
+		// Characters carry over state
+		for _, char := range characters {
+			char.StateManager.ResetStateForNewEncounter()
+			ed.AddActor(char)
+		}
+
+		// Fresh monsters for each encounter
+		for _, mCfg := range encCfg.MonsterConfigs {
+			m, err := sm.SetupActor(mCfg)
+			if err != nil {
+				return nil, fmt.Errorf("monster hydration failed: %w", err)
+			}
+			ed.AddActor(m)
+		}
+
+		ed.SetupEncounter()
+
+		var victory core.VictoryStatus
+		for round := 0; round < req.MaxRounds; round++ {
+			vic, err := ed.SimulateRound()
+			if err != nil {
+				return nil, fmt.Errorf("encounter failed: %w", err)
+			}
+			victory = vic
+			if victory != core.VictoryStatusNone {
+				break
+			}
+		}
+
+		totalRounds += ed.CurrentRound
+		encLogs := make([]events.TimelineEvent, 0)
+		if req.IncludeLogs {
+			encLogs = ed.ExportTimeline()
+		}
+
+		encounterResults = append(encounterResults, IndividualEncounterResult{
+			EncounterName: encCfg.Name,
+			VictoryStatus: victory,
+			Rounds:        ed.CurrentRound,
+			Seed:          encSeed,
+			Logs:          encLogs,
+		})
+
+		if victory != core.VictoryStatusCharacters {
+			// Party wiped or draw
+			break
+		}
+
+		encountersWon++
+
+		// Intermission
+		healing := im.ProcessIntermission(characters, req.Intermission)
+		if req.IncludeLogs && len(healing) > 0 {
+			ed.LogEvent(events.EventIntermissionHealing, nil, map[string]interface{}{
+				"healing": healing,
+			})
+			// Since we already captured logs, append the healing event specifically
+			if len(encounterResults) > 0 {
+				encounterResults[len(encounterResults)-1].Logs = append(encounterResults[len(encounterResults)-1].Logs, ed.CombatLog[len(ed.CombatLog)-1])
+			}
+		}
+	}
+
+	var memEnd runtime.MemStats
+	runtime.ReadMemStats(&memEnd)
+
+	finalStates := make(map[int]actor.Actor)
+	for _, char := range characters {
+		finalStates[char.InstanceID] = *char
+	}
+
+	return &AdventuringDayResult{
+		TotalEncounters:  len(req.Encounters),
+		EncountersWon:    encountersWon,
+		SuccessRate:      float64(encountersWon) / float64(len(req.Encounters)) * 100,
+		AverageRounds:    float64(totalRounds) / float64(len(req.Encounters)),
+		EncounterResults: encounterResults,
+		FinalActorStates: finalStates,
+		Performance: &PerformanceMetrics{
+			ExecutionTimeMs:    time.Since(startTime).Milliseconds(),
+			ExecutionTimeHuman: time.Since(startTime).String(),
+			MemoryAllocatedMb:  float64(memEnd.TotalAlloc-memStart.TotalAlloc) / 1024 / 1024,
+			PeakGoroutines:     runtime.NumGoroutine(),
+		},
+	}, nil
 }
 
 func assembleBalancedLogs(chars, monsters, others []IndividualSimulationResult, limit int) []IndividualSimulationResult {
@@ -299,22 +412,18 @@ func assembleBalancedLogs(chars, monsters, others []IndividualSimulationResult, 
 	}
 
 	// Mark any leftovers in our temporary buckets as stripped
-	// Actually, we don't need to do anything with them because they were never added to multiResult.IndividualResults
-	// BUT wait, in my loop above, if I don't add them to IndividualResults yet, I MUST add them now or they will be lost.
-	// The ones that DIDN'T make it into the balanced selection should still be in the IndividualResults slice but without logs.
-
 	for _, res := range chars {
-		res.Logs = nil
+		res.EncounterResults = nil
 		res.LogsStripped = true
 		result = append(result, res)
 	}
 	for _, res := range monsters {
-		res.Logs = nil
+		res.EncounterResults = nil
 		res.LogsStripped = true
 		result = append(result, res)
 	}
 	for _, res := range others {
-		res.Logs = nil
+		res.EncounterResults = nil
 		res.LogsStripped = true
 		result = append(result, res)
 	}

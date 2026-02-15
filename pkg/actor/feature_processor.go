@@ -107,6 +107,28 @@ func (a *Actor) processClassFeatures() {
 				a.StateManager.Resource[string(core.SpecAbilitySecondWind)] = 1
 			}
 		}
+
+		// Arcane Recovery
+		if f.Name == core.SpecAbilityArcaneRecovery {
+			if _, ok := a.StateManager.Resource[string(core.SpecAbilityArcaneRecovery)]; !ok {
+				a.StateManager.Resource[string(core.SpecAbilityArcaneRecovery)] = 1
+			}
+		}
+
+		// TODO: Add below to ED
+		// Action Surge
+		if f.Name == core.SpecAbilityActionSurge {
+			if _, ok := a.StateManager.Resource[string(core.SpecAbilityActionSurge)]; !ok {
+				a.StateManager.Resource[string(core.SpecAbilityActionSurge)] = f.Data.Value
+			}
+		}
+
+		// Stroke of Luck
+		if f.Name == core.SpecAbilityStrokeOfLuck {
+			if _, ok := a.StateManager.Resource[string(core.SpecAbilityStrokeOfLuck)]; !ok {
+				a.StateManager.Resource[string(core.SpecAbilityStrokeOfLuck)] = 1
+			}
+		}
 	}
 }
 

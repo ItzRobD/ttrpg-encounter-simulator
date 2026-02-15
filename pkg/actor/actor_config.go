@@ -44,6 +44,17 @@ type ActorConfig struct {
 
 	// AI and Behavior
 	Behavior BehaviorConfig `json:"behavior,omitempty"`
+
+	// Initial State for resuming simulations
+	InitialState *InitialState `json:"initial_state,omitempty"`
+}
+
+type InitialState struct {
+	CurrentHP   int                  `json:"current_hp"`
+	MaxHP       int                  `json:"max_hp"`
+	TempHP      int                  `json:"temp_hp"`
+	Conditions  core.ActorConditions `json:"conditions"`
+	HealthState core.HealthState     `json:"health_state"`
 }
 
 type MonsterSpellcastingConfig struct {

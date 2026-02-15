@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"dnd5e-encounter-simulator-backend/internal/database/repo"
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -26,28 +24,17 @@ func CreateSimulation(c *gin.Context) {
 
 	req := request.Payload
 
-	// Hydrate monsters from monster_ids
-	for _, mID := range req.MonsterIDs {
-		monsterCfg, err := repo.HydrateMonsterConfig(c.Request.Context(), fmt.Sprintf("%d", mID))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to hydrate monster %d: %v", mID, err)})
-			log.Printf("CreateSimulation: Failed to hydrate monster %d: %v", mID, err)
-			return
-		}
-		req.ActorConfigs = append(req.ActorConfigs, *monsterCfg)
-	}
-
 	// Basic validation
 	if req.NumberOfRuns <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid number of runs"})
 		return
 	}
-	if req.MaxRounds <= 0 {
+	if req.AdventuringDay.MaxRounds <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid max rounds"})
 		return
 	}
-	if len(req.ActorConfigs) < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid number of actors"})
+	if len(req.AdventuringDay.Encounters) < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid number of encounters"})
 		return
 	}
 

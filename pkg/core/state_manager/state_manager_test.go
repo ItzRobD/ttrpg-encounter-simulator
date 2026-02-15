@@ -116,3 +116,46 @@ func TestStateManager_ModifyHP_HealthState(t *testing.T) {
 		t.Errorf("Expected HealthStateDead; got %s", sm.HealthState)
 	}
 }
+
+func TestStateManager_ResetStateForNewEncounter(t *testing.T) {
+	sm := &StateManager{
+		CurrentHP:            10,
+		MaxHP:                20,
+		ActionUsedCount:      1,
+		BonusActionUsedCount: 1,
+		ReactionUsedCount:    1,
+		AttackCount:          2,
+		Conditions:           core.NewActorConditions(),
+		DeathSaveSuccesses:   2,
+		DeathSaveFailures:    1,
+	}
+	sm.Conditions.Add(core.ConditionProne)
+	sm.Conditions.Add(core.ConditionPoisoned)
+
+	sm.ResetStateForNewEncounter()
+
+	if sm.CurrentHP != 10 {
+		t.Errorf("Expected HP 10 to be preserved; got %d", sm.CurrentHP)
+	}
+	if sm.ActionUsedCount != 0 {
+		t.Errorf("Expected ActionUsedCount 0; got %d", sm.ActionUsedCount)
+	}
+	if sm.BonusActionUsedCount != 0 {
+		t.Errorf("Expected BonusActionUsedCount 0; got %d", sm.BonusActionUsedCount)
+	}
+	if sm.ReactionUsedCount != 0 {
+		t.Errorf("Expected ReactionUsedCount 0; got %d", sm.ReactionUsedCount)
+	}
+	if sm.AttackCount != 0 {
+		t.Errorf("Expected AttackCount 0; got %d", sm.AttackCount)
+	}
+	if sm.Conditions.Has(core.ConditionProne) {
+		t.Error("Prone condition should have been cleared")
+	}
+	if sm.Conditions.Has(core.ConditionPoisoned) {
+		t.Error("Poisoned condition should have been cleared")
+	}
+	if sm.DeathSaveSuccesses != 0 || sm.DeathSaveFailures != 0 {
+		t.Errorf("Death saves should have been reset; got %d/%d", sm.DeathSaveSuccesses, sm.DeathSaveFailures)
+	}
+}

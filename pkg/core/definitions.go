@@ -179,4 +179,7 @@ const (
 	SpecAbilityRageResistance       SpecialAbility = "Rage: Resistance"
 	SpecAbilityUncannyDodge         SpecialAbility = "Uncanny Dodge"
 	SpecAbilityElusive              SpecialAbility = "Elusive"
+	SpecAbilityActionSurge          SpecialAbility = "Action Surge"
+	SpecAbilityStrokeOfLuck         SpecialAbility = "Stroke of Luck"
+	SpecAbilityArcaneRecovery       SpecialAbility = "Arcane Recovery"
 )

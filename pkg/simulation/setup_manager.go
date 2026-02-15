@@ -25,16 +25,34 @@ func NewSetupManager(ctx context.Context, rm *roll_manager.RollManager) *SetupMa
 }
 
 func (sm *SetupManager) SetupActor(cfg actor.ActorConfig) (*actor.Actor, error) {
+	var a *actor.Actor
+	var err error
+
 	switch cfg.ActorType {
 	case core.ActorTypeCharacter:
-		return sm.setupCharacter(cfg)
+		a, err = sm.setupCharacter(cfg)
 	case core.ActorTypeMonster:
-		return sm.setupMonster(cfg)
+		a, err = sm.setupMonster(cfg)
 	case core.ActorTypeLair:
-		return sm.setupLair(cfg)
+		a, err = sm.setupLair(cfg)
 	default:
 		return nil, fmt.Errorf("invalid actor type: %v", cfg.ActorType)
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply initial state if provided (overwrites hydrated defaults)
+	if cfg.InitialState != nil {
+		a.StateManager.CurrentHP = cfg.InitialState.CurrentHP
+		a.StateManager.MaxHP = cfg.InitialState.MaxHP
+		a.StateManager.TempHP = cfg.InitialState.TempHP
+		a.StateManager.Conditions = cfg.InitialState.Conditions
+		a.StateManager.HealthState = cfg.InitialState.HealthState
+	}
+
+	return a, nil
 }
 
 func (sm *SetupManager) setupCharacter(cfg actor.ActorConfig) (*actor.Actor, error) {
@@ -148,6 +166,16 @@ func (sm *SetupManager) setupCharacter(cfg actor.ActorConfig) (*actor.Actor, err
 	// Initialize HP based on HPConfig
 	sm.initializeActorHP(a)
 
+	// Initialize Hit Dice for adventuring day
+	if len(a.HPConfig.HitDice) > 0 {
+		a.StateManager.MaxHitDice = make(map[core.DiceType]int)
+		a.StateManager.CurrentHitDice = make(map[core.DiceType]int)
+		for die, count := range a.HPConfig.HitDice {
+			a.StateManager.MaxHitDice[die] = count
+			a.StateManager.CurrentHitDice[die] = count
+		}
+	}
+
 	a.UpdateOffensiveValues()
 	a.Behavior = cfg.Behavior
 
@@ -230,6 +258,16 @@ func (sm *SetupManager) setupMonster(cfg actor.ActorConfig) (*actor.Actor, error
 
 	// Initialize HP based on HPConfig
 	sm.initializeActorHP(a)
+
+	// Initialize Hit Dice for adventuring day
+	if len(a.HPConfig.HitDice) > 0 {
+		a.StateManager.MaxHitDice = make(map[core.DiceType]int)
+		a.StateManager.CurrentHitDice = make(map[core.DiceType]int)
+		for die, count := range a.HPConfig.HitDice {
+			a.StateManager.MaxHitDice[die] = count
+			a.StateManager.CurrentHitDice[die] = count
+		}
+	}
 
 	a.UpdateOffensiveValues()
 	a.Behavior = config.Behavior
