@@ -144,6 +144,10 @@ export class SimulationResults {
   }
 
   getEventLabel(event: SimulationEvent): string {
+    if (event.type === EventType.CombatStart) {
+      return 'Combat Started';
+    }
+
     const data = event.data || {};
     switch (event.type) {
       case EventType.Round:
@@ -241,6 +245,10 @@ export class SimulationResults {
 
     if (event.type === EventType.ActionStart) {
       details = data.actionName || '';
+    }
+
+    if (event.type === EventType.CombatStart) {
+      details = 'Initial health and conditions set.';
     }
 
     if (event.type === EventType.Resolution) {

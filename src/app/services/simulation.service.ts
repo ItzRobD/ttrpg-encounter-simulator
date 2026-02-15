@@ -116,41 +116,39 @@ export class SimulationService {
   }
 
   makeSimulationPayload(combatants: Actor[]): SimulationPayload | null {
-    const monsters = combatants.filter(a => isMonster(a)) as Actor[];
-    const characters = combatants.filter(a => isCharacter(a)) as Actor[];
+    const party = this.combatantService.party();
+    const encountersData = this.combatantService.encounters();
 
-    if (monsters.length === 0 || characters.length === 0) {
-      this.stateService.setError('No monsters or characters to simulate.');
+    if (party.length === 0 || encountersData.every(e => e.length === 0)) {
+      this.stateService.setError('No party or encounters to simulate.');
       return null;
     }
 
     const characterConfigs: Actor[] = [];
-    for (const c of characters) {
+    for (const c of party) {
       const { state, ...config } = c;
       characterConfigs.push(config as Actor);
     }
 
-    const monsterIds: number[] = [];
-    const monsterConfigs: Actor[] = [];
+    const encounters: SimulationEncounterConfig[] = encountersData.map((e, i) => {
+      const monsterIds: number[] = [];
+      const monsterConfigs: Actor[] = [];
 
-    for (const m of monsters) {
-      if (m.isCustom) {
-        const { state, ...config } = m;
-        monsterConfigs.push(config as Actor);
-      } else {
-        monsterIds.push(+m.id);
+      for (const m of e) {
+        if (m.isCustom) {
+          const { state, ...config } = m;
+          monsterConfigs.push(config as Actor);
+        } else {
+          monsterIds.push(+m.id);
+        }
       }
-    }
 
-    // Currently, we're wrapping the active encounter into the new multi-encounter format.
-    // In a future update, we might allow users to define multiple encounters in the UI.
-    const encounters: SimulationEncounterConfig[] = [
-      {
-        name: 'Encounter 1',
+      return {
+        name: `Encounter ${i + 1}`,
         monsterIds: monsterIds,
         monsterConfigs: monsterConfigs
-      }
-    ];
+      };
+    });
 
     return {
       base_options: this.options(),
@@ -273,20 +271,40 @@ export class SimulationService {
           throw new Error('Invalid simulation result structure: missing individualResults');
         }
 
-        // characterConfigs is now inside results
-        const characterConfigsMap = results.characterConfigs || {};
-        const actorConfigs = Object.values(characterConfigsMap);
+        // actorConfigs is now inside results and contains ALL actors
+        const actorConfigsMap = results.actorConfigs || {};
+
+        const actorConfigs: Actor[] = Object.entries(actorConfigsMap).map(([id, config]: [string, any]) => {
+          const actor = {
+            ...config,
+            instanceId: config.instanceId || Number(id)
+          } as Actor;
+
+          // If ac is 0 or missing, try to set it from the config if available
+          if ((!actor.ac || actor.ac === 0) && (config.ac || config.AC)) {
+            actor.ac = config.ac || config.AC;
+          }
+
+          return actor;
+        });
 
         const simulationLogs: SimulationLog[] = results.individualResults.map((res: IndividualResult) => {
-          // For now, we'll take the logs from the first encounter or flatten them.
-          // The UI will eventually need to handle multiple encounters per run.
+          // Flatten encounters for the current simple view, but preserve encounter context
           const allEvents = res.encounterResults.flatMap(er => er.logs);
+
+          // Find the first event with actor_states as initial states if res.actorInitialStates is missing
+          const firstStateEvent = allEvents.find(e => e.type === EventType.CombatStart && e.data?.actorStates);
+
+          // Use the new encounter-level initial_state if available (from the first encounter)
+          const encounterInitialState = res.encounterResults[0]?.initialState;
+
+          const actorInitialStates = res.actorInitialStates || encounterInitialState || firstStateEvent?.data?.actorStates;
 
           return {
             actors: [],
             events: allEvents,
-            initialState: res.initialState,
-            actorInitialStates: res.actorInitialStates,
+            initialState: res.initialState || results.initialState,
+            actorInitialStates: actorInitialStates,
             actorConfigs: actorConfigs
           };
         });
@@ -334,17 +352,31 @@ export class SimulationService {
       // Map the full response structure
       const data = this.mapperService.mapKeys(rawResult) as SimulationResponse;
       const results = data.results;
-      const characterConfigsMap = results.characterConfigs || {};
-      const actorConfigs = Object.values(characterConfigsMap);
+      const actorConfigsMap = results.actorConfigs || {};
+      const actorConfigs: Actor[] = Object.entries(actorConfigsMap).map(([id, config]: [string, any]) => {
+        const actor = {
+          ...config,
+          instanceId: config.instanceId || Number(id)
+        } as Actor;
+
+        if ((!actor.ac || actor.ac === 0) && (config.ac || config.AC)) {
+          actor.ac = config.ac || config.AC;
+        }
+
+        return actor;
+      });
 
       // Extract and format using the same logic as fetchSimulationResult
       const simulationLogs: SimulationLog[] = results.individualResults.map((res: IndividualResult) => {
         const allEvents = res.encounterResults.flatMap(er => er.logs);
+        const firstStateEvent = allEvents.find(e => e.type === EventType.CombatStart && e.data?.actorStates);
+        const encounterInitialState = res.encounterResults[0]?.initialState;
+
         return {
           actors: [],
           events: allEvents,
-          initialState: res.initialState,
-          actorInitialStates: res.actorInitialStates,
+          initialState: res.initialState || results.initialState,
+          actorInitialStates: res.actorInitialStates || encounterInitialState || firstStateEvent?.data?.actorStates,
           actorConfigs: actorConfigs
         };
       });
@@ -360,7 +392,6 @@ export class SimulationService {
       if (result.logs.length > 0) {
         this.stateService.setSelectedSimulationLog(result.logs[0]);
       }
-      console.log('Dummy simulation data seeded:', result);
     } catch (err) {
       console.error('Failed to seed dummy simulation data', err);
     }

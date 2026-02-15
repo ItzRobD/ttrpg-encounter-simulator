@@ -14,7 +14,12 @@ import {
   LevelType,
   isCharacter,
   isMonster,
-  Actor
+  Actor,
+  SimulationResult,
+  IndividualResult,
+  EncounterResult,
+  SimulationEvent,
+  CombatantReference
 } from '../models';
 import { environment } from '../../environments/environment';
 import { LocalStorageService } from './local-storage.service';
@@ -24,50 +29,77 @@ import { LocalStorageService } from './local-storage.service';
 })
 export class CombatantService {
   private readonly localStorage = inject(LocalStorageService);
-  private readonly ENCOUNTER_STORAGE_KEY = 'dnd5e_active_encounter';
+  private readonly PARTY_STORAGE_KEY = 'dnd5e_active_party';
+  private readonly ENCOUNTERS_STORAGE_KEY = 'dnd5e_active_encounters';
 
-  private readonly _combatants = signal<Actor[]>(
-    this.localStorage.getItem<Actor[]>(this.ENCOUNTER_STORAGE_KEY) || []
+  private readonly _party = signal<Actor[]>(
+    this.localStorage.getItem<Actor[]>(this.PARTY_STORAGE_KEY) || []
   );
+
+  private readonly _encounters = signal<Actor[][]>(
+    this.localStorage.getItem<Actor[][]>(this.ENCOUNTERS_STORAGE_KEY) || [[]]
+  );
+
+  private readonly _activeEncounterIndex = signal<number>(0);
 
   // Public readonly signals
-  readonly combatants = this._combatants.asReadonly();
+  readonly party = this._party.asReadonly();
+  readonly encounters = this._encounters.asReadonly();
+  readonly activeEncounterIndex = this._activeEncounterIndex.asReadonly();
 
-  readonly count = computed(() => this._combatants().length);
+  readonly activeEncounter = computed(() => this._encounters()[this._activeEncounterIndex()] || []);
 
-  readonly monsters = computed(() =>
-    this._combatants().filter((a): a is Actor => isMonster(a))
-  );
+  readonly combatants = computed(() => [...this._party(), ...this.activeEncounter()]);
 
-  readonly characters = computed(() =>
-    this._combatants().filter((a): a is Actor => isCharacter(a))
-  );
+  readonly count = computed(() => this.combatants().length);
 
   constructor() {
     // Automatically persist to localStorage whenever the list changes
     effect(() => {
-      this.localStorage.setItem(this.ENCOUNTER_STORAGE_KEY, this._combatants());
+      this.localStorage.setItem(this.PARTY_STORAGE_KEY, this._party());
+    });
+    effect(() => {
+      this.localStorage.setItem(this.ENCOUNTERS_STORAGE_KEY, this._encounters());
     });
   }
 
   // Helper to get the next unique instanceId
   private getNextInstanceId(): number {
-    const current = this._combatants();
-    if (current.length === 0) return 1;
-    return Math.max(...current.map(a => a.instanceId)) + 1;
+    const allCombatants = [...this._party(), ...this._encounters().flat()];
+    if (allCombatants.length === 0) return 1;
+    return Math.max(...allCombatants.map(a => a.instanceId)) + 1;
+  }
+
+  setActiveEncounter(index: number): void {
+    if (index >= 0 && index < this._encounters().length) {
+      this._activeEncounterIndex.set(index);
+    }
+  }
+
+  addEncounter(): void {
+    this._encounters.update(e => [...e, []]);
+    this._activeEncounterIndex.set(this._encounters().length - 1);
+  }
+
+  removeEncounter(index: number): void {
+    this._encounters.update(e => {
+      if (e.length <= 1) return [[]];
+      const newList = e.filter((_, i) => i !== index);
+      return newList;
+    });
+
+    // Adjust active index if needed
+    if (this._activeEncounterIndex() >= this._encounters().length) {
+      this._activeEncounterIndex.set(this._encounters().length - 1);
+    }
   }
 
   /**
-   * Adds a new actor to the encounter if limits allow.
-   * Fluid limits:
-   * 1. Overall total (maxTotal) is the primary constraint.
-   * 2. Characters are hard-capped at maxCharacters.
-   * 3. Monsters can fill any remaining capacity up to maxTotal.
-   *    (e.g., if maxTotal is 23 and characters are 0, you can have 23 monsters).
+   * Adds a new actor to the party or current encounter if limits allow.
    */
   addCombatant(actor: Actor): boolean {
     const isChar = isCharacter(actor);
-    const currentCharacters = this.characters().length;
+    const currentCharacters = this._party().length;
 
     // Check that we're below the max actors
     if (this.count() >= environment.limits.maxTotal) return false;
@@ -75,15 +107,20 @@ export class CombatantService {
     // Check if we're already at the max number of characters
     if (isChar && currentCharacters >= environment.limits.maxCharacters) return false;
 
-    // Note: No monster-specific cap is checked here to allow them to fill
-    // the remaining capacity as requested (fluid behavior).
-
     const newCombatant = {
       ...actor,
       instanceId: this.getNextInstanceId()
     };
 
-    this._combatants.update(list => [...list, newCombatant]);
+    if (isChar) {
+      this._party.update(list => [...list, newCombatant]);
+    } else {
+      this._encounters.update(encs => {
+        const newEncs = [...encs];
+        newEncs[this._activeEncounterIndex()] = [...newEncs[this._activeEncounterIndex()], newCombatant];
+        return newEncs;
+      });
+    }
     return true;
   }
 
@@ -117,37 +154,68 @@ export class CombatantService {
   }
 
   /**
-   * Removes an actor from the encounter by its unique instanceId.
+   * Removes an actor by its unique instanceId.
    */
   removeCombatant(instanceId: number): void {
-    this._combatants.update(list => list.filter(a => a.instanceId !== instanceId));
+    if (this._party().some(a => a.instanceId === instanceId)) {
+      this._party.update(list => list.filter(a => a.instanceId !== instanceId));
+    } else {
+      this._encounters.update(encs => encs.map(e => e.filter(a => a.instanceId !== instanceId)));
+    }
   }
 
   /**
-   * Clears all combatants from the encounter.
+   * Clears the current active encounter.
    */
-  clearEncounter(): void {
-    this._combatants.set([]);
+  clearActiveEncounter(): void {
+    this._encounters.update(encs => {
+      const newEncs = [...encs];
+      newEncs[this._activeEncounterIndex()] = [];
+      return newEncs;
+    });
+  }
+
+  /**
+   * Clears everything.
+   */
+  clearAll(): void {
+    this._party.set([]);
+    this._encounters.set([[]]);
+    this._activeEncounterIndex.set(0);
   }
 
   /**
    * Updates a specific combatant.
    */
   updateCombatant(instanceId: number, updates: Partial<Actor>): void {
-    this._combatants.update(list =>
-      list.map(a => a.instanceId === instanceId ? { ...a, ...updates } : a)
-    );
+    if (this._party().some(a => a.instanceId === instanceId)) {
+      this._party.update(list =>
+        list.map(a => a.instanceId === instanceId ? { ...a, ...updates } : a)
+      );
+    } else {
+      this._encounters.update(encs =>
+        encs.map(e => e.map(a => a.instanceId === instanceId ? { ...a, ...updates } : a))
+      );
+    }
   }
 
   /**
    * Reorders a combatant in the list.
    */
   reorderCombatant(fromIndex: number, toIndex: number): void {
-    this._combatants.update(list => {
-      const newList = [...list];
-      const [movedItem] = newList.splice(fromIndex, 1);
-      newList.splice(toIndex, 0, movedItem);
-      return newList;
+    // Note: Reordering is currently only supporting reordering within the same list (party or active encounter)
+    // and depends on how the UI presents the list.
+    // If it's a flat list of all combatants:
+    const all = [...this.combatants()];
+    const [movedItem] = all.splice(fromIndex, 1);
+    all.splice(toIndex, 0, movedItem);
+
+    // Distribute back to party and active encounter
+    this._party.set(all.filter(a => isCharacter(a)));
+    this._encounters.update(encs => {
+      const newEncs = [...encs];
+      newEncs[this._activeEncounterIndex()] = all.filter(a => isMonster(a));
+      return newEncs;
     });
   }
 
@@ -155,6 +223,101 @@ export class CombatantService {
    * Sorts the combatants by initiative (descending).
    */
   sortByInitiative(): void {
-    this._combatants.update(list => [...list].sort((a, b) => b.state.initiative - a.state.initiative));
+    this._party.update(list => [...list].sort((a, b) => b.state.initiative - a.state.initiative));
+    this._encounters.update(encs => encs.map(e => [...e].sort((a, b) => b.state.initiative - a.state.initiative)));
+  }
+
+  /**
+   * Loads combatants from a simulation result.
+   */
+  loadFromSimulation(result: SimulationResult): void {
+    console.log('[CombatantService] loadFromSimulation called with:', result);
+
+    // actorConfigs now includes BOTH characters and monsters
+    const allActorConfigs = result.actorConfigs || [];
+
+    // Extract characters from actorConfigs
+    const characters = allActorConfigs.filter(a => isCharacter(a)).map(c => ({
+      ...c,
+      state: {
+        ...c.state,
+        currentHp: c.hpConfig?.hpAverage || c.hpConfig?.value || c.state?.currentHp || 0,
+        maxHp: c.hpConfig?.hpAverage || c.hpConfig?.value || c.state?.maxHp || 0,
+      }
+    }));
+
+    this._party.set(characters);
+
+    // Extract encounters from the first individual result
+    if (result.individualResults && result.individualResults.length > 0) {
+      const firstRun: IndividualResult = result.individualResults[0];
+      const encounters: Actor[][] = [];
+
+      firstRun.encounterResults.forEach((er: EncounterResult, erIndex: number) => {
+        const monstersInEncounter: Actor[] = [];
+        const seenInEncounter = new Set<number>();
+
+        // 1. First, check logs for actors present in this encounter
+        er.logs.forEach((event: SimulationEvent) => {
+          const checkActor = (ref?: CombatantReference) => {
+            if (ref?.instanceId && !seenInEncounter.has(ref.instanceId)) {
+                seenInEncounter.add(ref.instanceId);
+                const config = allActorConfigs.find(a => a.instanceId === ref.instanceId);
+                if (config && isMonster(config)) {
+                    monstersInEncounter.push({
+                      ...config,
+                      state: {
+                        ...config.state,
+                        currentHp: config.hpConfig?.hpAverage || config.hpConfig?.value || config.state?.currentHp || 0,
+                        maxHp: config.hpConfig?.hpAverage || config.hpConfig?.value || config.state?.maxHp || 0,
+                      }
+                    });
+                }
+            }
+          };
+
+          checkActor(event.actor);
+          if (event.data?.target) checkActor(event.data.target);
+          if (event.data?.actorId) checkActor({ instanceId: Number(event.data.actorId), name: '', type: '' });
+          if (event.data?.targetId) checkActor({ instanceId: Number(event.data.targetId), name: '', type: '' });
+          if (event.data?.actorStates) {
+              Object.keys(event.data.actorStates).forEach(id => {
+                  checkActor({ instanceId: Number(id), name: '', type: '' });
+              });
+          }
+        });
+
+        // 2. Also check encounter level initialState if logs were sparse
+        if (er.initialState) {
+            Object.keys(er.initialState).forEach(id => {
+                const instanceId = Number(id);
+                if (!seenInEncounter.has(instanceId)) {
+                    const config = allActorConfigs.find(a => a.instanceId === instanceId);
+                    if (config && isMonster(config)) {
+                        seenInEncounter.add(instanceId);
+                        monstersInEncounter.push({
+                          ...config,
+                          state: {
+                            ...config.state,
+                            currentHp: config.hpConfig?.hpAverage || config.hpConfig?.value || config.state?.currentHp || 0,
+                            maxHp: config.hpConfig?.hpAverage || config.hpConfig?.value || config.state?.maxHp || 0,
+                          }
+                        });
+                    }
+                }
+            });
+        }
+
+        encounters.push(monstersInEncounter);
+      });
+
+      if (encounters.length > 0) {
+        this._encounters.set(encounters);
+      } else {
+        this._encounters.set([[]]);
+      }
+    }
+
+    this._activeEncounterIndex.set(0);
   }
   }

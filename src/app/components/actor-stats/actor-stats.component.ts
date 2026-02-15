@@ -37,9 +37,42 @@ export class ActorStats {
         deathSaves: { successes: 0, failures: 0 },
         isStable: false,
         isDead: false,
+        currentHp: 0,
+        maxHp: 0,
+        tempHp: 0,
+        hitDie: 0,
+        initiative: 0
       } as ActorState;
     }
-    return this.projectedState() || a?.state;
+    const state = this.projectedState() || a?.state;
+
+    // Fallback to ensure we never return undefined and have required nested properties
+    if (!state || state.maxHp === 0 || isNaN(state.maxHp)) {
+      const fallbackMaxHp = state?.maxHp || a?.state?.maxHp || a?.hpConfig?.hpAverage || a?.hpConfig?.value || a?.ac || (a as any)?.AC || 0;
+      return {
+        ...(state || a?.state),
+        conditions: state?.conditions || a?.state?.conditions || {},
+        resistances: state?.resistances || a?.state?.resistances || {},
+        deathSaves: state?.deathSaves || a?.state?.deathSaves || { successes: 0, failures: 0 },
+        isStable: state?.isStable ?? a?.state?.isStable ?? true,
+        isDead: state?.isDead ?? a?.state?.isDead ?? false,
+        currentHp: state?.currentHp ?? a?.state?.currentHp ?? 0,
+        maxHp: fallbackMaxHp,
+        tempHp: state?.tempHp ?? a?.state?.tempHp ?? 0,
+        hitDie: state?.hitDie ?? a?.state?.hitDie ?? 0,
+        initiative: state?.initiative ?? a?.state?.initiative ?? 0,
+      } as ActorState;
+    }
+
+    // Ensure deathSaves exists even if state is present but partially initialized
+    if (!state.deathSaves) {
+        return {
+            ...state,
+            deathSaves: { successes: 0, failures: 0 }
+        } as ActorState;
+    }
+
+    return state;
   });
 
   protected readonly immunities = computed(() => {

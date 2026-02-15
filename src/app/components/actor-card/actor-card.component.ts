@@ -83,15 +83,32 @@ export class ActorCard {
         deathSaves: { successes: 0, failures: 0 },
         isStable: false,
         isDead: false,
+        currentHp: 0,
+        maxHp: 0,
+        tempHp: 0,
+        hitDie: 0,
+        initiative: 0
       } as ActorState;
     }
     const state = projected || this.actor().state;
-    if (state?.isProjected) {
-        console.log(`[ActorCard] ${this.actor().name} displayState:`, {
-          hp: `${state?.currentHp}/${state?.maxHp}`,
-          isProjected: !!projected
-        });
+
+    // Fallback to ensure we never return undefined
+    if (!state || state.maxHp === 0 || isNaN(state.maxHp)) {
+      const a = this.actor();
+      const fallbackMaxHp = state?.maxHp || a.state?.maxHp || a.hpConfig?.hpAverage || a.hpConfig?.value || a.ac || (a as any).AC || 0;
+      return {
+        ...(state || a.state),
+        conditions: state?.conditions || a.state?.conditions || {},
+        resistances: state?.resistances || a.state?.resistances || {},
+        deathSaves: state?.deathSaves || a.state?.deathSaves || { successes: 0, failures: 0 },
+        isStable: state?.isStable ?? a.state?.isStable ?? true,
+        isDead: state?.isDead ?? a.state?.isDead ?? false,
+        currentHp: state?.currentHp ?? a.state?.currentHp ?? 0,
+        maxHp: fallbackMaxHp,
+        tempHp: state?.tempHp ?? a.state?.tempHp ?? 0,
+      } as ActorState;
     }
+
     return state;
   });
 

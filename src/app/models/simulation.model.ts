@@ -152,6 +152,7 @@ export interface EncounterResult {
   rounds: number;
   seed: { seed1: number; seed2: number };
   logs: SimulationEvent[];
+  initialState?: Record<string, ActorStateSnapshot>;
 }
 
 export interface IndividualResult {
@@ -182,7 +183,6 @@ export interface SimulationResult {
   individualResults: IndividualResult[];
   performance?: SimulationPerformance;
   initialState?: Record<string, any>;
-  characterConfigs?: Record<string, Actor>;
   actorConfigs?: Actor[];
   // For UI compatibility, we'll map the logs from the first run or flatten them
   logs: SimulationLog[];

@@ -53,8 +53,8 @@
               icon="pi pi-trash"
               severity="danger"
               [text]="true"
-              (onClick)="combatantService.clearEncounter()"
-              pTooltip="Clear Encounter"
+              (onClick)="combatantService.clearAll()"
+              pTooltip="Clear All"
             ></p-button>
           </div>
         </div>
@@ -63,18 +63,18 @@
           <p-message severity="error" [text]="simulationService.error()!" styleClass="w-full"></p-message>
         }
 
-        <div class="grid" [class.flex-column]="isCombatantsCollapsed()">
-          <!-- Characters -->
-          <div [class]="isCombatantsCollapsed() ? 'col-12' : 'col-12 lg:col-6'">
+        <div class="flex flex-column gap-4 overflow-auto" [class.align-items-center]="isCombatantsCollapsed()">
+          <!-- Party Panel -->
+          <div class="w-full">
             <div
               class="flex align-items-center justify-content-between mb-3"
               [class.flex-column]="isCombatantsCollapsed()"
             >
               <div class="flex align-items-center gap-2" [class.justify-content-center]="isCombatantsCollapsed()">
-                <i class="pi pi-users text-primary text-xl" pTooltip="Characters"
+                <i class="pi pi-users text-primary text-xl" pTooltip="Party"
                 showDelay="1000"></i>
                 <h4 class="text-lg font-medium m-0 white-space-nowrap" [class.hidden]="isCombatantsCollapsed()">
-                  Characters ({{ combatantService.characters().length }})
+                  Party ({{ combatantService.party().length }})
                 </h4>
               </div>
               <p-button
@@ -89,7 +89,7 @@
               ></p-button>
             </div>
             <div class="flex flex-column gap-3">
-              @for (a of combatantService.characters(); track a.instanceId) {
+              @for (a of combatantService.party(); track a.instanceId) {
                 @if (isCombatantsCollapsed()) {
                   <div
                     class="p-2 border-1 surface-border border-round text-center surface-100 font-bold"
@@ -116,32 +116,71 @@
             </div>
           </div>
 
-          <!-- Monsters -->
-          <div [class]="isCombatantsCollapsed() ? 'col-12' : 'col-12 lg:col-6'">
+          <div class="border-top-1 surface-border w-full my-2"></div>
+
+          <!-- Encounters Panel -->
+          <div class="w-full">
             <div
               class="flex align-items-center justify-content-between mb-3"
               [class.flex-column]="isCombatantsCollapsed()"
             >
               <div class="flex align-items-center gap-2" [class.justify-content-center]="isCombatantsCollapsed()">
-                <i class="pi pi-skull text-red-500 text-xl" pTooltip="Monsters"
+                <i class="pi pi-skull text-red-500 text-xl" pTooltip="Encounters"
                 showDelay="1000"></i>
                 <h4 class="text-lg font-medium m-0 white-space-nowrap" [class.hidden]="isCombatantsCollapsed()">
-                  Monsters ({{ combatantService.monsters().length }})
+                  Encounters ({{ combatantService.encounters().length }})
                 </h4>
               </div>
-              <p-button
-                icon="pi pi-plus"
-                [text]="true"
-                size="small"
-                severity="danger"
-                pTooltip="Add Monster"
-                tooltipPosition="top"
-                (onClick)="isMonsterSelectorVisible.set(true)"
-                [class.hidden]="isCombatantsCollapsed()"
-              ></p-button>
+              <div class="flex gap-1" [class.hidden]="isCombatantsCollapsed()">
+                <p-button
+                  icon="pi pi-plus-circle"
+                  [text]="true"
+                  size="small"
+                  severity="secondary"
+                  pTooltip="New Encounter"
+                  (onClick)="combatantService.addEncounter()"
+                ></p-button>
+                <p-button
+                  icon="pi pi-plus"
+                  [text]="true"
+                  size="small"
+                  severity="danger"
+                  pTooltip="Add Monster"
+                  (onClick)="isMonsterSelectorVisible.set(true)"
+                ></p-button>
+              </div>
             </div>
+
+            <!-- Encounter Tabs -->
+            @if (!isCombatantsCollapsed()) {
+                <div class="flex align-items-center gap-1 mb-3 overflow-x-auto pb-1">
+                    @for (enc of combatantService.encounters(); track $index) {
+                        <div class="flex align-items-center">
+                            <p-button
+                                [label]="'E' + ($index + 1)"
+                                [severity]="combatantService.activeEncounterIndex() === $index ? 'danger' : 'secondary'"
+                                [outlined]="combatantService.activeEncounterIndex() !== $index"
+                                size="small"
+                                (onClick)="combatantService.setActiveEncounter($index)"
+                                [pTooltip]="'Encounter ' + ($index + 1)"
+                            ></p-button>
+                            @if (combatantService.encounters().length > 1) {
+                                <p-button
+                                    icon="pi pi-times"
+                                    [text]="true"
+                                    severity="danger"
+                                    size="small"
+                                    class="ml-neg-1"
+                                    (onClick)="combatantService.removeEncounter($index)"
+                                ></p-button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
             <div class="flex flex-column gap-3">
-              @for (a of combatantService.monsters(); track a.instanceId) {
+              @for (a of combatantService.activeEncounter(); track a.instanceId) {
                 @if (isCombatantsCollapsed()) {
                   <div
                     class="p-2 border-1 border-red-200 border-round text-center bg-red-50 text-red-700 font-bold"
@@ -160,12 +199,25 @@
                 }
               } @empty {
                 @if (!isCombatantsCollapsed()) {
-                  <p class="text-600 italic p-3 border-1 surface-border border-round border-dashed">
-                    No monsters.
-                  </p>
+                  <div class="flex flex-column align-items-center justify-content-center p-4 border-1 surface-border border-round border-dashed bg-surface-50">
+                    <i class="pi pi-skull text-300 text-3xl mb-2"></i>
+                    <p class="text-600 italic m-0">Empty encounter.</p>
+                  </div>
                 }
               }
             </div>
+            @if (!isCombatantsCollapsed() && combatantService.activeEncounter().length > 0) {
+                <div class="flex justify-content-end mt-2">
+                    <p-button
+                        label="Clear Encounter"
+                        icon="pi pi-trash"
+                        [text]="true"
+                        severity="danger"
+                        size="small"
+                        (onClick)="combatantService.clearActiveEncounter()"
+                    ></p-button>
+                </div>
+            }
           </div>
         </div>
       </div>

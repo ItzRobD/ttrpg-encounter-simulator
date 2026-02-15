@@ -73,10 +73,12 @@ export class MapperService {
       let current = record;
       while (current && typeof current === 'object' && !Array.isArray(current)) {
         if (current['data'] !== undefined && current['id'] === undefined && current['ID'] === undefined && current['type'] === undefined && current['name'] === undefined && current['spell_type'] === undefined) {
+          console.log('[MapperService] Unwrapping data envelope');
           current = current['data'] as Record<string, unknown>;
         } else if (current['details'] !== undefined && typeof current['details'] === 'object' && current['id'] === undefined && current['ID'] === undefined && current['type'] === undefined) {
           const details = current['details'] as Record<string, unknown>;
           if (details['data'] !== undefined && details['id'] === undefined && details['type'] === undefined) {
+            console.log('[MapperService] Unwrapping details.data envelope');
             current = details['data'] as Record<string, unknown>;
           } else {
             break;
@@ -184,7 +186,6 @@ export class MapperService {
       'CR': 'cr',
       'DC': 'dc',
       'individual_results': 'individualResults',
-      'character_configs': 'characterConfigs',
       'encounter_results': 'encounterResults',
       'simulation_id': 'simulationId',
       'created_at': 'createdAt',
@@ -254,6 +255,7 @@ export class MapperService {
       'final_roll_value': 'finalRollValue',
       'final_rolls': 'finalRolls',
       'is_natural_one': 'isNaturalOne',
+      'initial_state': 'initialState',
       'original_rolls': 'originalRolls',
       'reroll_events': 'rerollEvents',
       'roll_type': 'rollType',

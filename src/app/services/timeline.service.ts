@@ -39,6 +39,7 @@ export class TimelineService {
     const events = log?.events;
     if (!events) return [];
     return events.filter(e =>
+      e.type === EventType.CombatStart ||
       e.type === EventType.Round ||
       e.type === EventType.Turn ||
       e.type === EventType.Choice ||
@@ -112,60 +113,80 @@ export class TimelineService {
 
     const stateMap = new Map<number, ActorState>();
 
-    console.log(`[TimelineService] computing projectedState at index ${index}`);
-
     // Map backend instanceId to frontend instanceId
     const backendToFrontendIdMap = new Map<number, number>();
     const initialStates = log.actorInitialStates;
     const logActorConfigs = log.actorConfigs || [];
 
     if (initialStates) {
-      console.log(`[TimelineService] Raw actorInitialStates keys:`, Object.keys(initialStates));
-      console.log(`[TimelineService] Initializing states from actorInitialStates`, initialStates);
+      console.log('[TimelineService] Initializing stateMap from actorInitialStates:', initialStates);
       Object.entries(initialStates).forEach(([id, state]: [string, ActorStateSnapshot]) => {
         const instanceId = Number(id);
         if (!isNaN(instanceId)) {
-          // Robust mapping for HP values which might be camelCase or snake_case
-          const currentHp = state.currentHp;
-          const maxHp = (state as any).maxHp ?? (state as any).max_hp ?? (state as any).maxHP;
-          const tempHp = state.tempHp;
+          const rawCurrentHp = state.currentHp ?? (state as any).current_hp;
+          const rawMaxHp = (state as any).maxHp ?? (state as any).max_hp ?? (state as any).maxHP;
+          const rawTempHp = state.tempHp ?? (state as any).temp_hp;
 
-          // Attempt to find original frontend instanceId by name
+          let maxHp = rawMaxHp;
+          const currentHpVal = Number(rawCurrentHp ?? 0);
+          const tempHpVal = Number(rawTempHp ?? 0);
+
+          // Attempt to find original frontend instanceId
           const actorConfig = (logActorConfigs as Actor[]).find((c: Actor) => c.instanceId === instanceId);
           let targetInstanceId = instanceId;
 
-          if (actorConfig) {
-            const combatant = this.combatantService.combatants().find(c => c.name === actorConfig.name);
-            if (combatant) {
-              targetInstanceId = combatant.instanceId;
-              backendToFrontendIdMap.set(instanceId, targetInstanceId);
-              console.log(`[TimelineService] Mapping backend instanceId ${instanceId} to frontend instanceId ${targetInstanceId} for actor ${actorConfig.name}`);
-            }
+          // Try to find matching combatant in current session
+          const combatants = this.combatantService.combatants();
+          const combatant = combatants.find(c => c.instanceId === instanceId);
+
+          if (!maxHp && actorConfig) {
+            maxHp = actorConfig.hpConfig?.hpAverage || actorConfig.hpConfig?.value || actorConfig.ac || (actorConfig as any).AC;
           }
+          if (!maxHp && combatant) {
+            maxHp = combatant.state.maxHp || combatant.hpConfig?.hpAverage || combatant.hpConfig?.value;
+          }
+
+          if (combatant) {
+            targetInstanceId = combatant.instanceId;
+            backendToFrontendIdMap.set(instanceId, targetInstanceId);
+          } else if (actorConfig) {
+             targetInstanceId = actorConfig.instanceId || instanceId;
+             backendToFrontendIdMap.set(instanceId, targetInstanceId);
+          } else {
+             backendToFrontendIdMap.set(instanceId, instanceId);
+          }
+
+          const finalMaxHp = Number(maxHp ?? currentHpVal ?? 0);
+          console.log(`[TimelineService] Init Actor ${id} (mapped to ${targetInstanceId}): HP ${currentHpVal}/${finalMaxHp}, Name: ${actorConfig?.name || combatant?.name || 'Unknown'}`);
 
           stateMap.set(targetInstanceId, {
             ...state,
             // Ensure properties match ActorState interface
-            currentHp: Number(currentHp ?? 0),
-            maxHp: Number(maxHp ?? 0),
-            tempHp: Number(tempHp ?? 0),
-            hitDie: (state as any).hitDie ?? 10,
+            currentHp: currentHpVal,
+            maxHp: finalMaxHp,
+            tempHp: tempHpVal,
+            hitDie: (state as any).hitDie ?? (state as any).hit_die ?? 10,
             conditions: (state as any).conditions || {},
             deathSaves: (state as any).deathSaves || { successes: 0, failures: 0 },
             resistances: (state as any).resistances || {},
             isStable: (state as any).isStable ?? (state as any).stable ?? true,
-            isDead: (state as any).isDead ?? (state.healthState === 'dead'),
+            isDead: (state as any).isDead ?? (state.healthState === 'dead' || (state as any).health_state === 'dead'),
             initiative: (state as any).initiative ?? 0,
             isProjected: true
           } as unknown as ActorState);
-          console.log(`[TimelineService] stateMap.set(${targetInstanceId}, HP: ${stateMap.get(targetInstanceId)?.currentHp})`, stateMap.get(targetInstanceId));
         }
+      });
+    } else {
+      // Fallback: Initialize from current combatants if actorInitialStates is missing
+      this.combatantService.combatants().forEach(c => {
+        stateMap.set(c.instanceId, {
+          ...c.state,
+          isProjected: true
+        });
       });
     }
 
     // 2. Replay events up to the current index
-    console.log(`[TimelineService] Replaying up to index ${index}. Target Event ID: ${events[index]?.id}`);
-
     for (let i = 0; i <= index && i < events.length; i++) {
       const event = events[i];
       const data = event.data || {};
@@ -179,17 +200,27 @@ export class TimelineService {
 
           if (currentState) {
             // Map snapshot state to ActorState interface
-            const currentHp = state.currentHp;
-            const tempHp = state.tempHp;
+            const currentHp = state.currentHp ?? (state as any).current_hp;
+            const maxHpSnap = (state as any).maxHp ?? (state as any).max_hp;
+            const tempHp = state.tempHp ?? (state as any).temp_hp;
+            const conditions = (state as any).conditions || state.conditions;
+
+            const finalCurrentHp = Number(currentHp ?? currentState.currentHp);
+            const finalMaxHp = Number(maxHpSnap ?? currentState.maxHp);
+
+            console.log(`[TimelineService] Update Actor ${id} (${targetInstanceId}) Snapshot: HP ${finalCurrentHp}/${finalMaxHp}, Type: ${event.type}`);
 
             stateMap.set(targetInstanceId, {
               ...currentState,
-              currentHp: Number(currentHp ?? currentState.currentHp),
+              currentHp: finalCurrentHp,
+              maxHp: finalMaxHp,
               tempHp: Number(tempHp ?? currentState.tempHp),
-              conditions: (state as any).conditions || currentState.conditions,
-              isDead: state.healthState === 'dead',
+              conditions: conditions || currentState.conditions,
+              isDead: (state.healthState === 'dead' || (state as any).health_state === 'dead'),
               isStable: (state as any).isStable ?? (state as any).stable ?? currentState.isStable
             });
+          } else {
+             console.warn(`[TimelineService] No currentState for Actor ${id} (${targetInstanceId}) during ${event.type} snapshot`);
           }
         });
 
@@ -229,16 +260,6 @@ export class TimelineService {
           const modificationValue = (data.result?.modificationValue !== undefined) ? data.result.modificationValue :
                                     (data.value !== undefined) ? data.value : 0;
 
-          console.log(`[TimelineService] HPModified event detail:`, {
-            id: event.id,
-            targetId,
-            newHp,
-            newTempHp,
-            modificationValue,
-            dataResult: data.result,
-            data
-          });
-
           if (targetId !== undefined) {
             const instanceId = Number(targetId);
             const currentState = stateMap.get(instanceId);
@@ -246,8 +267,11 @@ export class TimelineService {
               const maxHp = currentState.maxHp || 1;
               const update: Partial<ActorState> = {};
 
-              if (newHp !== undefined && newHp !== null) {
-                update.currentHp = Math.max(0, Math.min(Number(newHp), maxHp));
+              // Priority: newHp from snapshot/result > finalHp from event data
+              const finalHpValue = (newHp !== undefined && newHp !== null) ? newHp : data.finalHp;
+
+              if (finalHpValue !== undefined && finalHpValue !== null) {
+                update.currentHp = Math.max(0, Math.min(Number(finalHpValue), maxHp));
                 console.log(`[TimelineService] HPModified: Actor ${instanceId}, Applied New HP: ${update.currentHp}/${maxHp}`);
 
                 // If HP > 0, they might not be unconscious/dead anymore
@@ -298,8 +322,6 @@ export class TimelineService {
           const actorId = (rawActorId !== undefined) ? (backendToFrontendIdMap.get(Number(rawActorId)) || Number(rawActorId)) : undefined;
           const initiative = data.roll?.total ?? data.value;
 
-          console.log(`[TimelineService] Initiative event:`, { id: event.id, actorId, initiative, data });
-
           if (actorId !== undefined && initiative !== undefined) {
             const instanceId = Number(actorId);
             const currentState = stateMap.get(instanceId);
@@ -308,7 +330,6 @@ export class TimelineService {
                 ...currentState,
                 initiative: Number(initiative)
               };
-              console.log(`[TimelineService] Updating Actor ${instanceId} state (Initiative)`, newState);
               stateMap.set(instanceId, newState);
             }
           }
@@ -365,15 +386,12 @@ export class TimelineService {
       }
     }
 
-    // 3. Log final state map
-    console.log(`[TimelineService] Final stateMap keys:`, Array.from(stateMap.keys()));
-    console.log(`[TimelineService] Final stateMap size: ${stateMap.size}. Summary:`,
-      Array.from(stateMap.entries()).map(([id, state]) => {
-        // Try to find name in combatantService since IDs are now mapped to frontend IDs
-        const name = this.combatantService.combatants().find(c => c.instanceId === id)?.name || 'Unknown';
-        return `${name} (ID ${id}): HP ${state.currentHp}/${state.maxHp}`;
-      })
-    );
+    console.log('[TimelineService] final stateMap Summary:');
+    stateMap.forEach((state, id) => {
+        console.log(`  Actor ${id}: HP ${state.currentHp}/${state.maxHp}, Dead: ${state.isDead}`);
+    });
+
+    // 3. Return state map
     return stateMap;
   });
 }
