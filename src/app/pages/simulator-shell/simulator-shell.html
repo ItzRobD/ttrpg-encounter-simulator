@@ -133,14 +133,6 @@
               </div>
               <div class="flex gap-1" [class.hidden]="isCombatantsCollapsed()">
                 <p-button
-                  icon="pi pi-plus-circle"
-                  [text]="true"
-                  size="small"
-                  severity="secondary"
-                  pTooltip="New Encounter"
-                  (onClick)="combatantService.addEncounter()"
-                ></p-button>
-                <p-button
                   icon="pi pi-plus"
                   [text]="true"
                   size="small"
@@ -168,6 +160,9 @@
                                     </div>
                                 </p-tab>
                             }
+                            <p-tab value="add" (click)="combatantService.addEncounter()" pTooltip="New Encounter">
+                                <i class="pi pi-plus text-xs"></i>
+                            </p-tab>
                         </p-tablist>
                     </p-tabs>
                 </div>
