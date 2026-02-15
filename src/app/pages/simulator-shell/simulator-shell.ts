@@ -50,6 +50,10 @@ export class SimulatorShell {
   public readonly isCharacterSelectorVisible = signal(false);
   public readonly isMonsterSelectorVisible = signal(false);
 
+  private readonly _timelineDebug = effect(() => {
+    this.timelineService.projectedState();
+  });
+
   private readonly _logCombatants = effect(() => {
     const combatants = this.combatantService.combatants();
     console.log(`[SimulatorShell] Current combatants:`, combatants.map(c => ({ name: c.name, instanceId: c.instanceId })));

@@ -127,6 +127,8 @@ export interface SimulationEvent {
   timestamp?: string;
   sequenceId?: string; // Groups events into a "Turn"
   parentId?: string;   // Defines hierarchy (e.g. Attack -> Damage)
+  actorStates?: Record<string, ActorStateSnapshot>;
+  healing?: Record<string, number>;
 }
 
 /**
