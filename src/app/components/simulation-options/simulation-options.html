@@ -7,7 +7,7 @@
   [blockScroll]="true"
 >
   <div class="flex flex-column gap-4 p-2">
-    <p-accordion [multiple]="true" [value]="['0', '1', '2', '3']">
+    <p-accordion [multiple]="true" [value]="['0', '1', '2', '3', '4']">
       <!-- General & Seeds -->
       <p-accordion-panel value="0">
         <p-accordion-header>General & Seed</p-accordion-header>
@@ -84,6 +84,28 @@
                 [ngModel]="options().useHPAverageCharacter"
                 (ngModelChange)="updateOption('useHPAverageCharacter', $event)"
               ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label for="includeStateSnapshots" class="text-sm font-semibold">Include State Snapshots</label>
+              <p-toggleswitch
+                id="includeStateSnapshots"
+                [ngModel]="options().includeStateSnapshots"
+                (ngModelChange)="updateOption('includeStateSnapshots', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label for="maxLoggedRuns" class="text-sm font-semibold">Max Logged Runs</label>
+              <p-inputNumber
+                id="maxLoggedRuns"
+                [ngModel]="options().maxLoggedRuns"
+                (ngModelChange)="updateOption('maxLoggedRuns', $event)"
+                placeholder="10"
+                [useGrouping]="false"
+                [min]="1"
+                [max]="100"
+                class="w-full"
+                styleClass="w-full"
+              ></p-inputNumber>
             </div>
           </div>
         </p-accordion-content>
@@ -166,6 +188,56 @@
                 (ngModelChange)="updateOption('alwaysUseSneakAttack', $event)"
               ></p-toggleswitch>
             </div>
+
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">Char. Heal Threshold %</label>
+              <p-inputNumber
+                [ngModel]="options().characterHealThresholdPct"
+                (ngModelChange)="updateOption('characterHealThresholdPct', $event)"
+                [min]="0"
+                [max]="100"
+                suffix="%"
+                [showButtons]="true"
+                class="w-full"
+              ></p-inputNumber>
+            </div>
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">Char. Emergency Threshold %</label>
+              <p-inputNumber
+                [ngModel]="options().characterEmergencyThresholdPct"
+                (ngModelChange)="updateOption('characterEmergencyThresholdPct', $event)"
+                [min]="0"
+                [max]="100"
+                suffix="%"
+                [showButtons]="true"
+                class="w-full"
+              ></p-inputNumber>
+            </div>
+
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">Monster Heal Threshold %</label>
+              <p-inputNumber
+                [ngModel]="options().monsterHealThresholdPct"
+                (ngModelChange)="updateOption('monsterHealThresholdPct', $event)"
+                [min]="0"
+                [max]="100"
+                suffix="%"
+                [showButtons]="true"
+                class="w-full"
+              ></p-inputNumber>
+            </div>
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">Monster Emergency Threshold %</label>
+              <p-inputNumber
+                [ngModel]="options().monsterEmergencyThresholdPct"
+                (ngModelChange)="updateOption('monsterEmergencyThresholdPct', $event)"
+                [min]="0"
+                [max]="100"
+                suffix="%"
+                [showButtons]="true"
+                class="w-full"
+              ></p-inputNumber>
+            </div>
           </div>
         </p-accordion-content>
       </p-accordion-panel>
@@ -222,6 +294,108 @@
                 [ngModel]="options().debugAI"
                 (ngModelChange)="updateOption('debugAI', $event)"
               ></p-toggleswitch>
+            </div>
+
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">Multiattack Policy</label>
+              <p-selectbutton
+                [options]="multiattackPolicyOptions"
+                [ngModel]="options().multiattackPolicy"
+                (ngModelChange)="updateOption('multiattackPolicy', $event)"
+                class="w-full"
+              ></p-selectbutton>
+            </div>
+
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">Action Selection Policy</label>
+              <p-selectbutton
+                [options]="actionSelectionPolicyOptions"
+                [ngModel]="options().actionSelectionPolicy"
+                (ngModelChange)="updateOption('actionSelectionPolicy', $event)"
+                class="w-full"
+              ></p-selectbutton>
+            </div>
+
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">AOE Target Threshold</label>
+              <p-inputNumber
+                [ngModel]="options().aoeTargetThreshold"
+                (ngModelChange)="updateOption('aoeTargetThreshold', $event)"
+                [min]="1"
+                [max]="20"
+                [showButtons]="true"
+                class="w-1/2"
+              ></p-inputNumber>
+            </div>
+
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Disable Monster Turns</label>
+              <p-toggleswitch
+                [ngModel]="options().disableMonsterTurns"
+                (ngModelChange)="updateOption('disableMonsterTurns', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Disable Character Turns</label>
+              <p-toggleswitch
+                [ngModel]="options().disableCharacterTurns"
+                (ngModelChange)="updateOption('disableCharacterTurns', $event)"
+              ></p-toggleswitch>
+            </div>
+            <div class="flex align-items-center justify-content-between">
+              <label class="text-sm font-semibold">Disable Lair Turns</label>
+              <p-toggleswitch
+                [ngModel]="options().disableLairTurns"
+                (ngModelChange)="updateOption('disableLairTurns', $event)"
+              ></p-toggleswitch>
+            </div>
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+
+      <!-- Intermission Options -->
+      <p-accordion-panel value="4">
+        <p-accordion-header>Intermission Rules</p-accordion-header>
+        <p-accordion-content>
+          <div class="flex flex-column gap-3 pt-2">
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">Max Short Rests</label>
+              <p-inputNumber
+                [ngModel]="intermissionConfig().maxShortRests"
+                (ngModelChange)="updateIntermission('maxShortRests', $event)"
+                [min]="0"
+                [max]="10"
+                [showButtons]="true"
+                class="w-full"
+              ></p-inputNumber>
+            </div>
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">Short Rest Heal Threshold</label>
+              <p-inputNumber
+                [ngModel]="intermissionConfig().shortRestHealThreshold"
+                (ngModelChange)="updateIntermission('shortRestHealThreshold', $event)"
+                [min]="0"
+                [max]="1"
+                [step]="0.05"
+                [showButtons]="true"
+                mode="decimal"
+                class="w-full"
+              ></p-inputNumber>
+              <small class="text-500">Heal if current HP < this % of max HP.</small>
+            </div>
+            <div class="flex flex-column gap-2">
+              <label class="text-sm font-semibold">Post-Rest Heal Threshold</label>
+              <p-inputNumber
+                [ngModel]="intermissionConfig().postRestHealThreshold"
+                (ngModelChange)="updateIntermission('postRestHealThreshold', $event)"
+                [min]="0"
+                [max]="1"
+                [step]="0.05"
+                [showButtons]="true"
+                mode="decimal"
+                class="w-full"
+              ></p-inputNumber>
+              <small class="text-500">Target HP % after resting.</small>
             </div>
           </div>
         </p-accordion-content>

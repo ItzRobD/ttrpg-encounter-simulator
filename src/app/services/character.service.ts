@@ -110,9 +110,6 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
     });
   }
 
-  // Deprecated naming
-  public get characterSummaries() { return this.summaries; }
-
   getSummaries(forceRefresh = false): Observable<ActorSummary[]> {
     if (!forceRefresh && this._summaries().length > 0) {
       return of(this._summaries());
@@ -189,11 +186,6 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
           return of([]);
         })
       );
-  }
-
-  // Deprecated
-  getCharacterSummaries(forceRefresh = false): Observable<ActorSummary[]> {
-    return this.getSummaries(forceRefresh);
   }
 
   selectActorByID(id: string): Observable<Actor> {
@@ -352,11 +344,6 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
     return forkJoin(hydrationTasks).pipe(
       map(() => character)
     );
-  }
-
-  // Deprecated
-  selectCharacterByID(id: string): Observable<Actor> {
-    return this.selectActorByID(id);
   }
 
   selectActor(actor: Actor | null): void {

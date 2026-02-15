@@ -40,7 +40,7 @@ export class ActorSpellcasting {
           return {
             ...wrapper.spell,
             isInnate: true,
-            maxCastsPerDay: wrapper.maxCastsPerDay !== undefined ? wrapper.maxCastsPerDay : wrapper.max_casts_per_day
+            maxCastsPerDay: wrapper.maxCastsPerDay
           };
         }
         return wrapper;
@@ -77,8 +77,8 @@ export class ActorSpellcasting {
     const spells = d.spells || [];
 
     spells.forEach((spell: any) => {
-      if (spell.isInnate || (spell as any).is_innate) {
-        const usage = this.getInnateUsageLabel(spell.maxCastsPerDay || (spell as any).max_casts_per_day);
+      if (spell.isInnate) {
+        const usage = this.getInnateUsageLabel(spell.maxCastsPerDay);
         if (!innateGroups[usage]) {
           innateGroups[usage] = [];
         }

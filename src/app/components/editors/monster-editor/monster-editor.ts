@@ -487,14 +487,6 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
     const components = actionGroup.get('damageBlocks') as FormArray;
     if (data?.damageBlocks && Array.isArray(data.damageBlocks)) {
       data.damageBlocks.forEach((c: any) => this.addDamageComponent(components, c));
-    } else if (data?.numberOfDice) {
-      // Legacy data support
-      this.addDamageComponent(components, {
-        numberOfDice: data.numberOfDice,
-        die: data.die,
-        amountToAdd: data.amountToAdd,
-        damageType: data.damageType
-      });
     } else if (!data) {
       // Default component for new actions
       this.addDamageComponent(components);
@@ -535,14 +527,6 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
     const components = actionGroup.get('damageBlocks') as FormArray;
     if (data?.damageBlocks && Array.isArray(data.damageBlocks)) {
       data.damageBlocks.forEach((c: any) => this.addDamageComponent(components, c));
-    } else if (data?.numberOfDice) {
-      // Legacy data support
-      this.addDamageComponent(components, {
-        numberOfDice: data.numberOfDice,
-        die: data.die,
-        amountToAdd: data.amountToAdd,
-        damageType: data.damageType
-      });
     } else if (!data) {
       // Default component for new actions
       this.addDamageComponent(components);

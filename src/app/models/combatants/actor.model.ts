@@ -1,4 +1,4 @@
-import { Abilities, Metadata, Feature, Spell, InnateSpell, SpellSlots, Ability, DamageResistances, Equipment, DamageType, DiceType, ActorState } from '../core';
+import { Abilities, Metadata, Feature, Spell, InnateSpell, SpellSlots, Ability, DamageResistances, Equipment, DamageType, DiceType, ActorState, Spellcasting } from '../core';
 import { BehaviorConfig } from '../configs/behavior-config.model';
 
 export type ActorType = 'character' | 'monster' | string;
@@ -64,7 +64,7 @@ export interface Actor {
   name: string;
   isCustom?: boolean;
   state: ActorState;
-  spellcasting?: any;
+  spellcasting?: Spellcasting;
   hp?: HPConfig;
   side: Side;
   actorType: ActorType;
@@ -75,7 +75,7 @@ export interface Actor {
   equipment?: Equipment;
   equipmentConfigs?: EquipmentConfig[];
   knownSpellIDs?: number[];
-  customEquipment?: any[];
+  customEquipment?: unknown[];
   customSpells?: Spell[];
   actions?: Action[];
   spellActions?: Action[];

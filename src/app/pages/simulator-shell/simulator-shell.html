@@ -100,7 +100,7 @@
                 } @else {
                   <app-actor-card
                     [actor]="a"
-                    [projectedState]="timelineService.projectedState().get(a.instanceId) || a.state"
+                    [projectedState]="timelineService.projectedState().get(a.instanceId)"
                     [hideState]="false"
                     [showDelete]="true"
                     (delete)="combatantService.removeCombatant($event)"
@@ -152,7 +152,7 @@
                 } @else {
                   <app-actor-card
                     [actor]="a"
-                    [projectedState]="timelineService.projectedState().get(a.instanceId) || a.state"
+                    [projectedState]="timelineService.projectedState().get(a.instanceId)"
                     [hideState]="false"
                     [showDelete]="true"
                     (delete)="combatantService.removeCombatant($event)"

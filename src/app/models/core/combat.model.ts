@@ -42,4 +42,5 @@ export interface ActorState {
   healThreshold?: number;
   concentration?: any;
   hasActedThisTurn?: boolean;
+  isProjected?: boolean;
 }

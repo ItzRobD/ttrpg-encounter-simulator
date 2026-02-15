@@ -60,25 +60,22 @@ describe('SimulationMappingDebug', () => {
       req.flush({
         data: {
           created_at: "2026-01-19T16:02:10.135146Z",
-          entity_configs: {
-            monster_configs: [],
-            character_configs: [
-              {
-                instance_id: 1,
-                name: "Henry",
-                as_config: { ability_scores: {}, proficiencies: {} },
-                hp: { value: 119 }
-              },
-              {
-                instance_id: 2,
-                name: "Frank",
-                as_config: { ability_scores: {}, proficiencies: {} },
-                hp: { value: 14 }
-              }
-            ]
-          },
           results: {
             total_runs: 2,
+            character_configs: {
+              "1": {
+                instance_id: 1,
+                name: "Henry",
+                abilities: { ability_scores: {}, proficiencies: {} },
+                hp_config: { value: 119 }
+              },
+              "2": {
+                instance_id: 2,
+                name: "Frank",
+                abilities: { ability_scores: {}, proficiencies: {} },
+                hp_config: { value: 14 }
+              }
+            },
             character_victories: 0,
             monster_victories: 2,
             other_victories: 0,
@@ -88,18 +85,32 @@ describe('SimulationMappingDebug', () => {
               {
                 run_id: 1,
                 victory_status: "monsters",
-                rounds: 16,
-                logs: [
-                  { id: "e1", round: 1, type: "round", data: { note: "Start" } },
-                  { id: "e1-2", round: 1, attack_name: "Longsword", attack_roll: 10, target: "Monster", success: true }
+                total_rounds: 16,
+                encounter_results: [
+                  {
+                    encounter_name: "Encounter 1",
+                    victory_status: "monsters",
+                    rounds: 16,
+                    logs: [
+                      { id: "e1", round: 1, type: "round", data: { note: "Start" } },
+                      { id: "e1-2", round: 1, type: "attack", data: { action_name: "Longsword", roll: { total: 10 }, target_id: 2, is_hit: true } }
+                    ]
+                  }
                 ]
               },
               {
                 run_id: 2,
                 victory_status: "monsters",
-                rounds: 11,
-                logs: [
-                  { id: "e2", round: 1, type: "round", data: { note: "Start" } }
+                total_rounds: 11,
+                encounter_results: [
+                  {
+                    encounter_name: "Encounter 1",
+                    victory_status: "monsters",
+                    rounds: 11,
+                    logs: [
+                      { id: "e2", round: 1, type: "round", data: { note: "Start" } }
+                    ]
+                  }
                 ]
               }
             ],

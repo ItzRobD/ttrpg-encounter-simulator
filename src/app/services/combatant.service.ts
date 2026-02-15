@@ -101,8 +101,8 @@ export class CombatantService {
       state: {
         ...actor.state,
         // Initialize HP if not already set
-        currentHp: actor.state?.currentHp || actor.hpConfig?.hpAverage || actor.hp?.hpAverage || actor.hp?.value || 1,
-        maxHp: actor.state?.maxHp || actor.hpConfig?.hpAverage || actor.hp?.hpAverage || actor.hp?.value || 1,
+        currentHp: actor.state?.currentHp || actor.hpConfig?.hpAverage || actor.hpConfig?.value || 1,
+        maxHp: actor.state?.maxHp || actor.hpConfig?.hpAverage || actor.hpConfig?.value || 1,
         tempHp: 0,
         initiative: 0,
         isStable: true,

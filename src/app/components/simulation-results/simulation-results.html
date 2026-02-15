@@ -1,17 +1,31 @@
 <div class="flex flex-column h-full">
   <!-- Log Tabs -->
-  <div class="flex justify-content-between align-items-center mb-2">
-    <p-tabs [value]="0" (valueChange)="onTabChange($event)" class="flex-1">
-      <p-tablist>
-        @for (index of logIndicies(); track index) {
-          <p-tab [value]="index">Run {{ index + 1 }}</p-tab>
-        }
-      </p-tablist>
-    </p-tabs>
+  <div class="flex flex-column mb-2">
+    <div class="flex justify-content-between align-items-center">
+      <p-tabs [value]="activeTabIndex()" (valueChange)="onTabChange($event)" class="flex-1">
+        <p-tablist>
+          @for (index of logIndices(); track index) {
+            <p-tab [value]="index">Run {{ index + 1 }}</p-tab>
+          }
+        </p-tablist>
+      </p-tabs>
 
-    @if (performance(); as perf) {
-      <div class="text-xs text-500 font-mono px-3" [pTooltip]="'Memory: ' + (perf.memoryAllocatedMb | number:'1.2-2') + 'MB, Goroutines: ' + perf.peakGoroutines">
-        Simulated in {{ perf.executionTimeHuman }}
+      @if (performance(); as perf) {
+        <div class="text-xs text-500 font-mono px-3" [pTooltip]="'Memory: ' + (perf.memoryAllocatedMb | number:'1.2-2') + 'MB, Goroutines: ' + perf.peakGoroutines">
+          Simulated in {{ perf.executionTimeHuman }}
+        </div>
+      }
+    </div>
+
+    @if (encounterIndices().length > 1) {
+      <div class="flex align-items-center mt-2 px-1">
+        <p-tabs [value]="activeEncounterIndex()" (valueChange)="onEncounterChange($event)" class="flex-1 small-tabs">
+          <p-tablist>
+            @for (index of encounterIndices(); track index) {
+              <p-tab [value]="index">Encounter {{ index + 1 }}</p-tab>
+            }
+          </p-tablist>
+        </p-tabs>
       </div>
     }
   </div>

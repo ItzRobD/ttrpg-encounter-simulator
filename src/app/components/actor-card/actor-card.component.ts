@@ -74,6 +74,7 @@ export class ActorCard {
   }
 
   protected readonly displayState = computed(() => {
+    const projected = this.projectedState();
     if (this.hideState()) {
       const a = this.actor();
       return {
@@ -84,7 +85,14 @@ export class ActorCard {
         isDead: false,
       } as ActorState;
     }
-    return this.projectedState() || this.actor().state;
+    const state = projected || this.actor().state;
+    if (state?.isProjected) {
+        console.log(`[ActorCard] ${this.actor().name} displayState:`, {
+          hp: `${state?.currentHp}/${state?.maxHp}`,
+          isProjected: !!projected
+        });
+    }
+    return state;
   });
 
   isCharacter(a: Actor): boolean {

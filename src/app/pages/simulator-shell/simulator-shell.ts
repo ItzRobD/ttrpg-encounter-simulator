@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -50,6 +50,11 @@ export class SimulatorShell {
   public readonly isCharacterSelectorVisible = signal(false);
   public readonly isMonsterSelectorVisible = signal(false);
 
+  private readonly _logCombatants = effect(() => {
+    const combatants = this.combatantService.combatants();
+    console.log(`[SimulatorShell] Current combatants:`, combatants.map(c => ({ name: c.name, instanceId: c.instanceId })));
+  });
+
   // Use BreakpointObserver with custom query from environment
   public readonly isXL = toSignal(
     this.breakpointObserver
@@ -67,7 +72,8 @@ export class SimulatorShell {
   }
 
   fetchSpecificSimulation(): void {
-    const id = '019c54bc-bcce-7464-82ad-0d11abae7436';
+    const id = '019c6293-123f-770a-87f7-062233d81fdd';
+    // const id = '019c59b0-0909-7053-9273-1926304c6442';
     this.simulationService.fetchSimulationResult(id).subscribe();
   }
 }

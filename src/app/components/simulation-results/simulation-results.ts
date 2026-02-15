@@ -1,4 +1,4 @@
-import {Component, computed, inject} from '@angular/core';
+import {Component, computed, inject, signal} from '@angular/core';
 import {TimelineService} from '../../services/timeline.service';
 import {SimulationService} from '../../services/simulation.service';
 import {Tab, TabList, Tabs} from 'primeng/tabs';
@@ -42,19 +42,39 @@ export class SimulationResults {
 
   protected readonly EventType = EventType;
 
-  protected readonly treeNodes = computed(() => {
-    const log = this.stateService.selectedSimulationLog();
-    if (!log) return [];
+  protected readonly activeTabIndex = signal(0);
 
-    // log.events is already mapped to camelCase by SimulationService
-    return this.mapperService.mapSimulationLog(log.events);
-  });
-
-  protected readonly logIndicies = computed(() => {
+  protected readonly logIndices = computed(() => {
     const result = this.simulationService.simulationResult();
     if (!result) return [];
 
     return result.individualResults.map((_, i) => i);
+  });
+
+  protected readonly activeEncounterIndex = signal(0);
+
+  protected readonly encounterIndices = computed(() => {
+    const result = this.simulationService.simulationResult();
+    const runIndex = this.activeTabIndex();
+    if (!result || !result.individualResults[runIndex]) return [];
+
+    return result.individualResults[runIndex].encounterResults.map((_, i) => i);
+  });
+
+  protected readonly treeNodes = computed(() => {
+    const result = this.simulationService.simulationResult();
+    const runIndex = this.activeTabIndex();
+    const encounterIndex = this.activeEncounterIndex();
+
+    if (!result || !result.individualResults[runIndex]) return [];
+
+    const run = result.individualResults[runIndex];
+    const encounter = run.encounterResults[encounterIndex];
+
+    if (!encounter) return [];
+
+    // log.events is already mapped to camelCase by SimulationService
+    return this.mapperService.mapSimulationLog(encounter.logs);
   });
 
   protected readonly performance = computed(() => {
@@ -64,14 +84,59 @@ export class SimulationResults {
   onTabChange(value: string | number | undefined): void {
     if (value === undefined) return;
     const index = typeof value === 'string' ? parseInt(value, 10) : value;
+    this.activeTabIndex.set(index);
+    this.activeEncounterIndex.set(0);
+    this.updateSelectedLog();
+  }
+
+  onEncounterChange(value: string | number | undefined): void {
+    if (value === undefined) return;
+    const index = typeof value === 'string' ? parseInt(value, 10) : value;
+    this.activeEncounterIndex.set(index);
+    this.updateSelectedLog();
+  }
+
+  private updateSelectedLog(): void {
     const result = this.simulationService.simulationResult();
-    if (result && result.logs[index]) {
-      this.timelineService.setSelectedSimulationLog(result.logs[index]);
+    const runIndex = this.activeTabIndex();
+    const encounterIndex = this.activeEncounterIndex();
+
+    if (result && result.individualResults[runIndex]) {
+        const run = result.individualResults[runIndex];
+        const encounter = run.encounterResults[encounterIndex];
+        if (encounter) {
+            this.timelineService.setSelectedSimulationLog({
+                actors: [],
+                events: encounter.logs,
+                initialState: run.initialState,
+                actorInitialStates: run.actorInitialStates,
+                actorConfigs: result.actorConfigs
+            });
+        }
     }
   }
 
   isEventActive(id: string): boolean {
-    return this.timelineService.activeEvent()?.id === id;
+    const active = this.timelineService.activeEvent();
+    if (active?.id === id) return true;
+
+    // Special case for rounds and turns which might not have parentIds in the same way
+    if (id.startsWith('round-')) {
+      const roundNum = parseInt(id.replace('round-', ''), 10);
+      return active?.round === roundNum;
+    }
+
+    // Check if the event is an ancestor of the active event
+    const log = this.stateService.selectedSimulationLog();
+    if (!log) return false;
+
+    let current: SimulationEvent | undefined | null = active;
+    while (current?.parentId) {
+      if (current.parentId === id) return true;
+      current = log.events.find(e => e.id === current?.parentId);
+    }
+
+    return false;
   }
 
   logEvent(event: SimulationEvent): void {
@@ -185,9 +250,8 @@ export class SimulationResults {
     if (event.type === EventType.AttackRoll || event.type === EventType.SavingThrow || event.type === EventType.DamageRoll) {
       const roll = data.roll;
       if (roll) {
-        const dieValue = parseInt(roll.dice, 10);
-        const diceType = isNaN(dieValue) ? DiceType.D20 : dieValue as DiceType;
-        const damageType = this.titleCasePipe.transform(data.damageType || roll.rollType) || '';
+        const diceType = (roll.dice as unknown as DiceType) || DiceType.D20;
+        const damageType = this.titleCasePipe.transform(roll.rollType) || '';
 
         details = `Total: ${roll.total}, Dice: ${formatDice(
           roll.numberOfDice,
@@ -195,11 +259,15 @@ export class SimulationResults {
           roll.modifier
         )} ${damageType}`.trim();
 
-        if (event.type === EventType.SavingThrow || event.type === EventType.AttackRoll) {
-          const isSuccess = roll.isSuccess;
-          const targetDC = data.diceRoll?.targetValue || roll.total; // Fallback if diceRoll missing
-          const label = event.type === EventType.SavingThrow ? 'vs DC' : 'vs AC';
-          const status = isSuccess ? `Success ${label} ${targetDC}` : `Failed ${label} ${targetDC}`;
+        if (event.type === EventType.SavingThrow || event.type === EventType.AttackRoll || roll.rollType === 'attack' || roll.rollType === 'saving throw') {
+          const isAttack = event.type === EventType.AttackRoll || roll.rollType === 'attack';
+          const isSuccess = isAttack ? data.isHit : data.saveSuccess;
+          const targetValue = isAttack
+            ? (data.targetAc)
+            : (data.dc);
+
+          const label = isAttack ? 'vs AC' : 'vs DC';
+          const status = isSuccess ? `Success ${label} ${targetValue}` : `Failed ${label} ${targetValue}`;
           details = `${details} (${status})`;
         }
       }
@@ -211,15 +279,13 @@ export class SimulationResults {
       }
     }
 
-    if (data.roll) {
-      const dieValue = parseInt(data.roll.dice, 10);
-      const diceType = dieValue as DiceType;
-      const damageType = this.titleCasePipe.transform(data.damageType) || '';
+    if (data.roll && (event.type as any) !== EventType.AttackRoll && (event.type as any) !== EventType.SavingThrow && (event.type as any) !== EventType.DamageRoll && (event.type as any) !== EventType.Initiative) {
+      const diceType = (data.roll.dice as unknown as DiceType);
       details += ` Total: ${data.roll.total}, Dice: ${formatDice(
         data.roll.numberOfDice,
         diceType,
         data.roll.modifier
-      )} ${damageType}`;
+      )}`;
     }
 
     return details;

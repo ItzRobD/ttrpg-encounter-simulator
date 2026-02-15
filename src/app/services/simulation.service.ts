@@ -1,7 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { SimulationLog, SimulationResult, SimulationEvent, EventType, SimulationConfig,
-  SimulationPayload, Actor, SimulationStatusResponse, SimulationStatus, IndividualResult, isMonster, isCharacter, SimulationResponse
+  SimulationPayload, Actor, SimulationStatusResponse, SimulationStatus, IndividualResult, isMonster, isCharacter, SimulationResponse, IntermissionConfig, SimulationEncounterConfig
 } from '../models';
 import { SimulationOptions } from '../models';
 import { CombatantService } from './combatant.service';
@@ -34,6 +34,21 @@ export class SimulationService {
   private readonly _currentSimulationId = signal<string | null>(null);
   readonly currentSimulationId = this._currentSimulationId.asReadonly();
 
+  private readonly _intermissionConfig = signal<IntermissionConfig>(this.getDefaultIntermissionConfig());
+  readonly intermissionConfig = this._intermissionConfig.asReadonly();
+
+  private getDefaultIntermissionConfig(): IntermissionConfig {
+    return {
+      maxShortRests: 2,
+      shortRestHealThreshold: 0.7,
+      postRestHealThreshold: 0.9
+    };
+  }
+
+  updateIntermissionConfig(config: Partial<IntermissionConfig>): void {
+    this._intermissionConfig.update(current => ({ ...current, ...config }));
+  }
+
   private getDefaultConfig(): SimulationConfig {
     return {
       numberOfRuns: environment.config.defaultNumberOfRuns,
@@ -62,6 +77,8 @@ export class SimulationService {
       aoeHitsAllEnemies: false,
       characterHealThresholdPct: 30,
       monsterHealThresholdPct: 30,
+      characterEmergencyThresholdPct: 15,
+      monsterEmergencyThresholdPct: 15,
       limitedLegendaryActions: true,
       allowLairActions: true,
       allowDragonbornBreathAttack: true,
@@ -78,7 +95,9 @@ export class SimulationService {
       debugAI: false,
       hpVisibilityMode: 'visible',
       enableMonsterNoise: false,
-      monsterNoiseWeight: 0.05
+      monsterNoiseWeight: 0.05,
+      includeStateSnapshots: true,
+      maxLoggedRuns: 10
     };
   }
 
@@ -105,29 +124,39 @@ export class SimulationService {
       return null;
     }
 
-    const monsterIds: number[] = [];
-    const actorConfigs: any[] = [];
+    const characterConfigs: Actor[] = [];
+    for (const c of characters) {
+      const { state, ...config } = c;
+      characterConfigs.push(config as Actor);
+    }
 
-    // Process Monsters
+    const monsterIds: number[] = [];
+    const monsterConfigs: Actor[] = [];
+
     for (const m of monsters) {
-      if (!m.isCustom) {
-        monsterIds.push(+m.id);
-      } else {
+      if (m.isCustom) {
         const { state, ...config } = m;
-        actorConfigs.push(config);
+        monsterConfigs.push(config as Actor);
+      } else {
+        monsterIds.push(+m.id);
       }
     }
 
-    // Process Characters
-    for (const c of characters) {
-      const { state, ...config } = c;
-      actorConfigs.push(config);
-    }
+    // Currently, we're wrapping the active encounter into the new multi-encounter format.
+    // In a future update, we might allow users to define multiple encounters in the UI.
+    const encounters: SimulationEncounterConfig[] = [
+      {
+        name: 'Encounter 1',
+        monsterIds: monsterIds,
+        monsterConfigs: monsterConfigs
+      }
+    ];
 
     return {
       base_options: this.options(),
-      actor_configs: actorConfigs,
-      monster_ids: monsterIds,
+      character_configs: characterConfigs,
+      encounters: encounters,
+      intermission: this.intermissionConfig(),
       number_of_runs: this.config().numberOfRuns,
       max_rounds: this.config().maxRounds,
       include_logs: this.config().includeLogs,
@@ -155,7 +184,7 @@ export class SimulationService {
       .pipe(
         switchMap(response => {
           if (response.status === 202) {
-            const body = response.body as any;
+            const body = response.body as { data?: { simulationId: string }, simulationId?: string };
             const simulationId = body?.data?.simulationId || body?.simulationId;
             if (simulationId) {
               this._currentSimulationId.set(simulationId);
@@ -224,24 +253,43 @@ export class SimulationService {
 
   public fetchSimulationResult(id: string): Observable<SimulationResult> {
     const resultUrl = `${environment.apiUrl}/simulation/results/${id}`;
-    return this.http.get<any>(resultUrl).pipe(
+    return this.http.get<unknown>(resultUrl).pipe(
       map(response => {
-        // The mappingInterceptor might have already unwrapped the 'data' envelope
-        const data = (response?.results) ? response : response?.data;
+        // The mappingInterceptor might automatically unwrap the 'data' envelope.
+        // If it's still there, we map it, otherwise we map the top-level response.
+        const mappedResponse = this.mapperService.mapKeys(response) as any;
+        console.log('[SimulationService] fetchSimulationResult mappedResponse:', mappedResponse);
 
-        if (!data?.results || !Array.isArray(data.results.individualResults)) {
+        // Based on the log, results should be either at top level or inside a 'data' key that was already unwrapped.
+        const data = mappedResponse;
+        const results = data.results;
+
+        if (!results || !Array.isArray(results.individualResults)) {
           console.error('Invalid simulation result structure. Full response:', response);
+          console.error('Mapped data:', data);
+          if (results) {
+            console.error('Results keys:', Object.keys(results));
+          }
           throw new Error('Invalid simulation result structure: missing individualResults');
         }
 
-        const results = data.results;
-        const actorConfigs = data.actorConfigs;
+        // characterConfigs is now inside results
+        const characterConfigsMap = results.characterConfigs || {};
+        const actorConfigs = Object.values(characterConfigsMap);
 
-        const simulationLogs: SimulationLog[] = results.individualResults.map((res: any) => ({
-          actors: [],
-          events: res.logs || [],
-          initialState: res.initialState
-        }));
+        const simulationLogs: SimulationLog[] = results.individualResults.map((res: IndividualResult) => {
+          // For now, we'll take the logs from the first encounter or flatten them.
+          // The UI will eventually need to handle multiple encounters per run.
+          const allEvents = res.encounterResults.flatMap(er => er.logs);
+
+          return {
+            actors: [],
+            events: allEvents,
+            initialState: res.initialState,
+            actorInitialStates: res.actorInitialStates,
+            actorConfigs: actorConfigs
+          };
+        });
 
         const simulationResult: SimulationResult = {
           ...results,
@@ -277,28 +325,35 @@ export class SimulationService {
    */
   async seedDummyData(): Promise<void> {
     try {
-      const response = await fetch('/sim_result_response.json');
+      const response = await fetch('/sim_adv_day_result_resp.json');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const rawResult = await response.json();
 
       // Map the full response structure
-      const mappedResponse = this.mapperService.mapKeys(rawResult) as { data: SimulationResponse };
-      const data = mappedResponse.data;
+      const data = this.mapperService.mapKeys(rawResult) as SimulationResponse;
+      const results = data.results;
+      const characterConfigsMap = results.characterConfigs || {};
+      const actorConfigs = Object.values(characterConfigsMap);
 
       // Extract and format using the same logic as fetchSimulationResult
-      const simulationLogs: SimulationLog[] = data.results.individualResults.map((res: any) => ({
-        actors: [],
-        events: res.logs || [],
-        initialState: res.initialState
-      }));
+      const simulationLogs: SimulationLog[] = results.individualResults.map((res: IndividualResult) => {
+        const allEvents = res.encounterResults.flatMap(er => er.logs);
+        return {
+          actors: [],
+          events: allEvents,
+          initialState: res.initialState,
+          actorInitialStates: res.actorInitialStates,
+          actorConfigs: actorConfigs
+        };
+      });
 
       const result: SimulationResult = {
-        ...data.results,
-        actorConfigs: data.actorConfigs,
+        ...results,
+        actorConfigs: actorConfigs,
         logs: simulationLogs,
-        count: data.results.totalRuns || simulationLogs.length
+        count: results.totalRuns || simulationLogs.length
       };
 
       this.stateService.setSimulationResult(result);

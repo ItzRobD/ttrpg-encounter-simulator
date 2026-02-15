@@ -93,6 +93,8 @@ export interface Spellcasting {
   casterLevel: number;
   spellSlots: SpellSlots;
   spells?: Spell[];
+  leveledSpells?: Spell[];
+  innateSpells?: InnateSpell[];
   spellIds?: (number | string)[];
   spellSaveDC: number;
   spellAttackBonus: number;

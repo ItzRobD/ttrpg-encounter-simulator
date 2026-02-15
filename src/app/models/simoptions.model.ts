@@ -1,5 +1,8 @@
 export type HPVisibilityMode = 'visible' | 'hidden' | 'percentage';
 
+export type MultiattackFollowUpPolicy = 'aggressive' | 'random' | 'smart';
+export type ActionSelectionPolicy = 'weighted' | 'random' | 'highest_damage' | 'utility';
+
 export interface SimulationOptions {
   seed: { seed1: number; seed2: number };
   useHPAverageMonster: boolean;
@@ -15,6 +18,8 @@ export interface SimulationOptions {
   aoeHitsAllEnemies: boolean;
   characterHealThresholdPct: number;
   monsterHealThresholdPct: number;
+  characterEmergencyThresholdPct: number;
+  monsterEmergencyThresholdPct: number;
   limitedLegendaryActions: boolean;
   allowLairActions: boolean;
   allowDragonbornBreathAttack: boolean;
@@ -34,6 +39,16 @@ export interface SimulationOptions {
   hpVisibilityMode: HPVisibilityMode;
   enableMonsterNoise: boolean;
   monsterNoiseWeight: number;
+
+  includeStateSnapshots: boolean;
+  maxLoggedRuns: number;
+
+  aoeTargetThreshold?: number;
+  multiattackPolicy?: MultiattackFollowUpPolicy;
+  actionSelectionPolicy?: ActionSelectionPolicy;
+  disableMonsterTurns?: boolean;
+  disableCharacterTurns?: boolean;
+  disableLairTurns?: boolean;
 }
 
 export interface SimulationConfig {

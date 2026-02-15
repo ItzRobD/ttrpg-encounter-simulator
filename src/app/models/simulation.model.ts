@@ -1,4 +1,4 @@
-import { Actor, ResistanceType} from './combatants';
+import { Actor, ResistanceType, Condition} from './combatants';
 import {SimulationOptions} from './simoptions.model';
 import {CharacterConfig} from './configs/character-config.model';
 import {MonsterConfig} from './configs/monster-config.model';
@@ -9,25 +9,26 @@ export interface CombatantReference {
   type: 'character' | 'monster' | '';
 }
 
+export enum AdvantageType {
+  Disadvantage = -1,
+  Normal = 0,
+  Advantage = 1
+}
+
 export interface RollResult {
-  round: number;
-  timestamp: string;
-  id: string;
-  rollType: string;
-  numberOfDice: number;
-  dice: string;
+  advantage: AdvantageType;
+  dice: number;
   finalRollValue: number;
   finalRolls: number[];
-  modifier: number;
-  total: number;
-  advantage: 'Normal' | 'Advantage' | 'Disadvantage';
   isCritical: boolean;
   isNaturalOne: boolean;
-  isSuccess: boolean;
-  originalRolls?: number[];
-  rerollEvents?: unknown;
-  wasRerolled?: boolean;
-  name?: string;
+  modifier: number;
+  numberOfDice: number;
+  originalRolls: number[];
+  rerollEvents: unknown;
+  rollType: string;
+  total: number;
+  isSuccess?: boolean;
 }
 
 export interface DiceRoll {
@@ -38,13 +39,15 @@ export interface DiceRoll {
   results: number[];
   success?: boolean;
   targetValue?: number;
+  advantage?: AdvantageType;
 }
 
 export interface EventData {
   actor?: CombatantReference;
   target?: CombatantReference;
   roll?: RollResult;
-  diceRoll?: DiceRoll; // Used in 'attack' and 'savingthrow' types
+  targetId?: number;
+  actorId?: number;
   choiceType?: string;
   choice?: string | null;
   decision?: string;
@@ -56,36 +59,40 @@ export interface EventData {
     didHpDamage: boolean;
     didTempDamage: boolean;
     newHp: number;
+    newTempHp: number;
     originalHp: number;
+    originalTempHp: number;
+    tempHpUsed: number;
   };
   scores?: {
     utilityScore: number;
     factors: { [key: string]: number } | null;
     topReasons: string[] | null;
   };
-  value?: number;
-  originalHp?: number;
   finalHp?: number;
-  originalTempHp?: number;
   finalTempHp?: number;
-  originalValue?: number;
-  finalValue?: number;
+  value?: number;
+  attackType?: string;
+  diceRoll?: DiceRoll;
   wasModified?: boolean;
   resistanceType?: string;
   resistanceBroken?: boolean;
   note?: string;
-  attackType?: string;
+  targetAc?: number;
+  dc?: number;
+  saveSuccess?: boolean;
+  isHit?: boolean;
   winner?: string;
   rounds?: number;
-  name?: string;
-  numberOfDice?: number;
-  dice?: string;
-  damageType?: string;
-  attackBonus?: number;
-  damageBonus?: number;
-  isRanged?: boolean;
-  properties?: string[];
-  modifiers?: string[];
+  actorStates?: Record<string, ActorStateSnapshot>;
+  healing?: Record<string, number>;
+}
+
+export interface ActorStateSnapshot {
+  currentHp: number;
+  tempHp: number;
+  conditions: Condition[] | null;
+  healthState: string;
 }
 
 
@@ -107,6 +114,8 @@ export enum EventType {
   ActionStart = 'action_start',
   Resolution = 'resolution',
   AttackRoll = 'attack_roll',
+  IntermissionHealing = 'intermission_healing',
+  CombatStart = 'combat_start',
 }
 
 export interface SimulationEvent {
@@ -133,15 +142,27 @@ export interface SimulationLog {
   actors: Actor[];
   events: SimulationEvent[];
   initialState?: Record<string, any>;
+  actorInitialStates?: Record<string, ActorStateSnapshot>;
+  actorConfigs?: Actor[];
+}
+
+export interface EncounterResult {
+  encounterName: string;
+  victoryStatus: string;
+  rounds: number;
+  seed: { seed1: number; seed2: number };
+  logs: SimulationEvent[];
 }
 
 export interface IndividualResult {
   runId: number;
   victoryStatus: string;
-  rounds: number;
+  totalRounds: number;
   seed: { seed1: number; seed2: number };
-  logs: SimulationEvent[];
+  encounterResults: EncounterResult[];
   initialState?: Record<string, any>;
+  actorInitialStates?: Record<string, ActorStateSnapshot>;
+  actorConfigs?: Actor[];
 }
 
 export interface SimulationPerformance {
@@ -161,7 +182,8 @@ export interface SimulationResult {
   individualResults: IndividualResult[];
   performance?: SimulationPerformance;
   initialState?: Record<string, any>;
-  actorConfigs?: any;
+  characterConfigs?: Record<string, Actor>;
+  actorConfigs?: Actor[];
   // For UI compatibility, we'll map the logs from the first run or flatten them
   logs: SimulationLog[];
   count: number;
@@ -170,7 +192,9 @@ export interface SimulationResult {
 export interface SimulationResponse {
   createdAt: string;
   results: SimulationResult;
-  actorConfigs: Record<string, any>;
+  simulationId: string;
+  status: string;
+  updatedAt: string;
 }
 
 export interface SimulationRequest {
@@ -192,10 +216,23 @@ export interface SimulationStatusResponse {
   error?: string;
 }
 
+export interface IntermissionConfig {
+  maxShortRests: number;
+  shortRestHealThreshold: number;
+  postRestHealThreshold: number;
+}
+
+export interface SimulationEncounterConfig {
+  name: string;
+  monsterIds: number[];
+  monsterConfigs: Actor[];
+}
+
 export interface SimulationPayload {
   base_options: SimulationOptions;
-  actor_configs?: any[];
-  monster_ids: number[];
+  character_configs: Actor[];
+  encounters: SimulationEncounterConfig[];
+  intermission: IntermissionConfig;
   number_of_runs: number;
   max_rounds: number;
   include_logs: boolean;

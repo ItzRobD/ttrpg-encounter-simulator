@@ -104,12 +104,12 @@ export class MapperService {
   /**
    * Recursively converts object keys from camelCase to snake_case for the backend.
    */
-  serializeKeys<T>(obj: T): any {
+  serializeKeys<T>(obj: T): unknown {
     if (Array.isArray(obj)) {
       return obj.map((v) => this.serializeKeys(v));
     } else if (obj !== null && typeof obj === 'object') {
-      const result: Record<string, any> = {};
-      const typedObj = obj as Record<string, any>;
+      const result: Record<string, unknown> = {};
+      const typedObj = obj as Record<string, unknown>;
 
       Object.keys(typedObj).forEach((key) => {
         // Hydrated objects that shouldn't be sent back as full objects if IDs are present
@@ -183,22 +183,19 @@ export class MapperService {
       'HP': 'hp',
       'CR': 'cr',
       'DC': 'dc',
-      'ability_scores': 'abilityScores',
-      'ability_score_prof': 'abilityScoreProficiency',
-      'dice_count': 'numberOfDice',
-      'number_of_dice': 'numberOfDice',
-      'hp_method': 'hpSetMethod',
-      'hp_set_method': 'hpSetMethod',
+      'individual_results': 'individualResults',
+      'character_configs': 'characterConfigs',
+      'encounter_results': 'encounterResults',
+      'simulation_id': 'simulationId',
+      'created_at': 'createdAt',
+      'updated_at': 'updatedAt',
       'class_id': 'classId',
       'race_id': 'raceId',
       'armor_id': 'armorId',
       'shield_id': 'shieldId',
       'weapon_id': 'weaponId',
       'instance_id': 'instanceId',
-      'monster_actions': 'monsterActions',
-      'as_config': 'asConfig',
       'is_custom': 'isCustom',
-      'spell_dc': 'spellDC',
       'casting_time': 'castingTime',
       'spell_type': 'spellType',
       'is_concentration': 'isConcentration',
@@ -213,7 +210,6 @@ export class MapperService {
       'custom_equipment': 'customEquipment',
       'custom_spells': 'customSpells',
       'spell_actions': 'spellActions',
-      'spellcasting_config': 'spellcasting',
       'action_preference': 'actionPreference',
       'secondary_action_preference': 'secondaryActionPreference',
       'target_priority': 'targetPriority',
@@ -225,15 +221,11 @@ export class MapperService {
       'spellcasting_level': 'spellcastingLevel',
       'is_legendary': 'isLegendary',
       'max_legendary_actions': 'maxLegendaryActions',
-      'average_offensive_value': 'averageOffensiveValue',
-      'highest_offensive_value': 'highestOffensiveValue',
       'hit_dice': 'hitDice',
       'amount_to_add': 'amountToAdd',
-      'use_spellmod': 'useSpellMod',
       'level_type': 'levelType',
       'minimum_str': 'minimumStr',
       'damage_blocks': 'damageBlocks',
-      'dice_block': 'damageBlocks',
       'leveled_spells': 'leveledSpells',
       'innate_spells': 'innateSpells',
       'save_dc': 'saveDC',
@@ -254,10 +246,30 @@ export class MapperService {
       'dex_bonus': 'dexBonus',
       'max_bonus': 'maxBonus',
       'is_innate': 'isInnate',
-      'max_casts_per_day': 'maxCastsPerDay'
+      'max_casts_per_day': 'maxCastsPerDay',
+      'current_hp': 'currentHp',
+      'max_hp': 'maxHp',
+      'temp_hp': 'tempHp',
+      'health_state': 'healthState',
+      'final_roll_value': 'finalRollValue',
+      'final_rolls': 'finalRolls',
+      'is_natural_one': 'isNaturalOne',
+      'original_rolls': 'originalRolls',
+      'reroll_events': 'rerollEvents',
+      'roll_type': 'rollType',
+      'rtarget_ac': 'rtargetAc',
+      'target_ac': 'targetAc',
+      'is_critical': 'isCritical',
+      'is_hit': 'isHit',
+      'save_success': 'saveSuccess'
     };
 
     if (overrides[str]) return overrides[str];
+
+    // If it's already camelCase (contains uppercase but no underscore), return as is
+    if (/[A-Z]/.test(str) && !str.includes('_')) {
+      return str;
+    }
 
     // Standard snake_case to camelCase
     let result = str.toLowerCase().replace(/(_[a-z])/g, (g) => g.toUpperCase().replace('_', ''));

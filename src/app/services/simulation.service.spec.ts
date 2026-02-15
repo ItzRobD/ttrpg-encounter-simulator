@@ -92,7 +92,14 @@ describe('SimulationService', () => {
       total_runs: 1,
       individual_results: [{
         run_id: 1,
-        logs: [{ ID: '1', Type: 'round' }]
+        total_rounds: 1,
+        victory_status: 'monsters',
+        encounter_results: [{
+          encounter_name: 'Encounter 1',
+          victory_status: 'monsters',
+          rounds: 1,
+          logs: [{ id: '1', type: 'round' }]
+        }]
       }]
     };
 
@@ -158,7 +165,7 @@ describe('SimulationService', () => {
 
     const mockResultJson = {
       total_runs: 0,
-      individual_results: []
+      individual_results: [] as any[]
     };
     resultReq.flush({
       data: {

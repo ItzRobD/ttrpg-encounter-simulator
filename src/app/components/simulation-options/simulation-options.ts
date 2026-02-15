@@ -8,7 +8,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { TooltipModule } from 'primeng/tooltip';
 import { AccordionModule, AccordionPanel, AccordionHeader, AccordionContent } from 'primeng/accordion';
-import { SimulationOptions, HPVisibilityMode } from '../../models/simoptions.model';
+import { SimulationOptions, HPVisibilityMode, IntermissionConfig } from '../../models';
 import { SimulationService } from '../../services/simulation.service';
 import {environment} from '../../../environments/environment';
 
@@ -40,11 +40,25 @@ export class SimulationOptionsComponent {
 
   protected readonly options = this.simulationService.options;
   protected readonly config = this.simulationService.config;
+  protected readonly intermissionConfig = this.simulationService.intermissionConfig;
 
   protected readonly hpVisibilityOptions = [
     { label: 'Visible', value: 'visible' },
     { label: 'Hidden', value: 'hidden' },
     { label: 'Percentage', value: 'percentage' }
+  ];
+
+  protected readonly multiattackPolicyOptions = [
+    { label: 'Aggressive', value: 'aggressive' },
+    { label: 'Random', value: 'random' },
+    { label: 'Smart', value: 'smart' }
+  ];
+
+  protected readonly actionSelectionPolicyOptions = [
+    { label: 'Weighted', value: 'weighted' },
+    { label: 'Random', value: 'random' },
+    { label: 'Highest Damage', value: 'highest_damage' },
+    { label: 'Utility', value: 'utility' }
   ];
 
   onHide() {
@@ -68,6 +82,10 @@ export class SimulationOptionsComponent {
       ...currentConfig,
       [part]: value || false
     });
+  }
+
+  updateIntermission(key: keyof IntermissionConfig, value: number | null) {
+    this.simulationService.updateIntermissionConfig({ [key]: value || 0 });
   }
 
   protected readonly environment = environment;

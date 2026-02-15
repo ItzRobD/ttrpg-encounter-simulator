@@ -53,10 +53,6 @@ export class MonsterService implements ActorService<Actor, ActorSummary> {
   // Selected Monster alias
   public readonly selectedMonster = this.selectedActor;
 
-  // Deprecated naming for backward compatibility if needed, but we'll update usages
-  public get monsterSummaries() { return this.summaries; }
-  public get selectedBestiaryMonster() { return this.selectedMonster; }
-
   constructor() {
     // Listen for cloud content changes to refresh the UI
     this.customContentService.apiContentChange$.subscribe(({ type }) => {
@@ -136,43 +132,6 @@ export class MonsterService implements ActorService<Actor, ActorSummary> {
       );
   }
 
-  // Keep old method name for compatibility during migration
-  getMonsterSummaries(forceRefresh = false): Observable<ActorSummary[]> {
-    return this.getSummaries(forceRefresh);
-  }
-
-  /**
-   * Fetches all monsters from the backend.
-   */
-  getMonsters(): Observable<Actor[]> {
-    this._loading.set(true);
-    this._error.set(null);
-    return this.http.get<ApiResponse<unknown>>(this.apiUrl).pipe(
-      retry({
-        count: environment.httpRetryCount,
-        delay: environment.httpRetryDelay
-      }),
-      map((response) => {
-        let rawData: unknown[] = [];
-        if (response && response.data) {
-          rawData = Array.isArray(response.data) ? response.data : Object.values(response.data as Record<string, unknown>);
-        } else if (response && 'monsters' in (response as unknown as Record<string, unknown>)) {
-          rawData = Object.values((response as unknown as Record<string, Record<string, unknown>>)['monsters']);
-        }
-        return rawData as Actor[];
-      }),
-      tap((monsters) => {
-        this._monsters.set(monsters);
-        this._loading.set(false);
-      }),
-      catchError((err) => {
-        this._loading.set(false);
-        this._error.set('Failed to load monsters. Please try again later.');
-        return throwError(() => err);
-      })
-    );
-  }
-
   selectActorByID(id: string): Observable<Actor> {
     // Try finding in custom monsters first
     const customMonster = this.customContentService.customMonsters().find(m => m.id.toString() === id);
@@ -203,11 +162,6 @@ export class MonsterService implements ActorService<Actor, ActorSummary> {
         return throwError(() => err);
       })
     );
-  }
-
-  // Keep old method name for compatibility during migration
-  selectBestiaryMonsterByID(id: string): Observable<Actor> {
-    return this.selectActorByID(id);
   }
 
   /**
