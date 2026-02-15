@@ -6,6 +6,7 @@ import { map } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageModule } from 'primeng/message';
+import {Tab, TabList, Tabs} from 'primeng/tabs';
 import { ActorCard } from '../../components/actor-card/actor-card.component';
 import { CombatantService } from '../../services/combatant.service';
 import { SimulationService } from '../../services/simulation.service';
@@ -23,6 +24,9 @@ import { ActorSelectorDialog } from '../../components/actor-selector-dialog/acto
     ButtonModule,
     TooltipModule,
     MessageModule,
+    Tab,
+    Tabs,
+    TabList,
     ActorCard,
     SimulationResults,
     SimulationOptionsComponent,

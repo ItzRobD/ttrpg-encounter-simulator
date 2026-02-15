@@ -70,9 +70,11 @@ export class CombatantService {
     return Math.max(...allCombatants.map(a => a.instanceId)) + 1;
   }
 
-  setActiveEncounter(index: number): void {
-    if (index >= 0 && index < this._encounters().length) {
-      this._activeEncounterIndex.set(index);
+  setActiveEncounter(index: string | number | undefined): void {
+    if (index === undefined) return;
+    const idx = typeof index === 'string' ? parseInt(index, 10) : index;
+    if (idx >= 0 && idx < this._encounters().length) {
+      this._activeEncounterIndex.set(idx);
     }
   }
 

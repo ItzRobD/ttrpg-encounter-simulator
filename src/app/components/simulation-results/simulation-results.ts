@@ -14,6 +14,8 @@ import {DiceType, EventType, SimulationEvent} from '../../models';
 import {formatDice} from '../../shared/utils/dnd-utils';
 import {SnakeToSpacePipe} from '../../pipes/snake-to-space.pipe';
 
+import {CombatantService} from '../../services/combatant.service';
+
 @Component({
   selector: 'app-simulation-results',
   standalone: true,
@@ -35,6 +37,7 @@ import {SnakeToSpacePipe} from '../../pipes/snake-to-space.pipe';
 })
 export class SimulationResults {
   public readonly simulationService = inject(SimulationService);
+  public readonly combatantService = inject(CombatantService);
   public readonly timelineService = inject(TimelineService);
   public readonly stateService = inject(SimulationStateService);
   private readonly mapperService = inject(MapperService);
@@ -51,7 +54,7 @@ export class SimulationResults {
     return result.individualResults.map((_, i) => i);
   });
 
-  protected readonly activeEncounterIndex = signal(0);
+  protected readonly activeEncounterIndex = this.combatantService.activeEncounterIndex;
 
   protected readonly encounterIndices = computed(() => {
     const result = this.simulationService.simulationResult();
@@ -85,14 +88,14 @@ export class SimulationResults {
     if (value === undefined) return;
     const index = typeof value === 'string' ? parseInt(value, 10) : value;
     this.activeTabIndex.set(index);
-    this.activeEncounterIndex.set(0);
+    this.combatantService.setActiveEncounter(0);
     this.updateSelectedLog();
   }
 
   onEncounterChange(value: string | number | undefined): void {
     if (value === undefined) return;
     const index = typeof value === 'string' ? parseInt(value, 10) : value;
-    this.activeEncounterIndex.set(index);
+    this.combatantService.setActiveEncounter(index);
     this.updateSelectedLog();
   }
 

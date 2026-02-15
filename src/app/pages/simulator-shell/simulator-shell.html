@@ -154,28 +154,22 @@
             <!-- Encounter Tabs -->
             @if (!isCombatantsCollapsed()) {
                 <div class="flex align-items-center gap-1 mb-3 overflow-x-auto pb-1">
-                    @for (enc of combatantService.encounters(); track $index) {
-                        <div class="flex align-items-center">
-                            <p-button
-                                [label]="'E' + ($index + 1)"
-                                [severity]="combatantService.activeEncounterIndex() === $index ? 'danger' : 'secondary'"
-                                [outlined]="combatantService.activeEncounterIndex() !== $index"
-                                size="small"
-                                (onClick)="combatantService.setActiveEncounter($index)"
-                                [pTooltip]="'Encounter ' + ($index + 1)"
-                            ></p-button>
-                            @if (combatantService.encounters().length > 1) {
-                                <p-button
-                                    icon="pi pi-times"
-                                    [text]="true"
-                                    severity="danger"
-                                    size="small"
-                                    class="ml-neg-1"
-                                    (onClick)="combatantService.removeEncounter($index)"
-                                ></p-button>
+                    <p-tabs [value]="combatantService.activeEncounterIndex()" (valueChange)="combatantService.setActiveEncounter($event)" class="flex-1 small-tabs">
+                        <p-tablist>
+                            @for (enc of combatantService.encounters(); track $index) {
+                                <p-tab [value]="$index" class="relative">
+                                    <div class="flex align-items-center gap-2">
+                                        <span>E{{ $index + 1 }}</span>
+                                        @if (combatantService.encounters().length > 1) {
+                                            <i class="pi pi-times text-xs cursor-pointer hover:text-red-500"
+                                               (click)="$event.stopPropagation(); combatantService.removeEncounter($index)"
+                                               pTooltip="Remove Encounter"></i>
+                                        }
+                                    </div>
+                                </p-tab>
                             }
-                        </div>
-                    }
+                        </p-tablist>
+                    </p-tabs>
                 </div>
             }
 
