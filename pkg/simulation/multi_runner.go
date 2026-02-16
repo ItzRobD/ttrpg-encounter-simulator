@@ -256,6 +256,7 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 			stats.AverageHealingReceivedPerRun = float64(stats.TotalHealingReceived) / float64(multiResult.TotalRuns)
 			stats.AverageAttacksMadePerRun = float64(stats.AttacksMade) / float64(multiResult.TotalRuns)
 			stats.AverageAttacksHitPerRun = float64(stats.AttacksHit) / float64(multiResult.TotalRuns)
+			stats.AverageSpellsUsedPerRun = float64(stats.SpellsUsed) / float64(multiResult.TotalRuns)
 		}
 	}
 
@@ -488,6 +489,7 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 		stats.AverageHealingReceivedPerRun = float64(stats.TotalHealingReceived)
 		stats.AverageAttacksMadePerRun = float64(stats.AttacksMade)
 		stats.AverageAttacksHitPerRun = float64(stats.AttacksHit)
+		stats.AverageSpellsUsedPerRun = float64(stats.SpellsUsed)
 	}
 
 	return &AdventuringDayResult{
@@ -617,7 +619,9 @@ func mergeCombatStatistics(target map[int]*CombatStatistics, source map[int]*Com
 		as.AttacksMade += stats.AttacksMade
 		as.AttacksHit += stats.AttacksHit
 		as.AttacksMissed += stats.AttacksMissed
+		as.SpellsUsed += stats.SpellsUsed
 		as.SpellAttackActions += stats.SpellAttackActions
+		as.SpellSaveActions += stats.SpellSaveActions
 		as.LegendaryActionsUsed += stats.LegendaryActionsUsed
 		as.HealingActions += stats.HealingActions
 		as.CriticalHits += stats.CriticalHits

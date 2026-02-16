@@ -42,6 +42,7 @@ type CombatStatistics struct {
 	AverageHealingReceivedPerRun float64 `json:"average_healing_received_per_run"`
 	AverageAttacksMadePerRun     float64 `json:"average_attacks_made_per_run"`
 	AverageAttacksHitPerRun      float64 `json:"average_attacks_hit_per_run"`
+	AverageSpellsUsedPerRun      float64 `json:"average_spells_used_per_run"`
 
 	// Intermission Tracking
 	IntermissionHitDiceUsed     map[core.DiceType]int `json:"intermission_hit_dice_used"`
