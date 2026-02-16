@@ -66,7 +66,7 @@ type Action struct {
 	// Properties
 	WeaponProperties *WeaponProperties `json:"weapon_properties,omitempty"`
 
-	// Constraints
+	// Metadata
 	RechargeValue int  `json:"recharge_value,omitempty"`
 	CastLevel     int  `json:"cast_level,omitempty"`
 	IsInnate      bool `json:"is_innate,omitempty"`

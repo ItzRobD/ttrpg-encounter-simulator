@@ -199,7 +199,7 @@ func (sm *SetupManager) setupMonster(cfg actor.ActorConfig) (*actor.Actor, error
 		config = &cfg
 	} else {
 		config, err = repo.HydrateMonsterConfig(sm.ctx, cfg.ID)
-		if err != nil {
+		if err != nil || config == nil {
 			return nil, err
 		}
 

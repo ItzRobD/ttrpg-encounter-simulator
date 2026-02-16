@@ -279,6 +279,10 @@ func (adj *Adjudicator) executeHealing(a *actor.Actor, initialTargetID int, acti
 		// Update Statistics
 		if adj.ed.Statistics != nil {
 			adj.ed.Statistics.AddHeal(a.InstanceID, target.InstanceID, actualHeal)
+			// Guard if legendary actions can be healing actions (custom monsters perhaps)
+			if action.Cost.ActivationType == core.ActLegendary {
+				adj.ed.Statistics.AddLegendaryActionUse(a.InstanceID)
+			}
 
 			// Check if we can clear NeedsHealing
 			threshold := adj.ed.SimOptions.MonsterHealThresholdPct
@@ -443,6 +447,12 @@ func (adj *Adjudicator) executeIndividualStrike(a *actor.Actor, target *actor.Ac
 	if adj.ed.Statistics != nil && !isHit {
 		adj.ed.Statistics.AddAttack(a.InstanceID, target.InstanceID, false, isCritical, 0)
 	}
+	if action.Cost.ActivationType == core.ActLegendary {
+		adj.ed.Statistics.AddLegendaryActionUse(a.InstanceID)
+	}
+	if action.ActionType == core.ATSpell {
+		adj.ed.Statistics.AddSpellAttack(a.InstanceID, action.HasDC)
+	}
 
 	if !isHit {
 		return nil
@@ -456,7 +466,7 @@ func (adj *Adjudicator) executeIndividualStrike(a *actor.Actor, target *actor.Ac
 	ctx.Target = a
 	adj.ed.dispatchHooks(target, core.HookOnSelfHit, ctx)
 
-	// 3. Resolve Damage
+	// Resolve Damage
 	oid := adj.ed.LogEvent(events.EventOutcome, a, map[string]interface{}{
 		"type":      "damage",
 		"target_id": target.InstanceID,

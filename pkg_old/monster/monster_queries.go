@@ -861,7 +861,7 @@ func GetMonsterSpellcastingConfigByID(ctx context.Context, id []int) (map[int]Mo
 //	if err != nil {
 //		return nil, fmt.Errorf("failed to get monster multiattacks by id: %w", err)
 //	}
-//	config.LegendaryActions, err = getMonsterLegendaryActionsByID(ctx, id)
+//	config.LegendaryActionsUsed, err = getMonsterLegendaryActionsByID(ctx, id)
 //	if err != nil {
 //		return nil, fmt.Errorf("failed to get monster legendary actions by id: %w", err)
 //	}

@@ -21,15 +21,16 @@ type MultiSimulationRequest struct {
 
 // MultiSimulationResult aggregates the results of multiple adventuring day simulation runs.
 type MultiSimulationResult struct {
-	TotalRuns          int                          `json:"total_runs"`
-	CharacterVictories int                          `json:"character_victories"` // Entire day won
-	MonsterVictories   int                          `json:"monster_victories"`   // Party wiped at some point
-	OtherVictories     int                          `json:"other_victories"`     // Draw or other
-	AverageRounds      float64                      `json:"average_rounds"`
-	WinRatePercentage  float64                      `json:"win_rate_percentage"`
-	ActorConfigs       map[int]actor.ActorConfig    `json:"actor_configs,omitempty"`
-	IndividualResults  []IndividualSimulationResult `json:"individual_results,omitempty"`
-	Performance        *PerformanceMetrics          `json:"performance,omitempty"`
+	TotalRuns           int                          `json:"total_runs"`
+	CharacterVictories  int                          `json:"character_victories"` // Entire day won
+	MonsterVictories    int                          `json:"monster_victories"`   // Party wiped at some point
+	OtherVictories      int                          `json:"other_victories"`     // Draw or other
+	AverageRounds       float64                      `json:"average_rounds"`
+	WinRatePercentage   float64                      `json:"win_rate_percentage"`
+	ActorConfigs        map[int]actor.ActorConfig    `json:"actor_configs,omitempty"`
+	IndividualResults   []IndividualSimulationResult `json:"individual_results,omitempty"`
+	Performance         *PerformanceMetrics          `json:"performance,omitempty"`
+	AggregateStatistics map[int]*CombatStatistics    `json:"aggregate_statistics,omitempty"`
 }
 
 type PerformanceMetrics struct {
@@ -41,13 +42,14 @@ type PerformanceMetrics struct {
 
 // IndividualSimulationResult holds data for a single adventuring day simulation run.
 type IndividualSimulationResult struct {
-	RunID            int                         `json:"run_id"`
-	VictoryStatus    core.VictoryStatus          `json:"victory_status"`
-	TotalRounds      int                         `json:"total_rounds"`
-	Seed             core.Seed                   `json:"seed"`
-	LogsStripped     bool                        `json:"logs_stripped,omitempty"`
-	EncounterResults []IndividualEncounterResult `json:"encounter_results,omitempty"`
-	ActorConfigs     map[int]actor.ActorConfig   `json:"actor_configs,omitempty"`
+	RunID               int                         `json:"run_id"`
+	VictoryStatus       core.VictoryStatus          `json:"victory_status"`
+	TotalRounds         int                         `json:"total_rounds"`
+	Seed                core.Seed                   `json:"seed"`
+	LogsStripped        bool                        `json:"logs_stripped,omitempty"`
+	EncounterResults    []IndividualEncounterResult `json:"encounter_results,omitempty"`
+	ActorConfigs        map[int]actor.ActorConfig   `json:"actor_configs,omitempty"`
+	AggregateStatistics map[int]*CombatStatistics   `json:"aggregate_statistics,omitempty"`
 }
 
 type ActorInitialState struct {
@@ -74,14 +76,15 @@ type AdventuringDayRequest struct {
 }
 
 type AdventuringDayResult struct {
-	TotalEncounters  int                         `json:"total_encounters"`
-	EncountersWon    int                         `json:"encounters_won"`
-	SuccessRate      float64                     `json:"success_rate"`
-	AverageRounds    float64                     `json:"average_rounds"`
-	EncounterResults []IndividualEncounterResult `json:"encounter_results,omitempty"`
-	FinalActorStates map[int]actor.Actor         `json:"final_actor_states,omitempty"`
-	ActorConfigs     map[int]actor.ActorConfig   `json:"actor_configs,omitempty"`
-	Performance      *PerformanceMetrics         `json:"performance,omitempty"`
+	TotalEncounters     int                         `json:"total_encounters"`
+	EncountersWon       int                         `json:"encounters_won"`
+	SuccessRate         float64                     `json:"success_rate"`
+	AverageRounds       float64                     `json:"average_rounds"`
+	EncounterResults    []IndividualEncounterResult `json:"encounter_results,omitempty"`
+	FinalActorStates    map[int]actor.Actor         `json:"final_actor_states,omitempty"`
+	ActorConfigs        map[int]actor.ActorConfig   `json:"actor_configs,omitempty"`
+	Performance         *PerformanceMetrics         `json:"performance,omitempty"`
+	AggregateStatistics map[int]*CombatStatistics   `json:"aggregate_statistics,omitempty"`
 }
 
 type IndividualEncounterResult struct {
@@ -91,6 +94,7 @@ type IndividualEncounterResult struct {
 	Seed          core.Seed                 `json:"seed"`
 	InitialState  map[int]ActorInitialState `json:"initial_state,omitempty"`
 	Logs          []events.TimelineEvent    `json:"logs,omitempty"`
+	Statistics    map[int]*CombatStatistics `json:"statistics,omitempty"`
 }
 
 // RunMultiSimulation executes multiple adventuring day simulations and returns an aggregated result.
@@ -147,12 +151,13 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 			}
 
 			res := IndividualSimulationResult{
-				RunID:            runID,
-				VictoryStatus:    dayVictory,
-				TotalRounds:      totalRounds,
-				Seed:             seed,
-				EncounterResults: dayRes.EncounterResults,
-				ActorConfigs:     dayRes.ActorConfigs,
+				RunID:               runID,
+				VictoryStatus:       dayVictory,
+				TotalRounds:         totalRounds,
+				Seed:                seed,
+				EncounterResults:    dayRes.EncounterResults,
+				ActorConfigs:        dayRes.ActorConfigs,
+				AggregateStatistics: dayRes.AggregateStatistics,
 			}
 
 			resultsChan <- res
@@ -160,9 +165,10 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 	}
 
 	multiResult := &MultiSimulationResult{
-		TotalRuns:         req.NumberOfRuns,
-		IndividualResults: make([]IndividualSimulationResult, 0, req.NumberOfRuns),
-		ActorConfigs:      make(map[int]actor.ActorConfig),
+		TotalRuns:           req.NumberOfRuns,
+		IndividualResults:   make([]IndividualSimulationResult, 0, req.NumberOfRuns),
+		ActorConfigs:        make(map[int]actor.ActorConfig),
+		AggregateStatistics: make(map[int]*CombatStatistics),
 	}
 
 	maxLogs := req.BaseOptions.MaxLoggedRuns
@@ -179,6 +185,9 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		select {
 		case res := <-resultsChan:
 			totalRounds += res.TotalRounds
+
+			// Aggregate statistics from all runs into the multi-result aggregate
+			mergeCombatStatistics(multiResult.AggregateStatistics, res.AggregateStatistics)
 
 			// Merge ActorConfigs
 			for id, cfg := range res.ActorConfigs {
@@ -233,6 +242,12 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 	if multiResult.TotalRuns > 0 {
 		multiResult.AverageRounds = float64(totalRounds) / float64(multiResult.TotalRuns)
 		multiResult.WinRatePercentage = (float64(multiResult.CharacterVictories) / float64(multiResult.TotalRuns)) * 100
+
+		// Update averages for multiResult aggregate stats
+		for _, stats := range multiResult.AggregateStatistics {
+			stats.AverageDamagePerRound = float64(stats.TotalDamageDealt) / float64(totalRounds)
+			stats.AverageHealingPerRound = float64(stats.TotalHealingDone) / float64(totalRounds)
+		}
 	}
 
 	// Capture character configs from first run or provided configs
@@ -368,6 +383,7 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 			Seed:          encSeed,
 			InitialState:  initialState,
 			Logs:          encLogs,
+			Statistics:    ed.Statistics.statistics,
 		})
 
 		// If party wiped, we stop the adventuring day, but we might want to continue
@@ -400,6 +416,16 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 		finalStates[char.InstanceID] = *char
 	}
 
+	// Aggregate individual encounter result statistics
+	aggStats := aggregateEncounterStatistics(encounterResults...)
+
+	for _, stats := range aggStats {
+		if totalRounds > 0 {
+			stats.AverageDamagePerRound = float64(stats.TotalDamageDealt) / float64(totalRounds)
+			stats.AverageHealingPerRound = float64(stats.TotalHealingDone) / float64(totalRounds)
+		}
+	}
+
 	return &AdventuringDayResult{
 		TotalEncounters:  len(req.Encounters),
 		EncountersWon:    encountersWon,
@@ -414,6 +440,7 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 			MemoryAllocatedMb:  float64(memEnd.TotalAlloc-memStart.TotalAlloc) / 1024 / 1024,
 			PeakGoroutines:     runtime.NumGoroutine(),
 		},
+		AggregateStatistics: aggStats,
 	}, nil
 }
 
@@ -481,4 +508,51 @@ func assembleBalancedLogs(chars, monsters, others []IndividualSimulationResult, 
 	}
 
 	return result
+}
+
+// mergeIntMaps combines multiple maps by summing the values of identical keys.
+func mergeIntMaps(maps ...map[int]int) map[int]int {
+	result := make(map[int]int)
+	for _, m := range maps {
+		for k, v := range m {
+			result[k] += v
+		}
+	}
+	return result
+}
+
+func aggregateEncounterStatistics(encounters ...IndividualEncounterResult) map[int]*CombatStatistics {
+	aggStats := make(map[int]*CombatStatistics)
+	for _, enc := range encounters {
+		mergeCombatStatistics(aggStats, enc.Statistics)
+	}
+	return aggStats
+}
+
+func mergeCombatStatistics(target map[int]*CombatStatistics, source map[int]*CombatStatistics) {
+	for instanceID, stats := range source {
+		if _, exists := target[instanceID]; !exists {
+			target[instanceID] = NewCombatStatistics()
+		}
+
+		as := target[instanceID]
+		as.TotalDamageDealt += stats.TotalDamageDealt
+		as.TotalHealingDone += stats.TotalHealingDone
+		as.AttacksMade += stats.AttacksMade
+		as.AttacksHit += stats.AttacksHit
+		as.AttacksMissed += stats.AttacksMissed
+		as.SpellActions += stats.SpellActions
+		as.LegendaryActionsUsed += stats.LegendaryActionsUsed
+		as.HealingActions += stats.HealingActions
+		as.CriticalHits += stats.CriticalHits
+		as.TimesDamaged += stats.TimesDamaged
+		as.TimesHealed += stats.TimesHealed
+		as.TotalDamageTaken += stats.TotalDamageTaken
+		as.TotalHealingReceived += stats.TotalHealingReceived
+		as.DeathSaveSuccesses += stats.DeathSaveSuccesses
+		as.DeathSaveFailures += stats.DeathSaveFailures
+
+		as.DamageByRound = mergeIntMaps(as.DamageByRound, stats.DamageByRound)
+		as.HealingByRound = mergeIntMaps(as.HealingByRound, stats.HealingByRound)
+	}
 }

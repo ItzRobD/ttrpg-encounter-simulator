@@ -16,11 +16,15 @@ type CombatStatistics struct {
 	AverageHealingPerRound float64     `json:"average_healing_per_round"`
 
 	// Attack patterns
-	AttacksMade    int `json:"attacks_made"`
-	AttacksHit     int `json:"attacks_hit"`
-	AttacksMissed  int `json:"attacks_missed"`
-	HealingActions int `json:"healing_actions"`
-	CriticalHits   int `json:"critical_hits"`
+	AttacksMade          int `json:"attacks_made"`
+	AttacksHit           int `json:"attacks_hit"`
+	AttacksMissed        int `json:"attacks_missed"`
+	SpellsUsed           int `json:"spells_used"`
+	SpellAttackActions   int `json:"spell_attack_actions"`
+	SpellSaveActions     int `json:"spell_save_actions"`
+	LegendaryActionsUsed int `json:"legendary_actions_used"`
+	HealingActions       int `json:"healing_actions"`
+	CriticalHits         int `json:"critical_hits"`
 
 	// Defensive stats
 	TimesDamaged         int `json:"times_damaged"`
@@ -31,7 +35,7 @@ type CombatStatistics struct {
 	DeathSaveFailures    int `json:"death_save_failures"`
 
 	// Premium AI Tracking
-	LastAttackerID int `json:"last_attacker_id"` // id of the last entity to deal damage to this combatant
+	LastAttackerID int `json:"-"` // id of the last entity to deal damage to this combatant
 }
 
 func NewCombatStatistics() *CombatStatistics {
@@ -155,6 +159,28 @@ func (es *EncounterStatistics) ClearNeedsEmergencyHealing(actorID int) {
 			es.NeedsEmergencyHealing = append(es.NeedsEmergencyHealing[:i], es.NeedsEmergencyHealing[i+1:]...)
 			return
 		}
+	}
+}
+
+// AddLegendaryActionUse increments the count of legendary actions used by the specified attacker in the statistics.
+func (es *EncounterStatistics) AddLegendaryActionUse(attackerID int) {
+	if _, ok := es.actors[attackerID]; !ok {
+		return
+	}
+
+	es.statistics[attackerID].LegendaryActionsUsed++
+}
+
+func (es *EncounterStatistics) AddSpellAttack(attackerID int, hasDC bool) {
+	if _, ok := es.actors[attackerID]; !ok {
+		return
+	}
+
+	es.statistics[attackerID].SpellsUsed++
+	if hasDC {
+		es.statistics[attackerID].SpellSaveActions++
+	} else {
+		es.statistics[attackerID].SpellAttackActions++
 	}
 }
 
