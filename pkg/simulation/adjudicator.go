@@ -451,7 +451,7 @@ func (adj *Adjudicator) executeIndividualStrike(a *actor.Actor, target *actor.Ac
 		adj.ed.Statistics.AddLegendaryActionUse(a.InstanceID)
 	}
 	if action.ActionType == core.ATSpell {
-		adj.ed.Statistics.AddSpellAttack(a.InstanceID, action.HasDC)
+		adj.ed.Statistics.AddSpellAttack(a.InstanceID, action)
 	}
 
 	if !isHit {

@@ -16,15 +16,16 @@ type CombatStatistics struct {
 	AverageHealingPerRound float64     `json:"average_healing_per_round"`
 
 	// Attack patterns
-	AttacksMade          int `json:"attacks_made"`
-	AttacksHit           int `json:"attacks_hit"`
-	AttacksMissed        int `json:"attacks_missed"`
-	SpellsUsed           int `json:"spells_used"`
-	SpellAttackActions   int `json:"spell_attack_actions"`
-	SpellSaveActions     int `json:"spell_save_actions"`
-	LegendaryActionsUsed int `json:"legendary_actions_used"`
-	HealingActions       int `json:"healing_actions"`
-	CriticalHits         int `json:"critical_hits"`
+	AttacksMade          int         `json:"attacks_made"`
+	AttacksHit           int         `json:"attacks_hit"`
+	AttacksMissed        int         `json:"attacks_missed"`
+	SpellsUsed           int         `json:"spells_used"`
+	SpellAttackActions   int         `json:"spell_attack_actions"`
+	SpellSaveActions     int         `json:"spell_save_actions"`
+	SpellSlotsUsed       map[int]int `json:"spell_slots_used"`
+	LegendaryActionsUsed int         `json:"legendary_actions_used"`
+	HealingActions       int         `json:"healing_actions"`
+	CriticalHits         int         `json:"critical_hits"`
 
 	// Defensive stats
 	TimesDamaged         int `json:"times_damaged"`
@@ -34,6 +35,20 @@ type CombatStatistics struct {
 	DeathSaveSuccesses   int `json:"death_save_successes"`
 	DeathSaveFailures    int `json:"death_save_failures"`
 
+	// Per Run Averages (for multi-simulation)
+	AverageDamageDealtPerRun     float64 `json:"average_damage_dealt_per_run"`
+	AverageHealingDonePerRun     float64 `json:"average_healing_done_per_run"`
+	AverageDamageTakenPerRun     float64 `json:"average_damage_taken_per_run"`
+	AverageHealingReceivedPerRun float64 `json:"average_healing_received_per_run"`
+	AverageAttacksMadePerRun     float64 `json:"average_attacks_made_per_run"`
+	AverageAttacksHitPerRun      float64 `json:"average_attacks_hit_per_run"`
+
+	// Intermission Tracking
+	IntermissionHitDiceUsed     map[core.DiceType]int `json:"intermission_hit_dice_used"`
+	IntermissionHealingReceived int                   `json:"intermission_healing_received"`
+	IntermissionSpellsUsed      int                   `json:"intermission_spells_used"`
+	IntermissionSpellSlotsUsed  map[int]int           `json:"intermission_spell_slots_used"`
+
 	// Premium AI Tracking
 	LastAttackerID int `json:"-"` // id of the last entity to deal damage to this combatant
 }
@@ -42,6 +57,7 @@ func NewCombatStatistics() *CombatStatistics {
 	return &CombatStatistics{
 		DamageByRound:  make(map[int]int),
 		HealingByRound: make(map[int]int),
+		SpellSlotsUsed: make(map[int]int),
 	}
 }
 
@@ -171,17 +187,23 @@ func (es *EncounterStatistics) AddLegendaryActionUse(attackerID int) {
 	es.statistics[attackerID].LegendaryActionsUsed++
 }
 
-func (es *EncounterStatistics) AddSpellAttack(attackerID int, hasDC bool) {
+func (es *EncounterStatistics) AddSpellAttack(attackerID int, action *core.Action) {
+	if action.ActionType != core.ATSpell {
+		return
+	}
+
 	if _, ok := es.actors[attackerID]; !ok {
 		return
 	}
 
 	es.statistics[attackerID].SpellsUsed++
-	if hasDC {
+	if action.HasDC {
 		es.statistics[attackerID].SpellSaveActions++
 	} else {
 		es.statistics[attackerID].SpellAttackActions++
 	}
+
+	es.statistics[attackerID].SpellSlotsUsed[action.CastLevel]++
 }
 
 // AddAttack records an attack event between two actors, updating their combat statistics.

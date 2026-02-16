@@ -85,6 +85,7 @@ type AdventuringDayResult struct {
 	ActorConfigs        map[int]actor.ActorConfig   `json:"actor_configs,omitempty"`
 	Performance         *PerformanceMetrics         `json:"performance,omitempty"`
 	AggregateStatistics map[int]*CombatStatistics   `json:"aggregate_statistics,omitempty"`
+	ShortRestsTaken     int                         `json:"short_rests_taken"`
 }
 
 type IndividualEncounterResult struct {
@@ -247,6 +248,14 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		for _, stats := range multiResult.AggregateStatistics {
 			stats.AverageDamagePerRound = float64(stats.TotalDamageDealt) / float64(totalRounds)
 			stats.AverageHealingPerRound = float64(stats.TotalHealingDone) / float64(totalRounds)
+
+			// Per run averages
+			stats.AverageDamageDealtPerRun = float64(stats.TotalDamageDealt) / float64(multiResult.TotalRuns)
+			stats.AverageHealingDonePerRun = float64(stats.TotalHealingDone) / float64(multiResult.TotalRuns)
+			stats.AverageDamageTakenPerRun = float64(stats.TotalDamageTaken) / float64(multiResult.TotalRuns)
+			stats.AverageHealingReceivedPerRun = float64(stats.TotalHealingReceived) / float64(multiResult.TotalRuns)
+			stats.AverageAttacksMadePerRun = float64(stats.AttacksMade) / float64(multiResult.TotalRuns)
+			stats.AverageAttacksHitPerRun = float64(stats.AttacksHit) / float64(multiResult.TotalRuns)
 		}
 	}
 
@@ -298,6 +307,18 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 		characters = append(characters, a)
 		// Capture the fully hydrated config including the assigned InstanceID
 		actorConfigs[a.InstanceID] = a.ToConfig()
+	}
+
+	type IntermissionStats struct {
+		hitDiceUsed     map[core.DiceType]int
+		healing         map[int]int
+		shortRestsTaken int
+	}
+
+	intermissionStats := IntermissionStats{
+		hitDiceUsed:     make(map[core.DiceType]int),
+		healing:         make(map[int]int),
+		shortRestsTaken: 0,
 	}
 
 	for _, encCfg := range req.Encounters {
@@ -371,7 +392,7 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 		}
 
 		totalRounds += ed.CurrentRound
-		encLogs := make([]events.TimelineEvent, 0)
+		var encLogs []events.TimelineEvent
 		if req.IncludeLogs {
 			encLogs = ed.ExportTimeline()
 		}
@@ -396,16 +417,52 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 		encountersWon++
 
 		// Intermission
-		healing := im.ProcessIntermission(characters, req.Intermission)
-		if req.IncludeLogs && len(healing) > 0 {
+		res := im.ProcessIntermission(characters, req.Intermission)
+		if req.IncludeLogs && len(res.HealingReceived) > 0 {
 			ed.LogEvent(events.EventIntermissionHealing, nil, map[string]interface{}{
-				"healing": healing,
+				"healing": res.HealingReceived,
 			})
 			// Since we already captured logs, append the healing event specifically
-			if len(encounterResults) > 0 {
-				encounterResults[len(encounterResults)-1].Logs = append(encounterResults[len(encounterResults)-1].Logs, ed.CombatLog[len(ed.CombatLog)-1])
+			encounterResults[len(encounterResults)-1].Logs = append(encounterResults[len(encounterResults)-1].Logs, ed.CombatLog[len(ed.CombatLog)-1])
+		}
+
+		// Update day-level aggregate stats with intermission data
+		// Attach intermission stats to the encounter results' statistics
+		// so they get picked up by aggregateEncounterStatistics.
+		lastEncStats := encounterResults[len(encounterResults)-1].Statistics
+		for id, heal := range res.HealingReceived {
+			if stats, ok := lastEncStats[id]; ok {
+				stats.IntermissionHealingReceived += heal
 			}
 		}
+		for id, hdMap := range res.HitDiceUsed {
+			if stats, ok := lastEncStats[id]; ok {
+				if stats.IntermissionHitDiceUsed == nil {
+					stats.IntermissionHitDiceUsed = make(map[core.DiceType]int)
+				}
+				for die, count := range hdMap {
+					stats.IntermissionHitDiceUsed[die] += count
+				}
+			}
+		}
+		for id, count := range res.SpellsUsed {
+			if stats, ok := lastEncStats[id]; ok {
+				stats.IntermissionSpellsUsed += count
+			}
+		}
+		for id, slots := range res.SpellSlotsUsed {
+			if stats, ok := lastEncStats[id]; ok {
+				if stats.IntermissionSpellSlotsUsed == nil {
+					stats.IntermissionSpellSlotsUsed = make(map[int]int)
+				}
+				for lvl, count := range slots {
+					stats.IntermissionSpellSlotsUsed[lvl] += count
+				}
+			}
+		}
+
+		intermissionStats.healing = mergeIntMaps(intermissionStats.healing, res.HealingReceived)
+		intermissionStats.shortRestsTaken = res.ShortRestsTaken
 	}
 
 	var memEnd runtime.MemStats
@@ -424,6 +481,13 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 			stats.AverageDamagePerRound = float64(stats.TotalDamageDealt) / float64(totalRounds)
 			stats.AverageHealingPerRound = float64(stats.TotalHealingDone) / float64(totalRounds)
 		}
+		// In a single run, per-run averages are the same as totals
+		stats.AverageDamageDealtPerRun = float64(stats.TotalDamageDealt)
+		stats.AverageHealingDonePerRun = float64(stats.TotalHealingDone)
+		stats.AverageDamageTakenPerRun = float64(stats.TotalDamageTaken)
+		stats.AverageHealingReceivedPerRun = float64(stats.TotalHealingReceived)
+		stats.AverageAttacksMadePerRun = float64(stats.AttacksMade)
+		stats.AverageAttacksHitPerRun = float64(stats.AttacksHit)
 	}
 
 	return &AdventuringDayResult{
@@ -441,6 +505,7 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 			PeakGoroutines:     runtime.NumGoroutine(),
 		},
 		AggregateStatistics: aggStats,
+		ShortRestsTaken:     intermissionStats.shortRestsTaken,
 	}, nil
 }
 
@@ -521,6 +586,17 @@ func mergeIntMaps(maps ...map[int]int) map[int]int {
 	return result
 }
 
+// mergeDiceMaps combines multiple maps by summing the values of identical keys.
+func mergeDiceMaps(maps ...map[core.DiceType]int) map[core.DiceType]int {
+	result := make(map[core.DiceType]int)
+	for _, m := range maps {
+		for k, v := range m {
+			result[k] += v
+		}
+	}
+	return result
+}
+
 func aggregateEncounterStatistics(encounters ...IndividualEncounterResult) map[int]*CombatStatistics {
 	aggStats := make(map[int]*CombatStatistics)
 	for _, enc := range encounters {
@@ -541,7 +617,7 @@ func mergeCombatStatistics(target map[int]*CombatStatistics, source map[int]*Com
 		as.AttacksMade += stats.AttacksMade
 		as.AttacksHit += stats.AttacksHit
 		as.AttacksMissed += stats.AttacksMissed
-		as.SpellActions += stats.SpellActions
+		as.SpellAttackActions += stats.SpellAttackActions
 		as.LegendaryActionsUsed += stats.LegendaryActionsUsed
 		as.HealingActions += stats.HealingActions
 		as.CriticalHits += stats.CriticalHits
@@ -554,5 +630,12 @@ func mergeCombatStatistics(target map[int]*CombatStatistics, source map[int]*Com
 
 		as.DamageByRound = mergeIntMaps(as.DamageByRound, stats.DamageByRound)
 		as.HealingByRound = mergeIntMaps(as.HealingByRound, stats.HealingByRound)
+		as.SpellSlotsUsed = mergeIntMaps(as.SpellSlotsUsed, stats.SpellSlotsUsed)
+
+		// Aggregate intermission stats
+		as.IntermissionHealingReceived += stats.IntermissionHealingReceived
+		as.IntermissionSpellsUsed += stats.IntermissionSpellsUsed
+		as.IntermissionHitDiceUsed = mergeDiceMaps(as.IntermissionHitDiceUsed, stats.IntermissionHitDiceUsed)
+		as.IntermissionSpellSlotsUsed = mergeIntMaps(as.IntermissionSpellSlotsUsed, stats.IntermissionSpellSlotsUsed)
 	}
 }

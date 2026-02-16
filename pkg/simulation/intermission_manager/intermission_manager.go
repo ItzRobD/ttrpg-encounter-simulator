@@ -26,32 +26,55 @@ func NewIntermissionManager(rm *roll_manager.RollManager) *IntermissionManager {
 	}
 }
 
-func (im *IntermissionManager) ProcessIntermission(party []*actor.Actor, options IntermissionOptions) map[int]int {
+type IntermissionResult struct {
+	ShortRestsTaken   int
+	HealingReceived   map[int]int
+	HitDiceUsed       map[int]map[core.DiceType]int
+	SpellsUsed        map[int]int
+	SpellSlotsUsed    map[int]map[int]int
+	HealerInstanceIDs []int // IDs of actors who performed healing
+}
+
+// ProcessIntermission manages the intermission phase for a party, handling short rests and post-combat healing operations.
+// Returns: an IntermissionResult containing detailed statistics
+func (im *IntermissionManager) ProcessIntermission(party []*actor.Actor, options IntermissionOptions) IntermissionResult {
+	result := IntermissionResult{
+		HealingReceived: make(map[int]int),
+		HitDiceUsed:     make(map[int]map[core.DiceType]int),
+		SpellsUsed:      make(map[int]int),
+		SpellSlotsUsed:  make(map[int]map[int]int),
+	}
+
 	// Determine if the party should short rest, always before expending resources
-	srHealing := make(map[int]int)
 	if im.ShortRestsTaken < options.MaxShortRests {
 		if im.shouldTakeShortRest(party, options.ShortRestHealThreshold) {
-			srHealing = im.PerformShortRest(party)
+			srHealing, hdUsedByActor := im.PerformShortRest(party)
 			im.ShortRestsTaken++
+
+			for id, heal := range srHealing {
+				result.HealingReceived[id] += heal
+			}
+			for id, hd := range hdUsedByActor {
+				result.HitDiceUsed[id] = hd
+			}
 		}
 	}
 
 	// Post combat healing using resources
-	pcHealing := im.performPostCombatHealing(party, options.PostRestHealThreshold)
+	pcHealing, spellsUsed, slotsUsed := im.performPostCombatHealing(party, options.PostRestHealThreshold)
 
-	totalHealing := make(map[int]int)
-	if srHealing != nil {
-		for id, heal := range srHealing {
-			totalHealing[id] += heal
-		}
+	for id, heal := range pcHealing {
+		result.HealingReceived[id] += heal
 	}
-	if pcHealing != nil {
-		for id, heal := range pcHealing {
-			totalHealing[id] += heal
-		}
+	for id, count := range spellsUsed {
+		result.SpellsUsed[id] += count
+	}
+	for id, slots := range slotsUsed {
+		result.SpellSlotsUsed[id] = slots
 	}
 
-	return totalHealing
+	result.ShortRestsTaken = im.ShortRestsTaken
+	return result
 }
 
 func (im *IntermissionManager) shouldTakeShortRest(party []*actor.Actor, threshold float64) bool {
@@ -63,25 +86,31 @@ func (im *IntermissionManager) shouldTakeShortRest(party []*actor.Actor, thresho
 	return false
 }
 
-func (im *IntermissionManager) PerformShortRest(party []*actor.Actor) map[int]int {
+// PerformShortRest handles short rest recovery for the party, restoring hit points and available short rest resources.
+// Returns a map of healing done by actor ID and a map of hit dice expended by type per actor.
+func (im *IntermissionManager) PerformShortRest(party []*actor.Actor) (map[int]int, map[int]map[core.DiceType]int) {
 	srHealing := make(map[int]int)
+	hdUsedByActor := make(map[int]map[core.DiceType]int)
 
 	for _, actor := range party {
 		// Recover Hit Dice based recovery (spending hit dice)
-		hdHealAmt := im.spendHitDice(actor)
+		hdHealAmt, hdUsed := im.spendHitDice(actor)
 		srHealing[actor.InstanceID] += hdHealAmt
+		if len(hdUsed) > 0 {
+			hdUsedByActor[actor.InstanceID] = hdUsed
+		}
 
 		// Recover Short Rest resources
 		im.recoverShortRestResources(actor)
 	}
 
-	return srHealing
+	return srHealing, hdUsedByActor
 }
 
-func (im *IntermissionManager) spendHitDice(a *actor.Actor) int {
+func (im *IntermissionManager) spendHitDice(a *actor.Actor) (int, map[core.DiceType]int) {
 	sm := &a.StateManager
 	if len(sm.CurrentHitDice) == 0 {
-		return 0
+		return 0, nil
 	}
 
 	// Sort highest dice to lowest
@@ -93,6 +122,7 @@ func (im *IntermissionManager) spendHitDice(a *actor.Actor) int {
 	conMod := a.Abilities.GetAbilityModifier(core.AbilityConstitution)
 
 	totalHealingDone := 0
+	hitDiceUsed := make(map[core.DiceType]int)
 	for _, die := range diceTypes {
 		for sm.CurrentHitDice[die] > 0 && sm.CurrentHP < sm.MaxHP {
 			res := im.RollManager.RollDice(1, die, roll_manager.RollOptions{})
@@ -103,10 +133,11 @@ func (im *IntermissionManager) spendHitDice(a *actor.Actor) int {
 			hpModRes := sm.ModifyHP(healAmount, false, a.ActorType == core.ActorTypeCharacter)
 			sm.CurrentHitDice[die]--
 			totalHealingDone += hpModRes.ModificationValue
+			hitDiceUsed[die]++
 		}
 	}
 
-	return totalHealingDone
+	return totalHealingDone, hitDiceUsed
 }
 
 func (im *IntermissionManager) recoverShortRestResources(a *actor.Actor) {
@@ -156,7 +187,7 @@ func (im *IntermissionManager) recoverShortRestResources(a *actor.Actor) {
 	}
 }
 
-func (im *IntermissionManager) performPostCombatHealing(party []*actor.Actor, threshold float64) map[int]int {
+func (im *IntermissionManager) performPostCombatHealing(party []*actor.Actor, threshold float64) (map[int]int, map[int]int, map[int]map[int]int) {
 	// Find party members who need healing
 	needsHealing := make([]*actor.Actor, 0)
 	for _, member := range party {
@@ -166,10 +197,12 @@ func (im *IntermissionManager) performPostCombatHealing(party []*actor.Actor, th
 	}
 
 	if len(needsHealing) == 0 {
-		return nil
+		return nil, nil, nil
 	}
 
 	totalHealing := make(map[int]int)
+	totalSpellsUsed := make(map[int]int)
+	totalSlotsUsed := make(map[int]map[int]int)
 
 	for _, actor := range party {
 		if actor.StateManager.CurrentHP <= 0 || !actor.IsHealer() {
@@ -180,7 +213,7 @@ func (im *IntermissionManager) performPostCombatHealing(party []*actor.Actor, th
 		featureHealing := im.useHealingFeatures(actor, needsHealing)
 
 		// Use healing spells
-		spellHealing := im.useHealingSpells(actor, needsHealing, threshold)
+		spellHealing, spellsUsed, slotsUsed := im.useHealingSpells(actor, needsHealing, threshold)
 
 		for id, healAmount := range featureHealing {
 			totalHealing[id] += healAmount
@@ -189,9 +222,21 @@ func (im *IntermissionManager) performPostCombatHealing(party []*actor.Actor, th
 		for id, healAmount := range spellHealing {
 			totalHealing[id] += healAmount
 		}
+
+		if spellsUsed > 0 {
+			totalSpellsUsed[actor.InstanceID] += spellsUsed
+		}
+		if len(slotsUsed) > 0 {
+			if totalSlotsUsed[actor.InstanceID] == nil {
+				totalSlotsUsed[actor.InstanceID] = make(map[int]int)
+			}
+			for lvl, count := range slotsUsed {
+				totalSlotsUsed[actor.InstanceID][lvl] += count
+			}
+		}
 	}
 
-	return totalHealing
+	return totalHealing, totalSpellsUsed, totalSlotsUsed
 }
 
 func (im *IntermissionManager) useHealingFeatures(healer *actor.Actor, party []*actor.Actor) map[int]int {
@@ -230,13 +275,15 @@ func (im *IntermissionManager) useHealingFeatures(healer *actor.Actor, party []*
 	return totalHealing
 }
 
-func (im *IntermissionManager) useHealingSpells(healer *actor.Actor, party []*actor.Actor, threshold float64) map[int]int {
+func (im *IntermissionManager) useHealingSpells(healer *actor.Actor, party []*actor.Actor, threshold float64) (map[int]int, int, map[int]int) {
 	sm := &healer.StateManager
 	if !healer.SpellManager.HasHealingSpells() {
-		return nil
+		return nil, 0, nil
 	}
 
 	totalHealing := make(map[int]int)
+	spellsUsed := 0
+	slotsUsed := make(map[int]int)
 
 	// Spend lowest slots first for out-of-combat healing
 	levels := slices.Collect(maps.Keys(sm.CurrentSlots))
@@ -261,7 +308,7 @@ func (im *IntermissionManager) useHealingSpells(healer *actor.Actor, party []*ac
 			}
 
 			if target == nil {
-				return nil // No one needs healing below threshold
+				return totalHealing, spellsUsed, slotsUsed // No one needs healing below threshold
 			}
 
 			// Find a healing spell at this level
@@ -292,9 +339,11 @@ func (im *IntermissionManager) useHealingSpells(healer *actor.Actor, party []*ac
 
 			healRes := target.StateManager.ModifyHP(healAmount, false, target.ActorType == core.ActorTypeCharacter)
 			sm.CurrentSlots[lvl]--
+			spellsUsed++
+			slotsUsed[lvl]++
 			totalHealing[target.InstanceID] += healRes.ModificationValue
 		}
 	}
 
-	return totalHealing
+	return totalHealing, spellsUsed, slotsUsed
 }
