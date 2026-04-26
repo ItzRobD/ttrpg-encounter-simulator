@@ -1,4 +1,4 @@
-<p-card class="p-fluid border-1 surface-border relative">
+<p-card class="p-fluid border-1 surface-border relative overflow-hidden">
   @if (actor(); as a) {
     @if (showDelete()) {
       <div class="absolute delete-button-container">
@@ -56,8 +56,8 @@
               </div>
             </div>
             <div class="flex gap-3 align-items-center">
-              <div class="flex flex-column align-items-center gap-1" style="min-width: 120px">
-                <span class="text-xs font-bold white-space-nowrap text-600">
+              <div class="flex flex-column align-items-center gap-1" style="min-width: 100px">
+                <span class="text-xs font-bold text-600">
                   @if (!hideState()) {
                     HP: {{ state?.currentHp ?? '?' }}{{ (state?.tempHp ?? 0) > 0 ? ' (+' + state.tempHp + ')' : '' }} / {{ state?.maxHp ?? '?' }}
                   } @else {
@@ -69,26 +69,26 @@
                   }
                 </span>
                 @if (!hideState()) {
-                  <div
-                    class="relative overflow-hidden border-round"
-                    style="height: 8px; width: 100%; background-color: var(--p-surface-200)"
-                  >
-                    <div
-                      class="absolute top-0 left-0 h-full transition-all transition-duration-300"
-                      [style.width.%]="hpPercent()"
-                      [style.background-color]="hpColor()"
-                    ></div>
-                    <div
-                      class="absolute top-0 h-full transition-all transition-duration-300"
-                      [style.left.%]="hpPercent()"
-                      [style.width.%]="tempHpPercent()"
-                      style="background-color: #3b82f6; opacity: 0.8"
-                    ></div>
-                  </div>
+                  <p-progressBar
+                    [value]="hpStatus().percent"
+                    [showValue]="false"
+                    [color]="hpStatus().color"
+                    [style]="{ height: '8px' }"
+                    class="w-full"
+                  />
+                  @if (hpStatus().tempPercent > 0) {
+                    <p-progressBar
+                        [value]="hpStatus().tempPercent"
+                        [showValue]="false"
+                        color="#3b82f6"
+                        [style]="{ height: '4px', marginTop: '2px', opacity: 0.8 }"
+                        class="w-full"
+                    />
+                  }
                 }
               </div>
               <div class="flex flex-column pt-0">
-                <span class="text-xs font-bold white-space-nowrap">AC:
+                <span class="text-xs font-bold">AC:
                   {{ getAC(a) || '??' }}</span>
                 @if (!hideState() && state) {
                   <span class="text-xs font-bold text-primary">Init: {{ state.initiative }}</span>
@@ -102,7 +102,7 @@
             <!-- Statistics Panel -->
             <p-accordion-panel value="0">
               <p-accordion-header>
-                <div class="grid w-full align-items-center">
+                <div class="grid w-full align-items-center m-0">
                   <div class="col-4">
                     <span class="text-sm font-bold uppercase text-600">{{
                       statsHeaderText().label

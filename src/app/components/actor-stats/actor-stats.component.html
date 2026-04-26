@@ -1,8 +1,8 @@
-<div class="grid w-full pt-2">
+<div class="grid w-full pt-2 m-0">
   <!-- Ability Scores -->
   <div class="col-12">
     @if (actor() && abilities() && abilities().abilityScores) {
-      <div class="grid">
+      <div class="grid m-0">
         @for (entry of getAbilityScoreEntries(abilities().abilityScores); track entry.key) {
           <div class="col-4 sm:col-2 p-1">
             <div

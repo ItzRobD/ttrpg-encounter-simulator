@@ -16,6 +16,8 @@ import {SimulationResults} from '../../components/simulation-results/simulation-
 import { SimulationOptionsComponent } from '../../components/simulation-options/simulation-options';
 import { ActorSelectorDialog } from '../../components/actor-selector-dialog/actor-selector-dialog.component';
 
+import { SimulationStatsComponent } from '../../components/simulation-stats/simulation-stats';
+
 @Component({
   selector: 'app-simulator-shell',
   standalone: true,
@@ -30,13 +32,22 @@ import { ActorSelectorDialog } from '../../components/actor-selector-dialog/acto
     ActorCard,
     SimulationResults,
     SimulationOptionsComponent,
-    ActorSelectorDialog
+    ActorSelectorDialog,
+    SimulationStatsComponent
   ],
   templateUrl: './simulator-shell.html',
   styles: [
     `
       :host {
         display: block;
+      }
+
+      .combatants-panel {
+        transition: all 0.3s ease-in-out;
+      }
+
+      .stats-panel {
+         transition: all 0.3s ease-in-out;
       }
     `,
   ],
@@ -50,6 +61,7 @@ export class SimulatorShell {
   protected readonly layout = environment.layout;
 
   public readonly isCombatantsCollapsed = signal(false);
+  public readonly isStatsCollapsed = signal(false);
   public readonly isOptionsVisible = signal(false);
   public readonly isCharacterSelectorVisible = signal(false);
   public readonly isMonsterSelectorVisible = signal(false);
@@ -73,6 +85,10 @@ export class SimulatorShell {
 
   toggleCombatants() {
     this.isCombatantsCollapsed.update((v) => !v);
+  }
+
+  toggleStats() {
+    this.isStatsCollapsed.update((v) => !v);
   }
 
   toggleOptions() {

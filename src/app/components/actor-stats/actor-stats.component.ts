@@ -29,8 +29,9 @@ export class ActorStats {
   });
 
   protected readonly displayState = computed(() => {
-    const a = this.actor();
+    const projected = this.projectedState();
     if (this.hideState()) {
+      const a = this.actor();
       return {
         conditions: {},
         resistances: a?.state?.resistances || {},
@@ -44,35 +45,30 @@ export class ActorStats {
         initiative: 0
       } as ActorState;
     }
-    const state = this.projectedState() || a?.state;
 
-    // Fallback to ensure we never return undefined and have required nested properties
-    if (!state || state.maxHp === 0 || isNaN(state.maxHp)) {
-      const fallbackMaxHp = state?.maxHp || a?.state?.maxHp || a?.hpConfig?.hpAverage || a?.hpConfig?.value || a?.ac || (a as any)?.AC || 0;
-      return {
-        ...(state || a?.state),
-        conditions: state?.conditions || a?.state?.conditions || {},
-        resistances: state?.resistances || a?.state?.resistances || {},
-        deathSaves: state?.deathSaves || a?.state?.deathSaves || { successes: 0, failures: 0 },
-        isStable: state?.isStable ?? a?.state?.isStable ?? true,
-        isDead: state?.isDead ?? a?.state?.isDead ?? false,
-        currentHp: state?.currentHp ?? a?.state?.currentHp ?? 0,
-        maxHp: fallbackMaxHp,
-        tempHp: state?.tempHp ?? a?.state?.tempHp ?? 0,
-        hitDie: state?.hitDie ?? a?.state?.hitDie ?? 0,
-        initiative: state?.initiative ?? a?.state?.initiative ?? 0,
-      } as ActorState;
+    if (projected) {
+      return projected;
     }
 
-    // Ensure deathSaves exists even if state is present but partially initialized
-    if (!state.deathSaves) {
-        return {
-            ...state,
-            deathSaves: { successes: 0, failures: 0 }
-        } as ActorState;
-    }
+    // If no projected state, use the initial actor state
+    const a = this.actor();
+    const state = a?.state;
+    const maxHpFromConfig = a?.hpConfig?.value || a?.hpConfig?.hpAverage || 0;
+    const maxHp = Math.max(1, Number(state?.maxHp || maxHpFromConfig || 1));
 
-    return state;
+    return {
+      ...(state || {}),
+      currentHp: Number(state?.currentHp ?? 0),
+      maxHp: maxHp,
+      tempHp: Number(state?.tempHp ?? 0),
+      hitDie: state?.hitDie ?? a?.hpConfig?.hitDie ?? 10,
+      conditions: state?.conditions || {},
+      deathSaves: state?.deathSaves || { successes: 0, failures: 0 },
+      resistances: state?.resistances || {},
+      isStable: state?.isStable ?? true,
+      isDead: state?.isDead ?? false,
+      initiative: state?.initiative ?? 0,
+    } as ActorState;
   });
 
   protected readonly immunities = computed(() => {

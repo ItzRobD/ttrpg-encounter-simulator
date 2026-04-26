@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
+import { ProgressBarModule } from 'primeng/progressbar';
 import { MapperService } from '../../services/mapper.service';
 import {
   DiceType,
@@ -39,6 +40,7 @@ import { EquipmentService } from '../../services/equipment.service';
     AccordionContent,
     TitleCasePipe,
     ButtonModule,
+    ProgressBarModule,
     FormsModule,
     ActorStats,
     ActorSpecialAbilities,
@@ -90,26 +92,30 @@ export class ActorCard {
         initiative: 0
       } as ActorState;
     }
-    const state = projected || this.actor().state;
 
-    // Fallback to ensure we never return undefined
-    if (!state || state.maxHp === 0 || isNaN(state.maxHp)) {
-      const a = this.actor();
-      const fallbackMaxHp = state?.maxHp || a.state?.maxHp || a.hpConfig?.hpAverage || a.hpConfig?.value || a.ac || (a as any).AC || 0;
-      return {
-        ...(state || a.state),
-        conditions: state?.conditions || a.state?.conditions || {},
-        resistances: state?.resistances || a.state?.resistances || {},
-        deathSaves: state?.deathSaves || a.state?.deathSaves || { successes: 0, failures: 0 },
-        isStable: state?.isStable ?? a.state?.isStable ?? true,
-        isDead: state?.isDead ?? a.state?.isDead ?? false,
-        currentHp: state?.currentHp ?? a.state?.currentHp ?? 0,
-        maxHp: fallbackMaxHp,
-        tempHp: state?.tempHp ?? a.state?.tempHp ?? 0,
-      } as ActorState;
+    if (projected) {
+      return projected;
     }
 
-    return state;
+    // If no projected state, use the initial actor state
+    const a = this.actor();
+    const state = a.state;
+    const maxHpFromConfig = a.hpConfig?.value || a.hpConfig?.hpAverage || 0;
+    const maxHp = Math.max(1, Number(state?.maxHp || maxHpFromConfig || 1));
+
+    return {
+      ...state,
+      currentHp: Number(state?.currentHp ?? 0),
+      maxHp: maxHp,
+      tempHp: Number(state?.tempHp ?? 0),
+      hitDie: state?.hitDie ?? a.hpConfig?.hitDie ?? 10,
+      conditions: state?.conditions || {},
+      deathSaves: state?.deathSaves || { successes: 0, failures: 0 },
+      resistances: state?.resistances || {},
+      isStable: state?.isStable ?? true,
+      isDead: state?.isDead ?? false,
+      initiative: state?.initiative ?? 0,
+    } as ActorState;
   });
 
   isCharacter(a: Actor): boolean {
@@ -149,25 +155,34 @@ export class ActorCard {
       .map(([condition]) => condition)
       .sort();
   });
-  protected readonly hpPercent = computed(() => {
-    if (this.hideState()) return 0;
+
+  protected readonly hpStatus = computed(() => {
+    if (this.hideState()) return { percent: 0, tempPercent: 0, color: '#ef4444' };
     const state = this.displayState();
-    if (!state || !state.maxHp) return 0;
-    return Math.min(100, Math.floor((state.currentHp / state.maxHp) * 100));
-  });
-  protected readonly tempHpPercent = computed(() => {
-    if (this.hideState()) return 0;
-    const state = this.displayState();
-    if (!state || (state.tempHp || 0) <= 0 || !state.maxHp) return 0;
-    // We calculate temp HP relative to Max HP to see how much of the bar it should occupy
-    return Math.floor(((state.tempHp || 0) / state.maxHp) * 100);
-  });
-  protected readonly hpColor = computed(() => {
-    if (this.hideState()) return '';
-    const percent = this.hpPercent();
-    if (percent >= 50) return '#22c55e'; // Green 500
-    if (percent >= 25) return '#eab308'; // Yellow 500
-    return '#ef4444'; // Red 500
+    const current = state.currentHp;
+    const max = state.maxHp;
+    const temp = state.tempHp;
+
+    const percent = max > 0 ? Math.min(100, Math.max(0, (current / max) * 100)) : 0;
+    const tempPercent = max > 0 ? Math.min(100, Math.max(0, (temp / max) * 100)) : 0;
+
+    let color = '#22c55e'; // Green 500
+    if (percent < 25.01) {
+      color = '#ef4444'; // Red 500
+    } else if (percent < 50.01) {
+      color = '#eab308'; // Yellow 500
+    }
+
+    // Safety check for 100% case explicitly
+    if (percent >= 99.9) {
+        color = '#22c55e';
+    }
+
+    if (this.actor().name.includes('Henry') || this.actor().name.includes('Acolyte')) {
+        // console.log(`[ActorCard] Color check for ${this.actor().name}: ${percent.toFixed(1)}% -> ${color}`);
+    }
+
+    return { percent, tempPercent, color };
   });
 
   protected readonly specialAbilityNames = computed(() => {

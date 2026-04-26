@@ -1,14 +1,23 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
+import { TooltipModule } from 'primeng/tooltip';
 import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-app-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ButtonModule, DrawerModule],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    ButtonModule,
+    DrawerModule,
+    TooltipModule
+  ],
   templateUrl: './app-layout.html',
   styles: [
     `
@@ -44,6 +53,19 @@ import { environment } from '../../../environments/environment';
         clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
       }
 
+      .sidebar {
+        transition: width 0.3s ease-in-out;
+        overflow-x: hidden;
+      }
+
+      .sidebar-mini {
+        width: 60px !important;
+      }
+
+      .sidebar-mini:hover {
+        width: 12rem !important;
+      }
+
       @media screen and (min-width: 768px) {
         .layout-wrapper {
           padding-top: 1.5rem;
@@ -55,4 +77,15 @@ import { environment } from '../../../environments/environment';
 export class AppLayout {
   visible = false;
   protected readonly environmentName = environment.name;
+
+  public readonly isSidebarCollapsed = signal(true);
+  public readonly autoSlideSidebar = signal(true);
+
+  toggleSidebar() {
+    this.isSidebarCollapsed.update(v => !v);
+  }
+
+  toggleAutoSlide() {
+    this.autoSlideSidebar.update(v => !v);
+  }
 }
