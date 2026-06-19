@@ -1,0 +1,59 @@
+# ── Secrets / env ──────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+environment.dev.ts
+environment.local.ts
+
+# ── Editors / IDEs / AI tooling ────────────────────────────────
+.idea/
+.junie/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.claude/
+.superpowers/
+*.iml
+*.iws
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# ── OS ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Backend (Go) ───────────────────────────────────────────────
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+.gen/
+backend/pkg_old/
+
+# Backend data dumps (kept local, not in VCS)
+*.zip
+*.csv
+*.sql
+*.http
+
+# ── Frontend (Angular / Node) ──────────────────────────────────
+node_modules/
+/frontend/dist
+/frontend/tmp
+/frontend/out-tsc
+/frontend/.angular/cache
+npm-debug.log
+yarn-error.log
+.sass-cache/
+/coverage
+testem.log
+__screenshots__/
