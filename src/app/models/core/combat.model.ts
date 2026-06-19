@@ -40,7 +40,7 @@ export interface ActorState {
   isDead: boolean;
   initiative: number;
   healThreshold?: number;
-  concentration?: any;
+  concentration?: unknown;
   hasActedThisTurn?: boolean;
   isProjected?: boolean;
 }

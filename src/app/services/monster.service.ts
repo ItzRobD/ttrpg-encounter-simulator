@@ -1,6 +1,6 @@
 import {computed, inject, Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {Actor, ActorSummary, ApiResponse} from '../models';
+import {Actor, ActorSummary, ApiResponse, DataEnvelope} from '../models';
 import {environment} from '../../environments/environment';
 import {catchError, map, Observable, of, retry, tap, throwError} from 'rxjs';
 
@@ -30,13 +30,13 @@ export class MonsterService implements ActorService<Actor, ActorSummary> {
       name: m.name,
       isCustom: true,
       cr: m.metadata?.cr || 0,
-      type: (m.metadata?.type as any) || 'Unknown',
-      size: (m.metadata?.size as any) || 'Medium',
+      type: m.metadata?.type || 'Unknown',
+      size: m.metadata?.size || 'Medium',
       ac: m.ac || 0,
       isLegendary: !!m.metadata?.isLegendary,
       isSpellcaster: !!m.metadata?.spellcasterMetadata?.isSpellcaster,
       isInnateCaster: !!m.metadata?.spellcasterMetadata?.isInnateCaster
-    } as any));
+    }));
 
     return [...customSummaries, ...this._summaries()];
   });
@@ -92,20 +92,21 @@ export class MonsterService implements ActorService<Actor, ActorSummary> {
           delay: environment.httpRetryDelay
         }),
         map((response) => {
-          let rawData: any[] = [];
-          const responseData = (response as any).data || response;
+          // Response is camelCased + 'data'-unwrapped by the mapping interceptor.
+          const responseData = response.data ?? response;
 
+          let rawData: (Actor | ActorSummary)[] = [];
           if (Array.isArray(responseData)) {
-            rawData = responseData;
+            rawData = responseData as (Actor | ActorSummary)[];
           } else if (responseData && typeof responseData === 'object') {
-            rawData = Object.values(responseData);
+            rawData = Object.values(responseData) as (Actor | ActorSummary)[];
           }
 
-          return rawData.map((m: any) => {
-            if (m.metadata) {
-              // Actor style summary
+          return rawData.map((m): ActorSummary => {
+            if ('metadata' in m && m.metadata) {
+              // Actor-style payload: flatten into a summary.
               return {
-                id: m.id || m.ID,
+                id: m.id,
                 name: m.name,
                 isCustom: !!m.isCustom,
                 cr: m.metadata.cr,
@@ -115,7 +116,7 @@ export class MonsterService implements ActorService<Actor, ActorSummary> {
                 isLegendary: !!m.metadata.isLegendary,
                 isSpellcaster: !!m.metadata.spellcasterMetadata?.isSpellcaster,
                 isInnateCaster: !!m.metadata.spellcasterMetadata?.isInnateCaster
-              } as any;
+              };
             }
             return m as ActorSummary;
           });
@@ -149,7 +150,7 @@ export class MonsterService implements ActorService<Actor, ActorSummary> {
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        const data = (response as any)?.data || response;
+        const data = (response as DataEnvelope<Actor>)?.data || response;
         return data as Actor;
       }),
       tap((monster) => {

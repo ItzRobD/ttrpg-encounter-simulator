@@ -88,11 +88,28 @@ export interface EventData {
   healing?: Record<string, number>;
 }
 
+/**
+ * Mirrors the backend `events.ActorSnapshot` (pkg/core/events/timeline_event.go),
+ * after the mapping interceptor converts the snake_case JSON to camelCase.
+ * Per-event snapshots carry only these fields — note there is no maxHp here
+ * (max HP is only present on the initial-state snapshot below).
+ */
 export interface ActorStateSnapshot {
   currentHp: number;
   tempHp: number;
   conditions: Condition[] | null;
   healthState: string;
+}
+
+/**
+ * Mirrors the backend `ActorInitialState` (pkg/simulation/multi_runner.go),
+ * camelCased by the mapping interceptor. This is the `initial_state` payload,
+ * which includes maxHp. maxHp is optional because the timeline projection can
+ * fall back to a per-event snapshot (events.ActorSnapshot) when no dedicated
+ * initial_state payload is available, and those carry no maxHp.
+ */
+export interface ActorInitialStateSnapshot extends ActorStateSnapshot {
+  maxHp?: number;
 }
 
 
@@ -144,7 +161,7 @@ export interface SimulationLog {
   actors: Actor[];
   events: SimulationEvent[];
   initialState?: Record<string, any>;
-  actorInitialStates?: Record<string, ActorStateSnapshot>;
+  actorInitialStates?: Record<string, ActorInitialStateSnapshot>;
   actorConfigs?: Actor[];
 }
 
@@ -164,7 +181,7 @@ export interface IndividualResult {
   seed: { seed1: number; seed2: number };
   encounterResults: EncounterResult[];
   initialState?: Record<string, any>;
-  actorInitialStates?: Record<string, ActorStateSnapshot>;
+  actorInitialStates?: Record<string, ActorInitialStateSnapshot>;
   actorConfigs?: Actor[];
 }
 

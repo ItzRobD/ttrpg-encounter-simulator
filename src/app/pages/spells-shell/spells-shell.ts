@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal} from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import {Button} from 'primeng/button';
 import {SpellCard} from '../../components/spell-card/spell-card';
 import {IconField} from 'primeng/iconfield';
@@ -27,6 +27,7 @@ import {TabsModule} from 'primeng/tabs';
     TabsModule
   ],
   templateUrl: './spells-shell.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
     :host {
       display: block;

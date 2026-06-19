@@ -1,5 +1,6 @@
 import {
   Action,
+  DamageBlock,
   DamageResistances,
   DamageType,
   DiceType,
@@ -99,7 +100,7 @@ export function formatMultiattack(actorName: string, options: MultiattackOption[
 
   const parts = options.map((opt) => {
     const action = allActions.find((a) => {
-      const aId = (a.actionId || (a as any).id || (a as any).ID)?.toString();
+      const aId = a.actionId?.toString();
       return aId === opt.actionId?.toString();
     });
     const actionName = action ? action.name : 'Unknown Action';
@@ -260,7 +261,8 @@ export function getWeaponAbilityModifier(actor: Actor, weapon: Weapon): number {
  * Formats a weapon's full stat line.
  */
 export function formatWeaponData(actor: Actor, weapon: Weapon): string {
-  const levelOrCr = 'level' in actor ? (actor as any).level : (actor as any).metadata?.cr || 1;
+  const withLevel = actor as Actor & { level?: number };
+  const levelOrCr = withLevel.level ?? actor.metadata?.cr ?? 1;
   const proficiency = getProficiencyBonus(levelOrCr);
   const abilityMod = getWeaponAbilityModifier(actor, weapon);
 
@@ -290,14 +292,15 @@ export function formatWeaponData(actor: Actor, weapon: Weapon): string {
  * Returns a detail string for an equipment item based on its type.
  */
 export function getEquipmentDetail(item: EquipmentItem): string {
-  const inner = (item as any).weapon || (item as any).armor || item;
+  const nested = item as { weapon?: EquipmentItem; armor?: EquipmentItem };
+  const inner = nested.weapon || nested.armor || item;
 
   // Weapon damage handling: rely exclusively on damageBlocks
   if ('damageBlocks' in inner && Array.isArray(inner.damageBlocks)) {
     if (inner.damageBlocks.length === 0) return 'No damage details';
 
     return inner.damageBlocks
-      .map((c: any) => {
+      .map((c: DamageBlock) => {
         const dicePart = formatDice(c.numberOfDice, c.die, c.modifier || 0);
         const typePart = c.damageType ? ` ${c.damageType}` : '';
         return `${dicePart}${typePart}`;

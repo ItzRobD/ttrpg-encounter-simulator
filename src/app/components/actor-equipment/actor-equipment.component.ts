@@ -1,5 +1,5 @@
-import { Component, inject, input } from '@angular/core';
-import { Actor, WeaponSlot } from '../../models';
+import { Component, inject, input, ChangeDetectionStrategy } from '@angular/core';
+import { Actor, WeaponSlot, WeaponModifiers } from '../../models';
 import { CardModule } from 'primeng/card';
 import { EquipmentService } from '../../services/equipment.service';
 
@@ -8,6 +8,7 @@ import { EquipmentService } from '../../services/equipment.service';
   standalone: true,
   imports: [CardModule],
   templateUrl: './actor-equipment.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './actor-equipment.component.css',
 })
 export class ActorEquipment {
@@ -41,7 +42,7 @@ export class ActorEquipment {
     return summary ? summary.name : `Shield #${shieldId}`;
   }
 
-  formatModifiers(modifiers: any): string {
+  formatModifiers(modifiers: WeaponModifiers): string {
     const parts = [];
     if (modifiers.attackBonus) parts.push(`+${modifiers.attackBonus} to hit`);
     if (modifiers.damageBonus) parts.push(`+${modifiers.damageBonus} damage`);

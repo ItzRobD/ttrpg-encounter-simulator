@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -19,6 +19,7 @@ import { environment } from '../../../environments/environment';
     TooltipModule
   ],
   templateUrl: './app-layout.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
       :host {

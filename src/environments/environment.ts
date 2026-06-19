@@ -1,5 +1,7 @@
 export const environment = {
-  name: 'production',
+  // Base/default environment (ng serve / builds without a config). Production
+  // builds replace this with environment.prod.ts (see angular.json).
+  name: 'default',
   apiUrl: 'http://localhost:8080/api/v1',
   httpRetryCount: 3,
   httpRetryDelay: 1000,

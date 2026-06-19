@@ -1,7 +1,7 @@
-import { Component, effect, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, effect, OnInit, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { SplitButtonModule } from 'primeng/splitbutton';
@@ -16,13 +16,47 @@ import { TabsModule } from 'primeng/tabs';
 import { FluidModule } from 'primeng/fluid';
 import { AccordionModule } from 'primeng/accordion';
 import { BaseEditorDirective } from '../base-editor.directive';
-import { MonsterSize, MonsterType, DiceType, DamageType, CasterType, Ability, ResistanceType, Actor, Action } from '../../../models';
+import { MonsterSize, MonsterType, DiceType, DamageType, CasterType, Ability, ResistanceType, Actor, Action, DamageComponent, Conditions, ActorState, DamageResistances } from '../../../models';
 import { CustomActorType } from '../../../services/custom-content.service';
 import { AbilityScoreEditorComponent } from '../ability-score-editor/ability-score-editor';
 import { SpellcastingEditorComponent } from '../spellcasting-editor/spellcasting-editor';
 import { getProficiencyBonus } from '../../../shared/utils/dnd-utils';
 import { environment } from '../../../../environments/environment';
 import { MapperService } from '../../../services/mapper.service';
+
+/** Loose shape of a single damage block as stored in the editor's form data. */
+interface DamageBlockFormData extends Partial<DamageComponent> {}
+
+/**
+ * Shape of action/legendary-action data fed into the editor's FormArrays. This
+ * is the editor's flat form representation (damageBlocks, plus `cost` for
+ * legendary actions) rather than the backend `core.Action` shape.
+ */
+interface ActionFormData {
+  actionId?: string | number;
+  name?: string;
+  attackBonus?: number;
+  rechargeValue?: number;
+  cost?: number;
+  hasDC?: boolean;
+  dc?: number;
+  dcAbility?: Ability;
+  dcOnSuccess?: string;
+  description?: string;
+  damageBlocks?: DamageBlockFormData[];
+}
+
+/**
+ * A monster being edited may arrive with its actions either grouped under a
+ * legacy `monsterActions` object or flat on `actions`/`legendaryActions`.
+ * The backend itself only sends `actions` (see pkg/actor/actor_config.go); the
+ * grouped form is a local/legacy shape the editor still tolerates.
+ */
+interface EditableMonster {
+  monsterActions?: { actions?: ActionFormData[]; legendaryActions?: ActionFormData[] };
+  actions?: ActionFormData[];
+  legendaryActions?: ActionFormData[];
+}
 
 @Component({
   selector: 'app-monster-editor',
@@ -51,6 +85,7 @@ import { MapperService } from '../../../services/mapper.service';
 export class MonsterEditorComponent extends BaseEditorDirective<Actor> implements OnInit {
   private readonly fb = inject(FormBuilder);
   protected readonly mapperService = inject(MapperService);
+  private readonly destroyRef = inject(DestroyRef);
 
   public monsterForm: FormGroup = this.fb.group({
     id: [null],
@@ -235,17 +270,18 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
         this.legendaryActions.clear({ emitEvent: false });
         this.resistancesArray.clear({ emitEvent: false });
 
-        const monsterActions = (item as any).monsterActions || {
-          actions: (item as any).actions || [],
-          legendaryActions: (item as any).legendaryActions || []
+        const editable = item as Actor & EditableMonster;
+        const monsterActions = editable.monsterActions ?? {
+          actions: editable.actions ?? [],
+          legendaryActions: editable.legendaryActions ?? []
         };
 
         // Add actions
         if (monsterActions.actions) {
-          monsterActions.actions.forEach((a: any) => this.addAction(a));
+          monsterActions.actions.forEach((a: ActionFormData) => this.addAction(a));
         }
         if (monsterActions.legendaryActions) {
-          monsterActions.legendaryActions.forEach((la: any) => this.addLegendaryAction(la));
+          monsterActions.legendaryActions.forEach((la: ActionFormData) => this.addLegendaryAction(la));
         }
 
         // Handle resistances array
@@ -299,43 +335,43 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
   }
 
   ngOnInit(): void {
-    this.monsterForm.get('cr')?.valueChanges.subscribe(cr => {
+    this.monsterForm.get('cr')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(cr => {
       if (cr !== null) {
         this.monsterForm.patchValue({ proficiencyBonus: getProficiencyBonus(cr) }, { emitEvent: false });
         this.calculateSpellcasting();
       }
     });
 
-    this.monsterForm.get('hp')?.valueChanges.subscribe(() => {
+    this.monsterForm.get('hp')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.updateHPDisplay();
     });
 
-    this.monsterForm.get('asConfig.abilityScores')?.valueChanges.subscribe(() => {
+    this.monsterForm.get('asConfig.abilityScores')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
       this.updateHPModifier();
     });
 
-    this.monsterForm.get('asConfig.proficiencies')?.valueChanges.subscribe(() => {
+    this.monsterForm.get('asConfig.proficiencies')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
 
-    this.monsterForm.get('spellcasting.ability')?.valueChanges.subscribe(() => {
+    this.monsterForm.get('spellcasting.ability')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
 
-    this.monsterForm.get('isSpellcaster')?.valueChanges.subscribe(() => {
+    this.monsterForm.get('isSpellcaster')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
 
-    this.monsterForm.get('isInnateSpellcaster')?.valueChanges.subscribe(() => {
+    this.monsterForm.get('isInnateSpellcaster')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
 
-    this.monsterForm.get('spellcasting.casterLevel')?.valueChanges.subscribe(() => {
+    this.monsterForm.get('spellcasting.casterLevel')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
 
-    this.monsterForm.get('proficiencyBonus')?.valueChanges.subscribe(() => {
+    this.monsterForm.get('proficiencyBonus')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
   }
@@ -397,8 +433,8 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
     return 'monsters';
   }
 
-  private createEmptySpellSlots(): any {
-    const slots: any = {};
+  private createEmptySpellSlots(): Record<number, FormGroup> {
+    const slots: Record<number, FormGroup> = {};
     for (let i = 1; i <= 9; i++) {
       slots[i] = this.fb.group({ current: [0], max: [0] });
     }
@@ -470,7 +506,7 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
     });
   }
 
-  addAction(data: any = null): void {
+  addAction(data: ActionFormData | null = null): void {
     const actionGroup = this.fb.group({
       actionId: [data?.actionId || Math.floor(Math.random() * 1000000)],
       name: [data?.name || '', [Validators.required]],
@@ -486,7 +522,7 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
 
     const components = actionGroup.get('damageBlocks') as FormArray;
     if (data?.damageBlocks && Array.isArray(data.damageBlocks)) {
-      data.damageBlocks.forEach((c: any) => this.addDamageComponent(components, c));
+      data.damageBlocks.forEach((c: DamageBlockFormData) => this.addDamageComponent(components, c));
     } else if (!data) {
       // Default component for new actions
       this.addDamageComponent(components);
@@ -495,7 +531,7 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
     this.actions.push(actionGroup);
   }
 
-  addDamageComponent(array: FormArray, data: any = null): void {
+  addDamageComponent(array: FormArray, data: DamageBlockFormData | null = null): void {
     array.push(this.fb.group({
       numberOfDice: [data?.numberOfDice || 1],
       die: [data?.die || DiceType.D6],
@@ -512,7 +548,7 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
     this.actions.removeAt(index);
   }
 
-  addLegendaryAction(data: any = null): void {
+  addLegendaryAction(data: ActionFormData | null = null): void {
     const actionGroup = this.fb.group({
       actionId: [data?.actionId || Math.floor(Math.random() * 1000000)],
       name: [data?.name || '', [Validators.required]],
@@ -526,7 +562,7 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
 
     const components = actionGroup.get('damageBlocks') as FormArray;
     if (data?.damageBlocks && Array.isArray(data.damageBlocks)) {
-      data.damageBlocks.forEach((c: any) => this.addDamageComponent(components, c));
+      data.damageBlocks.forEach((c: DamageBlockFormData) => this.addDamageComponent(components, c));
     } else if (!data) {
       // Default component for new actions
       this.addDamageComponent(components);
@@ -535,7 +571,7 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
     this.legendaryActions.push(actionGroup);
   }
 
-  getDamageBlocks(action: any): FormArray {
+  getDamageBlocks(action: AbstractControl): FormArray {
     return action.get('damageBlocks') as FormArray;
   }
 
@@ -594,11 +630,11 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
       monster.actions?.push(...rawValues.monsterActions.actions);
     }
     if (rawValues.monsterActions?.legendaryActions) {
-      rawValues.monsterActions.legendaryActions.forEach((la: any) => {
+      rawValues.monsterActions.legendaryActions.forEach((la: ActionFormData) => {
         monster.actions?.push({
           ...la,
           isLegendary: true
-        });
+        } as Action);
       });
     }
 
@@ -652,26 +688,28 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
       });
     }
 
-    // Resistances
-    const resistanceObj: Record<string, any> = {};
+    // Resistances. The form stores an array of {damageType, resistanceType};
+    // DamageResistances is a full keyed map, so the partial object is narrowed.
+    const resistanceObj: Partial<Record<DamageType, ResistanceType>> = {};
     if (rawValues.state?.resistances && Array.isArray(rawValues.state.resistances)) {
-      rawValues.state.resistances.forEach((res: any) => {
+      rawValues.state.resistances.forEach((res: { damageType: DamageType; resistanceType: ResistanceType }) => {
         resistanceObj[res.damageType] = res.resistanceType;
       });
     }
-    monster.resistances = resistanceObj as any;
+    monster.resistances = resistanceObj as DamageResistances;
 
     // Spells
     if (monster.metadata?.spellcasterMetadata?.isSpellcaster || monster.metadata?.spellcasterMetadata?.isInnateCaster) {
-      monster.knownSpellIDs = (rawValues.spellcasting.spells || []).map((s: any) => Number(s.id));
+      monster.knownSpellIDs = (rawValues.spellcasting.spells || []).map((s: { id: string | number }) => Number(s.id));
     }
     monster.customSpells = [];
 
-    // Cleanup legacy fields
-    delete (monster as any).spellcasting;
-    delete (monster as any).monsterActions;
-    delete (monster as any).hp;
-    delete (monster as any).asConfig;
+    // Cleanup legacy fields not part of the Actor shape.
+    const deletable = monster as Record<string, unknown>;
+    delete deletable['spellcasting'];
+    delete deletable['monsterActions'];
+    delete deletable['hp'];
+    delete deletable['asConfig'];
 
     // Final state
     if (!this.itemToEdit()) {
@@ -680,9 +718,9 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
         maxHp: rawValues.hp.value,
         tempHp: 0,
         hitDie: rawValues.hp.hitDie,
-        conditions: {} as any,
+        conditions: {} as Conditions,
         deathSaves: { successes: 0, failures: 0 },
-        resistances: resistanceObj as any,
+        resistances: resistanceObj as DamageResistances,
         isStable: true,
         isDead: false,
         initiative: 0
@@ -690,8 +728,8 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
     } else {
       monster.state = {
         ...this.itemToEdit()?.state,
-        resistances: resistanceObj as any
-      } as any;
+        resistances: resistanceObj as DamageResistances
+      } as ActorState;
     }
 
     return monster as Actor;
@@ -703,7 +741,7 @@ export class MonsterEditorComponent extends BaseEditorDirective<Actor> implement
   exportToJSON(): void {
     const monster = this.prepareMonsterObject();
     const exportObj = { ...monster };
-    delete (exportObj as any).state;
+    delete (exportObj as Record<string, unknown>)['state'];
 
     const serializedMonster = this.mapperService.serializeKeys(exportObj);
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(serializedMonster, null, 2));

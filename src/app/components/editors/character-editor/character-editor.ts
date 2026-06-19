@@ -1,6 +1,6 @@
-import { Component, effect, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, effect, OnInit, inject, signal, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
@@ -48,6 +48,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
   private readonly fb = inject(FormBuilder);
   private readonly equipmentService = inject(EquipmentService);
   protected readonly mapperService = inject(MapperService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly Race = Race;
   protected readonly Number = Number;
 
@@ -72,10 +73,10 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
   });
 
   public characterForm: FormGroup = this.fb.group({
-    id: [null],
+    id: this.fb.control<string | number | null>(null),
     name: ['', [Validators.required]],
     raceId: [this.mapperService.getRaceId(Race.Human), [Validators.required]],
-    dragonbornColor: [null],
+    dragonbornColor: this.fb.control<DragonbornColor | null>(null),
     classId: [this.mapperService.getClassId(Class.Fighter), [Validators.required]],
     level: [1, [Validators.required, Validators.min(1), Validators.max(20)]],
     proficiencyBonus: [2],
@@ -107,12 +108,12 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
       })
     }),
     equipment: this.fb.group({
-      armorId: [null],
-      shieldId: [null],
+      armorId: this.fb.control<string | number | null>(null),
+      shieldId: this.fb.control<string | number | null>(null),
       hasShieldEquipped: [false],
-      primaryWeaponId: [null],
-      secondaryWeaponId: [null],
-      rangedWeaponId: [null]
+      primaryWeaponId: this.fb.control<string | number | null>(null),
+      secondaryWeaponId: this.fb.control<string | number | null>(null),
+      rangedWeaponId: this.fb.control<string | number | null>(null)
     }),
     spellcasting: this.fb.group({
       casterType: [CasterType.None],
@@ -121,7 +122,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
       spellSaveDC: [10],
       spellAttackBonus: [0],
       spellSlots: this.fb.group(this.createEmptySpellSlots()),
-      spells: [[]]
+      spells: this.fb.control<{ id: string | number }[]>([])
     }),
     behavior: this.fb.group({
       actionPreference: ['balanced'],
@@ -134,7 +135,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
       maxHp: [10],
       tempHp: [0],
       hitDie: [10],
-      conditions: [{}],
+      conditions: this.fb.control<Record<string, unknown>>({}),
       deathSaves: this.fb.group({ successes: [0], failures: [0] }),
       resistances: this.fb.array([]),
       isStable: [true],
@@ -273,7 +274,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
 
   ngOnInit(): void {
     // Watch for level changes to update proficiency bonus
-    this.characterForm.get('level')?.valueChanges.subscribe(level => {
+    this.characterForm.get('level')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(level => {
       if (level !== null) {
         const pb = Math.floor((level - 1) / 4) + 2;
         this.characterForm.get('proficiencyBonus')?.setValue(pb, { emitEvent: false });
@@ -282,50 +283,46 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
     });
 
     // Watch for spellcasting changes
-    this.characterForm.get('asConfig.abilityScores')?.valueChanges.subscribe(() => {
+    this.characterForm.get('asConfig.abilityScores')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
       this.updateHPModifier();
     });
 
-    this.characterForm.get('asConfig.proficiencies')?.valueChanges.subscribe(() => {
+    this.characterForm.get('asConfig.proficiencies')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
 
-    this.characterForm.get('hp.numberOfDice')?.valueChanges.subscribe(() => this.updateHPModifier());
-    this.characterForm.get('hp.hitDie')?.valueChanges.subscribe(() => this.updateHPDisplay());
-    this.characterForm.get('hp.amountToAdd')?.valueChanges.subscribe(() => this.updateHPDisplay());
+    this.characterForm.get('hp.numberOfDice')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateHPModifier());
+    this.characterForm.get('hp.hitDie')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateHPDisplay());
+    this.characterForm.get('hp.amountToAdd')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.updateHPDisplay());
 
-    this.characterForm.get('spellcasting.ability')?.valueChanges.subscribe(() => {
+    this.characterForm.get('spellcasting.ability')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
 
-    this.characterForm.get('class')?.valueChanges.subscribe(className => {
-      // Logic below handles everything needed for class changes
-    });
-
-    this.characterForm.get('spellcasting.casterLevel')?.valueChanges.subscribe(() => {
+    this.characterForm.get('spellcasting.casterLevel')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
 
-    this.characterForm.get('proficiencyBonus')?.valueChanges.subscribe(() => {
+    this.characterForm.get('proficiencyBonus')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.calculateSpellcasting();
     });
 
-    this.characterForm.get('raceId')?.valueChanges.subscribe(raceId => {
+    this.characterForm.get('raceId')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(raceId => {
       const dragonbornId = this.mapperService.getRaceId(Race.Dragonborn);
       if (Number(raceId) !== dragonbornId) {
         this.characterForm.get('dragonbornColor')?.setValue(null, { emitEvent: false });
       }
     });
 
-    this.characterForm.get('classId')?.valueChanges.subscribe(classId => {
+    this.characterForm.get('classId')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(classId => {
       if (classId !== null && classId !== undefined) {
         this.calculateSpellcasting();
       }
     });
 
     // Watch for HP value changes to update state
-    this.characterForm.get('hp.value')?.valueChanges.subscribe(val => {
+    this.characterForm.get('hp.value')?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(val => {
       this.characterForm.get('state.currentHp')?.setValue(val, { emitEvent: false });
       this.characterForm.get('state.maxHp')?.setValue(val, { emitEvent: false });
     });
@@ -523,18 +520,19 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
 
     // Spells
     if (character.metadata?.spellcasterMetadata?.isSpellcaster) {
-      character.knownSpellIDs = (rawValues.spellcasting.spells || []).map((s: any) => Number(s.id));
+      character.knownSpellIDs = (rawValues.spellcasting.spells || []).map((s: { id: string | number }) => Number(s.id));
     }
     character.customSpells = []; // For character mocks
 
-    // Cleanup legacy fields
-    delete (character as any).spellcasting;
-    delete (character as any).equipment;
-    delete (character as any).hp;
-    delete (character as any).asConfig;
+    // Cleanup legacy fields not part of the persisted Actor shape.
+    const deletable = character as Record<string, unknown>;
+    delete deletable['spellcasting'];
+    delete deletable['equipment'];
+    delete deletable['hp'];
+    delete deletable['asConfig'];
 
     // Build the final state (needed for simulator, but often omitted in static mocks)
-    const resistanceObj: Record<string, any> = {};
+    const resistanceObj: Record<string, ResistanceType> = {};
     if (rawValues.state.resistances && Array.isArray(rawValues.state.resistances)) {
       rawValues.state.resistances.forEach((res: { damageType: string; resistanceType: ResistanceType }) => {
         resistanceObj[res.damageType] = res.resistanceType;
@@ -573,7 +571,7 @@ export class CharacterEditorComponent extends BaseEditorDirective<Actor> impleme
 
     // For the v2 export mock, we want a cleaner version without the runtime state
     const exportObj = { ...character };
-    delete (exportObj as any).state;
+    delete (exportObj as Record<string, unknown>)['state'];
 
     const serializedCharacter = this.mapperService.serializeKeys(exportObj);
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(serializedCharacter, null, 2));

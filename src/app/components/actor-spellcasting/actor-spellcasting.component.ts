@@ -1,12 +1,27 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { Spell, MonsterSpellcastingConfig, Spellcasting } from '../../models';
 
+/** Accepts either a character's Spellcasting or a monster's config; fields differ. */
+type SpellcastingInput = Partial<Spellcasting> & Partial<MonsterSpellcastingConfig>;
+
+/** A spell as displayed here, possibly annotated with innate-casting info. */
+interface SpellView extends Spell {
+  isInnate?: boolean;
+  maxCastsPerDay?: number;
+}
+
+/** Backend innate spells may arrive wrapped: { spell: {...}, maxCastsPerDay }. */
+interface InnateSpellWrapper {
+  spell?: Spell;
+  maxCastsPerDay?: number;
+}
+
 interface SpellGroup {
   level: number;
   label: string;
-  spells: Spell[];
+  spells: SpellView[];
   isInnate: boolean;
 }
 
@@ -15,10 +30,11 @@ interface SpellGroup {
   standalone: true,
   imports: [CardModule, TooltipModule],
   templateUrl: './actor-spellcasting.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './actor-spellcasting.component.css',
 })
 export class ActorSpellcasting {
-  public readonly spellcasting = input<any | undefined>(undefined);
+  public readonly spellcasting = input<SpellcastingInput | undefined>(undefined);
   public readonly hideState = input<boolean>(false);
 
   protected readonly data = computed(() => {
@@ -27,15 +43,15 @@ export class ActorSpellcasting {
     if (!sc) return null;
 
     // Both structures (MonsterSpellcastingConfig and legacy Spellcasting) are now passed via a.spellcasting
-    let spells = sc.spells || [];
+    let spells: SpellView[] = sc.spells ?? [];
 
     if (sc.leveledSpells) {
       spells = [...spells, ...sc.leveledSpells];
     }
 
     if (sc.innateSpells) {
-      // Innate spells from backend are wrapped: { spell: {...}, max_casts_per_day: -1 }
-      const flattenedInnate = sc.innateSpells.map((wrapper: any) => {
+      // Innate spells from backend are wrapped: { spell: {...}, maxCastsPerDay: -1 }
+      const flattenedInnate: SpellView[] = (sc.innateSpells as unknown as InnateSpellWrapper[]).map((wrapper) => {
         if (wrapper.spell) {
           return {
             ...wrapper.spell,
@@ -43,20 +59,16 @@ export class ActorSpellcasting {
             maxCastsPerDay: wrapper.maxCastsPerDay
           };
         }
-        return wrapper;
+        return wrapper as unknown as SpellView;
       });
       spells = [...spells, ...flattenedInnate];
     }
 
     // Normalize spell slots if they are just numbers (backend format)
-    const rawSlots = sc.spellSlots || {};
-    const normalizedSlots: any = {};
+    const rawSlots = (sc.spellSlots ?? {}) as Record<string, number | { current: number; max: number }>;
+    const normalizedSlots: Record<string, { current: number; max: number }> = {};
     Object.entries(rawSlots).forEach(([level, value]) => {
-      if (typeof value === 'number') {
-        normalizedSlots[level] = { current: value, max: value };
-      } else {
-        normalizedSlots[level] = value;
-      }
+      normalizedSlots[level] = typeof value === 'number' ? { current: value, max: value } : value;
     });
 
     return {
@@ -71,12 +83,12 @@ export class ActorSpellcasting {
     const d = this.data();
     if (!d) return [];
 
-    const leveledGroups: { [level: number]: Spell[] } = {};
-    const innateGroups: { [usage: string]: Spell[] } = {};
+    const leveledGroups: { [level: number]: SpellView[] } = {};
+    const innateGroups: { [usage: string]: SpellView[] } = {};
 
     const spells = d.spells || [];
 
-    spells.forEach((spell: any) => {
+    spells.forEach((spell) => {
       if (spell.isInnate) {
         const usage = this.getInnateUsageLabel(spell.maxCastsPerDay);
         if (!innateGroups[usage]) {

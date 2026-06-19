@@ -2,7 +2,7 @@ import {computed, inject, Injectable, signal} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {environment} from '../../environments/environment';
 import {MapperService} from './mapper.service';
-import { Actor, ActorSummary, Armor, Weapon } from '../models';
+import { Actor, ActorSummary, Armor, Weapon, Spell, CasterType, WeaponSlotData, DataEnvelope } from '../models';
 import {catchError, forkJoin, Observable, of, retry, tap, throwError} from 'rxjs';
 import {map, switchMap} from 'rxjs/operators';
 import {ActorService} from './actor.service.interface';
@@ -11,6 +11,17 @@ import { EquipmentService } from './equipment.service';
 import { SpellsService } from './spells.service';
 
 import { ApiResponse } from '../models';
+
+/**
+ * The character summaries endpoint returns objects that are mostly ActorSummary
+ * plus a few raw fields used only to resolve display names. Fields are camelCase
+ * (the mapping interceptor normalizes the snake_case backend payload).
+ */
+interface RawCharacterSummary extends ActorSummary {
+  armorId?: number | string;
+  weaponIds?: (number | string)[];
+  equipment?: { hasShieldEquipped?: boolean; shieldId?: number | string };
+}
 
 @Injectable({
   providedIn: 'root',
@@ -38,7 +49,7 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
       const metadata = c.metadata;
 
       if (eq?.armorId) {
-        const armorSummary = (this.equipmentService.summaries() as any[]).find((s: any) =>
+        const armorSummary = this.equipmentService.summaries().find(s =>
           s.id.toString() === eq.armorId!.toString() && (s.type === 'Armor' || s.type === 'Shield')
         );
         armorName = armorSummary ? armorSummary.name : `Armor #${eq.armorId}`;
@@ -47,7 +58,7 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
       if (eq?.hasShieldEquipped) {
         let shieldName = 'Shield';
         if (eq.shieldId) {
-          const shieldSummary = (this.equipmentService.summaries() as any[]).find((s: any) =>
+          const shieldSummary = this.equipmentService.summaries().find(s =>
             s.id.toString() === eq.shieldId!.toString() && s.type === 'Shield'
           );
           shieldName = shieldSummary ? shieldSummary.name : `Shield #${eq.shieldId}`;
@@ -57,14 +68,14 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
 
       const weaponNames: string[] = [];
       if (eq) {
-        const primaryIds = (eq.primarySlot || []).map((w: any) => w.weaponId);
-        const secondaryIds = (eq.secondarySlot || []).map((w: any) => w.weaponId);
-        const rangedIds = (eq.rangedSlot || []).map((w: any) => w.weaponId);
+        const primaryIds = (eq.primarySlot || []).map(w => w.weaponId);
+        const secondaryIds = (eq.secondarySlot || []).map(w => w.weaponId);
+        const rangedIds = (eq.rangedSlot || []).map(w => w.weaponId);
 
         const allWeaponIds = [...primaryIds, ...secondaryIds, ...rangedIds];
 
         allWeaponIds.forEach(id => {
-          const ws = (this.equipmentService.summaries() as any[]).find((s: any) =>
+          const ws = this.equipmentService.summaries().find(s =>
             s.id.toString() === id.toString() && s.type === 'Weapon'
           );
           weaponNames.push(ws ? ws.name : `Weapon #${id}`);
@@ -84,7 +95,7 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
         isInnateCaster: !!metadata?.spellcasterMetadata?.isInnateCaster,
         armorName: armorName,
         weapons: weaponNames
-      } as any;
+      };
     });
     return [...customSummaries, ...this._summaries()];
   });
@@ -124,34 +135,31 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
           delay: environment.httpRetryDelay
         }),
         map((response) => {
-         let rawData: any[] = [];
-          const responseData = (response as any).data || response;
+          // Response is camelCased + 'data'-unwrapped by the mapping interceptor.
+          const responseData = response.data ?? response;
 
+          let rawData: RawCharacterSummary[] = [];
           if (Array.isArray(responseData)) {
-            rawData = responseData;
+            rawData = responseData as RawCharacterSummary[];
           } else if (responseData && typeof responseData === 'object') {
-            rawData = Object.values(responseData);
+            rawData = Object.values(responseData) as RawCharacterSummary[];
           }
 
           const mapped = rawData.map((c) => {
-            const mapped = c as any;
             // Inject display names for components that still expect .race and .class
-            mapped.race = this.mapperService.getRaceName(mapped.raceId);
-            mapped.class = this.mapperService.getClassName(mapped.classId);
+            c.race = this.mapperService.getRaceName(c.raceId ?? 0);
+            c.class = this.mapperService.getClassName(c.classId ?? 0);
 
             // Correctly resolve armor and weapon names for the summary
-            if (mapped.armorId) {
+            if (c.armorId) {
               const armor = this.equipmentService.summaries().find(s =>
-                s.id.toString() === mapped.armorId?.toString() && (s.type === 'Armor' || s.type === 'Shield')
+                s.id.toString() === c.armorId?.toString() && (s.type === 'Armor' || s.type === 'Shield')
               );
-              mapped.armorName = armor ? armor.name : `Armor #${mapped.armorId}`;
+              c.armorName = armor ? armor.name : `Armor #${c.armorId}`;
             }
 
-            // Also check for shield in summary mapping if it's there
-            const raw = c as any;
-            const hasShield = !!(raw.equipment?.has_shield_equipped || raw.has_shield_equipped);
-            const shieldId = raw.equipment?.shield_id || raw.shield_id;
-
+            const hasShield = !!c.equipment?.hasShieldEquipped;
+            const shieldId = c.equipment?.shieldId;
             if (hasShield) {
               let sName = 'Shield';
               if (shieldId) {
@@ -160,11 +168,11 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
                 );
                 sName = shield ? shield.name : `Shield #${shieldId}`;
               }
-              mapped.armorName = mapped.armorName ? `${mapped.armorName} (+ ${sName})` : sName;
+              c.armorName = c.armorName ? `${c.armorName} (+ ${sName})` : sName;
             }
 
-            if (mapped.weaponIds && Array.isArray(mapped.weaponIds)) {
-              mapped.weapons = mapped.weaponIds.map((id: string | number) => {
+            if (c.weaponIds && Array.isArray(c.weaponIds)) {
+              c.weapons = c.weaponIds.map((id) => {
                 const weapon = this.equipmentService.summaries().find(s =>
                   s.id.toString() === id.toString() && s.type === 'Weapon'
                 );
@@ -172,7 +180,7 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
               });
             }
 
-            return mapped as ActorSummary;
+            return c as ActorSummary;
           });
           return mapped;
         }),
@@ -205,7 +213,7 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
         delay: environment.httpRetryDelay
       }),
       map(response => {
-        const data = (response as any)?.data || response;
+        const data = (response as DataEnvelope<Actor>)?.data || response;
         return data as Actor;
       }),
       switchMap(character => this.hydrateCharacter(character)),
@@ -229,12 +237,12 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
 
     // 1. Hydrate Spells
     const spellcasting = character.spellcasting;
-    const spellIds = character.knownSpellIDs || (character.spellcasting as any)?.spellIds;
+    const spellIds = character.knownSpellIDs || spellcasting?.spellIds;
 
     if (spellIds && spellIds.length > 0) {
       // If not already hydrated
-      if (!(spellcasting as any)?.spells || (spellcasting as any).spells.length !== (spellIds as any).length) {
-        const spellRequests = (spellIds as any).map((id: any) =>
+      if (!spellcasting?.spells || spellcasting.spells.length !== spellIds.length) {
+        const spellRequests = spellIds.map((id) =>
           this.spellsService.selectActorByID(id.toString()).pipe(
             catchError(err => {
               console.error(`Failed to hydrate spell ${id}`, err);
@@ -243,17 +251,17 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
           )
         );
         hydrationTasks.push(forkJoin(spellRequests).pipe(
-          tap((spells: any) => {
+          tap((spells: (Spell | null)[]) => {
             if (!character.spellcasting) {
-              (character as any).spellcasting = {
-                casterType: (character.metadata?.spellcasterMetadata?.isSpellcaster ? 'full' : 'none') as any,
+              character.spellcasting = {
+                casterType: (character.metadata?.spellcasterMetadata?.isSpellcaster ? CasterType.Full : CasterType.None),
                 casterLevel: character.metadata?.spellcasterMetadata?.spellcastingLevel || 1,
                 spellSlots: {},
                 spellSaveDC: 10,
                 spellAttackBonus: 0
               };
             }
-            (character.spellcasting as any).spells = spells.filter((s: any) => s !== null);
+            character.spellcasting.spells = spells.filter((s): s is Spell => s !== null);
           })
         ));
       }
@@ -272,10 +280,10 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
           character.equipment!.shieldId = config.id;
           character.equipment!.hasShieldEquipped = true;
         } else if (config.type === 'weapon') {
-          const slotData: any = {
+          const slotData: WeaponSlotData = {
             weaponId: config.id,
             isProficient: true, // Assume proficient for custom chars
-            modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false }
+            modifiers: { attackBonus: 0, damageBonus: 0, isMagic: false, isSilvered: false, isAdamantine: false, isColdForgedIron: false }
           };
           if (config.slot === 'primary') {
             character.equipment!.primarySlot = [slotData];
@@ -323,10 +331,10 @@ export class CharacterService implements ActorService<Actor, ActorSummary> {
 
     weaponSlots.forEach(slot => {
       slot!.forEach(ws => {
-        if (ws.weaponId && !(ws as any).weapon) {
+        if (ws.weaponId && !ws.weapon) {
           hydrationTasks.push(this.equipmentService.selectItemByID(ws.weaponId.toString(), 'Weapon').pipe(
             tap(weapon => {
-              (ws as any).weapon = weapon as Weapon;
+              ws.weapon = weapon as Weapon;
             }),
             catchError(err => {
               console.error(`Failed to hydrate weapon ${ws.weaponId}`, err);

@@ -62,6 +62,7 @@ export interface WeaponSlotData {
   weaponId: number | string;
   isProficient: boolean;
   modifiers: WeaponModifiers;
+  weapon?: Weapon; // populated during hydration
 }
 
 export interface Equipment {

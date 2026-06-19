@@ -18,6 +18,7 @@ export interface MultiattackOption {
 
 export interface Action {
   actionId?: string | number;
+  actionType?: string; // backend action_type, e.g. 'monster_action' | 'monster_legendary' | 'monster_multiattack'
   name: string;
   description?: string;
   rechargeValue?: number;
@@ -93,10 +94,15 @@ export interface ActorSummary {
   cr?: number;
   level?: number;
   type?: string;
+  size?: string;
   class?: string;
   race?: string;
+  classId?: number;
+  raceId?: number;
   ac?: number;
   isLegendary?: boolean;
   isSpellcaster?: boolean;
   isInnateCaster?: boolean;
+  armorName?: string; // display-only, resolved from equipment
+  weapons?: string[]; // display-only weapon names
 }

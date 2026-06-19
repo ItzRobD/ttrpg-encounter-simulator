@@ -47,7 +47,7 @@ export class SpellcastingEditorComponent implements OnInit, OnChanges {
         const ctrl = group.get('casterType');
         if (ctrl) {
           this.casterTypeSignal.set(ctrl.value);
-          const sub = ctrl.valueChanges.subscribe(v => this.casterTypeSignal.set(v));
+          const sub = ctrl.valueChanges.subscribe((v: CasterType) => this.casterTypeSignal.set(v));
           return () => sub.unsubscribe();
         }
       }
@@ -104,7 +104,7 @@ export class SpellcastingEditorComponent implements OnInit, OnChanges {
 
     this.loadingSpells.set(true);
     this.spellsService.selectActorByID(summary.id.toString()).subscribe({
-      next: (fullSpell: any) => {
+      next: (fullSpell: Spell) => {
         const updatedSpells = [...currentSpells, fullSpell];
         this.group().get('spells')?.setValue(updatedSpells);
         this.selectedSummary = null;

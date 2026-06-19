@@ -2,7 +2,7 @@ import { Actor, isCharacter, isMonster } from './combatants';
 
 export function getAC(actor: Actor): string {
   // New Actor model AC
-  const ac = actor.ac ?? (actor as any).AC ?? (actor as any).ac;
+  const ac = actor.ac;
   if (ac !== undefined && ac !== null && ac !== 0) {
     return ac.toString();
   }
@@ -35,8 +35,7 @@ export function getAC(actor: Actor): string {
 
     return baseAC.toString();
   } else if (isMonster(actor)) {
-    const ac = (actor as any).ac;
-    return ac?.toString() || '??';
+    return actor.ac?.toString() || '??';
   }
 
   console.log('Unable to get AC for ', actor)

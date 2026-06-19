@@ -116,7 +116,7 @@ export abstract class BaseEditorDirective<T extends { id?: string | number; name
         next: () => {
           this.close();
         },
-        error: (err: any) => {
+        error: (err: unknown) => {
           console.error(`Failed to save ${type}`, err);
           this.error.set(`Failed to save ${type}. Please try again.`);
         }

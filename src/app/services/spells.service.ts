@@ -109,7 +109,7 @@ export class SpellsService {
 
     if (rawData && typeof rawData === 'object') {
       // If it's a dictionary of spells
-      return Object.values(rawData as any as Record<string, SpellSummary>);
+      return Object.values(rawData as unknown as Record<string, SpellSummary>);
     }
 
     return [];
@@ -163,7 +163,9 @@ export class SpellsService {
         // Note: MapperService.mapKeys might have already unwrapped the outer 'data' envelope
         // or the response might still be { data: { "119": { ... } } } if MapperService didn't unwrap it.
 
-        let data = (response as any)?.data || response;
+        // Either a single spell or a dict keyed by id; the interceptor may or
+        // may not have unwrapped the 'data' envelope.
+        const data = ((response as ApiResponse<Record<string, Spell>>)?.data ?? response) as Record<string, Spell> & Partial<Spell>;
 
         // If it's a dictionary of spells
         if (data && typeof data === 'object' && !Array.isArray(data) && !data.id && !data.name) {

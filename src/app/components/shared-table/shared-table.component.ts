@@ -25,7 +25,7 @@ import { MapperService } from '../../services/mapper.service';
 import {
   ActorSummary,
   Actor,
-  EquipmentItem, SpellSummary, Spell
+  EquipmentItem, EquipmentSummary, SpellSummary, Spell
 } from '../../models';
 import {SpellsService} from '../../services/spells.service';
 
@@ -74,18 +74,18 @@ export class SharedTable {
         return {
           ...service,
           selectedActor: service.selectedItem,
-          selectActor: (actor: any) => service.selectItem(actor),
+          selectActor: (actor: EquipmentItem | null) => service.selectItem(actor),
           selectActorByID: (id: string) => service.selectItemByID(id, 'Weapon') // Defaulting to Weapon for now
-        } as any;
+        } as unknown as SupportedService;
       }
       case 'spells': {
         const service = this.spellsService;
         return {
           ...service,
           selectedActor: service.selectedSpell,
-          selectActor: (actor: any) => service.selectActor(actor),
+          selectActor: (actor: Spell | null) => service.selectActor(actor),
           selectActorByID: (id: string) => service.selectActorByID(id)
-        } as any;
+        } as unknown as SupportedService;
       }
     }
   });
@@ -133,7 +133,7 @@ export class SharedTable {
 
     // 1. Category Filtering
     if (category !== 'all') {
-      items = items.filter((i: any) => {
+      items = items.filter((i: ActorSummary) => {
         if (this.mode() === 'monster') {
           if (category === 'srd') return !i.isCustom;
           if (category === 'custom') return !!i.isCustom;
@@ -141,9 +141,10 @@ export class SharedTable {
           if (category === 'armor') return i.type === 'Armor' || i.type === 'Shield';
           if (category === 'weapons') return i.type === 'Weapon';
         } else if (this.mode() === 'spells') {
-          if (category === 'damage') return i.spellType === 'damage';
-          if (category === 'healing') return i.spellType === 'healing';
-          if (category === 'utility') return i.spellType === 'other';
+          const spellType = (i as unknown as SpellSummary).spellType;
+          if (category === 'damage') return spellType === 'damage';
+          if (category === 'healing') return spellType === 'healing';
+          if (category === 'utility') return spellType === 'other';
         }
         return true;
       });
@@ -158,7 +159,7 @@ export class SharedTable {
       const basicMatch = i.name.toLowerCase().includes(term);
 
       if (this.mode() === 'monster') {
-        const m = i as any;
+        const m = i;
         return (
           basicMatch ||
           m.type?.toLowerCase().includes(term) ||
@@ -169,7 +170,7 @@ export class SharedTable {
           ((m.isSpellcaster || m.isInnateCaster) && 'spellcaster'.includes(term))
         );
       } else if (this.mode() === 'character') {
-        const c = i as any;
+        const c = i;
         return (
           basicMatch ||
           c.race?.toLowerCase().includes(term) ||
@@ -178,7 +179,7 @@ export class SharedTable {
           ((c.isSpellcaster || c.isInnateCaster) && 'spellcaster'.includes(term))
         );
       } else if (this.mode() === 'equipment') {
-        const eq = i as any;
+        const eq = i as unknown as EquipmentSummary;
         const propertyMatch = eq.properties ? (
           (eq.properties.isVersatile && 'versatile'.includes(term)) ||
           (eq.properties.isFinesse && 'finesse'.includes(term)) ||
@@ -195,7 +196,7 @@ export class SharedTable {
           propertyMatch
         );
       } else if (this.mode() === 'spells') {
-        const spell = i as any;
+        const spell = i as unknown as SpellSummary;
         return (
           basicMatch ||
           spell.spellType?.toLowerCase().includes(term) ||
@@ -234,7 +235,7 @@ export class SharedTable {
     if (mode === 'monster' || mode === 'character') {
       (service as ActorService<Actor, ActorSummary>).selectActorByID(id.toString()).pipe(take(1)).subscribe();
     } else if (mode === 'equipment') {
-      const eqSummary = summary as any;
+      const eqSummary = summary as EquipmentSummary;
       this.equipmentService.selectItemByID(id.toString(), eqSummary.type).pipe(take(1)).subscribe();
     } else if (mode === 'spells') {
       this.spellsService.selectActorByID(id.toString()).pipe(take(1)).subscribe();

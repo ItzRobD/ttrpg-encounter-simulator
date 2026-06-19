@@ -1,4 +1,4 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DrawerModule } from 'primeng/drawer';
@@ -30,6 +30,7 @@ import {environment} from '../../../environments/environment';
     AccordionContent
   ],
   templateUrl: './simulation-options.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './simulation-options.css'
 })
 export class SimulationOptionsComponent {
@@ -65,7 +66,7 @@ export class SimulationOptionsComponent {
     this.visibleChange.emit(false);
   }
 
-  updateOption(key: keyof SimulationOptions, value: any) {
+  updateOption<K extends keyof SimulationOptions>(key: K, value: SimulationOptions[K]) {
     this.simulationService.updateOptions({ [key]: value });
   }
 

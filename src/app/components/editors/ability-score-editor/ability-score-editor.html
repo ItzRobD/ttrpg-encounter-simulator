@@ -1,27 +1,32 @@
 <div [formGroup]="group()" class="ability-grid">
-  <div *ngFor="let ability of abilities" class="ability-card">
-    <div class="flex align-items-center gap-1">
-      <div class="ability-label">{{ ability.short }}</div>
-      <i
-        class="prof-toggle pi"
-        [ngClass]="isProficient(ability.key) ? 'pi-star-fill text-primary' : 'pi-star text-400'"
-        (click)="toggleProficiency(ability.key)"
-        [pTooltip]="isProficient(ability.key) ? 'Proficient' : 'Not Proficient'"
-      ></i>
-    </div>
+  @for (ability of abilities; track ability.key) {
+    <div class="ability-card">
+      <div class="flex align-items-center gap-1">
+        <div class="ability-label">{{ ability.short }}</div>
+        <i
+          class="prof-toggle pi"
+          [class.pi-star-fill]="isProficient(ability.key)"
+          [class.text-primary]="isProficient(ability.key)"
+          [class.pi-star]="!isProficient(ability.key)"
+          [class.text-400]="!isProficient(ability.key)"
+          (click)="toggleProficiency(ability.key)"
+          [pTooltip]="isProficient(ability.key) ? 'Proficient' : 'Not Proficient'"
+        ></i>
+      </div>
 
-    <div formGroupName="abilityScores" class="score-input-container">
-      <p-inputNumber
-        [formControlName]="ability.key"
-        [min]="1"
-        [max]="30"
-        [showButtons]="true"
-        class="w-full"
-      ></p-inputNumber>
-    </div>
+      <div formGroupName="abilityScores" class="score-input-container">
+        <p-inputNumber
+          [formControlName]="ability.key"
+          [min]="1"
+          [max]="30"
+          [showButtons]="true"
+          class="w-full"
+        ></p-inputNumber>
+      </div>
 
-    <div class="mod-text">
-      ({{ getModifier(group().get('abilityScores')?.get(ability.key)?.value || 10) }})
+      <div class="mod-text">
+        ({{ getModifier(group().get('abilityScores')?.get(ability.key)?.value || 10) }})
+      </div>
     </div>
-  </div>
+  }
 </div>

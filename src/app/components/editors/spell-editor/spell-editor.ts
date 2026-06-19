@@ -1,4 +1,4 @@
-import { Component, effect, OnInit, inject } from '@angular/core';
+import { Component, effect, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
@@ -38,7 +38,8 @@ import { FluidModule } from 'primeng/fluid';
     SelectButtonModule,
     TooltipModule
   ],
-  templateUrl: './spell-editor.html'
+  templateUrl: './spell-editor.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SpellEditorComponent extends BaseEditorDirective<Spell> implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -77,8 +78,8 @@ export class SpellEditorComponent extends BaseEditorDirective<Spell> implements 
     };
   }
 
-  public spellForm: FormGroup = this.fb.group({
-    id: [null],
+  public spellForm = this.fb.group({
+    id: this.fb.control<string | number | null>(null),
     name: ['', [Validators.required]],
     description: ['', [Validators.required]],
     level: [0, [Validators.required, Validators.min(0), Validators.max(9)]],
@@ -149,11 +150,12 @@ export class SpellEditorComponent extends BaseEditorDirective<Spell> implements 
             formulaArray.forEach(f => this.addFormula(Number(level), f));
           } else {
             // Handle potentially non-array format if it still exists in custom data
-            this.addFormula(Number(level), formulaArray as any);
+            this.addFormula(Number(level), formulaArray as unknown as SpellFormula);
           }
         });
       }
-      this.spellForm.patchValue(item, { emitEvent: false });
+      // Boundary: external Spell patched into the form (formulas handled above).
+      this.spellForm.patchValue(item as unknown as Partial<typeof this.spellForm.value>, { emitEvent: false });
     } else {
         this.spellForm.reset({
           level: 0,
@@ -210,7 +212,7 @@ export class SpellEditorComponent extends BaseEditorDirective<Spell> implements 
 
     // Map formulas array back to Record<number, SpellFormula[]>
     const formulasRecord: Record<number, SpellFormula[]> = {};
-    rawValue.formulas.forEach((f: any) => {
+    (rawValue.formulas as unknown as SpellFormula[]).forEach((f: SpellFormula) => {
       const avg = (f.numberOfDice * (f.die + 1) / 2) + f.amountToAdd;
       const formula = {
         ...f,
@@ -223,10 +225,11 @@ export class SpellEditorComponent extends BaseEditorDirective<Spell> implements 
       formulasRecord[f.castLevel].push(formula);
     });
 
-    const actor: Spell = {
+    // Boundary: assemble the persisted Spell from the typed form value.
+    const actor = {
       ...rawValue,
       formulas: formulasRecord
-    };
+    } as unknown as Spell;
 
     // Ensure numeric values are correct
     actor.level = Number(actor.level);

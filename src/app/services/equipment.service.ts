@@ -9,7 +9,20 @@ import { ActorService } from './actor.service.interface';
 import { getEquipmentDetail } from '../shared/utils/dnd-utils';
 import { CustomContentService } from './custom-content.service';
 
-import { ApiResponse, DataEnvelope } from '../models';
+import { ApiResponse } from '../models';
+
+/**
+ * Raw equipment payload from the API: common fields plus a nested `weapon` or
+ * `armor` object holding the type-specific stats. Flattened into Weapon/Armor.
+ */
+interface RawEquipmentItem {
+  id?: number | string;
+  name?: string;
+  isCustom?: boolean;
+  type?: string;
+  weapon?: Partial<Weapon>;
+  armor?: Partial<Armor>;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -92,15 +105,16 @@ export class EquipmentService {
     this._loading.set(true);
     this._error.set(null);
 
-    const weapons$ = this.http.get<ApiResponse<any[]>>(`${this.apiUrl}/weapons`).pipe(
+    const weapons$ = this.http.get<ApiResponse<RawEquipmentItem[]> | RawEquipmentItem[]>(`${this.apiUrl}/weapons`).pipe(
       retry({
         count: environment.httpRetryCount,
         delay: environment.httpRetryDelay
       }),
       map(response => {
        // Response format: { count: 35, data: [ { id: "", name: "Rapier", weapon: { ... } }, ... ] }
-        const data = Array.isArray(response) ? response : (response?.data || []);
-        const weapons = data.map((item: any) => {
+       // (the mapping interceptor may unwrap the envelope, hence the union)
+        const data = Array.isArray(response) ? response : (response?.data ?? []);
+        const weapons = data.map((item) => {
           const weaponData = item.weapon || {};
           return {
             id: item.id,
@@ -120,15 +134,15 @@ export class EquipmentService {
       })
     );
 
-    const armor$ = this.http.get<ApiResponse<any[]>>(`${this.apiUrl}/armor`).pipe(
+    const armor$ = this.http.get<ApiResponse<RawEquipmentItem[]> | RawEquipmentItem[]>(`${this.apiUrl}/armor`).pipe(
       retry({
         count: environment.httpRetryCount,
         delay: environment.httpRetryDelay
       }),
       map(response => {
         // Response format: { count: 13, data: [ { id: "", name: "Padded Armor", armor: { ... } }, ... ] }
-        const data = Array.isArray(response) ? response : (response?.data || []);
-        const armorList = data.map((item: any) => {
+        const data = Array.isArray(response) ? response : (response?.data ?? []);
+        const armorList = data.map((item) => {
           const armorData = item.armor || {};
           return {
             id: item.id,
@@ -211,25 +225,24 @@ export class EquipmentService {
       url = `${this.apiUrl}/${path}/${id}`;
     }
 
-    return this.http.get<ApiResponse<any>>(url).pipe(
+    return this.http.get<ApiResponse<RawEquipmentItem> | RawEquipmentItem>(url).pipe(
       retry({
         count: environment.httpRetryCount,
         delay: environment.httpRetryDelay
       }),
       map(response => {
         // Response format: { data: { id: "17", name: "Glaive", type: "weapon", weapon/armor: { ... } } }
-        const data = (response as any)?.data || response;
+        const data = ((response as ApiResponse<RawEquipmentItem>)?.data ?? response) as RawEquipmentItem;
         if (!data || (!data.weapon && !data.armor && !data.id)) {
-          return null as any;
+          return null as unknown as EquipmentItem;
         }
 
-        const subKey = data.weapon ? 'weapon' : (data.armor ? 'armor' : null);
         const finalItem = {
           id: data.id,
           name: data.name,
           isCustom: data.isCustom,
           type: data.type,
-          ...(subKey ? data[subKey] : (data.id ? data : {}))
+          ...(data.weapon ?? data.armor ?? (data.id ? data : {}))
         } as EquipmentItem;
         return finalItem;
       }),

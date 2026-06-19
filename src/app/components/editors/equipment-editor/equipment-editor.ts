@@ -16,6 +16,34 @@ import { BaseEditorDirective } from '../base-editor.directive';
 import { Weapon, Armor, EquipmentItem, DiceType, DamageType } from '../../../models';
 import { CustomActorType } from '../../../services/custom-content.service';
 
+/** Editor form value for a weapon (flat dice fields, distinct from Weapon's damageBlocks). */
+interface WeaponFormValue {
+  id: string | number | null;
+  name: string;
+  numberOfDice: number;
+  die: DiceType;
+  damageType: DamageType;
+  properties: {
+    isVersatile: boolean; isFinesse: boolean; isRanged: boolean; isHeavy: boolean;
+    isTwoHanded: boolean; isLight: boolean; isThrown: boolean; isOnlyRanged: boolean;
+  };
+  modifiers: {
+    isMagic: boolean; isSilvered: boolean; isAdamantine: boolean; isColdForgedIron: boolean;
+    attackBonus: number; damageBonus: number;
+  };
+}
+
+/** Editor form value for armor. */
+interface ArmorFormValue {
+  id: string | number | null;
+  name: string;
+  ac: number;
+  dexBonus: boolean;
+  maxBonus: boolean;
+  minimumStrength: number;
+  modifier: number;
+}
+
 @Component({
   selector: 'app-equipment-editor',
   imports: [
@@ -41,8 +69,8 @@ export class EquipmentEditorComponent extends BaseEditorDirective<EquipmentItem>
 
   public readonly activeTab = signal<'weapon' | 'armor'>('weapon');
 
-  public weaponForm: FormGroup = this.fb.group({
-    id: [null],
+  public weaponForm = this.fb.group({
+    id: this.fb.control<string | number | null>(null),
     name: ['', [Validators.required]],
     numberOfDice: [1, [Validators.required, Validators.min(0), Validators.max(20)]],
     die: [DiceType.D6, [Validators.required]],
@@ -67,8 +95,8 @@ export class EquipmentEditorComponent extends BaseEditorDirective<EquipmentItem>
     })
   });
 
-  public armorForm: FormGroup = this.fb.group({
-    id: [null],
+  public armorForm = this.fb.group({
+    id: this.fb.control<string | number | null>(null),
     name: ['', [Validators.required]],
     ac: [10, [Validators.required, Validators.min(0), Validators.max(30)]],
     dexBonus: [false],
@@ -99,10 +127,11 @@ export class EquipmentEditorComponent extends BaseEditorDirective<EquipmentItem>
       if (item) {
         if ('die' in item) {
           this.activeTab.set('weapon');
-          this.weaponForm.patchValue(item);
+          // Boundary: external EquipmentItem patched into the (differently-shaped) form.
+          this.weaponForm.patchValue(item as unknown as Partial<WeaponFormValue>);
         } else {
           this.activeTab.set('armor');
-          this.armorForm.patchValue(item);
+          this.armorForm.patchValue(item as unknown as Partial<ArmorFormValue>);
         }
       } else {
         this.resetForms();
@@ -152,11 +181,12 @@ export class EquipmentEditorComponent extends BaseEditorDirective<EquipmentItem>
   onSave(): void {
     if (this.activeTab() === 'weapon') {
       if (this.weaponForm.valid) {
-        this.saveActor(this.weaponForm.value);
+        // Boundary: form value persisted as a Weapon.
+        this.saveActor(this.weaponForm.getRawValue() as unknown as Weapon);
       }
     } else {
       if (this.armorForm.valid) {
-        this.saveActor(this.armorForm.value);
+        this.saveActor(this.armorForm.getRawValue() as unknown as Armor);
       }
     }
   }

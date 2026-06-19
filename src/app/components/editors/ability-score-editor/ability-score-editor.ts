@@ -1,5 +1,4 @@
 import { Component, input, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TooltipModule } from 'primeng/tooltip';
@@ -7,7 +6,7 @@ import { getModifier, formatModifier } from '../../../shared/utils/dnd-utils';
 
 @Component({
   selector: 'app-ability-score-editor',
-  imports: [CommonModule, ReactiveFormsModule, InputNumberModule, TooltipModule],
+  imports: [ReactiveFormsModule, InputNumberModule, TooltipModule],
   templateUrl: './ability-score-editor.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`

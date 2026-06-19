@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import {
   ActorState,
@@ -16,6 +16,7 @@ import {
   standalone: true,
   imports: [TitleCasePipe],
   templateUrl: './actor-stats.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './actor-stats.component.css',
 })
 export class ActorStats {

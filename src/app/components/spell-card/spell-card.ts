@@ -1,4 +1,4 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, input, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
@@ -9,6 +9,7 @@ import { Spell, SpellFormula } from '../../models';
   standalone: true,
   imports: [CardModule, TitleCasePipe, CommonModule, TagModule],
   templateUrl: './spell-card.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './spell-card.css',
 })
 export class SpellCard {

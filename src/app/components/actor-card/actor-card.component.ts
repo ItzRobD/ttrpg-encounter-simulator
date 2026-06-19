@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -51,6 +51,7 @@ import { EquipmentService } from '../../services/equipment.service';
     CrFormatPipe,
   ],
   templateUrl: './actor-card.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './actor-card.component.css',
 })
 export class ActorCard {
@@ -193,7 +194,7 @@ export class ActorCard {
   protected readonly actionNames = computed(() => {
     const a = this.actor();
     return (a.actions || [])
-      .filter(a => (a as any).actionType === 'monster_action' || (a as any).action_type === 'monster_action' || (a as any).actionType === 'monster_multiattack' || (a as any).action_type === 'monster_multiattack')
+      .filter(act => act.actionType === 'monster_action' || act.actionType === 'monster_multiattack')
       .map(act => act.name);
   });
 
@@ -219,7 +220,7 @@ export class ActorCard {
   protected readonly legendaryActionNames = computed(() => {
     const a = this.actor();
     return (a.actions || [])
-      .filter(act => (act as any).actionType === 'monster_legendary' || (act as any).action_type === 'monster_legendary')
+      .filter(act => act.actionType === 'monster_legendary')
       .map(act => act.name);
   });
 
@@ -305,11 +306,11 @@ export class ActorCard {
     const sc = a.spellcasting;
     if (!sc) return { label: '', list: '' };
 
-    let spells: any[] = [];
+    let spells: { name: string }[] = [];
     if (sc.leveledSpells || sc.innateSpells) {
       spells = [...(sc.leveledSpells || []), ...(sc.innateSpells || [])];
-    } else if ((sc as any).spells) {
-      spells = (sc as any).spells;
+    } else if (sc.spells) {
+      spells = sc.spells;
     }
 
     if (spells.length === 0) return { label: '', list: '' };

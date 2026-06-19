@@ -1,4 +1,4 @@
-import { inject, Injectable, signal, computed, effect} from '@angular/core';
+import { inject, Injectable, signal, computed, effect, WritableSignal} from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { SubscriptionService } from './subscription.service';
 import { HttpClient } from '@angular/common/http';
@@ -125,8 +125,8 @@ export class CustomContentService {
       equipment: this._customEquipment
     };
 
-    const targetSignal = signalMap[type];
-    (targetSignal as any).update((items: any[]) => {
+    const targetSignal = signalMap[type] as unknown as WritableSignal<Array<{ id: string | number }>>;
+    targetSignal.update((items) => {
       const index = items.findIndex(i => i.id === actor.id);
       if (index > -1) {
         const newItems = [...items];
@@ -152,9 +152,9 @@ export class CustomContentService {
       equipment: this._customEquipment
     };
 
-    const targetSignal = signalMap[type] as any;
-    targetSignal.update((items: any[]) => {
-      const newItems = items.filter((i: any) => i.id !== id);
+    const targetSignal = signalMap[type] as unknown as WritableSignal<Array<{ id: string | number }>>;
+    targetSignal.update((items) => {
+      const newItems = items.filter((i) => i.id !== id);
       this.subscriptionService.updateLocalUsage(type, newItems.length);
       return newItems;
     });

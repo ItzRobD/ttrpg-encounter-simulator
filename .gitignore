@@ -53,3 +53,4 @@ environment.local.ts
 *.md
 *.txt
 !readme.md
+.superpowers/

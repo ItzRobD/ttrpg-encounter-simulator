@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { SharedTable } from '../../components/shared-table/shared-table.component';
 import { EquipmentCard } from '../../components/equipment-card/equipment-card';
 import { EquipmentService } from '../../services/equipment.service';
@@ -29,6 +29,7 @@ import { TabsModule } from 'primeng/tabs';
     TabsModule
   ],
   templateUrl: './equipment-shell.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './equipment-shell.css',
   styles: [`
     :host {

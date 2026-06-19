@@ -12,6 +12,23 @@ import { filter, finalize, map, switchMap, take, takeWhile, tap } from 'rxjs/ope
 import { catchError, Observable, throwError, timer, of } from 'rxjs';
 import {MonsterConfig} from '../models/configs/monster-config.model';
 
+/**
+ * Loosely-typed view of the raw simulation results payload as returned by the
+ * API and reshaped here into a SimulationResult. Mirrors the backend
+ * MultiSimulationResult after key-mapping (see pkg/simulation/multi_runner.go).
+ */
+interface RawSimResults {
+  individualResults?: IndividualResult[];
+  actorConfigs?: Record<string, Actor>;
+  initialState?: Record<string, unknown>;
+  totalRuns?: number;
+  [key: string]: unknown;
+}
+
+interface RawSimEnvelope {
+  results?: RawSimResults;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -255,7 +272,7 @@ export class SimulationService {
       map(response => {
         // The mappingInterceptor might automatically unwrap the 'data' envelope.
         // If it's still there, we map it, otherwise we map the top-level response.
-        const mappedResponse = this.mapperService.mapKeys(response) as any;
+        const mappedResponse = this.mapperService.mapKeys(response) as RawSimEnvelope;
         console.log('[SimulationService] fetchSimulationResult mappedResponse:', mappedResponse);
 
         // Based on the log, results should be either at top level or inside a 'data' key that was already unwrapped.
@@ -274,15 +291,15 @@ export class SimulationService {
         // actorConfigs is now inside results and contains ALL actors
         const actorConfigsMap = results.actorConfigs || {};
 
-        const actorConfigs: Actor[] = Object.entries(actorConfigsMap).map(([id, config]: [string, any]) => {
+        const actorConfigs: Actor[] = Object.entries(actorConfigsMap).map(([id, config]: [string, Actor]) => {
           const actor = {
             ...config,
             instanceId: config.instanceId || Number(id)
           } as Actor;
 
           // If ac is 0 or missing, try to set it from the config if available
-          if ((!actor.ac || actor.ac === 0) && (config.ac || config.AC)) {
-            actor.ac = config.ac || config.AC;
+          if ((!actor.ac || actor.ac === 0) && config.ac) {
+            actor.ac = config.ac;
           }
 
           return actor;
@@ -309,12 +326,14 @@ export class SimulationService {
           };
         });
 
-        const simulationResult: SimulationResult = {
+        // `results` is the raw envelope; the win/round aggregate fields are
+        // spread through and the reshaped collections overwrite their raw forms.
+        const simulationResult = {
           ...results,
           actorConfigs: actorConfigs,
           logs: simulationLogs,
           count: results.totalRuns || simulationLogs.length
-        };
+        } as unknown as SimulationResult;
 
         return simulationResult;
       }),
@@ -353,14 +372,15 @@ export class SimulationService {
       const data = this.mapperService.mapKeys(rawResult) as SimulationResponse;
       const results = data.results;
       const actorConfigsMap = results.actorConfigs || {};
-      const actorConfigs: Actor[] = Object.entries(actorConfigsMap).map(([id, config]: [string, any]) => {
+      const actorConfigs: Actor[] = Object.entries(actorConfigsMap).map(([id, configRaw]) => {
+        const config = configRaw as Actor;
         const actor = {
           ...config,
           instanceId: config.instanceId || Number(id)
         } as Actor;
 
-        if ((!actor.ac || actor.ac === 0) && (config.ac || config.AC)) {
-          actor.ac = config.ac || config.AC;
+        if ((!actor.ac || actor.ac === 0) && config.ac) {
+          actor.ac = config.ac;
         }
 
         return actor;

@@ -1,5 +1,5 @@
 import {computed, inject, Injectable, signal, WritableSignal} from '@angular/core';
-import { ActorState, EventType, SimulationLog, Actor, ActorSummary, Condition, ActorStateSnapshot, isCharacter } from '../models';
+import { ActorState, EventType, EventData, SimulationLog, Actor, ActorSummary, Condition, ActorStateSnapshot, ActorInitialStateSnapshot, isCharacter } from '../models';
 import {CombatantService} from './combatant.service';
 import {SimulationStateService} from './simulation-state.service';
 
@@ -121,12 +121,12 @@ export class TimelineService {
 
     if (initialStates) {
       // console.log('[TimelineService] Initializing stateMap from actorInitialStates:', initialStates);
-      Object.entries(initialStates).forEach(([id, state]: [string, ActorStateSnapshot]) => {
+      Object.entries(initialStates).forEach(([id, state]: [string, ActorInitialStateSnapshot]) => {
         const instanceId = Number(id);
         if (!isNaN(instanceId)) {
-          const rawCurrentHp = state.currentHp ?? (state as any).current_hp;
-          const rawMaxHp = (state as any).maxHp ?? (state as any).max_hp ?? (state as any).maxHP ?? (state as any).MaxHP;
-          const rawTempHp = state.tempHp ?? (state as any).temp_hp;
+          const rawCurrentHp = state.currentHp;
+          const rawMaxHp = state.maxHp;
+          const rawTempHp = state.tempHp;
 
           let maxHp = rawMaxHp;
           const currentHpVal = Number(rawCurrentHp ?? 0);
@@ -164,8 +164,9 @@ export class TimelineService {
               maxHp = actorConfig.state.maxHp;
             }
           } else {
-             // Try name-based matching for characters as a last resort
-             const configName = (actorConfig as any)?.name || 'Unknown';
+             // Try name-based matching for characters as a last resort.
+             // (actorConfig is undefined in this branch; name comes from the combatant.)
+             const configName = 'Unknown';
              const nameMatch = combatants.find((c: Actor) => c.name === configName && isCharacter(c));
              if (nameMatch) {
                  targetInstanceId = nameMatch.instanceId;
@@ -180,19 +181,21 @@ export class TimelineService {
           const actorName = actorConfig?.name || combatant?.name || 'Unknown';
           // console.log(`[TimelineService] Init Actor ${id} (mapped to ${targetInstanceId}): HP ${currentHpVal}/${finalMaxHp}, Name: ${actorName}`);
 
+          // The backend initial-state snapshot only carries currentHp/maxHp/
+          // tempHp/conditions/healthState. The remaining ActorState fields are
+          // not part of the snapshot, so they start from sensible defaults.
           stateMap.set(targetInstanceId, {
             ...state,
-            // Ensure properties match ActorState interface
             currentHp: currentHpVal,
             maxHp: finalMaxHp,
             tempHp: tempHpVal,
-            hitDie: (state as any).hitDie ?? (state as any).hit_die ?? 10,
-            conditions: (state as any).conditions || {},
-            deathSaves: (state as any).deathSaves || { successes: 0, failures: 0 },
-            resistances: (state as any).resistances || {},
-            isStable: (state as any).isStable ?? (state as any).stable ?? true,
-            isDead: (state as any).isDead ?? (state.healthState === 'dead' || (state as any).health_state === 'dead'),
-            initiative: (state as any).initiative ?? 0,
+            hitDie: 10,
+            conditions: state.conditions ?? {},
+            deathSaves: { successes: 0, failures: 0 },
+            resistances: {},
+            isStable: true,
+            isDead: state.healthState === 'dead',
+            initiative: 0,
             isProjected: true
           } as unknown as ActorState);
         }
@@ -210,7 +213,7 @@ export class TimelineService {
     // 2. Replay events up to the current index
     for (let i = 0; i <= index && i < events.length; i++) {
       const event = events[i];
-      const data = event.data || {};
+      const data: EventData = event.data || {};
       const actorStates = event.actorStates || data.actorStates;
 
       if (actorStates) {
@@ -220,18 +223,14 @@ export class TimelineService {
           const currentState = stateMap.get(targetInstanceId);
 
           if (currentState) {
-            // Map snapshot state to ActorState interface
-            const currentHp = state.currentHp ?? (state as any).current_hp ?? (state as any).CurrentHP ?? (state as any).CurrentHp;
-            const maxHpSnap = (state as any).maxHp ?? (state as any).max_hp ?? (state as any).MaxHP ?? (state as any).MaxHp;
-            const tempHp = state.tempHp ?? (state as any).temp_hp ?? (state as any).TempHP ?? (state as any).TempHp;
-            const conditions = (state as any).conditions || state.conditions;
+            // Per-event snapshots (events.ActorSnapshot) carry no maxHp, so we
+            // keep the existing maxHp and only update the fields they provide.
+            const currentHp = state.currentHp;
+            const tempHp = state.tempHp;
+            const conditions = state.conditions;
 
             const finalCurrentHp = currentHp !== undefined ? Number(currentHp) : currentState.currentHp;
-            // IMPORTANT: If maxHp in snapshot is 0 or missing, DO NOT overwrite the existing valid maxHp.
-            let finalMaxHp = currentState.maxHp;
-            if (maxHpSnap !== undefined && Number(maxHpSnap) > 0) {
-                finalMaxHp = Number(maxHpSnap);
-            }
+            const finalMaxHp = currentState.maxHp;
 
             if (currentState.isProjected) {
                 const actorName = (logActorConfigs as Actor[]).find((c: Actor) => c.instanceId === backendId)?.name || 'Unknown';
@@ -246,25 +245,25 @@ export class TimelineService {
               maxHp: finalMaxHp,
               tempHp: Number(tempHp ?? currentState.tempHp),
               conditions: conditions || currentState.conditions,
-              isDead: (state.healthState?.toLowerCase() === 'dead' || (state as any).health_state?.toLowerCase() === 'dead' || (state as any).HealthState?.toLowerCase() === 'dead'),
-              isStable: (state as any).isStable ?? (state as any).stable ?? (state as any).IsStable ?? currentState.isStable
-            });
+              isDead: state.healthState?.toLowerCase() === 'dead',
+              isStable: currentState.isStable
+            } as unknown as ActorState);
           } else {
              // Fallback: if currentState is missing, we might have a new monster joining
              const actorConfig = (logActorConfigs as Actor[]).find((c: Actor) => c.instanceId === backendId);
              if (actorConfig) {
-                 const currentHp = state.currentHp ?? (state as any).current_hp ?? (state as any).CurrentHP ?? (state as any).CurrentHp;
-                 const maxHpSnap = (state as any).maxHp ?? (state as any).max_hp ?? (state as any).MaxHP ?? (state as any).MaxHp;
-                 const finalMaxHp = Math.max(1, Number(maxHpSnap ?? actorConfig.hpConfig?.hpAverage ?? actorConfig.state?.maxHp ?? currentHp ?? 1));
+                 // Per-event snapshots have no maxHp, so derive it from the config.
+                 const currentHp = state.currentHp;
+                 const finalMaxHp = Math.max(1, Number(actorConfig.hpConfig?.hpAverage ?? actorConfig.state?.maxHp ?? currentHp ?? 1));
 
                  stateMap.set(targetInstanceId, {
                     ...actorConfig.state,
                     currentHp: Number(currentHp ?? finalMaxHp),
                     maxHp: finalMaxHp,
-                    tempHp: Number(state.tempHp ?? (state as any).temp_hp ?? 0),
-                    conditions: (state as any).conditions || state.conditions || {},
-                    isDead: (state.healthState?.toLowerCase() === 'dead' || (state as any).health_state?.toLowerCase() === 'dead'),
-                    isStable: (state as any).isStable ?? (state as any).stable ?? true,
+                    tempHp: Number(state.tempHp ?? 0),
+                    conditions: state.conditions || {},
+                    isDead: state.healthState?.toLowerCase() === 'dead',
+                    isStable: true,
                     isProjected: true
                  } as unknown as ActorState);
              }
@@ -280,10 +279,10 @@ export class TimelineService {
         case EventType.IntermissionHealing:
         case EventType.HPModified: {
           const rawActorId = data.actor?.instanceId || event.actor?.instanceId || data.actorId;
-          const edata = data as any;
-          const currentHp = edata.currentHp ?? edata.current_hp ?? edata.CurrentHP ?? edata.CurrentHp;
-          const maxHp = edata.maxHp ?? edata.max_hp ?? edata.MaxHP ?? edata.MaxHp;
-          const tempHp = edata.tempHp ?? edata.temp_hp ?? edata.TempHP ?? edata.TempHp;
+          // hp_modified carries the new HP inside `result` (backend
+          // HPModificationResult). maxHp is never changed by an HP event.
+          const newHp = data.result?.newHp;
+          const newTempHp = data.result?.newTempHp;
 
           const actorId = (rawActorId !== undefined) ? (backendToFrontendIdMap.get(Number(rawActorId)) || Number(rawActorId)) : undefined;
 
@@ -291,13 +290,9 @@ export class TimelineService {
             const instanceId = Number(actorId);
             const currentState = stateMap.get(instanceId);
             if (currentState) {
-              const finalCurrentHp = currentHp !== undefined ? Number(currentHp) : currentState.currentHp;
-              // IMPORTANT: If maxHp in event is 0 or missing, DO NOT overwrite the existing valid maxHp.
-              let finalMaxHp = currentState.maxHp;
-              if (maxHp !== undefined && Number(maxHp) > 0) {
-                  finalMaxHp = Number(maxHp);
-              }
-              const finalTempHp = tempHp !== undefined ? Number(tempHp) : currentState.tempHp;
+              const finalCurrentHp = newHp !== undefined ? Number(newHp) : currentState.currentHp;
+              const finalMaxHp = currentState.maxHp;
+              const finalTempHp = newTempHp !== undefined ? Number(newTempHp) : currentState.tempHp;
 
               const actorName = (logActorConfigs as Actor[]).find((c: Actor) => c.instanceId === Number(rawActorId))?.name || 'Unknown';
               if (actorName.includes('Henry') || actorName.includes('Acolyte')) {

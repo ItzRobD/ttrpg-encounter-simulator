@@ -1,4 +1,4 @@
-import {Component, computed, inject, signal} from '@angular/core';
+import {Component, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import {TimelineService} from '../../services/timeline.service';
 import {SimulationService} from '../../services/simulation.service';
 import {Tab, TabList, Tabs} from 'primeng/tabs';
@@ -33,6 +33,7 @@ import {CombatantService} from '../../services/combatant.service';
   ],
   providers: [TitleCasePipe],
   templateUrl: './simulation-results.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './simulation-results.css',
 })
 export class SimulationResults {
@@ -290,7 +291,8 @@ export class SimulationResults {
       }
     }
 
-    if (data.roll && (event.type as any) !== EventType.AttackRoll && (event.type as any) !== EventType.SavingThrow && (event.type as any) !== EventType.DamageRoll && (event.type as any) !== EventType.Initiative) {
+    const eventType = event.type as EventType;
+    if (data.roll && eventType !== EventType.AttackRoll && eventType !== EventType.SavingThrow && eventType !== EventType.DamageRoll && eventType !== EventType.Initiative) {
       const diceType = (data.roll.dice as unknown as DiceType);
       details += ` Total: ${data.roll.total}, Dice: ${formatDice(
         data.roll.numberOfDice,

@@ -1,7 +1,7 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
-import { Weapon, Armor, DiceType } from '../../models';
+import { Weapon, Armor, DiceType, EquipmentItem } from '../../models';
 import { formatDice, formatModifier, getEquipmentDetail } from '../../shared/utils/dnd-utils';
 import { TagModule } from 'primeng/tag';
 
@@ -10,6 +10,7 @@ import { TagModule } from 'primeng/tag';
   standalone: true,
   imports: [CardModule, CommonModule, TagModule],
   templateUrl: './equipment-card.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './equipment-card.css',
 })
 export class EquipmentCard {
@@ -31,11 +32,11 @@ export class EquipmentCard {
     return !!inner && ('ac' in inner) && !this.isWeapon();
   });
 
-  asWeapon(item: any): Weapon {
+  asWeapon(item?: EquipmentItem | null): Weapon {
     return this.innerItem() as Weapon;
   }
 
-  asArmor(item: any): Armor {
+  asArmor(item?: EquipmentItem | null): Armor {
     return this.innerItem() as Armor;
   }
 
