@@ -1,0 +1,240 @@
+<p-dialog
+  [header]="itemToEdit() ? 'Edit Custom Spell' : 'Create Custom Spell'"
+  [visible]="visible()"
+  (visibleChange)="close()"
+  [modal]="true"
+  [breakpoints]="{ '960px': '85vw', '640px': '95vw' }"
+  [style]="{ width: '700px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <form [formGroup]="spellForm" (ngSubmit)="onSave()" class="p-fluid">
+    <p-fluid>
+      <!-- Error Message -->
+      @if (error()) {
+        <p-message severity="error" [text]="error()!" class="mb-3"></p-message>
+      }
+
+      <div class="flex flex-column gap-3 mt-2">
+        <!-- Name -->
+        <div class="field">
+          <label for="name" class="font-bold block mb-1">Spell Name</label>
+          <input pInputText id="name" formControlName="name" placeholder="e.g. Blue Fireball"
+                 [class.p-invalid]="spellForm.get('name')?.invalid && spellForm.get('name')?.touched"
+                 [pTooltip]="spellForm.get('name')?.invalid && spellForm.get('name')?.touched ? 'Name is required' : ''" />
+        </div>
+
+        <!-- Description -->
+        <div class="field">
+          <label for="description" class="font-bold block mb-1">Description</label>
+          <textarea
+            pTextarea
+            id="description"
+            formControlName="description"
+            rows="2"
+            placeholder="Describe the spell effects..."
+            [class.p-invalid]="spellForm.get('description')?.invalid && spellForm.get('description')?.touched"
+            [pTooltip]="spellForm.get('description')?.invalid && spellForm.get('description')?.touched ? 'Description is required' : ''"
+          ></textarea>
+        </div>
+
+        <div class="grid">
+          <!-- Level -->
+          <div class="col-6 md:col-4">
+            <label for="level" class="font-bold block mb-1">Level</label>
+            <p-inputNumber
+              id="level"
+              formControlName="level"
+              [min]="0"
+              [max]="9"
+              placeholder="0 for Cantrip"
+              [showButtons]="true"
+              [class.p-invalid]="spellForm.get('level')?.invalid && spellForm.get('level')?.touched"
+              [pTooltip]="spellForm.get('level')?.invalid && spellForm.get('level')?.touched ? 'Level is required' : ''"
+            ></p-inputNumber>
+          </div>
+
+          <!-- Spell Type -->
+          <div class="col-6 md:col-4">
+            <label for="spellType" class="font-bold block mb-1">Type</label>
+            <p-select
+              id="spellType"
+              formControlName="spellType"
+              [options]="spellTypes"
+              optionLabel="label"
+              optionValue="value"
+            ></p-select>
+          </div>
+
+          <!-- Casting Time -->
+          <div class="col-6 md:col-4">
+            <label for="castingTime" class="font-bold block mb-1">Casting Time</label>
+            <p-select
+              id="castingTime"
+              formControlName="castingTime"
+              [options]="castingTimes"
+              optionLabel="label"
+              optionValue="value"
+            ></p-select>
+          </div>
+        </div>
+
+        <!-- Toggles -->
+        <div class="flex flex-column gap-2 p-2 border-1 surface-border border-round">
+          <div class="flex flex-wrap gap-3">
+            <div class="flex align-items-center gap-2">
+              <p-checkbox formControlName="isConcentration" [binary]="true" inputId="isConcentration"></p-checkbox>
+              <label for="isConcentration" class="text-sm">Concentration</label>
+            </div>
+            <div class="flex align-items-center gap-2">
+              <p-checkbox formControlName="isRitual" [binary]="true" inputId="isRitual"></p-checkbox>
+              <label for="isRitual" class="text-sm">Ritual</label>
+            </div>
+            <div class="flex align-items-center gap-2">
+              <p-checkbox formControlName="isAOE" [binary]="true" inputId="isAOE"></p-checkbox>
+              <label for="isAOE" class="text-sm">AOE</label>
+            </div>
+            <div class="flex align-items-center gap-2">
+              <p-checkbox formControlName="isTouch" [binary]="true" inputId="isTouch"></p-checkbox>
+              <label for="isTouch" class="text-sm">Touch</label>
+            </div>
+            <div class="flex align-items-center gap-2">
+              <p-checkbox formControlName="hasDC" [binary]="true" inputId="hasDC"></p-checkbox>
+              <label for="hasDC" class="text-sm">Has Save DC</label>
+            </div>
+            <div class="flex align-items-center gap-2">
+              <p-checkbox formControlName="isAutoHit" [binary]="true" inputId="isAutoHit"></p-checkbox>
+              <label for="isAutoHit" class="text-sm">Auto-Hit</label>
+            </div>
+          </div>
+
+          <!-- Save DC Details -->
+          @if (spellForm.get('hasDC')?.value) {
+            <div formGroupName="spellDC" class="grid mt-2 border-top-1 pt-2 surface-border">
+              <div class="col-6">
+                <label for="dcAbility" class="text-xs font-bold block mb-1">Save Ability</label>
+                <p-select
+                  id="dcAbility"
+                  formControlName="ability"
+                  [options]="abilities"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                ></p-select>
+              </div>
+              <div class="col-6">
+                <label for="dcSuccess" class="text-xs font-bold block mb-1">On Success</label>
+                <p-select
+                  id="dcSuccess"
+                  formControlName="onSuccess"
+                  [options]="successEffects"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                ></p-select>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Scaling Formulas Section -->
+        <div class="mt-3 p-3 border-1 surface-border border-round">
+          <div class="flex justify-content-between align-items-center mb-3">
+            <span class="font-bold">Scaling / Damage Formulas</span>
+            <div class="flex align-items-center gap-2">
+              <p-selectbutton
+                [options]="levelTypes"
+                formControlName="levelType"
+                optionLabel="label"
+                optionValue="value"
+              ></p-selectbutton>
+              <p-button
+                icon="pi pi-plus"
+                label="Add Formula"
+                [text]="true"
+                (onClick)="addFormula()"
+              ></p-button>
+            </div>
+          </div>
+
+          <div formArrayName="formulas" class="flex flex-column gap-2 mt-2">
+            @for (f of formulas.controls; track $index; let i = $index) {
+              <div [formGroupName]="i" class="grid align-items-end p-2 border-round surface-50 border-1 surface-border">
+                <div class="col-2">
+                  <label class="text-xs font-bold block mb-1">Level</label>
+                  <p-inputNumber
+                    formControlName="castLevel"
+                    [min]="1"
+                    [max]="spellForm.get('levelType')?.value === 'slot' ? 9 : 20"
+                    size="small"
+                    [class.p-invalid]="f.get('castLevel')?.errors?.['duplicate']"
+                    [pTooltip]="f.get('castLevel')?.errors?.['duplicate'] ? 'Conflict: Duplicate level' : ''"
+                  ></p-inputNumber>
+                </div>
+                <div class="col-2">
+                  <label class="text-xs font-bold block mb-1">Dice Count</label>
+                  <p-inputNumber formControlName="numberOfDice" [min]="0" size="small"></p-inputNumber>
+                </div>
+                <div class="col-2">
+                  <label class="text-xs font-bold block mb-1">Die</label>
+                  <p-select
+                    formControlName="die"
+                    [options]="diceOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    appendTo="body"
+                  ></p-select>
+                </div>
+                <div class="col-2">
+                  <label class="text-xs font-bold block mb-1">Mod</label>
+                  <p-inputNumber formControlName="amountToAdd" size="small"></p-inputNumber>
+                </div>
+                <div class="col-3">
+                  <label class="text-xs font-bold block mb-1">Type</label>
+                  <p-select
+                    formControlName="damageType"
+                    [options]="damageTypes"
+                    optionLabel="label"
+                    optionValue="value"
+                    appendTo="body"
+                  ></p-select>
+                </div>
+                <div class="col-1 flex justify-content-end">
+                  <p-button
+                    icon="pi pi-times"
+                    severity="danger"
+                    [text]="true"
+                    (onClick)="removeFormula(i)"
+                  ></p-button>
+                </div>
+              </div>
+            } @empty {
+              <div class="p-3 text-center border-round border-dashed surface-border text-500 italic">
+                No formulas added yet. Click "Add Formula" to scale your spell.
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </p-fluid>
+
+    <!-- Footer Buttons -->
+    <div class="flex justify-content-end gap-2 mt-4">
+      <p-button
+        label="Cancel"
+        [text]="true"
+        severity="secondary"
+        (onClick)="close()"
+        [disabled]="loading()"
+      ></p-button>
+
+      <p-splitButton
+        [label]="primarySaveLabel()"
+        [icon]="loading() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+        (onClick)="onSaveAttempt()"
+        [model]="saveOptions()"
+        [disabled]="loading() || spellForm.invalid">
+      </p-splitButton>
+    </div>
+  </form>
+</p-dialog>

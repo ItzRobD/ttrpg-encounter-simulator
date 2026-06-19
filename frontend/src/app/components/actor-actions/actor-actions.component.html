@@ -1,0 +1,35 @@
+<div class="flex flex-column gap-1 w-full mt-2">
+  <!-- Multiattacks -->
+  @for (multi of multiattacks(); track $index) {
+    <p-card
+      class="w-full"
+      [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
+    >
+      <div class="flex align-items-center gap-2">
+        <i class="pi pi-bolt text-primary"></i>
+        <span class="text-sm">
+          {{ formatMultiattack(actor().name, multi.multiattack, allActionsForLookup()) }}
+        </span>
+      </div>
+    </p-card>
+  }
+
+  <!-- Individual Actions -->
+  @for (action of actions(); track action.actionId || $index) {
+    <p-card
+      class="w-full"
+      [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
+    >
+      <div class="flex align-items-center gap-2">
+        <i class="pi pi-shield text-primary"></i>
+        <span class="text-sm">
+          <strong>{{ action.name }}</strong>
+          @if (getRechargeValue(action); as recharge) {
+            (Recharge: {{ recharge }})
+          }
+          {{ formatMonsterAction(action) }}
+        </span>
+      </div>
+    </p-card>
+  }
+</div>

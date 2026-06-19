@@ -1,0 +1,286 @@
+@if (activeService().error()) {
+  <div class="mb-3">
+    <p-message severity="error" [text]="activeService().error()!" styleClass="w-full"></p-message>
+  </div>
+}
+
+<p-table
+  #dt
+  [value]="filteredItems()"
+  [loading]="activeService().loading()"
+  [paginator]="false"
+  [scrollable]="true"
+  scrollHeight="450px"
+  [virtualScroll]="true"
+  [virtualScrollItemSize]="50"
+  styleClass="p-datatable-sm p-datatable-striped"
+  selectionMode="single"
+  [selection]="selectedSummary()"
+  (onRowSelect)="onRowSelect($event)"
+  (onRowUnselect)="onRowUnselect()"
+  dataKey="id"
+  [filterDelay]="0"
+  [tableStyle]="{ 'min-width': isMobile() ? 'auto' : '40rem', 'table-layout': 'fixed' }"
+>
+  <ng-template pTemplate="header">
+    @let widths = isMobile() ? colWidths.mobile : colWidths.desktop;
+    <tr>
+      @if (showAddToSimulator() && (mode() === 'monster' || mode() === 'character')) {
+        <th [style.width]="widths.actions.width" [style.min-width]="widths.actions.minWidth"></th>
+      }
+      <th
+        pSortableColumn="name"
+        [style.min-width]="widths.name.minWidth"
+        [style.width]="widths.name.width"
+      >
+        Name <p-sortIcon field="name"></p-sortIcon>
+      </th>
+
+      @if (mode() === 'monster') {
+        <th
+          pSortableColumn="type"
+          [style.min-width]="widths.type.minWidth"
+          [style.width]="widths.type.width"
+        >
+          Type <p-sortIcon field="type"></p-sortIcon>
+        </th>
+        @if (!isMobile()) {
+          <th
+            pSortableColumn="size"
+            [style.width]="widths.size.width"
+            [style.min-width]="widths.size.minWidth"
+          >
+            Size <p-sortIcon field="size"></p-sortIcon>
+          </th>
+        }
+        <th
+          pSortableColumn="cr"
+          [style.width]="widths.cr.width"
+          [style.min-width]="widths.cr.minWidth"
+        >
+          CR <p-sortIcon field="cr"></p-sortIcon>
+        </th>
+        @if (!isMobile()) {
+          <th
+            pSortableColumn="ac"
+            [style.width]="widths.ac.width"
+            [style.min-width]="widths.ac.minWidth"
+          >
+            AC <p-sortIcon field="ac"></p-sortIcon>
+          </th>
+        }
+      } @else if (mode() === 'character') {
+        <th
+          pSortableColumn="race"
+          [style.min-width]="widths.race.minWidth"
+          [style.width]="widths.race.width"
+        >
+          Race <p-sortIcon field="race"></p-sortIcon>
+        </th>
+        <th
+          pSortableColumn="class"
+          [style.min-width]="widths.class.minWidth"
+          [style.width]="widths.class.width"
+        >
+          Class <p-sortIcon field="class"></p-sortIcon>
+        </th>
+        <th
+          pSortableColumn="level"
+          [style.width]="widths.level.width"
+          [style.min-width]="widths.level.minWidth"
+        >
+          Level <p-sortIcon field="level"></p-sortIcon>
+        </th>
+      } @else if (mode() === 'spells') {
+        <th
+          pSortableColumn="level"
+          [style.width]="widths.level.width"
+          [style.min-width]="widths.level.minWidth"
+        >
+          Level <p-sortIcon field="level"></p-sortIcon>
+        </th>
+        <th
+          pSortableColumn="spellType"
+          [style.min-width]="widths.type.minWidth"
+          [style.width]="widths.type.width"
+        >
+          Type <p-sortIcon field="spellType"></p-sortIcon>
+        </th>
+      } @else {
+        <th
+          pSortableColumn="type"
+          [style.min-width]="widths.type.minWidth"
+          [style.width]="widths.type.width"
+        >
+          Type <p-sortIcon field="type"></p-sortIcon>
+        </th>
+        <th
+          pSortableColumn="detail"
+          [style.min-width]="widths.detail.minWidth"
+          [style.width]="widths.detail.width"
+        >
+          Detail <p-sortIcon field="detail"></p-sortIcon>
+        </th>
+      }
+
+      @if (isMobile()) {
+        <th [style.width]="widths.status.width" [style.min-width]="widths.status.minWidth"></th>
+      }
+    </tr>
+  </ng-template>
+  <ng-template pTemplate="body" let-item>
+    <tr [pSelectableRow]="item" [style.height]="'50px'">
+      @if (showAddToSimulator() && (mode() === 'monster' || mode() === 'character')) {
+        <td>
+          <p-button
+            icon="pi pi-plus"
+            [rounded]="true"
+            [text]="true"
+            size="small"
+            severity="success"
+            pTooltip="Add to Simulator"
+            (onClick)="onAddToSimulatorClick($event, item)"
+          ></p-button>
+        </td>
+      }
+      <td class="white-space-nowrap overflow-hidden text-overflow-ellipsis">
+        <div class="flex align-items-center gap-2">
+          <span>{{ item.name | titlecase }}</span>
+          @if (item.isCustom) {
+            <span class="custom-badge" pTooltip="Custom Content">C</span>
+          }
+          @if (!isMobile()) {
+            <div class="flex gap-1">
+              @if (mode() === 'monster') {
+                @if (item.isLegendary) {
+                  <i class="pi pi-star-fill text-yellow-500 text-xs" pTooltip="Legendary"></i>
+                }
+                @if (item.isSpellcaster) {
+                  <i class="pi pi-bolt text-blue-500 text-xs" pTooltip="Spellcaster"></i>
+                }
+                @if (item.isInnateCaster) {
+                  <i class="pi pi-sparkles text-cyan-500 text-xs" pTooltip="Innate Caster"></i>
+                }
+              } @else if (mode() === 'spells') {
+                @if (item.isConcentration) {
+                  <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
+                }
+                @if (item.isRitual) {
+                  <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
+                }
+                @if (item.isAOE) {
+                  <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
+                }
+                @if (item.hasDC) {
+                  <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
+                }
+              } @else if (mode() === 'equipment' && item.type === 'Weapon' && item.properties) {
+                @let props = item.properties;
+                @if (props.isVersatile) {
+                  <span class="property-icon bg-blue-100 text-blue-700" pTooltip="Versatile">V</span>
+                }
+                @if (props.isFinesse) {
+                  <span class="property-icon bg-green-100 text-green-700" pTooltip="Finesse">F</span>
+                }
+                @if (props.isHeavy) {
+                  <span class="property-icon bg-red-100 text-red-700" pTooltip="Heavy">H</span>
+                }
+                @if (props.isLight) {
+                  <span class="property-icon bg-orange-100 text-orange-700" pTooltip="Light">L</span>
+                }
+                @if (props.isThrown) {
+                  <span class="property-icon bg-purple-100 text-purple-700" pTooltip="Thrown">T</span>
+                }
+                @if (props.isRanged) {
+                  <span class="property-icon bg-cyan-100 text-cyan-700" pTooltip="Ranged">R</span>
+                }
+              }
+            </div>
+          }
+        </div>
+      </td>
+
+      @if (mode() === 'monster') {
+        <td
+          class="white-space-nowrap overflow-hidden text-overflow-ellipsis">
+          {{ item.type.toLowerCase().includes('swarm') ? 'Swarm' : (item.type | titlecase) }}
+        </td>
+        @if (!isMobile()) {
+          <td>{{ item.size | titlecase }}</td>
+        }
+        <td>{{ item.cr | crFormat }}</td>
+        @if (!isMobile()) {
+          <td>{{ item.ac }}</td>
+        }
+      } @else if (mode() === 'character') {
+        <td>{{ item.race | titlecase }}</td>
+        <td>{{ item.class | titlecase }}</td>
+        <td>{{ item.level }}</td>
+      } @else if (mode() === 'spells') {
+        <td>{{ item.level === 0 ? 'Cantrip' : item.level }}</td>
+        <td>{{ item.spellType | titlecase }}</td>
+      } @else {
+        <td>{{ item.type }}</td>
+        <td>{{ item.detail }}</td>
+      }
+
+      @if (isMobile()) {
+        <td>
+          <div class="flex gap-1 justify-content-end">
+            @if (mode() === 'monster' || mode() === 'character') {
+              @if (item.isLegendary) {
+                <i class="pi pi-star-fill text-yellow-500 text-xs" pTooltip="Legendary"></i>
+              }
+              @if (item.isSpellcaster) {
+                <i class="pi pi-bolt text-blue-500 text-xs" pTooltip="Spellcaster"></i>
+              }
+              @if (item.isInnateCaster) {
+                <i class="pi pi-sparkles text-cyan-500 text-xs" pTooltip="Innate Caster"></i>
+              }
+            } @else if (mode() === 'spells') {
+              @if (item.isConcentration) {
+                <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
+              }
+              @if (item.isRitual) {
+                <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
+              }
+              @if (item.isAOE) {
+                <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
+              }
+              @if (item.hasDC) {
+                <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
+              }
+            } @else if (mode() === 'equipment' && item.type === 'Weapon' && item.properties) {
+              @let props = item.properties;
+              @if (props.isVersatile) {
+                <span class="property-icon bg-blue-100 text-blue-700" pTooltip="Versatile">V</span>
+              }
+              @if (props.isFinesse) {
+                <span class="property-icon bg-green-100 text-green-700" pTooltip="Finesse">F</span>
+              }
+              @if (props.isHeavy) {
+                <span class="property-icon bg-red-100 text-red-700" pTooltip="Heavy">H</span>
+              }
+              @if (props.isLight) {
+                <span class="property-icon bg-orange-100 text-orange-700" pTooltip="Light">L</span>
+              }
+              @if (props.isThrown) {
+                <span class="property-icon bg-purple-100 text-purple-700" pTooltip="Thrown">T</span>
+              }
+              @if (props.isRanged) {
+                <span class="property-icon bg-cyan-100 text-cyan-700" pTooltip="Ranged">R</span>
+              }
+            }
+          </div>
+        </td>
+      }
+    </tr>
+  </ng-template>
+  <ng-template pTemplate="emptymessage">
+    <tr>
+      <td [attr.colspan]="isMobile() ? (mode() === 'monster' ? 5 : (mode() === 'character' ? 5 : (mode() === 'spells' ? 3 : 3))) : (mode() === 'monster' ? 6 : (mode() === 'character' ? 5 : (mode() === 'spells' ? 3 : 3)))" class="text-center p-4 text-600">
+        No {{ mode() === 'monster' || mode() === 'character' || mode() === 'spells' ? mode() + (mode() === 'spells' ? '' : 's') : 'items' }} found.
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

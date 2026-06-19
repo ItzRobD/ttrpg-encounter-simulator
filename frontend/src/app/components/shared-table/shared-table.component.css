@@ -1,0 +1,17 @@
+.property-icon, .custom-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  font-size: 0.6rem;
+  font-weight: bold;
+  cursor: help;
+}
+
+.custom-badge {
+  background-color: var(--primary-color);
+  color: var(--primary-color-text);
+  border: 1px solid var(--primary-color);
+}

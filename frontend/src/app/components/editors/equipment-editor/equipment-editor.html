@@ -1,0 +1,201 @@
+<p-dialog
+  [header]="itemToEdit() ? 'Edit Custom Item' : 'Create Custom Item'"
+  [visible]="visible()"
+  (visibleChange)="close()"
+  [modal]="true"
+  [breakpoints]="{ '960px': '85vw', '640px': '95vw' }"
+  [style]="{ width: '600px' }"
+  [draggable]="false"
+  [resizable]="false"
+>
+  <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)">
+    <p-tablist>
+      <p-tab value="weapon" [disabled]="!!itemToEdit() && activeTab() !== 'weapon'">Weapon</p-tab>
+      <p-tab value="armor" [disabled]="!!itemToEdit() && activeTab() !== 'armor'">Armor</p-tab>
+    </p-tablist>
+    <p-tabpanels>
+      <p-tabpanel value="weapon">
+        <form [formGroup]="weaponForm" (ngSubmit)="onSave()" class="p-fluid mt-3">
+          <p-fluid>
+            @if (error()) {
+              <p-message severity="error" class="mb-3">{{ error() }}</p-message>
+            }
+            <div class="flex flex-column gap-3">
+              <div class="field">
+                <label for="w-name" class="font-bold block mb-1">Weapon Name</label>
+                <input pInputText id="w-name" formControlName="name" placeholder="e.g. Flaming Longsword"
+                       [class.p-invalid]="weaponForm.get('name')?.invalid && weaponForm.get('name')?.touched" />
+              </div>
+
+              <div class="grid">
+                <div class="col-4">
+                  <label for="w-diceCount" class="font-bold block mb-1">Dice Count</label>
+                  <p-inputNumber id="w-diceCount" formControlName="numberOfDice" [min]="0"
+                                 [max]="20"
+                                 [showButtons]="true"></p-inputNumber>
+                </div>
+                <div class="col-4">
+                  <label for="w-die" class="font-bold block mb-1">Die</label>
+                  <p-select id="w-die" formControlName="die" [options]="diceOptions" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+                </div>
+                <div class="col-4">
+                  <label for="w-damageType" class="font-bold block mb-1">Type</label>
+                  <p-select id="w-damageType" formControlName="damageType" [options]="damageTypes" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+                </div>
+              </div>
+
+              <div class="field mt-2">
+                <label class="font-bold block mb-2">Properties</label>
+                <div formGroupName="properties" class="flex flex-wrap gap-3 p-2 border-1 surface-border border-round">
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isVersatile" [binary]="true" inputId="isVersatile"></p-checkbox>
+                    <label for="isVersatile" class="text-sm">Versatile</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isFinesse" [binary]="true" inputId="isFinesse"></p-checkbox>
+                    <label for="isFinesse" class="text-sm">Finesse</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isRanged" [binary]="true" inputId="isRanged"></p-checkbox>
+                    <label for="isRanged" class="text-sm">Ranged</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isHeavy" [binary]="true" inputId="isHeavy"></p-checkbox>
+                    <label for="isHeavy" class="text-sm">Heavy</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isTwoHanded" [binary]="true" inputId="isTwoHanded"></p-checkbox>
+                    <label for="isTwoHanded" class="text-sm">Two-Handed</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isLight" [binary]="true" inputId="isLight"></p-checkbox>
+                    <label for="isLight" class="text-sm">Light</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isThrown" [binary]="true" inputId="isThrown"></p-checkbox>
+                    <label for="isThrown" class="text-sm">Thrown</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isOnlyRanged" [binary]="true" inputId="isOnlyRanged"></p-checkbox>
+                    <label for="isOnlyRanged" class="text-sm">Ammo Only</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field mt-2" formGroupName="modifiers">
+                <label class="font-bold block mb-2">Modifiers</label>
+                <div class="flex flex-wrap gap-3 p-2 border-1 surface-border border-round mb-3">
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isMagic" [binary]="true" inputId="isMagic"></p-checkbox>
+                    <label for="isMagic" class="text-sm">Magic</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isSilvered" [binary]="true" inputId="isSilvered"></p-checkbox>
+                    <label for="isSilvered" class="text-sm">Silvered</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isAdamantine" [binary]="true" inputId="isAdamantine"></p-checkbox>
+                    <label for="isAdamantine" class="text-sm">Adamantine</label>
+                  </div>
+                  <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isColdForgedIron" [binary]="true" inputId="isColdForgedIron"></p-checkbox>
+                    <label for="isColdForgedIron" class="text-sm">Cold Iron</label>
+                  </div>
+                </div>
+                <div class="grid">
+                  <div class="col-6">
+                    <label for="w-atk" class="text-xs font-bold block mb-1">Attack Bonus</label>
+                    <p-inputNumber id="w-atk" formControlName="attackBonus" [showButtons]="true" [min]="-20" [max]="20"></p-inputNumber>
+                  </div>
+                  <div class="col-6">
+                    <label for="w-dmg" class="text-xs font-bold block mb-1">Damage Bonus</label>
+                    <p-inputNumber id="w-dmg" formControlName="damageBonus" [showButtons]="true" [min]="-20" [max]="20"></p-inputNumber>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </p-fluid>
+
+          <div class="flex justify-content-end gap-2 mt-4">
+            <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="close()" [disabled]="loading()"></p-button>
+
+            <p-splitButton
+              [label]="primarySaveLabel()"
+              [icon]="loading() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+              (onClick)="onSaveAttempt()"
+              [model]="saveOptions()"
+              [disabled]="loading() || weaponForm.invalid">
+            </p-splitButton>
+          </div>
+        </form>
+      </p-tabpanel>
+
+      <p-tabpanel value="armor">
+        <form [formGroup]="armorForm" (ngSubmit)="onSave()" class="p-fluid mt-3">
+          <p-fluid>
+            @if (error()) {
+              <p-message severity="error" class="mb-3">{{ error()! }}</p-message>
+            }
+            <div class="flex flex-column gap-3">
+              <div class="field">
+                <label for="a-name" class="font-bold block mb-1">Armor Name</label>
+                <input pInputText id="a-name" formControlName="name" placeholder="e.g. Plate Armor +1"
+                       [class.p-invalid]="armorForm.get('name')?.invalid && armorForm.get('name')?.touched" />
+              </div>
+
+              <div class="grid">
+                <div class="col-6">
+                  <label for="a-ac" class="font-bold block mb-1">AC Base</label>
+                  <p-inputNumber id="a-ac" formControlName="ac" [min]="0" [max]="30"
+                                 [showButtons]="true"></p-inputNumber>
+                </div>
+                <div class="col-6">
+                  <label for="a-mod" class="font-bold block mb-1">Modifier</label>
+                  <p-inputNumber id="a-mod" formControlName="modifier" [min]="-20" [max]="20" [showButtons]="true"
+                                 pTooltip="Magical bonus to AC"></p-inputNumber>
+                </div>
+              </div>
+
+              @let acVal = armorForm.get('ac')?.value || 0;
+              @let modVal = armorForm.get('modifier')?.value || 0;
+              <div class="p-2 surface-50 border-round text-center mb-2">
+                <span class="text-xl font-bold">Total AC: {{ acVal }}</span>
+                @if (modVal !== 0) {
+                  <span class="text-primary ml-2">({{ modVal > 0 ? '+' : '' }}{{ modVal }})</span>
+                }
+              </div>
+
+              <div class="grid align-items-center">
+                <div class="col-4 flex align-items-center gap-2">
+                  <p-checkbox id="a-dex" formControlName="dexBonus" [binary]="true"></p-checkbox>
+                  <label for="a-dex" class="font-bold text-sm">Dex Bonus</label>
+                </div>
+                <div class="col-4 flex align-items-center gap-2">
+                  <p-checkbox id="a-max" formControlName="maxBonus" [binary]="true"></p-checkbox>
+                  <label for="a-max" class="font-bold text-sm">Max Bonus</label>
+                </div>
+                <div class="col-4">
+                  <label for="a-str" class="font-bold block mb-1">Min Str</label>
+                  <p-inputNumber id="a-str" formControlName="minimumStrength" [min]="0" [max]="30"
+                                 [showButtons]="true"></p-inputNumber>
+                </div>
+              </div>
+            </div>
+          </p-fluid>
+
+          <div class="flex justify-content-end gap-2 mt-4">
+            <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="close()" [disabled]="loading()"></p-button>
+
+            <p-splitButton
+              [label]="primarySaveLabel()"
+              [icon]="loading() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+              (onClick)="onSaveAttempt()"
+              [model]="saveOptions()"
+              [disabled]="loading() || armorForm.invalid">
+            </p-splitButton>
+          </div>
+        </form>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+</p-dialog>

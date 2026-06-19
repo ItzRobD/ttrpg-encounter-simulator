@@ -1,0 +1,310 @@
+
+<div class="surface-card p-2 md:p-5 border-round shadow-2">
+  <div class="flex flex-column md:flex-row justify-content-between align-items-center mb-4 gap-3">
+    <h1 class="text-2xl md:text-3xl font-bold m-0 text-center md:text-left">Encounter Simulator</h1>
+    <div class="flex gap-2 w-full md:w-auto">
+      <p-button
+        [label]="isCombatantsCollapsed() ? '' : 'Combatants'"
+        [icon]="isCombatantsCollapsed() ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"
+        (onClick)="toggleCombatants()"
+        severity="secondary"
+        [text]="true"
+        pTooltip="Toggle Combatant List"
+        class="hidden md:block"
+      ></p-button>
+      <p-button
+        [label]="isStatsCollapsed() ? '' : 'Stats'"
+        [icon]="isStatsCollapsed() ? 'pi pi-chevron-left' : 'pi pi-chevron-right'"
+        (onClick)="toggleStats()"
+        severity="secondary"
+        [text]="true"
+        pTooltip="Toggle Stats Panel"
+        class="hidden md:block"
+      ></p-button>
+      <p-button
+        label="Options"
+        icon="pi pi-cog"
+        severity="secondary"
+        (onClick)="toggleOptions()"
+        class="flex-grow-1 md:flex-grow-0"
+        pTooltip="Simulation Settings"
+      ></p-button>
+    </div>
+  </div>
+
+  <p class="text-700 line-height-3 hidden md:block">
+    Welcome to the D&D 5e Encounter Simulator. Build your encounter, configure options, and run
+    simulations.
+  </p>
+
+  <div class="flex flex-column md:flex-row mt-4 md:mt-6 gap-3 overflow-hidden align-items-stretch">
+    <!-- Combatants Column -->
+    <div
+      class="combatants-panel flex flex-column border-1 surface-border border-round p-3 overflow-x-hidden overflow-y-auto bg-card shadow-1"
+      [style.width]="
+        isXL() ? (isCombatantsCollapsed() ? '250px' : '650px') : '100%'
+      "
+      [style.max-width]="
+        isXL() ? (isCombatantsCollapsed() ? '250px' : '650px') : '100%'
+      "
+      [class.hidden]="isCombatantsCollapsed() && !isXL()"
+    >
+      <div class="flex flex-column gap-4 h-full overflow-hidden">
+        <div class="flex justify-content-between align-items-center">
+          <h3 class="text-xl font-semibold m-0" [class.hidden]="isCombatantsCollapsed()">
+            Combatants
+          </h3>
+          <div class="flex gap-2" [class.hidden]="isCombatantsCollapsed()">
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              (onClick)="combatantService.clearAll()"
+              pTooltip="Clear All"
+            ></p-button>
+          </div>
+        </div>
+
+        @if (simulationService.error()) {
+          <p-message severity="error" [text]="simulationService.error()!" styleClass="w-full"></p-message>
+        }
+
+        <div class="flex flex-column gap-4 overflow-x-hidden overflow-y-auto flex-1" [class.align-items-center]="isCombatantsCollapsed()">
+          <!-- Party Panel -->
+          <div class="w-full">
+            <div
+              class="flex align-items-center justify-content-between mb-3"
+              [class.flex-column]="isCombatantsCollapsed()"
+            >
+              <div class="flex align-items-center gap-2" [class.justify-content-center]="isCombatantsCollapsed()">
+                <i class="pi pi-users text-primary text-xl" pTooltip="Party"
+                showDelay="1000"></i>
+                <h4 class="text-lg font-medium m-0" [class.hidden]="isCombatantsCollapsed()">
+                  Party ({{ combatantService.party().length }})
+                </h4>
+              </div>
+              <p-button
+                icon="pi pi-plus"
+                [text]="true"
+                size="small"
+                severity="primary"
+                pTooltip="Add Character"
+                tooltipPosition="top"
+                (onClick)="isCharacterSelectorVisible.set(true)"
+                [class.hidden]="isCombatantsCollapsed()"
+              ></p-button>
+            </div>
+            <div class="flex flex-column gap-3">
+              @for (a of combatantService.party(); track a.instanceId) {
+                @if (isCombatantsCollapsed()) {
+                  <div
+                    class="p-2 border-1 surface-border border-round text-center surface-100 font-bold"
+                    pTooltip="{{ a.name }}"
+                  >
+                    {{ a.name.substring(0, 2).toUpperCase() }}
+                  </div>
+                } @else {
+                  <app-actor-card
+                    [actor]="a"
+                    [projectedState]="timelineService.projectedState().get(a.instanceId)"
+                    [hideState]="false"
+                    [showDelete]="true"
+                    (delete)="combatantService.removeCombatant($event)"
+                  ></app-actor-card>
+                }
+              } @empty {
+                @if (!isCombatantsCollapsed()) {
+                  <p class="text-600 italic p-3 border-1 surface-border border-round border-dashed">
+                    No characters.
+                  </p>
+                }
+              }
+            </div>
+          </div>
+
+          <div class="border-top-1 surface-border w-full my-2"></div>
+
+          <!-- Encounters Panel -->
+          <div class="w-full">
+            <div
+              class="flex align-items-center justify-content-between mb-3"
+              [class.flex-column]="isCombatantsCollapsed()"
+            >
+              <div class="flex align-items-center gap-2" [class.justify-content-center]="isCombatantsCollapsed()">
+                <i class="pi pi-skull text-red-500 text-xl" pTooltip="Encounters"
+                showDelay="1000"></i>
+                <h4 class="text-lg font-medium m-0" [class.hidden]="isCombatantsCollapsed()">
+                  Encounters ({{ combatantService.encounters().length }})
+                </h4>
+              </div>
+              <div class="flex gap-1" [class.hidden]="isCombatantsCollapsed()">
+                <p-button
+                  icon="pi pi-plus"
+                  [text]="true"
+                  size="small"
+                  severity="danger"
+                  pTooltip="Add Monster"
+                  (onClick)="isMonsterSelectorVisible.set(true)"
+                ></p-button>
+              </div>
+            </div>
+
+            <!-- Encounter Tabs -->
+            @if (!isCombatantsCollapsed()) {
+                <div class="flex align-items-center gap-1 mb-3 overflow-x-auto pb-1">
+                    <p-tabs [value]="combatantService.activeEncounterIndex()" (valueChange)="combatantService.setActiveEncounter($event)" class="flex-1 small-tabs">
+                        <p-tablist>
+                            @for (enc of combatantService.encounters(); track $index) {
+                                <p-tab [value]="$index" class="relative">
+                                    <div class="flex align-items-center gap-2">
+                                        <span>E{{ $index + 1 }}</span>
+                                        @if (combatantService.encounters().length > 1) {
+                                            <i class="pi pi-times text-xs cursor-pointer hover:text-red-500"
+                                               (click)="$event.stopPropagation(); combatantService.removeEncounter($index)"
+                                               pTooltip="Remove Encounter"></i>
+                                        }
+                                    </div>
+                                </p-tab>
+                            }
+                            <p-tab value="add" (click)="combatantService.addEncounter()" pTooltip="New Encounter">
+                                <i class="pi pi-plus text-xs"></i>
+                            </p-tab>
+                        </p-tablist>
+                    </p-tabs>
+                </div>
+            }
+
+            <div class="flex flex-column gap-3">
+              @for (a of combatantService.activeEncounter(); track a.instanceId) {
+                @if (isCombatantsCollapsed()) {
+                  <div
+                    class="p-2 border-1 border-red-200 border-round text-center bg-red-50 text-red-700 font-bold"
+                    pTooltip="{{ a.name }}"
+                  >
+                    {{ a.name.substring(0, 2).toUpperCase() }}
+                  </div>
+                } @else {
+                  <app-actor-card
+                    [actor]="a"
+                    [projectedState]="timelineService.projectedState().get(a.instanceId)"
+                    [hideState]="false"
+                    [showDelete]="true"
+                    (delete)="combatantService.removeCombatant($event)"
+                  ></app-actor-card>
+                }
+              } @empty {
+                @if (!isCombatantsCollapsed()) {
+                  <div class="flex flex-column align-items-center justify-content-center p-4 border-1 surface-border border-round border-dashed bg-surface-50">
+                    <i class="pi pi-skull text-300 text-3xl mb-2"></i>
+                    <p class="text-600 italic m-0">Empty encounter.</p>
+                  </div>
+                }
+              }
+            </div>
+            @if (!isCombatantsCollapsed() && combatantService.activeEncounter().length > 0) {
+                <div class="flex justify-content-end mt-2">
+                    <p-button
+                        label="Clear Encounter"
+                        icon="pi pi-trash"
+                        [text]="true"
+                        severity="danger"
+                        size="small"
+                        (onClick)="combatantService.clearActiveEncounter()"
+                    ></p-button>
+                </div>
+            }
+          </div>
+        </div>
+
+        <!-- Sidebar Toggle Bottom -->
+      </div>
+    </div>
+
+    <!-- Results Column -->
+    <div class="flex-1 min-w-0 transition-all transition-duration-300">
+      <div class="p-2 md:p-4 border-1 surface-border border-round h-full min-h-20rem bg-card shadow-1">
+        <div class="flex justify-content-between align-items-center mb-4">
+          <h3 class="text-xl font-semibold m-0">Simulation Results</h3>
+          <div class="flex gap-2">
+            <p-button
+              icon="pi pi-download"
+              label="Fetch Debug Sim"
+              (onClick)="fetchSpecificSimulation()"
+              severity="secondary"
+              [pTooltip]="'Fetch debug simulation'"
+            ></p-button>
+            <p-button
+              label="Run Simulation"
+              icon="pi pi-play"
+              severity="success"
+              [loading]="simulationService.loading()"
+              [disabled]="combatantService.count() === 0"
+              (onClick)="simulationService.createSimulation()"
+            ></p-button>
+          </div>
+        </div>
+
+        @if (simulationService.simulationResult(); as result) {
+          <div class="flex flex-column gap-3">
+            <div class="surface-ground p-3 border-round">
+              <span class="font-bold">Total Logs:</span> {{ result.count }}
+            </div>
+            <app-simulation-results></app-simulation-results>
+          </div>
+        } @else {
+          <p class="text-600">
+            {{ combatantService.count() === 0
+               ? 'Add combatants to start a simulation.'
+               : 'Click "Run Simulation" to see the timeline here.' }}
+          </p>
+        }
+      </div>
+    </div>
+
+    <!-- Stats Column (Right) -->
+    <div
+      class="stats-panel flex flex-column border-1 surface-border border-round overflow-hidden bg-card shadow-1"
+      [style.width]="
+        isXL() ? (isStatsCollapsed() ? '60px' : '280px') : '100%'
+      "
+      [style.max-width]="
+        isXL() ? (isStatsCollapsed() ? '60px' : '280px') : '100%'
+      "
+      [class.hidden]="!isXL() && !simulationService.simulationResult()"
+    >
+        <div class="flex flex-column h-full overflow-hidden">
+            <div class="flex-1 overflow-auto" [class.hidden]="isStatsCollapsed()">
+                <app-simulation-stats [data]="simulationService.simulationResult()"></app-simulation-stats>
+            </div>
+
+            <!-- Mini stats view for collapsed state -->
+            @if (isStatsCollapsed()) {
+                <div class="flex flex-column align-items-center gap-4 py-4 h-full">
+                    <i class="pi pi-chart-bar text-primary text-xl" pTooltip="Stats"></i>
+                    @if (simulationService.simulationResult(); as res) {
+                        <div class="flex flex-column gap-3">
+                            <div class="text-xs font-bold text-center" pTooltip="Win Rate">
+                                {{ res.winRatePercentage | number:'1.0-0' }}%
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+  </div>
+</div>
+
+<app-simulation-options
+  [(visible)]="isOptionsVisible"
+></app-simulation-options>
+
+<app-actor-selector-dialog
+  [(visible)]="isCharacterSelectorVisible"
+  mode="character"
+></app-actor-selector-dialog>
+
+<app-actor-selector-dialog
+  [(visible)]="isMonsterSelectorVisible"
+  mode="monster"
+></app-actor-selector-dialog>

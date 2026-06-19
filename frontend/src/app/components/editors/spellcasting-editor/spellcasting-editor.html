@@ -1,0 +1,154 @@
+<div [formGroup]="group()" class="flex flex-column gap-3">
+  <div class="grid">
+    <div class="col-12 md:col-6">
+      <label class="font-bold block mb-1">Ability</label>
+      <p-select
+        formControlName="ability"
+        [options]="abilities"
+        optionLabel="label"
+        optionValue="value"
+        appendTo="body"
+        class="w-full"
+      ></p-select>
+    </div>
+    <div class="col-12 md:col-6">
+      <label class="font-bold block mb-1">Caster Level</label>
+      <p-inputNumber
+        formControlName="casterLevel"
+        [min]="1"
+        [max]="20"
+        [showButtons]="true"
+        class="w-full"
+      ></p-inputNumber>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="col-6">
+      <label class="font-bold block mb-1">Save DC</label>
+      <div class="p-2 border-1 surface-border border-round bg-surface-100 font-bold text-center">
+        {{ group().get('spellSaveDC')?.value }}
+      </div>
+    </div>
+    <div class="col-6">
+      <label class="font-bold block mb-1">Attack Bonus</label>
+      <div class="p-2 border-1 surface-border border-round bg-surface-100 font-bold text-center">
+        {{ group().get('spellAttackBonus')?.value >= 0 ? '+' : '' }}{{ group().get('spellAttackBonus')?.value }}
+      </div>
+    </div>
+  </div>
+
+  @if (slotLevels().length > 0) {
+    <div class="field mt-2">
+      <label class="font-bold block mb-2">Spell Slots</label>
+      <div formGroupName="spellSlots" class="grid p-2 border-1 surface-border border-round bg-surface-50">
+        @for (level of slotLevels(); track level) {
+          <div [formGroupName]="level" class="col-4 md:col-3 flex flex-column gap-1 mb-2">
+            <span class="text-xs font-semibold">Lvl {{ level }}</span>
+            <p-inputNumber
+              formControlName="max"
+              [min]="0"
+              [max]="10"
+              [showButtons]="false"
+              class="w-full"
+              styleClass="w-full"
+              placeholder="0"
+            ></p-inputNumber>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Spell Selection Section -->
+  <div class="field mt-3">
+    <label class="font-bold block mb-1">Add Spell</label>
+    <div class="flex gap-2">
+      <p-select
+        [options]="availableSummaries()"
+        [(ngModel)]="selectedSummary"
+        [ngModelOptions]="{standalone: true}"
+        optionLabel="name"
+        [filter]="true"
+        filterPlaceholder="Search for a spell..."
+        placeholder="Select a spell to add"
+        appendTo="body"
+        class="flex-grow-1"
+        [disabled]="loadingSpells()"
+      >
+        <ng-template let-spell #item>
+          <div class="flex justify-content-between align-items-center w-full">
+            <div class="flex align-items-center gap-2">
+              <span>{{ spell.name }}</span>
+              <div class="flex gap-1">
+                @if (spell.isConcentration) {
+                  <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
+                }
+                @if (spell.isRitual) {
+                  <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
+                }
+                @if (spell.isAOE) {
+                  <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
+                }
+                @if (spell.hasDC) {
+                  <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
+                }
+              </div>
+            </div>
+            <span class="text-xs text-500">Lvl {{ spell.level }}</span>
+          </div>
+        </ng-template>
+      </p-select>
+      <p-button
+        icon="pi pi-plus"
+        (onClick)="onAddSpell()"
+        [disabled]="!selectedSummary || loadingSpells()"
+        [loading]="loadingSpells()"
+      ></p-button>
+    </div>
+  </div>
+
+  <!-- Selected Spells List -->
+  <div class="field mt-3">
+    <label class="font-bold block mb-2">Selected Spells ({{ spells.length }})</label>
+    <div class="border-1 surface-border border-round bg-surface-50 overflow-hidden">
+      @if (spells.length === 0) {
+        <div class="p-4 text-center text-600 italic">No spells selected.</div>
+      } @else {
+        <div class="flex flex-column">
+          @for (spell of spells; track spell.id; let i = $index) {
+            <div class="flex justify-content-between align-items-center p-2 border-bottom-1 surface-border last:border-bottom-none">
+              <div class="flex flex-column">
+                <div class="flex align-items-center gap-2">
+                  <span class="font-semibold">{{ spell.name }}</span>
+                  <div class="flex gap-1">
+                    @if (spell.isConcentration) {
+                      <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
+                    }
+                    @if (spell.isRitual) {
+                      <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
+                    }
+                    @if (spell.isAOE) {
+                      <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
+                    }
+                    @if (spell.hasDC) {
+                      <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
+                    }
+                  </div>
+                </div>
+                <span class="text-xs text-600">Level {{ spell.level }} | {{ spell.castingTime }}</span>
+              </div>
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [text]="true"
+                size="small"
+                (onClick)="removeSpell(i)"
+              ></p-button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

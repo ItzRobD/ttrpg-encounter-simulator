@@ -1,0 +1,268 @@
+import {
+  Component,
+  inject,
+  ChangeDetectionStrategy,
+  input,
+  computed,
+  Signal,
+  output,
+} from '@angular/core';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map, take } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { TableModule } from 'primeng/table';
+import { TooltipModule } from 'primeng/tooltip';
+import { MessageModule } from 'primeng/message';
+import { ButtonModule } from 'primeng/button';
+import { MonsterService } from '../../services/monster.service';
+import { CommonModule } from '@angular/common';
+import { CharacterService } from '../../services/character.service';
+import { EquipmentService } from '../../services/equipment.service';
+import { CrFormatPipe } from '../../pipes/cr-format.pipe';
+import { ActorService } from '../../services/actor.service.interface';
+import { MapperService } from '../../services/mapper.service';
+import {
+  ActorSummary,
+  Actor,
+  EquipmentItem, EquipmentSummary, SpellSummary, Spell
+} from '../../models';
+import {SpellsService} from '../../services/spells.service';
+
+type SupportedService =
+  | ActorService<Actor, ActorSummary>
+  | ActorService<Actor, ActorSummary>
+  | (Omit<EquipmentService, 'selectedItem' | 'selectItem'> & {
+      selectedActor: Signal<EquipmentItem | null>;
+      selectActor: (item: EquipmentItem | null) => void;
+      selectActorByID: (id: string) => Observable<EquipmentItem>;
+    })
+  | (Omit<SpellsService, 'selectedSpell' | 'selectSpell'> & {
+      selectedActor: Signal<Spell | null>;
+      selectActor: (spell: Spell | null) => void;
+      selectActorByID: (id: string) => Observable<Spell>;
+    });
+
+@Component({
+  selector: 'app-shared-table',
+  imports: [TableModule, TooltipModule, MessageModule, CommonModule, CrFormatPipe, ButtonModule],
+  templateUrl: './shared-table.component.html',
+  styleUrl: './shared-table.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class SharedTable {
+  private readonly monsterService = inject(MonsterService);
+  private readonly characterService = inject(CharacterService);
+  private readonly equipmentService = inject(EquipmentService);
+  private readonly spellsService = inject(SpellsService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  protected readonly mapperService = inject(MapperService);
+
+  public readonly mode = input<'monster' | 'character' | 'equipment' | 'spells'>('monster');
+  public readonly searchTerm = input('');
+  public readonly categoryFilter = input<string>('all');
+  public readonly showAddToSimulator = input(false);
+
+  public readonly addToSimulator = output<Actor>();
+
+  public readonly activeService = computed<SupportedService>(() => {
+    switch (this.mode()) {
+      case 'monster': return this.monsterService;
+      case 'character': return this.characterService;
+      case 'equipment': {
+        const service = this.equipmentService;
+        return {
+          ...service,
+          selectedActor: service.selectedItem,
+          selectActor: (actor: EquipmentItem | null) => service.selectItem(actor),
+          selectActorByID: (id: string) => service.selectItemByID(id, 'Weapon') // Defaulting to Weapon for now
+        } as unknown as SupportedService;
+      }
+      case 'spells': {
+        const service = this.spellsService;
+        return {
+          ...service,
+          selectedActor: service.selectedSpell,
+          selectActor: (actor: Spell | null) => service.selectActor(actor),
+          selectActorByID: (id: string) => service.selectActorByID(id)
+        } as unknown as SupportedService;
+      }
+    }
+  });
+
+  protected readonly colWidths = {
+    desktop: {
+      name: { width: '35%', minWidth: '15rem' },
+      type: { width: '15%', minWidth: '10rem' },
+      size: { width: '2rem', minWidth: '2rem' },
+      cr: { width: '3rem', minWidth: '3rem' },
+      ac: { width: '3rem', minWidth: '3rem' },
+      level: { width: '3rem', minWidth: '3rem' },
+      class: { width: '20%', minWidth: '10rem' },
+      race: { width: '20%', minWidth: '10rem' },
+      detail: { width: '25%', minWidth: '10rem' },
+      status: { width: '0', minWidth: '0' },
+      actions: { width: '4rem', minWidth: '4rem' },
+    },
+    mobile: {
+      name: { width: '40%', minWidth: '12rem' },
+      type: { width: '30%', minWidth: '8rem' },
+      size: { width: '0', minWidth: '0' },
+      cr: { width: '5rem', minWidth: '5rem' },
+      ac: { width: '0', minWidth: '0' },
+      level: { width: '5rem', minWidth: '5rem' },
+      class: { width: '15%', minWidth: '12rem' },
+      race: { width: '15%', minWidth: '12rem' },
+      detail: { width: '25%', minWidth: '10rem' },
+      status: { width: '4rem', minWidth: '4rem' },
+      actions: { width: '4rem', minWidth: '4rem' },
+    }
+  };
+
+  public readonly isMobile = toSignal(
+    this.breakpointObserver.observe(Breakpoints.Handset).pipe(map((result) => result.matches)),
+    { initialValue: false }
+  );
+
+  public readonly filteredItems = computed(() => {
+    let summaries = this.activeService().summaries();
+    const term = this.searchTerm().toLowerCase().trim();
+    const category = this.categoryFilter().toLowerCase();
+
+    let items: ActorSummary[] = summaries;
+
+    // 1. Category Filtering
+    if (category !== 'all') {
+      items = items.filter((i: ActorSummary) => {
+        if (this.mode() === 'monster') {
+          if (category === 'srd') return !i.isCustom;
+          if (category === 'custom') return !!i.isCustom;
+        } else if (this.mode() === 'equipment') {
+          if (category === 'armor') return i.type === 'Armor' || i.type === 'Shield';
+          if (category === 'weapons') return i.type === 'Weapon';
+        } else if (this.mode() === 'spells') {
+          const spellType = (i as unknown as SpellSummary).spellType;
+          if (category === 'damage') return spellType === 'damage';
+          if (category === 'healing') return spellType === 'healing';
+          if (category === 'utility') return spellType === 'other';
+        }
+        return true;
+      });
+    }
+
+    // 2. Search Term Filtering
+    if (!term) {
+      return items;
+    }
+
+    return (items as ActorSummary[]).filter((i) => {
+      const basicMatch = i.name.toLowerCase().includes(term);
+
+      if (this.mode() === 'monster') {
+        const m = i;
+        return (
+          basicMatch ||
+          m.type?.toLowerCase().includes(term) ||
+          m.size?.toLowerCase().includes(term) ||
+          m.cr?.toString().includes(term) ||
+          m.ac?.toString().includes(term) ||
+          (m.isLegendary && 'legendary'.includes(term)) ||
+          ((m.isSpellcaster || m.isInnateCaster) && 'spellcaster'.includes(term))
+        );
+      } else if (this.mode() === 'character') {
+        const c = i;
+        return (
+          basicMatch ||
+          c.race?.toLowerCase().includes(term) ||
+          c.class?.toLowerCase().includes(term) ||
+          c.level?.toString().includes(term) ||
+          ((c.isSpellcaster || c.isInnateCaster) && 'spellcaster'.includes(term))
+        );
+      } else if (this.mode() === 'equipment') {
+        const eq = i as unknown as EquipmentSummary;
+        const propertyMatch = eq.properties ? (
+          (eq.properties.isVersatile && 'versatile'.includes(term)) ||
+          (eq.properties.isFinesse && 'finesse'.includes(term)) ||
+          (eq.properties.isHeavy && 'heavy'.includes(term)) ||
+          (eq.properties.isLight && 'light'.includes(term)) ||
+          (eq.properties.isTwoHanded && 'two-handed'.includes(term)) ||
+          (eq.properties.isThrown && 'thrown'.includes(term)) ||
+          (eq.properties.isRanged && 'ranged'.includes(term))
+        ) : false;
+        return (
+          basicMatch ||
+          eq.type?.toLowerCase().includes(term) ||
+          eq.detail?.toLowerCase().includes(term) ||
+          propertyMatch
+        );
+      } else if (this.mode() === 'spells') {
+        const spell = i as unknown as SpellSummary;
+        return (
+          basicMatch ||
+          spell.spellType?.toLowerCase().includes(term) ||
+          spell.level?.toString().includes(term) ||
+          (spell.isConcentration && 'concentration'.includes(term)) ||
+          (spell.isRitual && 'ritual'.includes(term)) ||
+          (spell.isAOE && ('aoe'.includes(term) || 'area of effect'.includes(term))) ||
+          (spell.hasDC && ('dc'.includes(term) || 'save'.includes(term)))
+        );
+      } else {
+        return false;
+      }
+    });
+  });
+
+  public readonly selectedSummary = computed(() => {
+    const service = this.activeService();
+    const selected = service.selectedActor();
+    if (!selected) return null;
+    return service.summaries().find((s) => (s as { id: number }).id === (selected as { id: number }).id) || null;
+  });
+
+  onRowSelect(event: { data?: ActorSummary | (ActorSummary)[] }): void {
+    const summary = event.data;
+    if (!summary || Array.isArray(summary)) return;
+
+    const id = (summary as { id?: number | string }).id;
+    if (id === undefined || id === null) {
+      console.error('Cannot select row: summary.id is undefined or null', summary);
+      return;
+    }
+
+    const service = this.activeService();
+    const mode = this.mode();
+
+    if (mode === 'monster' || mode === 'character') {
+      (service as ActorService<Actor, ActorSummary>).selectActorByID(id.toString()).pipe(take(1)).subscribe();
+    } else if (mode === 'equipment') {
+      const eqSummary = summary as EquipmentSummary;
+      this.equipmentService.selectItemByID(id.toString(), eqSummary.type).pipe(take(1)).subscribe();
+    } else if (mode === 'spells') {
+      this.spellsService.selectActorByID(id.toString()).pipe(take(1)).subscribe();
+    }
+
+  }
+
+  onRowUnselect(): void {
+    this.activeService().selectActor(null);
+  }
+
+  onAddToSimulatorClick(event: Event, summary: ActorSummary): void {
+    event.stopPropagation();
+
+    const service = this.activeService();
+    const id = (summary as { id?: number | string }).id;
+    if (id === undefined || id === null) return;
+
+    const mode = this.mode();
+    if (mode === 'monster' || mode === 'character') {
+      const actorService = service as ActorService<Actor, ActorSummary>;
+      actorService.selectActorByID(id.toString()).pipe(take(1)).subscribe({
+        next: () => {
+          const actor = actorService.selectedActor();
+          if (actor) this.addToSimulator.emit(actor);
+        }
+      });
+    }
+  }
+}

@@ -1,0 +1,217 @@
+<p-dialog
+  [header]="(itemToEdit() ? 'Edit Character' : 'Create Character') + (isSaving ? ' (Saving...)' : '')"
+  [visible]="visible()"
+  (visibleChange)="visibleChange.emit($event)"
+  [modal]="true"
+  [style]="{ width: '70vw', maxWidth: '1000px' }"
+  [breakpoints]="{ '960px': '95vw' }"
+  [draggable]="false"
+  [resizable]="false"
+  (onHide)="close()"
+>
+  <form [formGroup]="characterForm" (ngSubmit)="onSave()" class="p-fluid">
+    <p-tabs value="0">
+      <p-tablist>
+        <p-tab value="0">Base Stats</p-tab>
+        <p-tab value="1">Resistances</p-tab>
+        <p-tab value="2">Equipment</p-tab>
+        <p-tab value="3" [disabled]="!isSpellcaster()">Spellcasting</p-tab>
+        <p-tab value="4">Behavior</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <!-- Tab 0: Base Stats -->
+        <p-tabpanel value="0">
+          <div class="flex flex-column gap-3 mt-3">
+            <div class="field">
+              <label for="name" class="font-bold block mb-1">Character Name</label>
+              <input pInputText id="name" formControlName="name" placeholder="e.g. Drizzt Do'Urden"
+                     [class.p-invalid]="characterForm.get('name')?.invalid && characterForm.get('name')?.touched" />
+            </div>
+
+            <div class="grid">
+              <div class="col-12 md:col-3">
+                <label for="race" class="font-bold block mb-1">Race</label>
+                <p-select id="race" [options]="races" formControlName="raceId" optionLabel="label" optionValue="value" placeholder="Select Race" appendTo="body"></p-select>
+              </div>
+
+              @if (Number(characterForm.get('raceId')?.value) === mapperService.getRaceId(Race.Dragonborn)) {
+                <div class="col-12 md:col-3">
+                  <label for="dragonbornColor" class="font-bold block mb-1">Color</label>
+                  <p-select id="dragonbornColor" [options]="dragonbornColors" formControlName="dragonbornColor" optionLabel="label" optionValue="value" placeholder="Select Color" appendTo="body"></p-select>
+                </div>
+              }
+
+              <div class="col-12 md:col-3">
+                <label for="class" class="font-bold block mb-1">Class</label>
+                <p-select id="class" [options]="classes" formControlName="classId" optionLabel="label" optionValue="value" placeholder="Select Class" appendTo="body"></p-select>
+              </div>
+
+              <div class="col-12 md:col-3">
+                <label for="level" class="font-bold block mb-1">Level</label>
+                <p-inputNumber id="level" formControlName="level" [showButtons]="true" [min]="1" [max]="20"></p-inputNumber>
+              </div>
+            </div>
+
+            <div class="grid" formGroupName="hp">
+              <div class="col-12 md:col-6">
+                <label class="font-bold block mb-1">Hit Points (Calculated)</label>
+                <div class="p-2 border-1 surface-border border-round surface-ground font-bold text-lg">
+                  {{ hpDisplay() }}
+                </div>
+              </div>
+              <div class="col-6 md:col-2">
+                <label for="numDice" class="font-bold block mb-1">Num Dice</label>
+                <p-inputNumber id="numDice" formControlName="numberOfDice" [min]="1" [showButtons]="true" size="small"></p-inputNumber>
+              </div>
+              <div class="col-6 md:col-2">
+                <label for="hitDie" class="font-bold block mb-1">Hit Die (d)</label>
+                <p-inputNumber id="hitDie" formControlName="hitDie" [min]="4" [max]="12" [showButtons]="true" size="small"></p-inputNumber>
+              </div>
+              <div class="col-12 md:col-2">
+                <label for="amountToAdd" class="font-bold block mb-1">Flat Bonus</label>
+                <p-inputNumber id="amountToAdd" formControlName="amountToAdd" [showButtons]="true" size="small"></p-inputNumber>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="font-bold block mb-2">Ability Scores & Proficiencies</label>
+              <app-ability-score-editor [group]="asConfigGroup"></app-ability-score-editor>
+            </div>
+          </div>
+        </p-tabpanel>
+
+        <!-- Tab 1: Resistances -->
+        <p-tabpanel value="1">
+          <div class="mt-3">
+            <div class="flex justify-content-between align-items-center mb-3">
+              <h4 class="m-0">Damage Resistances, Immunities & Vulnerabilities</h4>
+              <p-button icon="pi pi-plus" label="Add Resistance" [text]="true" (onClick)="addResistance()"></p-button>
+            </div>
+
+            <div formGroupName="state">
+              <div formArrayName="resistances" class="flex flex-column gap-2">
+                @for (res of resistancesArray.controls; track $index; let i = $index) {
+                  <div [formGroupName]="i" class="grid align-items-end surface-50 p-2 border-round relative">
+                    <p-button icon="pi pi-times" severity="danger" [text]="true" size="small" class="absolute top-0 right-0" (onClick)="removeResistance(i)"></p-button>
+                    <div class="col-6">
+                      <label class="text-xs font-bold block mb-1">Damage Type</label>
+                      <p-select formControlName="damageType" [options]="damageTypes" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
+                    </div>
+                    <div class="col-6">
+                      <label class="text-xs font-bold block mb-1">Resistance Type</label>
+                      <p-select formControlName="resistanceType" [options]="resistanceTypes" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
+                    </div>
+                  </div>
+                }
+                @if (resistancesArray.length === 0) {
+                  <div class="text-center p-4 border-1 border-dashed surface-border border-round text-600 italic">
+                    No resistances configured.
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </p-tabpanel>
+
+        <!-- Tab 2: Equipment -->
+        <p-tabpanel value="2">
+          <div class="flex flex-column gap-3 mt-3" formGroupName="equipment">
+            <div class="grid">
+              <div class="col-12 md:col-6">
+                <label for="armor" class="font-bold block mb-1">Armor</label>
+                <p-select id="armor" [options]="armorOptions()" formControlName="armorId" optionLabel="name" optionValue="id" placeholder="Select Armor" [showClear]="true" appendTo="body"></p-select>
+              </div>
+              <div class="col-12 md:col-6">
+                <label for="shield" class="font-bold block mb-1">Shield</label>
+                <p-select id="shield" [options]="shieldOptions()" formControlName="shieldId" optionLabel="name" optionValue="id" placeholder="Select Shield" [showClear]="true" appendTo="body"></p-select>
+              </div>
+            </div>
+
+            <div class="field mt-2">
+              <div class="flex align-items-center gap-2">
+                <p-checkbox id="hasShieldEquipped" formControlName="hasShieldEquipped" [binary]="true"></p-checkbox>
+                <label for="hasShieldEquipped" class="font-bold">Equip Shield</label>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="col-12 md:col-4">
+                <label for="primaryWeapon" class="font-bold block mb-1">Primary Weapon</label>
+                <p-select id="primaryWeapon" [options]="weaponOptions()" formControlName="primaryWeaponId" optionLabel="name" optionValue="id" placeholder="Primary" [showClear]="true" appendTo="body"></p-select>
+              </div>
+              <div class="col-12 md:col-4">
+                <label for="secondaryWeapon" class="font-bold block mb-1">Secondary Weapon</label>
+                <p-select id="secondaryWeapon" [options]="weaponOptions()" formControlName="secondaryWeaponId" optionLabel="name" optionValue="id" placeholder="Secondary" [showClear]="true" appendTo="body"></p-select>
+              </div>
+              <div class="col-12 md:col-4">
+                <label for="rangedWeapon" class="font-bold block mb-1">Ranged Weapon</label>
+                <p-select id="rangedWeapon" [options]="rangedWeaponOptions()" formControlName="rangedWeaponId" optionLabel="name" optionValue="id" placeholder="Ranged" [showClear]="true" appendTo="body"></p-select>
+              </div>
+            </div>
+          </div>
+        </p-tabpanel>
+
+        <!-- Tab 3: Spellcasting -->
+        <p-tabpanel value="3">
+          @if (isSpellcaster()) {
+            <div class="mt-3">
+              <app-spellcasting-editor [group]="spellcastingGroup" [classId]="characterForm.get('classId')?.value"></app-spellcasting-editor>
+            </div>
+          } @else {
+            <div class="flex flex-column align-items-center justify-content-center p-5 text-center surface-card border-round-xl border-1 surface-border mt-3">
+              <i class="pi pi-lock text-4xl mb-3 text-secondary"></i>
+              <h3 class="m-0 text-xl font-bold">Spellcasting Disabled</h3>
+              <p class="text-secondary mt-2 mb-0">The selected class does not have spellcasting abilities.</p>
+            </div>
+          }
+        </p-tabpanel>
+
+        <!-- Tab 4: Behavior -->
+        <p-tabpanel value="4">
+          <div [formGroup]="behaviorGroup" class="flex flex-column gap-3 mt-3">
+            <div class="grid">
+              <div class="col-12 md:col-6">
+                <label for="actionPreference" class="font-bold block mb-1">Primary Action Preference</label>
+                <p-select id="actionPreference" formControlName="actionPreference" [options]="actionPreferences" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+              </div>
+              <div class="col-12 md:col-6">
+                <label for="targetPriority" class="font-bold block mb-1">Primary Target Priority</label>
+                <p-select id="targetPriority" formControlName="targetPriority" [options]="targetPriorities" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+              </div>
+              <div class="col-12 md:col-6">
+                <label for="secondaryActionPreference" class="font-bold block mb-1">Secondary Action Preference</label>
+                <p-select id="secondaryActionPreference" formControlName="secondaryActionPreference" [options]="actionPreferences" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+              </div>
+              <div class="col-12 md:col-6">
+                <label for="secondaryTargetPriority" class="font-bold block mb-1">Secondary Target Priority</label>
+                <p-select id="secondaryTargetPriority" formControlName="secondaryTargetPriority" [options]="targetPriorities" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+              </div>
+            </div>
+          </div>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+
+    @if (error()) {
+      <p-message severity="error" [text]="error()!" class="block mt-3"></p-message>
+    }
+
+    <div class="flex justify-content-between align-items-center mt-4">
+      <div>
+        <p-button label="Export JSON" icon="pi pi-download" severity="info" [text]="true" (onClick)="exportToJson()" tooltipPosition="top" pTooltip="Download character data as JSON for testing"></p-button>
+      </div>
+      <div class="flex gap-2">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [text]="true" (onClick)="close()" [disabled]="loading()"></p-button>
+
+        <p-splitButton
+          [label]="primarySaveLabel()"
+          [icon]="loading() ? 'pi pi-spin pi-spinner' : 'pi pi-check'"
+          (onClick)="onSaveAttempt()"
+          [model]="saveOptions()"
+          [disabled]="loading()">
+        </p-splitButton>
+      </div>
+    </div>
+  </form>
+</p-dialog>
