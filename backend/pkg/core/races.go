@@ -19,6 +19,21 @@ const (
 
 func (r RaceID) Int() int { return int(r) }
 
+type DragonbornColor string
+
+const (
+	DragonbornBlue   DragonbornColor = "Blue"
+	DragonbornBlack  DragonbornColor = "Black"
+	DragonbornBrass  DragonbornColor = "Brass"
+	DragonbornBronze DragonbornColor = "Bronze"
+	DragonbornCopper DragonbornColor = "Copper"
+	DragonbornGold   DragonbornColor = "Gold"
+	DragonbornGreen  DragonbornColor = "Green"
+	DragonbornRed    DragonbornColor = "Red"
+	DragonbornSilver DragonbornColor = "Silver"
+	DragonbornWhite  DragonbornColor = "White"
+)
+
 func (r RaceID) String() string {
 	switch r {
 	case Dwarf:

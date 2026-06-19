@@ -3,8 +3,6 @@ package simulation
 import (
 	"dnd5e-encounter-simulator-backend/pkg/actor"
 	"dnd5e-encounter-simulator-backend/pkg/core"
-	"dnd5e-encounter-simulator-backend/pkg_old/classes"
-	"dnd5e-encounter-simulator-backend/pkg_old/races"
 	"testing"
 )
 
@@ -13,7 +11,7 @@ func TestFeatureProcessor_UnarmoredDefense(t *testing.T) {
 	cfg := actor.ActorConfig{
 		ActorType: core.ActorTypeCharacter,
 		Metadata: actor.Metadata{
-			ClassID: classes.ClassID(core.Barbarian), // 2
+			ClassID: core.ClassID(core.Barbarian), // 2
 		},
 		Abilities: core.Abilities{
 			AbilityScores: core.AbilityScores{
@@ -35,8 +33,8 @@ func TestFeatureProcessor_UnarmoredDefense(t *testing.T) {
 	}
 
 	// Monk: 10 + Dex + Wis
-	cfg.Metadata.ClassID = classes.ClassID(core.Monk) // 7
-	cfg.Abilities.AbilityScores.Wisdom = 18           // +4
+	cfg.Metadata.ClassID = core.ClassID(core.Monk) // 7
+	cfg.Abilities.AbilityScores.Wisdom = 18        // +4
 	a, _ = actor.NewActorFromConfig(&cfg)
 	a.ProcessFeatures()
 	// Should be 10 + 2 + 4 = 16
@@ -54,7 +52,7 @@ func TestFeatureProcessor_TieflingResistance(t *testing.T) {
 	cfg := actor.ActorConfig{
 		ActorType: core.ActorTypeCharacter,
 		Metadata: actor.Metadata{
-			RaceID: races.RaceID(core.Tiefling),
+			RaceID: core.RaceID(core.Tiefling),
 		},
 		Features: features,
 	}
@@ -87,7 +85,7 @@ func TestFeatureProcessor_DragonbornBreath(t *testing.T) {
 	cfg := actor.ActorConfig{
 		ActorType: core.ActorTypeCharacter,
 		Metadata: actor.Metadata{
-			RaceID: races.RaceID(core.Dragonborn),
+			RaceID: core.RaceID(core.Dragonborn),
 		},
 		Features: features,
 	}
@@ -140,7 +138,7 @@ func TestFeatureProcessor_HalflingLuckyHydration(t *testing.T) {
 	cfg := actor.ActorConfig{
 		ActorType: core.ActorTypeCharacter,
 		Metadata: actor.Metadata{
-			RaceID: races.RaceID(core.Halfling),
+			RaceID: core.RaceID(core.Halfling),
 		},
 		Features: features,
 	}

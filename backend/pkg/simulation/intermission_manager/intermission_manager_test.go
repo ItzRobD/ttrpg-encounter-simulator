@@ -6,7 +6,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/roll_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
-	"dnd5e-encounter-simulator-backend/pkg_old/classes"
 	"math/rand/v2"
 	"testing"
 )
@@ -66,7 +65,7 @@ func TestIntermissionManager_WarlockRecovery(t *testing.T) {
 
 	warlock := &actor.Actor{
 		Metadata: actor.Metadata{
-			ClassID: classes.ClassID(core.Warlock),
+			ClassID: core.ClassID(core.Warlock),
 		},
 		StateManager: state_manager.StateManager{
 			MaxSlots:     spells.SpellSlots{1: 2},

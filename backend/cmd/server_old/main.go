@@ -3,7 +3,7 @@ package main
 import (
 	"dnd5e-encounter-simulator-backend/internal/api"
 	"dnd5e-encounter-simulator-backend/internal/database"
-	"dnd5e-encounter-simulator-backend/pkg_old/simulation"
+	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"log"
 	"net/http"
 	_ "net/http/pprof"

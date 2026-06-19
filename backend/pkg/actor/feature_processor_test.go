@@ -5,8 +5,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/equipment_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/equipment"
-	"dnd5e-encounter-simulator-backend/pkg_old/classes"
-	"dnd5e-encounter-simulator-backend/pkg_old/races"
 	"testing"
 )
 
@@ -20,7 +18,7 @@ func TestFeatureProcessor_StaticFeatures(t *testing.T) {
 			name: "Dwarven Resilience adds Poison Resistance",
 			setup: func() *Actor {
 				return &Actor{
-					Metadata:    Metadata{RaceID: races.RaceID(core.Dwarf)},
+					Metadata:    Metadata{RaceID: core.RaceID(core.Dwarf)},
 					Features:    []core.Feature{{Name: core.SpecAbilityDwarvenResilience}},
 					Resistances: core.NewDamageResistances(),
 				}
@@ -35,7 +33,7 @@ func TestFeatureProcessor_StaticFeatures(t *testing.T) {
 			name: "Hellish Resistance adds Fire Resistance",
 			setup: func() *Actor {
 				return &Actor{
-					Metadata:    Metadata{RaceID: races.RaceID(core.Tiefling)},
+					Metadata:    Metadata{RaceID: core.RaceID(core.Tiefling)},
 					Features:    []core.Feature{{Name: core.SpecAbilityHellishResistance}},
 					Resistances: core.NewDamageResistances(),
 				}
@@ -50,7 +48,7 @@ func TestFeatureProcessor_StaticFeatures(t *testing.T) {
 			name: "Draconic Resistance adds configured Damage Type",
 			setup: func() *Actor {
 				return &Actor{
-					Metadata: Metadata{RaceID: races.RaceID(core.Dragonborn)},
+					Metadata: Metadata{RaceID: core.RaceID(core.Dragonborn)},
 					Features: []core.Feature{
 						{
 							Name: core.SpecAbilityDraconicResistance,
@@ -92,7 +90,7 @@ func TestFeatureProcessor_StaticFeatures(t *testing.T) {
 			name: "Lay on Hands initializes resource pool",
 			setup: func() *Actor {
 				return &Actor{
-					Metadata:     Metadata{Level: 5, ClassID: classes.ClassID(core.Paladin)},
+					Metadata:     Metadata{Level: 5, ClassID: core.ClassID(core.Paladin)},
 					Features:     []core.Feature{{Name: core.SpecAbilityLayOnHands}},
 					StateManager: state_manager.StateManager{Resource: make(map[string]int)},
 				}

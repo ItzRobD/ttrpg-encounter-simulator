@@ -6,8 +6,6 @@ import (
 	"dnd5e-encounter-simulator-backend/pkg/core/spell_manager"
 	"dnd5e-encounter-simulator-backend/pkg/core/state_manager"
 	"dnd5e-encounter-simulator-backend/pkg/spells"
-	"dnd5e-encounter-simulator-backend/pkg_old/classes"
-	"dnd5e-encounter-simulator-backend/pkg_old/races"
 )
 
 type Actor struct {
@@ -56,10 +54,10 @@ type Metadata struct {
 	CR    float64 `json:"cr"`
 
 	// Character
-	ClassID              classes.ClassID       `json:"class_id,omitempty"`
-	RaceID               races.RaceID          `json:"race_id,omitempty"`
-	DragonbornColor      races.DragonbornColor `json:"dragonborn_color,omitempty"`
-	DragonbornDamageType core.DamageType       `json:"dragonborn_damage_type,omitempty"`
+	ClassID              core.ClassID         `json:"class_id,omitempty"`
+	RaceID               core.RaceID          `json:"race_id,omitempty"`
+	DragonbornColor      core.DragonbornColor `json:"dragonborn_color,omitempty"`
+	DragonbornDamageType core.DamageType      `json:"dragonborn_damage_type,omitempty"`
 
 	// Monster
 	MonsterSize         core.MonsterSize    `json:"size,omitempty"`
