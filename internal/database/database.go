@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
+	"net/url"
 	"os"
 
 	"github.com/jackc/pgx/v5"
@@ -25,8 +25,10 @@ func InitDb(opts *InitOpts) error {
 	} else {
 		err = godotenv.Load(opts.EnvPath)
 	}
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+	// A missing .env file is not fatal: in production the DB_* vars are
+	// supplied by the environment directly. Only surface other load errors.
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("error loading env file: %w", err)
 	}
 
 	user := os.Getenv("DB_USER")
@@ -35,7 +37,11 @@ func InitDb(opts *InitOpts) error {
 	port := os.Getenv("DB_PORT")
 	dbname := os.Getenv("DB_NAME")
 
-	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", user, password, host, port, dbname)
+	// URL-escape credentials so passwords containing reserved characters
+	// (@, :, /, etc.) don't corrupt the connection string.
+	connString := fmt.Sprintf("postgres://%s@%s:%s/%s",
+		url.UserPassword(user, password).String(),
+		host, port, url.PathEscape(dbname))
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
 		return fmt.Errorf("unable to parse database URL: %w", err)
@@ -43,7 +49,7 @@ func InitDb(opts *InitOpts) error {
 
 	pool, err = pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
-		log.Fatalf("Unable to create connection pool: %v\n", err)
+		return fmt.Errorf("unable to create connection pool: %w", err)
 	}
 	return nil
 }

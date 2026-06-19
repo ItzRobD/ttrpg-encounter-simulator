@@ -3,10 +3,20 @@ package handlers
 import (
 	"dnd5e-encounter-simulator-backend/pkg/simulation"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+)
+
+// Simulation input bounds. These are deliberately constants (not magic numbers
+// scattered through the handler) so tier-based limits can raise them later
+// without hunting for the checks. See plan Phase 1.2 / Phase 2 (tiers).
+const (
+	maxNumberOfRuns    = 1000
+	maxRoundsPerEnc    = 50
+	maxEncounters      = 20
+	maxTotalCombatants = 30
 )
 
 type SimulationPayload struct {
@@ -18,24 +28,36 @@ func CreateSimulation(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format: " + err.Error()})
-		log.Printf("CreateSimulation: ShouldBindJSON failed: %v", err)
+		slog.Warn("CreateSimulation: ShouldBindJSON failed", "err", err)
 		return
 	}
 
 	req := request.Payload
 
-	// Basic validation
-	if req.NumberOfRuns <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid number of runs"})
+	// Bounds validation. Upper caps protect the worker pool / DB from a
+	// pathological payload; the constants can be relaxed per subscription tier.
+	if req.NumberOfRuns <= 0 || req.NumberOfRuns > maxNumberOfRuns {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "number_of_runs must be between 1 and 1000"})
 		return
 	}
-	if req.MaxRounds <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid max rounds"})
+	if req.MaxRounds <= 0 || req.MaxRounds > maxRoundsPerEnc {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "max_rounds must be between 1 and 50"})
 		return
 	}
-	if len(req.Encounters) < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid number of encounters"})
+	if len(req.Encounters) < 1 || len(req.Encounters) > maxEncounters {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "encounters must be between 1 and 20"})
 		return
+	}
+
+	// Cap total combatants across the whole request. The most crowded single
+	// encounter (characters + that encounter's monsters) drives the per-round
+	// cost, so bound that rather than the sum of all encounters.
+	for _, enc := range req.Encounters {
+		combatants := len(req.CharacterConfigs) + len(enc.MonsterIDs) + len(enc.MonsterConfigs)
+		if combatants > maxTotalCombatants {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "an encounter exceeds the maximum of 30 combatants"})
+			return
+		}
 	}
 
 	// For now, using a placeholder owner ID. In a real app, this would come from auth context.
@@ -44,7 +66,7 @@ func CreateSimulation(c *gin.Context) {
 	simID, err := simulation.InsertNewSimulation(c.Request.Context(), ownerID, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create simulation: " + err.Error()})
-		log.Printf("CreateSimulation: Failed to create simulation: %v", err)
+		slog.Error("CreateSimulation: failed to create simulation", "err", err)
 		return
 	}
 
@@ -116,7 +138,7 @@ func GetSimulationResultsByID(c *gin.Context) {
 		var result simulation.MultiSimulationResult
 		if err := json.Unmarshal([]byte(*sim.ResultData), &result); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unmarshal result data"})
-			log.Printf("GetSimulationResultsByID: Failed to unmarshal result data for %s: %v", id, err)
+			slog.Error("GetSimulationResultsByID: failed to unmarshal result data", "sim_id", id, "err", err)
 			return
 		}
 		response["results"] = result

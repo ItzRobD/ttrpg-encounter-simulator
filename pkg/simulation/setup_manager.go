@@ -42,6 +42,9 @@ func (sm *SetupManager) SetupActor(cfg actor.ActorConfig) (*actor.Actor, error) 
 	if err != nil {
 		return nil, err
 	}
+	if a == nil {
+		return nil, fmt.Errorf("failed to setup actor: %s", cfg.Name)
+	}
 
 	// Apply initial state if provided (overwrites hydrated defaults)
 	if cfg.InitialState != nil {
@@ -199,8 +202,11 @@ func (sm *SetupManager) setupMonster(cfg actor.ActorConfig) (*actor.Actor, error
 		config = &cfg
 	} else {
 		config, err = repo.HydrateMonsterConfig(sm.ctx, cfg.ID)
-		if err != nil || config == nil {
+		if err != nil {
 			return nil, err
+		}
+		if config == nil {
+			return nil, fmt.Errorf("monster not found: %s", cfg.ID)
 		}
 
 		// Merge features from input config if any

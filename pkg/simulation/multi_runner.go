@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"runtime"
+	"runtime/debug"
 	"time"
 )
 
@@ -130,6 +131,14 @@ func RunMultiSimulation(ctx context.Context, req MultiSimulationRequest) (*Multi
 		go func(runID int, seed core.Seed) {
 			sem <- struct{}{}
 			defer func() { <-sem }()
+
+			// Recover from a panic in a single run so it fails that run via
+			// errChan instead of crashing the whole batch's goroutine.
+			defer func() {
+				if r := recover(); r != nil {
+					errChan <- fmt.Errorf("run %d panicked: %v\n%s", runID, r, debug.Stack())
+				}
+			}()
 
 			// Clone request and set seed
 			dayReq := req.AdventuringDayRequest
@@ -301,6 +310,9 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 		if err != nil {
 			return nil, fmt.Errorf("character hydration failed for %s: %w", cfg.Name, err)
 		}
+		if a == nil {
+			return nil, fmt.Errorf("character hydration failed for %s: received nil actor", cfg.Name)
+		}
 		// Assign InstanceID starting from 1 for characters
 		// We ignore any pre-assigned InstanceID from the request to ensure a clean start
 		a.InstanceID = nextInstanceID
@@ -344,6 +356,9 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 			if err != nil {
 				return nil, fmt.Errorf("monster hydration failed for ID %d: %w", mID, err)
 			}
+			if m == nil {
+				return nil, fmt.Errorf("monster hydration failed for ID %d: received nil actor", mID)
+			}
 			// Assign a unique InstanceID across the entire adventuring day
 			m.InstanceID = nextInstanceID
 			nextInstanceID++
@@ -356,6 +371,9 @@ func RunAdventuringDay(ctx context.Context, req AdventuringDayRequest) (*Adventu
 			m, err := sm.SetupActor(mCfg)
 			if err != nil {
 				return nil, fmt.Errorf("monster hydration failed: %w", err)
+			}
+			if m == nil {
+				return nil, fmt.Errorf("monster hydration failed: received nil actor")
 			}
 			// Assign a unique InstanceID across the entire adventuring day
 			m.InstanceID = nextInstanceID

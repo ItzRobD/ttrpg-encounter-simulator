@@ -41,13 +41,13 @@ func TestIntermissionManager_ShortRest(t *testing.T) {
 	}
 
 	// Should take short rest because 10 < 50*0.5
-	healing := im.ProcessIntermission(party, opts)
+	result := im.ProcessIntermission(party, opts)
 
 	if im.ShortRestsTaken != 1 {
 		t.Errorf("Expected 1 short rest taken, got %d", im.ShortRestsTaken)
 	}
 
-	if healing[a.InstanceID] == 0 {
+	if result.HealingReceived[a.InstanceID] == 0 {
 		t.Error("Expected healing in return map")
 	}
 
@@ -175,13 +175,13 @@ func TestIntermissionManager_Aggregation(t *testing.T) {
 		PostRestHealThreshold:  1.0,
 	}
 
-	healing := im.ProcessIntermission(party, opts)
+	result := im.ProcessIntermission(party, opts)
 
 	// Should have some healing from HD and 5 from Lay on Hands
-	if healing[a.InstanceID] == 0 {
+	if result.HealingReceived[a.InstanceID] == 0 {
 		t.Errorf("Expected healing for actor, got 0")
 	}
-	if healing[a.InstanceID] < 6 {
-		t.Errorf("Expected at least 6 healing (1 from HD + 5 from LOH), got %d", healing[a.InstanceID])
+	if result.HealingReceived[a.InstanceID] < 6 {
+		t.Errorf("Expected at least 6 healing (1 from HD + 5 from LOH), got %d", result.HealingReceived[a.InstanceID])
 	}
 }
