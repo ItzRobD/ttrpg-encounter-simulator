@@ -1,0 +1,30 @@
+@use 'layout' as l;
+
+:host {
+  display: block;
+}
+
+.actions-list {
+  @include l.stack(1);
+  width: 100%;
+  margin-top: l.space(2);
+}
+
+.action-card {
+  display: block;
+  width: 100%;
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.action-icon {
+  color: var(--p-primary-color);
+}
+
+.action-text {
+  font-size: 0.875rem;
+}

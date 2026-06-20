@@ -1,13 +1,13 @@
-<p-card class="p-fluid border-1 surface-border relative overflow-hidden">
+<p-card class="actor-card">
   @if (actor(); as a) {
     @if (showDelete()) {
-      <div class="absolute delete-button-container">
+      <div class="ac-delete">
         <p-button
           icon="pi pi-times"
           [rounded]="true"
           size="small"
           [raised]="true"
-          styleClass="delete-button"
+          styleClass="ac-delete-btn"
           (onClick)="$event.stopPropagation(); delete.emit(a.instanceId)"
           pTooltip="Remove from Simulator"
         ></p-button>
@@ -17,21 +17,17 @@
     <p-accordion [value]="mainActivePanel()" (valueChange)="mainActivePanel.set($event)">
       <p-accordion-panel value="0">
         <p-accordion-header>
-          <div
-            class="flex flex-column sm:flex-row justify-content-between align-items-center w-full gap-2"
-          >
-            <div class="flex flex-column align-items-center sm:align-items-start">
-              <span class="font-bold text-center sm:text-left"> {{ a.name }} </span>
-              <span class="text-sm text-500 text-center sm:text-left">
+          <div class="ac-head">
+            <div class="ac-identity">
+              <span class="ac-name">{{ a.name }}</span>
+              <span class="ac-sub">
                 @if (isCharacter(a)) {
                   Level {{ a.metadata.level }} {{ mapperService.getRaceName(a.metadata.raceId || 0) }} {{ mapperService.getClassName(a.metadata.classId || 0) }}
                 } @else if (isMonster(a)) {
                   CR {{ a.metadata.cr | crFormat }} {{ a.metadata.type }}
                 }
               </span>
-              <div
-                class="flex flex-wrap justify-content-center sm:justify-content-start gap-1 mt-1"
-              >
+              <div class="ac-tags">
                 @for (condition of activeConditions(); track condition) {
                   <p-tag
                     value="{{ condition | titlecase }}"
@@ -40,24 +36,16 @@
                   ></p-tag>
                 }
                 @if (state?.isStable) {
-                  <p-tag
-                    value="Stable"
-                    severity="success"
-                    [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"
-                  ></p-tag>
+                  <p-tag value="Stable" severity="success" [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"></p-tag>
                 }
                 @if (state?.isDead) {
-                  <p-tag
-                    value="Dead"
-                    severity="danger"
-                    [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"
-                  ></p-tag>
+                  <p-tag value="Dead" severity="danger" [dt]="{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }"></p-tag>
                 }
               </div>
             </div>
-            <div class="flex gap-3 align-items-center">
-              <div class="flex flex-column align-items-center gap-1" style="min-width: 100px">
-                <span class="text-xs font-bold text-600">
+            <div class="ac-vitals">
+              <div class="ac-hp">
+                <span class="ac-hp-label">
                   @if (!hideState()) {
                     HP: {{ state?.currentHp ?? '?' }}{{ (state?.tempHp ?? 0) > 0 ? ' (+' + state.tempHp + ')' : '' }} / {{ state?.maxHp ?? '?' }}
                   } @else {
@@ -74,43 +62,36 @@
                     [showValue]="false"
                     [color]="hpStatus().color"
                     [style]="{ height: '8px' }"
-                    class="w-full"
+                    class="ac-hp-bar"
                   />
                   @if (hpStatus().tempPercent > 0) {
                     <p-progressBar
-                        [value]="hpStatus().tempPercent"
-                        [showValue]="false"
-                        color="#3b82f6"
-                        [style]="{ height: '4px', marginTop: '2px', opacity: 0.8 }"
-                        class="w-full"
+                      [value]="hpStatus().tempPercent"
+                      [showValue]="false"
+                      color="#3b82f6"
+                      [style]="{ height: '4px', marginTop: '2px', opacity: 0.8 }"
+                      class="ac-hp-bar"
                     />
                   }
                 }
               </div>
-              <div class="flex flex-column pt-0">
-                <span class="text-xs font-bold">AC:
-                  {{ getAC(a) || '??' }}</span>
+              <div class="ac-defense">
+                <span class="ac-ac">AC: {{ getAC(a) || '??' }}</span>
                 @if (!hideState() && state) {
-                  <span class="text-xs font-bold text-primary">Init: {{ state.initiative }}</span>
+                  <span class="ac-init">Init: {{ state.initiative }}</span>
                 }
               </div>
             </div>
           </div>
         </p-accordion-header>
-        <p-accordion-content class="pt-2">
+        <p-accordion-content>
           <p-accordion [multiple]="true" [value]="activePanels()" (valueChange)="activePanels.set($event)">
             <!-- Statistics Panel -->
             <p-accordion-panel value="0">
               <p-accordion-header>
-                <div class="grid w-full align-items-center m-0">
-                  <div class="col-4">
-                    <span class="text-sm font-bold uppercase text-600">{{
-                      statsHeaderText().label
-                    }}</span>
-                  </div>
-                  <div class="col-8">
-                    <span class="text-xs text-700 font-medium">{{ statsHeaderText().list }}</span>
-                  </div>
+                <div class="ap-head">
+                  <span class="ap-label">{{ statsHeaderText().label }}</span>
+                  <span class="ap-list">{{ statsHeaderText().list }}</span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
@@ -127,15 +108,9 @@
             @if (specialAbilityNames().length > 0) {
               <p-accordion-panel value="2">
                 <p-accordion-header>
-                  <div class="grid w-full align-items-center">
-                    <div class="col-4">
-                      <span class="text-sm font-bold uppercase text-600">{{
-                        saHeaderText().label
-                      }}</span>
-                    </div>
-                    <div class="col-8">
-                      <span class="text-xs text-700 font-medium">{{ saHeaderText().list }}</span>
-                    </div>
+                  <div class="ap-head">
+                    <span class="ap-label">{{ saHeaderText().label }}</span>
+                    <span class="ap-list">{{ saHeaderText().list }}</span>
                   </div>
                 </p-accordion-header>
                 <p-accordion-content>
@@ -148,15 +123,9 @@
             @if (isCharacter(a) && weaponNames().length > 0) {
               <p-accordion-panel value="5">
                 <p-accordion-header>
-                  <div class="grid w-full align-items-center">
-                    <div class="col-4">
-                      <span class="text-sm font-bold uppercase text-600">{{
-                        equipmentHeaderText().label
-                      }}</span>
-                    </div>
-                    <div class="col-8">
-                      <span class="text-xs text-700 font-medium">{{ equipmentHeaderText().list }}</span>
-                    </div>
+                  <div class="ap-head">
+                    <span class="ap-label">{{ equipmentHeaderText().label }}</span>
+                    <span class="ap-list">{{ equipmentHeaderText().list }}</span>
                   </div>
                 </p-accordion-header>
                 <p-accordion-content>
@@ -169,15 +138,9 @@
             @if (isMonster(a) && actionNames().length > 0) {
               <p-accordion-panel value="1">
                 <p-accordion-header>
-                  <div class="grid w-full align-items-center">
-                    <div class="col-4">
-                      <span class="text-sm font-bold uppercase text-600">{{
-                        actionsHeaderText().label
-                      }}</span>
-                    </div>
-                    <div class="col-8">
-                      <span class="text-xs text-700 font-medium">{{ actionsHeaderText().list }}</span>
-                    </div>
+                  <div class="ap-head">
+                    <span class="ap-label">{{ actionsHeaderText().label }}</span>
+                    <span class="ap-list">{{ actionsHeaderText().list }}</span>
                   </div>
                 </p-accordion-header>
                 <p-accordion-content>
@@ -191,17 +154,9 @@
               @if (legendaryActionNames().length > 0) {
                 <p-accordion-panel value="3">
                   <p-accordion-header>
-                    <div class="grid w-full align-items-center">
-                      <div class="col-4">
-                        <span class="text-sm font-bold uppercase text-600">{{
-                          legendaryActionsHeaderText().label
-                        }}</span>
-                      </div>
-                      <div class="col-8">
-                        <span class="text-xs text-700 font-medium">{{
-                          legendaryActionsHeaderText().list
-                        }}</span>
-                      </div>
+                    <div class="ap-head">
+                      <span class="ap-label">{{ legendaryActionsHeaderText().label }}</span>
+                      <span class="ap-list">{{ legendaryActionsHeaderText().list }}</span>
                     </div>
                   </p-accordion-header>
                   <p-accordion-content>
@@ -210,21 +165,14 @@
                 </p-accordion-panel>
               }
             }
+
             <!-- Spellcasting Panel -->
             @if (a.spellcasting) {
               <p-accordion-panel value="4">
                 <p-accordion-header>
-                  <div class="grid w-full align-items-center">
-                    <div class="col-4">
-                      <span class="text-sm font-bold uppercase text-600">{{
-                          spellcastingHeaderText().label
-                        }}</span>
-                    </div>
-                    <div class="col-8">
-                      <span class="text-xs text-700 font-medium">{{
-                          spellcastingHeaderText().list
-                        }}</span>
-                    </div>
+                  <div class="ap-head">
+                    <span class="ap-label">{{ spellcastingHeaderText().label }}</span>
+                    <span class="ap-list">{{ spellcastingHeaderText().list }}</span>
                   </div>
                 </p-accordion-header>
                 <p-accordion-content>

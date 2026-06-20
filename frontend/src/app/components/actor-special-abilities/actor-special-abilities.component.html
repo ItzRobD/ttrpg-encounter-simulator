@@ -1,15 +1,11 @@
-<div class="grid gap-0 mt-2">
+<div class="sa-list">
   @for (feature of features(); track feature.id) {
-    <div class="col-12 p-1">
-      <div
-        class="flex flex-column gap-1 p-2 border-1 border-round surface-border bg-surface-50 h-full"
-      >
-        <div class="flex align-items-center gap-2">
-          <i class="pi pi-sparkles text-primary" style="font-size: 0.7rem"></i>
-          <span class="text-xs font-bold">{{ feature.name }}</span>
-        </div>
-        <p class="text-xs m-0 text-700">{{ feature.description }}</p>
+    <div class="sa-item">
+      <div class="sa-head">
+        <i class="pi pi-sparkles sa-icon"></i>
+        <span class="sa-name">{{ feature.name }}</span>
       </div>
+      <p class="sa-desc">{{ feature.description }}</p>
     </div>
   }
 </div>

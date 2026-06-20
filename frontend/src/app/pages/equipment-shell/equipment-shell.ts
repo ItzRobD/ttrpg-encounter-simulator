@@ -1,41 +1,27 @@
 import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
-import { SharedTable } from '../../components/shared-table/shared-table.component';
-import { EquipmentCard } from '../../components/equipment-card/equipment-card';
-import { EquipmentService } from '../../services/equipment.service';
 import { ButtonModule } from 'primeng/button';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { InputTextModule } from 'primeng/inputtext';
 import { TooltipModule } from 'primeng/tooltip';
-import { CommonModule } from '@angular/common';
+import { TabsModule } from 'primeng/tabs';
+import { LibraryPage } from '../../components/library-page/library-page';
+import { SharedTable } from '../../components/shared-table/shared-table.component';
+import { EquipmentCard } from '../../components/equipment-card/equipment-card.component';
+import { EquipmentService } from '../../services/equipment.service';
 import { EquipmentEditorComponent } from '../../components/editors/equipment-editor/equipment-editor';
 import { EquipmentItem } from '../../models';
 
-import { TabsModule } from 'primeng/tabs';
-
 @Component({
   selector: 'app-equipment-shell',
-  standalone: true,
   imports: [
+    ButtonModule,
+    TooltipModule,
+    TabsModule,
+    LibraryPage,
     SharedTable,
     EquipmentCard,
-    ButtonModule,
-    IconFieldModule,
-    InputIconModule,
-    InputTextModule,
-    TooltipModule,
-    CommonModule,
     EquipmentEditorComponent,
-    TabsModule
   ],
   templateUrl: './equipment-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './equipment-shell.css',
-  styles: [`
-    :host {
-      display: block;
-    }
-  `]
 })
 export class EquipmentShell implements OnInit {
   public readonly equipmentService = inject(EquipmentService);
@@ -68,14 +54,5 @@ export class EquipmentShell implements OnInit {
     if (confirm(`Are you sure you want to delete the custom item "${item.name}"?`)) {
       this.equipmentService.deleteItem(item.id!).subscribe();
     }
-  }
-
-  onSearch(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.searchTerm.set(target.value);
-  }
-
-  onClearSearch(): void {
-    this.searchTerm.set('');
   }
 }

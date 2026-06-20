@@ -1,8 +1,8 @@
-<div class="flex flex-column h-full">
+<div class="sr-wrap">
   <!-- Log Tabs -->
-  <div class="flex flex-column mb-2">
-    <div class="flex justify-content-between align-items-center">
-      <p-tabs [value]="activeTabIndex()" (valueChange)="onTabChange($event)" class="flex-1">
+  <div class="sr-tabs-head">
+    <div class="sr-tabs-row">
+      <p-tabs [value]="activeTabIndex()" (valueChange)="onTabChange($event)" class="sr-grow">
         <p-tablist>
           @for (index of logIndices(); track index) {
             <p-tab [value]="index">Run {{ index + 1 }}</p-tab>
@@ -11,15 +11,15 @@
       </p-tabs>
 
       @if (performance(); as perf) {
-        <div class="text-xs text-500 font-mono px-3" [pTooltip]="'Memory: ' + (perf.memoryAllocatedMb | number:'1.2-2') + 'MB, Goroutines: ' + perf.peakGoroutines">
+        <div class="sr-perf" [pTooltip]="'Memory: ' + (perf.memoryAllocatedMb | number:'1.2-2') + 'MB, Goroutines: ' + perf.peakGoroutines">
           Simulated in {{ perf.executionTimeHuman }}
         </div>
       }
     </div>
 
     @if (encounterIndices().length > 1) {
-      <div class="flex align-items-center mt-2 px-1">
-        <p-tabs [value]="activeEncounterIndex()" (valueChange)="onEncounterChange($event)" class="flex-1 small-tabs">
+      <div class="sr-enc-row">
+        <p-tabs [value]="activeEncounterIndex()" (valueChange)="onEncounterChange($event)" class="sr-grow small-tabs">
           <p-tablist>
             @for (index of encounterIndices(); track index) {
               <p-tab [value]="index">Encounter {{ index + 1 }}</p-tab>
@@ -31,13 +31,13 @@
   </div>
 
   <!-- Hierarchical Event List -->
-  <div class="flex-1 overflow-auto border-1 surface-border border-round bg-card">
+  <div class="sr-tree">
     <p-treeTable
       [value]="treeNodes()"
       [scrollable]="true"
       scrollHeight="flex"
       selectionMode="single"
-      class="w-full"
+      class="sr-grow"
     >
       <ng-template pTemplate="header">
         <tr>
@@ -48,8 +48,8 @@
       </ng-template>
       <ng-template pTemplate="body" let-rowNode let-rowData="rowData">
         <tr
-          [class.bg-primary-reverse]="isEventActive(rowData.id)"
-          class="transition-colors cursor-pointer"
+          class="sr-row"
+          [class.is-active]="isEventActive(rowData.id)"
           [pTooltip]="rowData.id"
           [tooltipPosition]="'top'"
           (click)="logEvent(rowData)"
@@ -57,34 +57,30 @@
           <td style="width: 280px">
             <p-treeTableToggler [rowNode]="rowNode" (click)="$event.stopPropagation()"></p-treeTableToggler>
             <i
+              class="sr-row-icon"
               [class]="
                 rowData.type === EventType.Round
                   ? 'pi pi-calendar'
                   : rowData.type === EventType.Turn
                     ? 'pi pi-user'
                     : rowData.type === EventType.Death
-                      ? 'pi pi-times-circle text-red-500'
+                      ? 'pi pi-times-circle c-red'
                       : rowData.type === EventType.Unconscious
-                        ? 'pi pi-moon text-blue-500'
+                        ? 'pi pi-moon c-blue'
                         : 'pi pi-bolt'
               "
-              class="mr-2 text-primary"
             ></i>
-            <span [class.font-bold]="rowData.type === EventType.Round || rowData.type === EventType.Turn">
+            <span [class.sr-strong]="rowData.type === EventType.Round || rowData.type === EventType.Turn">
               {{ getEventLabel(rowData) | snakeToSpace }}
             </span>
           </td>
           <td style="width: 150px">
             @if (rowData.actor; as actor) {
-              <span class="text-sm font-medium">
-                {{ actor.name }} ({{ actor.instanceId }})
-              </span>
+              <span class="sr-actor">{{ actor.name }} ({{ actor.instanceId }})</span>
             }
           </td>
           <td>
-            <span class="text-sm text-700">
-              {{ getEventDetails(rowData) | titlecase }}
-            </span>
+            <span class="sr-detail">{{ getEventDetails(rowData) | titlecase }}</span>
           </td>
         </tr>
       </ng-template>
@@ -93,24 +89,24 @@
 
   <!-- Timeline Scrubber -->
   @if (stateService.selectedSimulationLog(); as log) {
-    <div class="mt-4 pt-4 border-top-1 surface-border bg-card">
-      <div class="flex align-items-center gap-3 mb-2 px-2">
-        <span class="text-xs font-mono text-500">0</span>
+    <div class="sr-scrubber">
+      <div class="sr-slider-row">
+        <span class="sr-tick">0</span>
         <p-slider
-          class="flex-1"
+          class="sr-grow"
           [min]="0"
           [max]="timelineService.scrubbableEvents().length - 1"
           [(ngModel)]="timelineService.currentTimelineIndex"
         ></p-slider>
-        <span class="text-xs font-mono text-500">{{ timelineService.scrubbableEvents().length - 1 }}</span>
+        <span class="sr-tick">{{ timelineService.scrubbableEvents().length - 1 }}</span>
       </div>
-      <div class="flex justify-content-between align-items-center px-2">
-        <div class="text-sm font-medium">
-          Step <span class="text-primary">{{ timelineService.currentTimelineIndex + 1 }}</span>
-          <span class="text-500"> / {{ timelineService.scrubbableEvents().length }}</span>
+      <div class="sr-step-row">
+        <div class="sr-step">
+          Step <span class="sr-step-num">{{ timelineService.currentTimelineIndex + 1 }}</span>
+          <span class="sr-muted"> / {{ timelineService.scrubbableEvents().length }}</span>
         </div>
         @if (timelineService.activeEvent(); as active) {
-          <div class="text-xs text-500 italic">
+          <div class="sr-active">
             Active: {{ getEventLabel(active) }}
             @if (active.actor; as actor) {
               by {{ actor.name }} ({{ actor.instanceId }})

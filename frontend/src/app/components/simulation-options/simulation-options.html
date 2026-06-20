@@ -6,61 +6,52 @@
   [style]="{ width: '400px' }"
   [blockScroll]="true"
 >
-  <div class="flex flex-column gap-4 p-2">
+  <div class="opt-body">
     <p-accordion [multiple]="true" [value]="['0', '1', '2', '3', '4']">
       <!-- General & Seeds -->
       <p-accordion-panel value="0">
         <p-accordion-header>General & Seed</p-accordion-header>
         <p-accordion-content>
-          <div class="flex flex-column gap-3 pt-2">
-            <div class="flex flex-column gap-2">
-              <label class="font-bold text-sm">Simulation Seed</label>
-              <div class="flex flex-column gap-2">
+          <div class="opt-section">
+            <div class="opt-field">
+              <label class="opt-label">Simulation Seed</label>
+              <div class="opt-field">
                 <p-inputNumber
                   [ngModel]="options().seed.seed1"
                   (ngModelChange)="updateSeed('seed1', $event)"
                   placeholder="Seed 1"
                   [useGrouping]="false"
-                  class="w-full"
-                  styleClass="w-full"
                 ></p-inputNumber>
                 <p-inputNumber
                   [ngModel]="options().seed.seed2"
                   (ngModelChange)="updateSeed('seed2', $event)"
                   placeholder="Seed 2"
                   [useGrouping]="false"
-                  class="w-full"
-                  styleClass="w-full"
                 ></p-inputNumber>
               </div>
-              <small class="text-500">Set seeds for deterministic results (0 for random).</small>
+              <small class="opt-hint">Set seeds for deterministic results (0 for random).</small>
             </div>
 
-            <!-- Simulation Config -->
-            <div class="flex align-items-center justify-content-between">
-              <label for="numberOfRuns" class="text-sm font-semibold">Number of Runs</label>
+            <div class="opt-row">
+              <label for="numberOfRuns" class="opt-label">Number of Runs</label>
               <p-inputNumber
                 [ngModel]="config().numberOfRuns"
                 (ngModelChange)="updateConfig('numberOfRuns', $event)"
                 placeholder="20"
                 [useGrouping]="false"
-                class="w-full"
-                styleClass="w-full"
               ></p-inputNumber>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label for="maxRounds" class="text-sm font-semibold">Max Rounds</label>
+            <div class="opt-row">
+              <label for="maxRounds" class="opt-label">Max Rounds</label>
               <p-inputNumber
                 [ngModel]="config().maxRounds"
                 (ngModelChange)="updateConfig('maxRounds', $event)"
                 placeholder="30"
                 [useGrouping]="false"
-                class="w-full"
-                styleClass="w-full"
               ></p-inputNumber>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label for="includeLogs" class="text-sm font-semibold">Include Logs</label>
+            <div class="opt-row">
+              <label for="includeLogs" class="opt-label">Include Logs</label>
               <p-toggleswitch
                 id="includeLogs"
                 [ngModel]="config().includeLogs"
@@ -69,32 +60,32 @@
               ></p-toggleswitch>
             </div>
 
-            <div class="flex align-items-center justify-content-between">
-              <label for="useHPAverageMonster" class="text-sm font-semibold">Average Monster HP</label>
+            <div class="opt-row">
+              <label for="useHPAverageMonster" class="opt-label">Average Monster HP</label>
               <p-toggleswitch
                 id="useHPAverageMonster"
                 [ngModel]="options().useHPAverageMonster"
                 (ngModelChange)="updateOption('useHPAverageMonster', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label for="useHPAverageCharacter" class="text-sm font-semibold">Average Character HP</label>
+            <div class="opt-row">
+              <label for="useHPAverageCharacter" class="opt-label">Average Character HP</label>
               <p-toggleswitch
                 id="useHPAverageCharacter"
                 [ngModel]="options().useHPAverageCharacter"
                 (ngModelChange)="updateOption('useHPAverageCharacter', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label for="includeStateSnapshots" class="text-sm font-semibold">Include State Snapshots</label>
+            <div class="opt-row">
+              <label for="includeStateSnapshots" class="opt-label">Include State Snapshots</label>
               <p-toggleswitch
                 id="includeStateSnapshots"
                 [ngModel]="options().includeStateSnapshots"
                 (ngModelChange)="updateOption('includeStateSnapshots', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label for="maxLoggedRuns" class="text-sm font-semibold">Max Logged Runs</label>
+            <div class="opt-row">
+              <label for="maxLoggedRuns" class="opt-label">Max Logged Runs</label>
               <p-inputNumber
                 id="maxLoggedRuns"
                 [ngModel]="options().maxLoggedRuns"
@@ -103,8 +94,6 @@
                 [useGrouping]="false"
                 [min]="1"
                 [max]="100"
-                class="w-full"
-                styleClass="w-full"
               ></p-inputNumber>
             </div>
           </div>
@@ -115,37 +104,37 @@
       <p-accordion-panel value="1">
         <p-accordion-header>Combat Rules</p-accordion-header>
         <p-accordion-content>
-          <div class="flex flex-column gap-3 pt-2">
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Monsters Can Crit</label>
+          <div class="opt-section">
+            <div class="opt-row">
+              <label class="opt-label">Monsters Can Crit</label>
               <p-toggleswitch
                 [ngModel]="options().canMonstersCrit"
                 (ngModelChange)="updateOption('canMonstersCrit', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Characters Can Crit</label>
+            <div class="opt-row">
+              <label class="opt-label">Characters Can Crit</label>
               <p-toggleswitch
                 [ngModel]="options().canCharactersCrit"
                 (ngModelChange)="updateOption('canCharactersCrit', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Improved Criticals</label>
+            <div class="opt-row">
+              <label class="opt-label">Improved Criticals</label>
               <p-toggleswitch
                 [ngModel]="options().useImprovedCritical"
                 (ngModelChange)="updateOption('useImprovedCritical', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Always Upcast (NPCs)</label>
+            <div class="opt-row">
+              <label class="opt-label">Always Upcast (NPCs)</label>
               <p-toggleswitch
                 [ngModel]="options().monstersAlwaysUpcast"
                 (ngModelChange)="updateOption('monstersAlwaysUpcast', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">AOE Hits All Enemies</label>
+            <div class="opt-row">
+              <label class="opt-label">AOE Hits All Enemies</label>
               <p-toggleswitch
                 [ngModel]="options().aoeHitsAllEnemies"
                 (ngModelChange)="updateOption('aoeHitsAllEnemies', $event)"
@@ -159,38 +148,38 @@
       <p-accordion-panel value="2">
         <p-accordion-header>Features & Abilities</p-accordion-header>
         <p-accordion-content>
-          <div class="flex flex-column gap-3 pt-2">
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Enable Class Features</label>
+          <div class="opt-section">
+            <div class="opt-row">
+              <label class="opt-label">Enable Class Features</label>
               <p-toggleswitch
                 [ngModel]="options().enableClassFeatures"
                 (ngModelChange)="updateOption('enableClassFeatures', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Enable Racial Features</label>
+            <div class="opt-row">
+              <label class="opt-label">Enable Racial Features</label>
               <p-toggleswitch
                 [ngModel]="options().enableRacialFeatures"
                 (ngModelChange)="updateOption('enableRacialFeatures', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Paladins Always Smite</label>
+            <div class="opt-row">
+              <label class="opt-label">Paladins Always Smite</label>
               <p-toggleswitch
                 [ngModel]="options().paladinAlwaysSmite"
                 (ngModelChange)="updateOption('paladinAlwaysSmite', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Always Sneak Attack</label>
+            <div class="opt-row">
+              <label class="opt-label">Always Sneak Attack</label>
               <p-toggleswitch
                 [ngModel]="options().alwaysUseSneakAttack"
                 (ngModelChange)="updateOption('alwaysUseSneakAttack', $event)"
               ></p-toggleswitch>
             </div>
 
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">Char. Heal Threshold %</label>
+            <div class="opt-field">
+              <label class="opt-label">Char. Heal Threshold %</label>
               <p-inputNumber
                 [ngModel]="options().characterHealThresholdPct"
                 (ngModelChange)="updateOption('characterHealThresholdPct', $event)"
@@ -198,11 +187,10 @@
                 [max]="100"
                 suffix="%"
                 [showButtons]="true"
-                class="w-full"
               ></p-inputNumber>
             </div>
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">Char. Emergency Threshold %</label>
+            <div class="opt-field">
+              <label class="opt-label">Char. Emergency Threshold %</label>
               <p-inputNumber
                 [ngModel]="options().characterEmergencyThresholdPct"
                 (ngModelChange)="updateOption('characterEmergencyThresholdPct', $event)"
@@ -210,12 +198,11 @@
                 [max]="100"
                 suffix="%"
                 [showButtons]="true"
-                class="w-full"
               ></p-inputNumber>
             </div>
 
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">Monster Heal Threshold %</label>
+            <div class="opt-field">
+              <label class="opt-label">Monster Heal Threshold %</label>
               <p-inputNumber
                 [ngModel]="options().monsterHealThresholdPct"
                 (ngModelChange)="updateOption('monsterHealThresholdPct', $event)"
@@ -223,11 +210,10 @@
                 [max]="100"
                 suffix="%"
                 [showButtons]="true"
-                class="w-full"
               ></p-inputNumber>
             </div>
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">Monster Emergency Threshold %</label>
+            <div class="opt-field">
+              <label class="opt-label">Monster Emergency Threshold %</label>
               <p-inputNumber
                 [ngModel]="options().monsterEmergencyThresholdPct"
                 (ngModelChange)="updateOption('monsterEmergencyThresholdPct', $event)"
@@ -235,7 +221,6 @@
                 [max]="100"
                 suffix="%"
                 [showButtons]="true"
-                class="w-full"
               ></p-inputNumber>
             </div>
           </div>
@@ -246,27 +231,26 @@
       <p-accordion-panel value="3">
         <p-accordion-header>AI & Premium Options</p-accordion-header>
         <p-accordion-content>
-          <div class="flex flex-column gap-3 pt-2">
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">HP Visibility</label>
+          <div class="opt-section">
+            <div class="opt-field">
+              <label class="opt-label">HP Visibility</label>
               <p-selectbutton
                 [options]="hpVisibilityOptions"
                 [ngModel]="options().hpVisibilityMode"
                 (ngModelChange)="updateOption('hpVisibilityMode', $event)"
-                class="w-full"
               ></p-selectbutton>
             </div>
 
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Use Weighted AI</label>
+            <div class="opt-row">
+              <label class="opt-label">Use Weighted AI</label>
               <p-toggleswitch
                 [ngModel]="options().useWeightedAI"
                 (ngModelChange)="updateOption('useWeightedAI', $event)"
               ></p-toggleswitch>
             </div>
 
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Enable Monster Noise</label>
+            <div class="opt-row">
+              <label class="opt-label">Enable Monster Noise</label>
               <p-toggleswitch
                 [ngModel]="options().enableMonsterNoise"
                 (ngModelChange)="updateOption('enableMonsterNoise', $event)"
@@ -274,8 +258,8 @@
             </div>
 
             @if (options().enableMonsterNoise) {
-              <div class="flex flex-column gap-2">
-                <label class="text-sm font-semibold">Noise Weight ({{ options().monsterNoiseWeight }})</label>
+              <div class="opt-field">
+                <label class="opt-label">Noise Weight ({{ options().monsterNoiseWeight }})</label>
                 <p-inputNumber
                   [ngModel]="options().monsterNoiseWeight"
                   (ngModelChange)="updateOption('monsterNoiseWeight', $event)"
@@ -283,67 +267,63 @@
                   [max]="1"
                   [step]="0.01"
                   [showButtons]="true"
-                  class="w-full"
                 ></p-inputNumber>
               </div>
             }
 
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Debug AI Logs</label>
+            <div class="opt-row">
+              <label class="opt-label">Debug AI Logs</label>
               <p-toggleswitch
                 [ngModel]="options().debugAI"
                 (ngModelChange)="updateOption('debugAI', $event)"
               ></p-toggleswitch>
             </div>
 
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">Multiattack Policy</label>
+            <div class="opt-field">
+              <label class="opt-label">Multiattack Policy</label>
               <p-selectbutton
                 [options]="multiattackPolicyOptions"
                 [ngModel]="options().multiattackPolicy"
                 (ngModelChange)="updateOption('multiattackPolicy', $event)"
-                class="w-full"
               ></p-selectbutton>
             </div>
 
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">Action Selection Policy</label>
+            <div class="opt-field">
+              <label class="opt-label">Action Selection Policy</label>
               <p-selectbutton
                 [options]="actionSelectionPolicyOptions"
                 [ngModel]="options().actionSelectionPolicy"
                 (ngModelChange)="updateOption('actionSelectionPolicy', $event)"
-                class="w-full"
               ></p-selectbutton>
             </div>
 
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">AOE Target Threshold</label>
+            <div class="opt-row">
+              <label class="opt-label">AOE Target Threshold</label>
               <p-inputNumber
                 [ngModel]="options().aoeTargetThreshold"
                 (ngModelChange)="updateOption('aoeTargetThreshold', $event)"
                 [min]="1"
                 [max]="20"
                 [showButtons]="true"
-                class="w-1/2"
               ></p-inputNumber>
             </div>
 
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Disable Monster Turns</label>
+            <div class="opt-row">
+              <label class="opt-label">Disable Monster Turns</label>
               <p-toggleswitch
                 [ngModel]="options().disableMonsterTurns"
                 (ngModelChange)="updateOption('disableMonsterTurns', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Disable Character Turns</label>
+            <div class="opt-row">
+              <label class="opt-label">Disable Character Turns</label>
               <p-toggleswitch
                 [ngModel]="options().disableCharacterTurns"
                 (ngModelChange)="updateOption('disableCharacterTurns', $event)"
               ></p-toggleswitch>
             </div>
-            <div class="flex align-items-center justify-content-between">
-              <label class="text-sm font-semibold">Disable Lair Turns</label>
+            <div class="opt-row">
+              <label class="opt-label">Disable Lair Turns</label>
               <p-toggleswitch
                 [ngModel]="options().disableLairTurns"
                 (ngModelChange)="updateOption('disableLairTurns', $event)"
@@ -357,20 +337,19 @@
       <p-accordion-panel value="4">
         <p-accordion-header>Intermission Rules</p-accordion-header>
         <p-accordion-content>
-          <div class="flex flex-column gap-3 pt-2">
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">Max Short Rests</label>
+          <div class="opt-section">
+            <div class="opt-field">
+              <label class="opt-label">Max Short Rests</label>
               <p-inputNumber
                 [ngModel]="intermissionConfig().maxShortRests"
                 (ngModelChange)="updateIntermission('maxShortRests', $event)"
                 [min]="0"
                 [max]="10"
                 [showButtons]="true"
-                class="w-full"
               ></p-inputNumber>
             </div>
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">Short Rest Heal Threshold</label>
+            <div class="opt-field">
+              <label class="opt-label">Short Rest Heal Threshold</label>
               <p-inputNumber
                 [ngModel]="intermissionConfig().shortRestHealThreshold"
                 (ngModelChange)="updateIntermission('shortRestHealThreshold', $event)"
@@ -379,12 +358,11 @@
                 [step]="0.05"
                 [showButtons]="true"
                 mode="decimal"
-                class="w-full"
               ></p-inputNumber>
-              <small class="text-500">Heal if current HP < this % of max HP.</small>
+              <small class="opt-hint">Heal if current HP < this % of max HP.</small>
             </div>
-            <div class="flex flex-column gap-2">
-              <label class="text-sm font-semibold">Post-Rest Heal Threshold</label>
+            <div class="opt-field">
+              <label class="opt-label">Post-Rest Heal Threshold</label>
               <p-inputNumber
                 [ngModel]="intermissionConfig().postRestHealThreshold"
                 (ngModelChange)="updateIntermission('postRestHealThreshold', $event)"
@@ -393,9 +371,8 @@
                 [step]="0.05"
                 [showButtons]="true"
                 mode="decimal"
-                class="w-full"
               ></p-inputNumber>
-              <small class="text-500">Target HP % after resting.</small>
+              <small class="opt-hint">Target HP % after resting.</small>
             </div>
           </div>
         </p-accordion-content>

@@ -1,0 +1,76 @@
+@use 'layout' as l;
+
+:host {
+  display: block;
+}
+
+.opt-body {
+  @include l.stack(4);
+  padding: l.space(2);
+}
+
+.opt-section {
+  @include l.stack(3);
+  padding-top: l.space(2);
+}
+
+.opt-field {
+  @include l.stack(2);
+}
+
+.opt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: l.space(3);
+}
+
+.opt-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.opt-hint {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+// Inputs fill their field/row; select buttons split evenly.
+:host ::ng-deep {
+  p-inputnumber,
+  .p-inputnumber {
+    width: 100%;
+  }
+
+  .p-inputnumber-input {
+    width: 100%;
+  }
+
+  .p-selectbutton {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+
+    .p-togglebutton {
+      flex: 1 1 0;
+      min-width: 0;
+      height: auto;
+      padding-inline: 0.5rem;
+      overflow: visible;
+    }
+
+    // Let longer options (e.g. "Highest Damage") wrap instead of clipping.
+    .p-togglebutton-content,
+    .p-togglebutton-label {
+      white-space: normal;
+      overflow: visible;
+      text-align: center;
+    }
+
+    .p-togglebutton-label {
+      font-size: 0.75rem;
+      line-height: 1.15;
+    }
+  }
+}

@@ -5,11 +5,10 @@ import { formatMonsterAction } from '../../shared/utils/dnd-utils';
 
 @Component({
   selector: 'app-actor-legendary-actions',
-  standalone: true,
   imports: [CardModule],
   templateUrl: './actor-legendary-actions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './actor-legendary-actions.component.css',
+  styleUrl: './actor-legendary-actions.component.scss',
 })
 export class ActorLegendaryActions {
   public readonly actor = input.required<Actor>();

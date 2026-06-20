@@ -1,0 +1,192 @@
+@use 'breakpoints' as bp;
+@use 'layout' as l;
+
+.ce-tab {
+  @include l.stack(3);
+  margin-top: l.space(3);
+}
+
+.ce-tab-plain {
+  margin-top: l.space(3);
+}
+
+.ce-field {
+  @include l.stack(1);
+}
+
+.ce-label {
+  display: block;
+  margin-bottom: l.space(1);
+  font-weight: 700;
+}
+
+.ce-label-sm {
+  display: block;
+  margin-bottom: l.space(1);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ce-grid2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: l.space(3);
+
+  @include bp.above(bp.$bp-md) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.ce-grid3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: l.space(3);
+
+  @include bp.above(bp.$bp-md) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.ce-grid4 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: l.space(3);
+
+  @include bp.above(bp.$bp-md) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.ce-hp-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: l.space(3);
+}
+
+.ce-hp-total {
+  flex: 1 1 14rem;
+}
+
+.ce-hp-small {
+  flex: 1 1 6rem;
+}
+
+.ce-hp-box {
+  padding: l.space(2);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 5%, transparent);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.ce-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: l.space(2);
+  margin-bottom: l.space(3);
+}
+
+.ce-head-title {
+  margin: 0;
+}
+
+.ce-list {
+  @include l.stack(2);
+}
+
+.ce-res {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: l.space(3);
+  padding: l.space(2);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 4%, transparent);
+}
+
+.ce-empty {
+  padding: l.space(4);
+  border: 1px dashed var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  text-align: center;
+  font-style: italic;
+  color: var(--p-text-muted-color);
+}
+
+.ce-check {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.ce-check-label {
+  &.bold {
+    font-weight: 700;
+  }
+}
+
+.ce-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: l.space(3);
+  padding: l.space(6);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-xl);
+  background: var(--p-content-background);
+  text-align: center;
+}
+
+.ce-locked-icon {
+  margin-bottom: l.space(3);
+  font-size: 2rem;
+  color: var(--p-text-muted-color);
+}
+
+.ce-locked-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.ce-locked-text {
+  margin: l.space(2) 0 0;
+  color: var(--p-text-muted-color);
+}
+
+.ce-error {
+  display: block;
+  margin-top: l.space(3);
+}
+
+.ce-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: l.space(4);
+}
+
+.ce-footer-actions {
+  display: flex;
+  gap: l.space(2);
+}
+
+// Form controls fill their field (replaces the dropped `p-fluid` class).
+:host ::ng-deep {
+  p-select,
+  .p-select,
+  p-inputnumber,
+  .p-inputnumber,
+  input[pInputText],
+  textarea {
+    width: 100%;
+  }
+
+  .p-inputnumber-input {
+    width: 100%;
+  }
+}

@@ -5,11 +5,10 @@ import { EquipmentService } from '../../services/equipment.service';
 
 @Component({
   selector: 'app-actor-equipment',
-  standalone: true,
   imports: [CardModule],
   templateUrl: './actor-equipment.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './actor-equipment.component.css',
+  styleUrl: './actor-equipment.component.scss',
 })
 export class ActorEquipment {
   private readonly equipmentService = inject(EquipmentService);

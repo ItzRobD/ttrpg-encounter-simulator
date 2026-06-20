@@ -1,0 +1,97 @@
+<p-card class="equip-card">
+  <div class="ec-body">
+    <div class="ec-header">
+      <div class="ec-title">
+        <span class="ec-name">{{ item().name }}</span>
+        <span class="ec-kind">
+          @if (isWeapon()) {
+            Weapon
+          } @else if (isArmor()) {
+            {{ (item().name || '').toLowerCase().includes('shield') ? 'Shield' : 'Armor' }}
+          }
+        </span>
+      </div>
+      @if (isArmor()) {
+        @let armor = asArmor(item());
+        <div class="ec-header-side">
+          <span class="ec-name">AC {{ armor?.ac }}</span>
+          @if (armor && armor.minimumStr > 0) {
+            <span class="ec-meta">Min Str: {{ armor.minimumStr }}</span>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Weapon Details -->
+    @if (isWeapon()) {
+      @let weapon = asWeapon(item());
+      <div class="ec-section">
+        <div class="ec-row">
+          <div class="ec-field">
+            <span class="ec-label">Damage</span>
+            <span class="ec-value">{{ getEquipmentDetail(weapon) }}</span>
+          </div>
+          <div class="ec-stats">
+            <div class="ec-field end">
+              <span class="ec-label">Attack Bonus</span>
+              <span class="ec-value">{{ formatModifier(weapon?.modifiers?.attackBonus || 0) }}</span>
+            </div>
+            @if (weapon?.modifiers?.damageBonus) {
+              <div class="ec-field end">
+                <span class="ec-label">Dmg Bonus</span>
+                <span class="ec-value">{{ formatModifier(weapon.modifiers.damageBonus) }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (weaponProperties().length > 0) {
+          <div class="ec-field">
+            <span class="ec-label">Properties</span>
+            <div class="ec-tags">
+              @for (prop of weaponProperties(); track prop) {
+                <p-tag [value]="prop" severity="secondary" [dt]="{ fontSize: '0.7rem' }"></p-tag>
+              }
+            </div>
+          </div>
+        }
+
+        @if (weaponModifiers().length > 0) {
+          <div class="ec-field">
+            <span class="ec-label">Modifiers</span>
+            <div class="ec-tags">
+              @for (mod of weaponModifiers(); track mod) {
+                <p-tag [value]="mod" severity="info" [dt]="{ fontSize: '0.7rem' }"></p-tag>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Armor Details -->
+    @if (isArmor()) {
+      @let armor = asArmor(item());
+      <div class="ec-section">
+        <div class="ec-grid">
+          <div class="ec-field">
+            <span class="ec-label">Dex Bonus</span>
+            <span class="ec-value sm">
+              {{ armor?.dexBonus ? 'Yes' : 'No' }}
+              @if (armor?.dexBonus && armor?.maxBonus) {
+                <span class="ec-meta">(Max 2)</span>
+              }
+            </span>
+          </div>
+          <div class="ec-field">
+            <span class="ec-label">Modifier</span>
+            <span class="ec-value sm">{{ formatModifier(armor?.modifier || 0) }}</span>
+          </div>
+        </div>
+        @if (!armor?.dexBonus && armor?.minimumStr === 0 && armor?.modifier === 0) {
+          <p class="ec-empty">No additional properties for this item.</p>
+        }
+      </div>
+    }
+  </div>
+</p-card>

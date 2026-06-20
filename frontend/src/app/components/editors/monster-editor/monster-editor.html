@@ -8,10 +8,10 @@
   [draggable]="false"
   [resizable]="false"
 >
-  <form [formGroup]="monsterForm" (ngSubmit)="onSave()" class="p-fluid">
+  <form [formGroup]="monsterForm" (ngSubmit)="onSave()">
     <p-fluid>
       @if (error()) {
-        <p-message severity="error" [text]="error()!" class="mb-3"></p-message>
+        <p-message severity="error" [text]="error()!" class="me-error"></p-message>
       }
 
       <p-tabs value="0">
@@ -26,24 +26,24 @@
         <p-tabpanels>
           <!-- Base Stats Tab -->
           <p-tabpanel value="0">
-            <div class="flex flex-column gap-3 mt-3">
-              <div class="field">
-                <label for="name" class="font-bold block mb-1">Monster Name</label>
+            <div class="me-tab">
+              <div class="me-field">
+                <label for="name" class="me-label">Monster Name</label>
                 <input pInputText id="name" formControlName="name" placeholder="e.g. Ancient Blue Dragon"
                        [class.p-invalid]="monsterForm.get('name')?.invalid && monsterForm.get('name')?.touched" />
               </div>
 
-              <div class="grid">
-                <div class="col-6 md:col-3">
-                  <label for="type" class="font-bold block mb-1">Type</label>
+              <div class="me-grid4">
+                <div class="me-field">
+                  <label for="type" class="me-label">Type</label>
                   <p-select id="type" formControlName="type" [options]="types" optionLabel="label" optionValue="value" appendTo="body"></p-select>
                 </div>
-                <div class="col-6 md:col-3">
-                  <label for="size" class="font-bold block mb-1">Size</label>
+                <div class="me-field">
+                  <label for="size" class="me-label">Size</label>
                   <p-select id="size" formControlName="size" [options]="sizes" optionLabel="label" optionValue="value" appendTo="body"></p-select>
                 </div>
-                <div class="col-6 md:col-3">
-                  <label for="cr" class="font-bold block mb-1">CR</label>
+                <div class="me-field">
+                  <label for="cr" class="me-label">CR</label>
                   <p-select
                     id="cr"
                     formControlName="cr"
@@ -53,35 +53,33 @@
                     appendTo="body"
                   ></p-select>
                 </div>
-                <div class="col-6 md:col-3">
-                  <label for="ac" class="font-bold block mb-1">AC</label>
+                <div class="me-field">
+                  <label for="ac" class="me-label">AC</label>
                   <p-inputNumber id="ac" formControlName="ac" [min]="0" [max]="30" [showButtons]="true"></p-inputNumber>
                 </div>
               </div>
 
-              <div class="grid" formGroupName="hp">
-                <div class="col-12 md:col-6">
-                  <label class="font-bold block mb-1">Hit Points (Calculated)</label>
-                  <div class="p-2 border-1 surface-border border-round surface-ground font-bold text-lg">
-                    {{ hpDisplay() }}
-                  </div>
+              <div class="me-hp-grid" formGroupName="hp">
+                <div class="me-field me-hp-total">
+                  <label class="me-label">Hit Points (Calculated)</label>
+                  <div class="me-hp-box">{{ hpDisplay() }}</div>
                 </div>
-                <div class="col-6 md:col-2">
-                  <label for="numDice" class="font-bold block mb-1">Num Dice</label>
+                <div class="me-field me-hp-small">
+                  <label for="numDice" class="me-label">Num Dice</label>
                   <p-inputNumber id="numDice" formControlName="numberOfDice" [min]="1" [showButtons]="true" size="small"></p-inputNumber>
                 </div>
-                <div class="col-6 md:col-2">
-                  <label for="hitDie" class="font-bold block mb-1">Hit Die (d)</label>
+                <div class="me-field me-hp-small">
+                  <label for="hitDie" class="me-label">Hit Die (d)</label>
                   <p-inputNumber id="hitDie" formControlName="hitDie" [min]="4" [showButtons]="true" size="small"></p-inputNumber>
                 </div>
-                <div class="col-12 md:col-2">
-                  <label for="amountToAdd" class="font-bold block mb-1">Flat Bonus</label>
+                <div class="me-field me-hp-small">
+                  <label for="amountToAdd" class="me-label">Flat Bonus</label>
                   <p-inputNumber id="amountToAdd" formControlName="amountToAdd" [showButtons]="true" size="small"></p-inputNumber>
                 </div>
               </div>
 
-              <div class="field">
-                <label class="font-bold block mb-2">Ability Scores & Proficiencies</label>
+              <div class="me-field">
+                <label class="me-label">Ability Scores & Proficiencies</label>
                 <app-ability-score-editor [group]="asConfigGroup"></app-ability-score-editor>
               </div>
             </div>
@@ -89,31 +87,29 @@
 
           <!-- Resistances Tab -->
           <p-tabpanel value="1">
-            <div class="mt-3">
-              <div class="flex justify-content-between align-items-center mb-3">
-                <h4 class="m-0">Damage Resistances, Immunities & Vulnerabilities</h4>
+            <div class="me-tab-plain">
+              <div class="me-head">
+                <h4 class="me-head-title">Damage Resistances, Immunities & Vulnerabilities</h4>
                 <p-button icon="pi pi-plus" label="Add Resistance" [text]="true" (onClick)="addResistance()"></p-button>
               </div>
 
               <div formGroupName="state">
-                <div formArrayName="resistances" class="flex flex-column gap-2">
+                <div formArrayName="resistances" class="me-list">
                   @for (res of resistancesArray.controls; track $index; let i = $index) {
-                    <div [formGroupName]="i" class="grid align-items-end surface-50 p-2 border-round relative">
-                      <p-button icon="pi pi-times" severity="danger" [text]="true" size="small" class="absolute top-0 right-0" (onClick)="removeResistance(i)"></p-button>
-                      <div class="col-6">
-                        <label class="text-xs font-bold block mb-1">Damage Type</label>
+                    <div [formGroupName]="i" class="me-res">
+                      <div class="me-field">
+                        <label class="me-label-sm">Damage Type</label>
                         <p-select formControlName="damageType" [options]="damageTypes" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
                       </div>
-                      <div class="col-6">
-                        <label class="text-xs font-bold block mb-1">Resistance Type</label>
+                      <div class="me-field">
+                        <label class="me-label-sm">Resistance Type</label>
                         <p-select formControlName="resistanceType" [options]="resistanceTypes" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
                       </div>
+                      <p-button icon="pi pi-trash" severity="danger" [text]="true" class="me-res-del" pTooltip="Remove resistance" (onClick)="removeResistance(i)"></p-button>
                     </div>
                   }
                   @if (resistancesArray.length === 0) {
-                    <div class="text-center p-4 border-1 border-dashed surface-border border-round text-600 italic">
-                      No resistances configured.
-                    </div>
+                    <div class="me-empty">No resistances configured.</div>
                   }
                 </div>
               </div>
@@ -122,151 +118,127 @@
 
           <!-- Special Abilities Tab -->
           <p-tabpanel value="2">
-            <div [formGroup]="specialAbilitiesGroup" class="flex flex-column gap-4 mt-3">
+            <div [formGroup]="specialAbilitiesGroup" class="me-tab-lg">
               <!-- Basic Traits -->
-              <div class="flex flex-column gap-2">
-                <span class="font-bold text-sm border-bottom-1 surface-border pb-1">Basic Traits</span>
-                <div class="flex flex-wrap gap-3">
-                  <div class="flex align-items-center gap-2">
+              <div class="me-section">
+                <span class="me-section-title">Basic Traits</span>
+                <div class="me-checks">
+                  <div class="me-check">
                     <p-checkbox formControlName="assassinate" [binary]="true" inputId="assassinate"></p-checkbox>
-                    <label for="assassinate" class="text-sm">Assassinate</label>
+                    <label for="assassinate" class="me-check-label">Assassinate</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="bloodFrenzy" [binary]="true" inputId="bloodFrenzy"></p-checkbox>
-                    <label for="bloodFrenzy" class="text-sm">Blood Frenzy</label>
+                    <label for="bloodFrenzy" class="me-check-label">Blood Frenzy</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="evasion" [binary]="true" inputId="evasion"></p-checkbox>
-                    <label for="evasion" class="text-sm">Evasion</label>
+                    <label for="evasion" class="me-check-label">Evasion</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="fireForm" [binary]="true" inputId="fireForm"></p-checkbox>
-                    <label for="fireForm" class="text-sm">Fire Form</label>
+                    <label for="fireForm" class="me-check-label">Fire Form</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="gnomeCunning" [binary]="true" inputId="gnomeCunning"></p-checkbox>
-                    <label for="gnomeCunning" class="text-sm">Gnome Cunning</label>
+                    <label for="gnomeCunning" class="me-check-label">Gnome Cunning</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="lightningAbsorption" [binary]="true" inputId="lightningAbsorption"></p-checkbox>
-                    <label for="lightningAbsorption" class="text-sm">Lightning Absorption</label>
+                    <label for="lightningAbsorption" class="me-check-label">Lightning Absorption</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="magicResistance" [binary]="true" inputId="magicResistance"></p-checkbox>
-                    <label for="magicResistance" class="text-sm">Magic Resistance</label>
+                    <label for="magicResistance" class="me-check-label">Magic Resistance</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="magicWeapons" [binary]="true" inputId="magicWeapons"></p-checkbox>
-                    <label for="magicWeapons" class="text-sm">Magic Weapons</label>
+                    <label for="magicWeapons" class="me-check-label">Magic Weapons</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="packTactics" [binary]="true" inputId="packTactics"></p-checkbox>
-                    <label for="packTactics" class="text-sm">Pack Tactics</label>
+                    <label for="packTactics" class="me-check-label">Pack Tactics</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="reckless" [binary]="true" inputId="reckless"></p-checkbox>
-                    <label for="reckless" class="text-sm">Reckless</label>
+                    <label for="reckless" class="me-check-label">Reckless</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="reflectiveCarapace" [binary]="true" inputId="reflectiveCarapace"></p-checkbox>
-                    <label for="reflectiveCarapace" class="text-sm">Reflective Carapace</label>
+                    <label for="reflectiveCarapace" class="me-check-label">Reflective Carapace</label>
                   </div>
-                  <div class="flex align-items-center gap-2">
+                  <div class="me-check">
                     <p-checkbox formControlName="undeadFortitude" [binary]="true" inputId="undeadFortitude"></p-checkbox>
-                    <label for="undeadFortitude" class="text-sm">Undead Fortitude</label>
+                    <label for="undeadFortitude" class="me-check-label">Undead Fortitude</label>
                   </div>
                   @if (environment.features.gibbering) {
-                    <div class="flex align-items-center gap-2">
+                    <div class="me-check">
                       <p-checkbox formControlName="gibbering" [binary]="true" inputId="gibbering"></p-checkbox>
-                      <label for="gibbering" class="text-sm">Gibbering</label>
+                      <label for="gibbering" class="me-check-label">Gibbering</label>
                     </div>
                   }
                 </div>
               </div>
 
               <!-- Numeric & Complex Abilities -->
-              <div class="grid">
-                <div class="col-12 md:col-6">
-                  <span class="font-bold text-sm border-bottom-1 surface-border pb-1 block mb-2">Defense & Scaling</span>
-                  <div class="flex flex-column gap-2">
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Legendary Resistances</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="legendaryResistanceCount" [min]="0" [max]="5" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+              <div class="me-grid2">
+                <div class="me-section">
+                  <span class="me-section-title block">Defense & Scaling</span>
+                  <div class="me-num-list">
+                    <div class="me-num-row">
+                      <span class="me-num-label">Legendary Resistances</span>
+                      <p-inputNumber formControlName="legendaryResistanceCount" [min]="0" [max]="5" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Regeneration Value</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="regenerationValue" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                    <div class="me-num-row">
+                      <span class="me-num-label">Regeneration Value</span>
+                      <p-inputNumber formControlName="regenerationValue" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Relentless Threshold</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="relentlessThreshold" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                    <div class="me-num-row">
+                      <span class="me-num-label">Relentless Threshold</span>
+                      <p-inputNumber formControlName="relentlessThreshold" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Berserk Threshold</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="berserkThreshold" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                    <div class="me-num-row">
+                      <span class="me-num-label">Berserk Threshold</span>
+                      <p-inputNumber formControlName="berserkThreshold" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Limited Magic Immunity (Level)</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="limitedMagicImmunityLevel" [min]="0" [max]="9" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                    <div class="me-num-row">
+                      <span class="me-num-label">Limited Magic Immunity (Level)</span>
+                      <p-inputNumber formControlName="limitedMagicImmunityLevel" [min]="0" [max]="9" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
                   </div>
                 </div>
 
-                <div class="col-12 md:col-6">
-                  <span class="font-bold text-sm border-bottom-1 surface-border pb-1 block mb-2">Offense Scaling (Dice)</span>
-                  <div class="flex flex-column gap-2">
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Sneak Attack Dice</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="sneakAttackNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                <div class="me-section">
+                  <span class="me-section-title block">Offense Scaling (Dice)</span>
+                  <div class="me-num-list">
+                    <div class="me-num-row">
+                      <span class="me-num-label">Sneak Attack Dice</span>
+                      <p-inputNumber formControlName="sneakAttackNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Martial Advantage Dice</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="martialAdvantageNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                    <div class="me-num-row">
+                      <span class="me-num-label">Martial Advantage Dice</span>
+                      <p-inputNumber formControlName="martialAdvantageNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Divine Eminence Dice</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="divineEminenceNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                    <div class="me-num-row">
+                      <span class="me-num-label">Divine Eminence Dice</span>
+                      <p-inputNumber formControlName="divineEminenceNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Heated Body Dice</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="heatedBodyNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                    <div class="me-num-row">
+                      <span class="me-num-label">Heated Body Dice</span>
+                      <p-inputNumber formControlName="heatedBodyNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Fire Aura Dice</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="fireAuraNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                    <div class="me-num-row">
+                      <span class="me-num-label">Fire Aura Dice</span>
+                      <p-inputNumber formControlName="fireAuraNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
-                    <div class="grid align-items-center">
-                      <div class="col-8 text-sm">Corrosive Form Dice</div>
-                      <div class="col-4">
-                        <p-inputNumber formControlName="corrosiveFormNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
-                      </div>
+                    <div class="me-num-row">
+                      <span class="me-num-label">Corrosive Form Dice</span>
+                      <p-inputNumber formControlName="corrosiveFormNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
                     @if (environment.features.consumeLife) {
-                      <div class="grid align-items-center">
-                        <div class="col-8 text-sm">Consume Life Die</div>
-                        <div class="col-4">
-                          <p-select formControlName="consumeLifeDie" [options]="diceOptions" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
-                        </div>
+                      <div class="me-num-row">
+                        <span class="me-num-label">Consume Life Die</span>
+                        <p-select formControlName="consumeLifeDie" [options]="diceOptions" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
                       </div>
                     }
                   </div>
@@ -274,39 +246,29 @@
               </div>
 
               <!-- Burst & Death Effects -->
-              <div class="flex flex-column gap-2">
-                <span class="font-bold text-sm border-bottom-1 surface-border pb-1">Burst & Death Effects</span>
-                <div class="grid">
+              <div class="me-section">
+                <span class="me-section-title">Burst & Death Effects</span>
+                <div class="me-grid2">
                   <!-- Death Burst -->
-                  <div class="col-12 md:col-6 p-2 border-1 surface-border border-round bg-surface-50">
-                    <div class="font-semibold text-xs mb-2 uppercase">Death Burst</div>
-                    <div class="grid align-items-center">
-                      <div class="col-4 text-xs">Dice</div>
-                      <div class="col-8">
-                        <p-inputNumber formControlName="deathBurstNumDice" [min]="0" [showButtons]="true" size="small" styleClass="w-full"></p-inputNumber>
-                      </div>
-                      <div class="col-4 text-xs">Type</div>
-                      <div class="col-8">
-                        <p-select formControlName="deathBurstDamageType" [options]="damageTypes" optionLabel="label" optionValue="value" size="small" appendTo="body" class="w-full"></p-select>
-                      </div>
-                      <div class="col-4 text-xs">DC</div>
-                      <div class="col-8">
-                        <p-inputNumber formControlName="deathBurstDC" [min]="0" [showButtons]="true" size="small" styleClass="w-full"></p-inputNumber>
-                      </div>
+                  <div class="me-card">
+                    <div class="me-card-title">Death Burst</div>
+                    <div class="me-kv">
+                      <span class="me-kv-label">Dice</span>
+                      <p-inputNumber formControlName="deathBurstNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
+                      <span class="me-kv-label">Type</span>
+                      <p-select formControlName="deathBurstDamageType" [options]="damageTypes" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
+                      <span class="me-kv-label">DC</span>
+                      <p-inputNumber formControlName="deathBurstDC" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
                   </div>
                   <!-- Death Throes -->
-                  <div class="col-12 md:col-6 p-2 border-1 surface-border border-round bg-surface-50">
-                    <div class="font-semibold text-xs mb-2 uppercase">Death Throes</div>
-                    <div class="grid align-items-center">
-                      <div class="col-4 text-xs">Dice</div>
-                      <div class="col-8">
-                        <p-inputNumber formControlName="deathThroesNumDice" [min]="0" [showButtons]="true" size="small" styleClass="w-full"></p-inputNumber>
-                      </div>
-                      <div class="col-4 text-xs">DC</div>
-                      <div class="col-8">
-                        <p-inputNumber formControlName="deathThroesDC" [min]="0" [showButtons]="true" size="small" styleClass="w-full"></p-inputNumber>
-                      </div>
+                  <div class="me-card">
+                    <div class="me-card-title">Death Throes</div>
+                    <div class="me-kv">
+                      <span class="me-kv-label">Dice</span>
+                      <p-inputNumber formControlName="deathThroesNumDice" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
+                      <span class="me-kv-label">DC</span>
+                      <p-inputNumber formControlName="deathThroesDC" [min]="0" [showButtons]="true" size="small"></p-inputNumber>
                     </div>
                   </div>
                 </div>
@@ -316,59 +278,59 @@
 
           <!-- Actions Tab -->
           <p-tabpanel value="3">
-            <div class="mt-3">
-              <div class="flex justify-content-between align-items-center mb-3">
-                <h4 class="m-0">Actions</h4>
+            <div class="me-tab-plain">
+              <div class="me-head">
+                <h4 class="me-head-title">Actions</h4>
                 <p-button icon="pi pi-plus" label="Add Action" [text]="true" (onClick)="addAction()"></p-button>
               </div>
 
-              <div formGroupName="monsterActions" class="flex flex-column gap-3">
-                <div formArrayName="actions" class="flex flex-column gap-3">
+              <div formGroupName="monsterActions" class="me-list3">
+                <div formArrayName="actions" class="me-list3">
                   @for (action of actions.controls; track $index; let i = $index) {
-                    <div [formGroupName]="i" class="p-3 border-1 surface-border border-round shadow-1 relative">
-                      <p-button icon="pi pi-trash" severity="danger" [text]="true" class="absolute top-0 right-0" (onClick)="removeAction(i)"></p-button>
-                      <div class="grid">
-                        <div class="col-12 md:col-6">
-                          <label class="text-xs font-bold block mb-1">Action Name</label>
+                    <div [formGroupName]="i" class="me-action">
+                      <p-button icon="pi pi-trash" severity="danger" [text]="true" class="me-remove" (onClick)="removeAction(i)"></p-button>
+                      <div class="me-action-grid">
+                        <div class="me-field me-af-name">
+                          <label class="me-label-sm">Action Name</label>
                           <input pInputText formControlName="name" placeholder="Attack Name" />
                         </div>
-                        <div class="col-6 md:col-3">
-                          <label class="text-xs font-bold block mb-1">To Hit</label>
+                        <div class="me-field me-af-sm">
+                          <label class="me-label-sm">To Hit</label>
                           <p-inputNumber formControlName="attackBonus" [showButtons]="true"></p-inputNumber>
                         </div>
-                        <div class="col-6 md:col-3">
-                          <label class="text-xs font-bold block mb-1">Recharge</label>
+                        <div class="me-field me-af-sm">
+                          <label class="me-label-sm">Recharge</label>
                           <p-inputNumber formControlName="rechargeValue" [min]="0" [max]="6" [showButtons]="true" placeholder="0-6"></p-inputNumber>
                         </div>
-                        <div class="col-12 mt-2">
-                          <label class="text-xs font-bold block mb-1">Custom Description (Optional)</label>
+                        <div class="me-field me-af-full">
+                          <label class="me-label-sm">Custom Description (Optional)</label>
                           <textarea pTextarea formControlName="description" rows="2" placeholder="Leave blank to auto-generate"></textarea>
                         </div>
                       </div>
 
-                      <div class="mt-3">
-                        <div class="flex justify-content-between align-items-center mb-2">
-                          <span class="text-xs font-bold uppercase text-600">Damage Blocks</span>
+                      <div class="me-subsection">
+                        <div class="me-subhead">
+                          <span class="me-subhead-title">Damage Blocks</span>
                           <p-button icon="pi pi-plus" label="Add" [text]="true" size="small" (onClick)="addDamageComponent(getDamageBlocks(action))"></p-button>
                         </div>
-                        <div formArrayName="damageBlocks" class="flex flex-column gap-2">
+                        <div formArrayName="damageBlocks" class="me-list">
                           @for (comp of getDamageBlocks(action).controls; track $index; let j = $index) {
-                            <div [formGroupName]="j" class="grid align-items-end surface-50 p-2 border-round relative">
-                              <p-button icon="pi pi-times" severity="danger" [text]="true" size="small" class="absolute top-0 right-0" (onClick)="removeDamageComponent(getDamageBlocks(action), j)"></p-button>
-                              <div class="col-2">
-                                <label class="text-xs block mb-1">Dice</label>
+                            <div [formGroupName]="j" class="me-block">
+                              <p-button icon="pi pi-times" severity="danger" [text]="true" size="small" class="me-remove" (onClick)="removeDamageComponent(getDamageBlocks(action), j)"></p-button>
+                              <div class="me-field me-bk">
+                                <label class="me-label-xs">Dice</label>
                                 <p-inputNumber formControlName="numberOfDice" [min]="0" size="small"></p-inputNumber>
                               </div>
-                              <div class="col-3">
-                                <label class="text-xs block mb-1">Die</label>
+                              <div class="me-field me-bk">
+                                <label class="me-label-xs">Die</label>
                                 <p-select formControlName="die" [options]="diceOptions" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
                               </div>
-                              <div class="col-2">
-                                <label class="text-xs block mb-1">Mod</label>
+                              <div class="me-field me-bk">
+                                <label class="me-label-xs">Mod</label>
                                 <p-inputNumber formControlName="amountToAdd" size="small"></p-inputNumber>
                               </div>
-                              <div class="col-5">
-                                <label class="text-xs block mb-1">Type</label>
+                              <div class="me-field me-bk wide">
+                                <label class="me-label-xs">Type</label>
                                 <p-select formControlName="damageType" [options]="damageTypes" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
                               </div>
                             </div>
@@ -376,23 +338,23 @@
                         </div>
                       </div>
 
-                      <div class="mt-3 p-2 border-round surface-100">
-                        <div class="flex align-items-center gap-2 mb-2">
+                      <div class="me-dc-box">
+                        <div class="me-check">
                           <p-checkbox formControlName="hasDC" [binary]="true" [inputId]="'hasDC-' + i"></p-checkbox>
-                          <label [for]="'hasDC-' + i" class="text-xs font-bold">Has Saving Throw</label>
+                          <label [for]="'hasDC-' + i" class="me-check-label bold-xs">Has Saving Throw</label>
                         </div>
                         @if (action.get('hasDC')?.value) {
-                          <div class="grid">
-                            <div class="col-4">
-                              <label class="text-xs block mb-1">DC</label>
+                          <div class="me-dc-grid">
+                            <div class="me-field me-bk">
+                              <label class="me-label-xs">DC</label>
                               <p-inputNumber formControlName="dc" [min]="0" size="small"></p-inputNumber>
                             </div>
-                            <div class="col-4">
-                              <label class="text-xs block mb-1">Ability</label>
+                            <div class="me-field me-bk">
+                              <label class="me-label-xs">Ability</label>
                               <p-select formControlName="dcAbility" [options]="abilities" size="small" appendTo="body"></p-select>
                             </div>
-                            <div class="col-4">
-                              <label class="text-xs block mb-1">On Success</label>
+                            <div class="me-field me-bk">
+                              <label class="me-label-xs">On Success</label>
                               <p-select formControlName="dcOnSuccess" [options]="[{label:'Half', value:'half'}, {label:'None', value:'none'}]" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
                             </div>
                           </div>
@@ -402,57 +364,57 @@
                   }
                 </div>
 
-                <div class="flex justify-content-between align-items-center mt-4 mb-3">
-                  <h4 class="m-0">Legendary Actions</h4>
+                <div class="me-head me-head-spaced">
+                  <h4 class="me-head-title">Legendary Actions</h4>
                   <p-button icon="pi pi-plus" label="Add Legendary" [text]="true" (onClick)="addLegendaryAction()"></p-button>
                 </div>
 
-                <div formArrayName="legendaryActions" class="flex flex-column gap-3">
+                <div formArrayName="legendaryActions" class="me-list3">
                   @for (la of legendaryActions.controls; track $index; let i = $index) {
-                    <div [formGroupName]="i" class="p-3 border-1 surface-border border-round shadow-1 relative">
-                      <p-button icon="pi pi-trash" severity="danger" [text]="true" class="absolute top-0 right-0" (onClick)="removeLegendaryAction(i)"></p-button>
-                      <div class="grid">
-                        <div class="col-6">
-                          <label class="text-xs font-bold block mb-1">Action Name</label>
+                    <div [formGroupName]="i" class="me-action">
+                      <p-button icon="pi pi-trash" severity="danger" [text]="true" class="me-remove" (onClick)="removeLegendaryAction(i)"></p-button>
+                      <div class="me-action-grid">
+                        <div class="me-field me-af-name">
+                          <label class="me-label-sm">Action Name</label>
                           <input pInputText formControlName="name" />
                         </div>
-                        <div class="col-3">
-                          <label class="text-xs font-bold block mb-1">Cost</label>
+                        <div class="me-field me-af-sm">
+                          <label class="me-label-sm">Cost</label>
                           <p-inputNumber formControlName="cost" [min]="1" [max]="3" [showButtons]="true"></p-inputNumber>
                         </div>
-                        <div class="col-3">
-                          <label class="text-xs font-bold block mb-1">To Hit</label>
+                        <div class="me-field me-af-sm">
+                          <label class="me-label-sm">To Hit</label>
                           <p-inputNumber formControlName="attackBonus" [showButtons]="true"></p-inputNumber>
                         </div>
-                        <div class="col-12 mt-2">
-                          <label class="text-xs font-bold block mb-1">Custom Description (Optional)</label>
+                        <div class="me-field me-af-full">
+                          <label class="me-label-sm">Custom Description (Optional)</label>
                           <textarea pTextarea formControlName="description" rows="2" placeholder="Leave blank to auto-generate"></textarea>
                         </div>
                       </div>
 
-                      <div class="mt-3">
-                        <div class="flex justify-content-between align-items-center mb-2">
-                          <span class="text-xs font-bold uppercase text-600">Damage Blocks</span>
+                      <div class="me-subsection">
+                        <div class="me-subhead">
+                          <span class="me-subhead-title">Damage Blocks</span>
                           <p-button icon="pi pi-plus" label="Add" [text]="true" size="small" (onClick)="addDamageComponent(getDamageBlocks(la))"></p-button>
                         </div>
-                        <div formArrayName="damageBlocks" class="flex flex-column gap-2">
+                        <div formArrayName="damageBlocks" class="me-list">
                           @for (comp of getDamageBlocks(la).controls; track $index; let j = $index) {
-                            <div [formGroupName]="j" class="grid align-items-end surface-50 p-2 border-round relative">
-                              <p-button icon="pi pi-times" severity="danger" [text]="true" size="small" class="absolute top-0 right-0" (onClick)="removeDamageComponent(getDamageBlocks(la), j)"></p-button>
-                              <div class="col-2">
-                                <label class="text-xs block mb-1">Dice</label>
+                            <div [formGroupName]="j" class="me-block">
+                              <p-button icon="pi pi-times" severity="danger" [text]="true" size="small" class="me-remove" (onClick)="removeDamageComponent(getDamageBlocks(la), j)"></p-button>
+                              <div class="me-field me-bk">
+                                <label class="me-label-xs">Dice</label>
                                 <p-inputNumber formControlName="numberOfDice" [min]="0" size="small"></p-inputNumber>
                               </div>
-                              <div class="col-3">
-                                <label class="text-xs block mb-1">Die</label>
+                              <div class="me-field me-bk">
+                                <label class="me-label-xs">Die</label>
                                 <p-select formControlName="die" [options]="diceOptions" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
                               </div>
-                              <div class="col-2">
-                                <label class="text-xs block mb-1">Mod</label>
+                              <div class="me-field me-bk">
+                                <label class="me-label-xs">Mod</label>
                                 <p-inputNumber formControlName="amountToAdd" size="small"></p-inputNumber>
                               </div>
-                              <div class="col-5">
-                                <label class="text-xs block mb-1">Type</label>
+                              <div class="me-field me-bk wide">
+                                <label class="me-label-xs">Type</label>
                                 <p-select formControlName="damageType" [options]="damageTypes" optionLabel="label" optionValue="value" size="small" appendTo="body"></p-select>
                               </div>
                             </div>
@@ -460,15 +422,15 @@
                         </div>
                       </div>
 
-                      <div class="mt-3 p-2 border-round surface-100">
-                        <div class="flex align-items-center gap-2 mb-2">
+                      <div class="me-dc-box">
+                        <div class="me-check">
                           <p-checkbox formControlName="hasDC" [binary]="true" [inputId]="'hasDC-LA-' + i"></p-checkbox>
-                          <label [for]="'hasDC-LA-' + i" class="text-xs font-bold">Has Saving Throw</label>
+                          <label [for]="'hasDC-LA-' + i" class="me-check-label bold-xs">Has Saving Throw</label>
                         </div>
                         @if (la.get('hasDC')?.value) {
-                          <div class="grid">
-                            <div class="col-12">
-                              <label class="text-xs block mb-1">DC</label>
+                          <div class="me-dc-grid">
+                            <div class="me-field me-bk">
+                              <label class="me-label-xs">DC</label>
                               <p-inputNumber formControlName="dc" [min]="0" size="small"></p-inputNumber>
                             </div>
                           </div>
@@ -483,44 +445,44 @@
 
           <!-- Spellcasting Tab -->
           <p-tabpanel value="4">
-            <div class="mt-3">
-              <div class="flex flex-wrap gap-3 p-3 border-1 surface-border border-round mb-3 bg-surface-50">
-                <div class="flex align-items-center gap-2">
+            <div class="me-tab-plain">
+              <div class="me-toggle-box">
+                <div class="me-check">
                   <p-checkbox formControlName="isSpellcaster" [binary]="true" inputId="isSpellcaster"></p-checkbox>
-                  <label for="isSpellcaster" class="text-sm font-bold">Spellcaster</label>
+                  <label for="isSpellcaster" class="me-check-label bold">Spellcaster</label>
                 </div>
-                <div class="flex align-items-center gap-2">
+                <div class="me-check">
                   <p-checkbox formControlName="isInnateSpellcaster" [binary]="true" inputId="isInnateSpellcaster"></p-checkbox>
-                  <label for="isInnateSpellcaster" class="text-sm font-bold">Innate Spellcaster</label>
+                  <label for="isInnateSpellcaster" class="me-check-label bold">Innate Spellcaster</label>
                 </div>
               </div>
 
               @if (monsterForm.get('isSpellcaster')?.value || monsterForm.get('isInnateSpellcaster')?.value) {
                 <app-spellcasting-editor [group]="spellcastingGroup"></app-spellcasting-editor>
               } @else {
-                <p class="text-600 italic">Enable "Spellcaster" or "Innate Spellcaster" to configure spells.</p>
+                <p class="me-note">Enable "Spellcaster" or "Innate Spellcaster" to configure spells.</p>
               }
             </div>
           </p-tabpanel>
 
           <!-- Behavior Tab -->
           <p-tabpanel value="5">
-            <div [formGroup]="behaviorGroup" class="flex flex-column gap-3 mt-3">
-              <div class="grid">
-                <div class="col-12 md:col-6">
-                  <label for="actionPreference" class="font-bold block mb-1">Primary Action Preference</label>
+            <div [formGroup]="behaviorGroup" class="me-tab">
+              <div class="me-grid2">
+                <div class="me-field">
+                  <label for="actionPreference" class="me-label">Primary Action Preference</label>
                   <p-select id="actionPreference" formControlName="actionPreference" [options]="actionPreferences" optionLabel="label" optionValue="value" appendTo="body"></p-select>
                 </div>
-                <div class="col-12 md:col-6">
-                  <label for="targetPriority" class="font-bold block mb-1">Primary Target Priority</label>
+                <div class="me-field">
+                  <label for="targetPriority" class="me-label">Primary Target Priority</label>
                   <p-select id="targetPriority" formControlName="targetPriority" [options]="targetPriorities" optionLabel="label" optionValue="value" appendTo="body"></p-select>
                 </div>
-                <div class="col-12 md:col-6">
-                  <label for="secondaryActionPreference" class="font-bold block mb-1">Secondary Action Preference</label>
+                <div class="me-field">
+                  <label for="secondaryActionPreference" class="me-label">Secondary Action Preference</label>
                   <p-select id="secondaryActionPreference" formControlName="secondaryActionPreference" [options]="actionPreferences" optionLabel="label" optionValue="value" appendTo="body"></p-select>
                 </div>
-                <div class="col-12 md:col-6">
-                  <label for="secondaryTargetPriority" class="font-bold block mb-1">Secondary Target Priority</label>
+                <div class="me-field">
+                  <label for="secondaryTargetPriority" class="me-label">Secondary Target Priority</label>
                   <p-select id="secondaryTargetPriority" formControlName="secondaryTargetPriority" [options]="targetPriorities" optionLabel="label" optionValue="value" appendTo="body"></p-select>
                 </div>
               </div>
@@ -530,11 +492,11 @@
       </p-tabs>
     </p-fluid>
 
-    <div class="flex justify-content-between align-items-center mt-4">
+    <div class="me-footer">
       <div>
         <p-button label="Export JSON" icon="pi pi-download" severity="info" [text]="true" (onClick)="exportToJSON()" tooltipPosition="top" pTooltip="Download monster data as JSON for testing"></p-button>
       </div>
-      <div class="flex justify-content-end gap-2">
+      <div class="me-footer-actions">
         <p-button label="Cancel" [text]="true" severity="secondary" (onClick)="close()" [disabled]="loading()"></p-button>
 
         <p-splitButton

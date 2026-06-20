@@ -1,28 +1,20 @@
-<div class="flex flex-column gap-1 w-full mt-2">
-  <!-- Multiattacks -->
+<div class="actions-list">
   @for (multi of multiattacks(); track $index) {
-    <p-card
-      class="w-full"
-      [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
-    >
-      <div class="flex align-items-center gap-2">
-        <i class="pi pi-bolt text-primary"></i>
-        <span class="text-sm">
+    <p-card class="action-card" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+      <div class="action-row">
+        <i class="pi pi-bolt action-icon"></i>
+        <span class="action-text">
           {{ formatMultiattack(actor().name, multi.multiattack, allActionsForLookup()) }}
         </span>
       </div>
     </p-card>
   }
 
-  <!-- Individual Actions -->
   @for (action of actions(); track action.actionId || $index) {
-    <p-card
-      class="w-full"
-      [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }"
-    >
-      <div class="flex align-items-center gap-2">
-        <i class="pi pi-shield text-primary"></i>
-        <span class="text-sm">
+    <p-card class="action-card" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+      <div class="action-row">
+        <i class="pi pi-shield action-icon"></i>
+        <span class="action-text">
           <strong>{{ action.name }}</strong>
           @if (getRechargeValue(action); as recharge) {
             (Recharge: {{ recharge }})

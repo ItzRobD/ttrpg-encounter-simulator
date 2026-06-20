@@ -1,38 +1,27 @@
 import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import {Button} from 'primeng/button';
-import {SpellCard} from '../../components/spell-card/spell-card';
-import {IconField} from 'primeng/iconfield';
-import {InputIcon} from 'primeng/inputicon';
-import {InputText} from 'primeng/inputtext';
-import {SharedTable} from '../../components/shared-table/shared-table.component';
 import {Tooltip} from 'primeng/tooltip';
+import {TabsModule} from 'primeng/tabs';
+import {LibraryPage} from '../../components/library-page/library-page';
+import {SpellCard} from '../../components/spell-card/spell-card';
+import {SharedTable} from '../../components/shared-table/shared-table.component';
 import {SpellsService} from '../../services/spells.service';
 import {SpellEditorComponent} from '../../components/editors/spell-editor/spell-editor';
 import {Spell} from '../../models';
 
-import {TabsModule} from 'primeng/tabs';
-
 @Component({
   selector: 'app-spells-shell',
-  standalone: true,
   imports: [
     Button,
-    SpellCard,
-    IconField,
-    InputIcon,
-    InputText,
-    SharedTable,
     Tooltip,
+    TabsModule,
+    LibraryPage,
+    SpellCard,
+    SharedTable,
     SpellEditorComponent,
-    TabsModule
   ],
   templateUrl: './spells-shell.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `]
 })
 export class SpellsShell implements OnInit {
   public readonly spellsService = inject(SpellsService);
@@ -67,12 +56,4 @@ export class SpellsShell implements OnInit {
     }
   }
 
-  onSearch(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.searchTerm.set(target.value);
-    }
-
-    onClearSearch(): void {
-      this.searchTerm.set('');
-    }
-    }
+}

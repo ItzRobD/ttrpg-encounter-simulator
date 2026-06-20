@@ -1,0 +1,66 @@
+<div class="library-page">
+  <header class="lib-header">
+    <h1 class="lib-title">{{ title() }}</h1>
+    <div class="lib-actions">
+      <ng-content select="[actions]"></ng-content>
+    </div>
+  </header>
+
+  @if (description()) {
+    <p class="lib-desc">{{ description() }}</p>
+  }
+
+  <div class="lib-body">
+    <section class="lib-list">
+      <div class="lib-list-head">
+        <h3 class="lib-section-title">{{ listTitle() }}</h3>
+        <p-iconfield iconPosition="left" class="lib-search">
+          <p-inputicon class="pi pi-search"></p-inputicon>
+          <input
+            type="text"
+            pInputText
+            pSize="small"
+            [placeholder]="searchPlaceholder()"
+            [attr.aria-label]="searchLabel() || 'Search ' + listTitle()"
+            [ngModel]="search()"
+            (ngModelChange)="search.set($event)"
+          />
+          @if (search()) {
+            <p-inputicon
+              class="pi pi-times lib-clear"
+              role="button"
+              tabindex="0"
+              aria-label="Clear search"
+              (click)="search.set('')"
+              (keydown.enter)="search.set('')"
+            ></p-inputicon>
+          }
+        </p-iconfield>
+      </div>
+
+      <div class="lib-list-body">
+        <ng-content select="[tabs]"></ng-content>
+        <ng-content select="[list]"></ng-content>
+      </div>
+    </section>
+
+    <section class="lib-detail">
+      <div class="lib-detail-head">
+        <h3 class="lib-section-title">{{ detailTitle() }}</h3>
+        @if (hasSelection()) {
+          <div class="lib-detail-actions">
+            <ng-content select="[detailActions]"></ng-content>
+          </div>
+        }
+      </div>
+
+      <div class="lib-detail-body">
+        @if (hasSelection()) {
+          <ng-content select="[detail]"></ng-content>
+        } @else {
+          <p class="lib-empty">{{ emptyMessage() }}</p>
+        }
+      </div>
+    </section>
+  </div>
+</div>

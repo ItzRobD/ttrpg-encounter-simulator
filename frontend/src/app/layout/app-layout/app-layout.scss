@@ -1,0 +1,230 @@
+@use 'breakpoints' as bp;
+@use 'layout' as l;
+
+:host {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  // Scheme-aware crisp separator: light line on dark, dark line on light.
+  --chrome-border: color-mix(in srgb, var(--p-text-color) 16%, transparent);
+}
+
+.env-bar {
+  flex-shrink: 0;
+  height: 2px;
+  background: #6a1b9a;
+}
+
+.env-tab {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  padding: 0.12rem 1.5rem 0.18rem;
+  background: #6a1b9a;
+  color: #fff;
+  font: 700 0.68rem/1 monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
+}
+
+.layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  @include bp.above(bp.$bp-md) {
+    flex-direction: row;
+  }
+}
+
+// ── Chrome: sidebar + topbar sit on content bg above the deeper page canvas ──
+.sidebar {
+  display: none;
+
+  @include bp.above(bp.$bp-md) {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    width: 12rem;
+    background: var(--p-content-background);
+    border-right: 1px solid var(--chrome-border);
+    overflow-x: hidden;
+    transition: width 0.2s ease-in-out;
+  }
+}
+
+.nav-collapsed .sidebar {
+  width: 3.75rem;
+
+  .nav-label,
+  .brand {
+    display: none;
+  }
+
+  .sidebar-head {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .sidebar-foot {
+    justify-content: center;
+  }
+}
+
+.nav-collapsed.nav-autoslide .sidebar:hover {
+  width: 12rem;
+
+  .nav-label,
+  .brand {
+    display: inline;
+  }
+
+  .sidebar-head {
+    justify-content: flex-start;
+    padding: 0 l.space(2);
+  }
+
+  .sidebar-foot {
+    justify-content: space-between;
+  }
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+  flex-shrink: 0;
+  height: 3.5rem;
+  padding: 0 l.space(2);
+  border-bottom: 1px solid var(--chrome-border);
+  overflow: hidden;
+}
+
+.brand {
+  font-size: 1.15rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: l.space(1);
+  padding: l.space(2);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidebar-foot {
+  margin-top: auto;
+  padding-top: l.space(2);
+  border-top: 1px solid var(--chrome-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: l.space(2);
+}
+
+.foot-label {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: l.space(1);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+  padding: l.space(3);
+  border-radius: var(--p-border-radius-md);
+  color: var(--p-text-color);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.12s ease, color 0.12s ease;
+
+  i {
+    flex-shrink: 0;
+    width: 1.25rem;
+    font-size: 1rem;
+    text-align: center;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--p-text-color) 8%, transparent);
+  }
+
+  &.is-active {
+    background: color-mix(in srgb, var(--p-primary-color) 14%, transparent);
+    color: var(--p-primary-color);
+    font-weight: 600;
+  }
+}
+
+// ── Content column ──
+.content {
+  flex: 1;
+  min-width: 0; // let content shrink instead of forcing horizontal overflow
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: l.space(1);
+  flex-shrink: 0;
+  height: 3.5rem;
+  padding: 0 l.space(4);
+  background: var(--p-content-background);
+  border-bottom: 1px solid var(--chrome-border);
+}
+
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: l.space(1);
+}
+
+.brand-mobile {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.nav-toggle-mobile,
+.brand-mobile {
+  @include bp.above(bp.$bp-md) {
+    display: none;
+  }
+}
+
+.page {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+  padding: l.space(2);
+  background: var(--app-canvas);
+
+  @include bp.above(bp.$bp-md) {
+    padding: l.space(4);
+  }
+}
+
+.theme-popover-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: l.space(3);
+  padding-top: l.space(2);
+  border-top: 1px solid var(--p-content-border-color);
+}

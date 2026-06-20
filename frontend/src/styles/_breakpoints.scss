@@ -1,0 +1,15 @@
+// Shell-only structural breakpoints. Inside components prefer intrinsic layout
+// (grid auto-fit, flex-wrap, clamp, container queries). Emits no CSS.
+
+$bp-sm: 480px;
+$bp-md: 768px; // sidebar ↔ drawer
+$bp-lg: 1024px;
+$bp-xl: 1280px;
+
+@mixin above($bp) {
+  @media (min-width: $bp) { @content; }
+}
+
+@mixin below($bp) {
+  @media (max-width: ($bp - 0.02px)) { @content; }
+}

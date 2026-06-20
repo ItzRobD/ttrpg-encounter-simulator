@@ -1,0 +1,140 @@
+@use 'layout' as l;
+
+:host {
+  display: block;
+}
+
+.stats-wrap {
+  @include l.stack(2);
+  padding-top: l.space(2);
+}
+
+.ability-grid {
+  @include l.grid-auto(4.5rem, 1);
+}
+
+.ability {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: l.space(1);
+  padding: l.space(1);
+  height: 100%;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+}
+
+.ability-head {
+  display: flex;
+  align-items: center;
+  gap: l.space(1);
+}
+
+.ability-short {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.ability-prof {
+  font-size: 0.5rem;
+}
+
+.ability-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ability-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.ability-mod {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--p-primary-color);
+}
+
+.death-saves {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: l.space(2);
+  padding: l.space(2) l.space(3);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+}
+
+.death-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.death-groups {
+  display: flex;
+  gap: l.space(5);
+}
+
+.death-group {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.death-ico-ok {
+  font-size: 0.75rem;
+  color: var(--p-green-500);
+}
+
+.death-ico-fail {
+  font-size: 0.75rem;
+  color: var(--p-red-500);
+}
+
+.death-pips {
+  display: flex;
+  gap: l.space(1);
+}
+
+.death-pip {
+  font-size: 0.6rem;
+}
+
+.resist {
+  @include l.stack(1);
+  margin-top: l.space(2);
+  padding: l.space(2);
+  border-left: 2px solid var(--p-primary-color);
+  border-radius: var(--p-border-radius-md);
+}
+
+.resist-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: l.space(1);
+}
+
+.resist-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--p-primary-color);
+
+  &.vuln {
+    color: var(--p-red-500);
+  }
+}
+
+.resist-values {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--p-text-color);
+}

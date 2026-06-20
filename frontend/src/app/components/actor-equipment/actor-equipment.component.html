@@ -1,9 +1,9 @@
-<div class="flex flex-column gap-1 w-full mt-2">
+<div class="eq-list">
   @if (actor().equipment?.armorId) {
-    <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
-      <div class="flex align-items-center gap-2">
-        <i class="pi pi-shield text-primary"></i>
-        <span class="text-sm">
+    <p-card class="eq-card" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+      <div class="eq-row">
+        <i class="pi pi-shield eq-icon"></i>
+        <span class="eq-text">
           <strong>Armor:</strong> {{ getArmorName(actor().equipment!.armorId!) }}
           @if (actor().equipment?.hasShieldEquipped) {
             (+ {{ actor().equipment?.shieldId ? getShieldName(actor().equipment!.shieldId!) : 'Shield' }})
@@ -12,10 +12,10 @@
       </div>
     </p-card>
   } @else if (actor().equipment?.hasShieldEquipped) {
-    <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
-      <div class="flex align-items-center gap-2">
-        <i class="pi pi-shield text-primary"></i>
-        <span class="text-sm">
+    <p-card class="eq-card" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+      <div class="eq-row">
+        <i class="pi pi-shield eq-icon"></i>
+        <span class="eq-text">
           <strong>{{ actor().equipment?.shieldId ? getShieldName(actor().equipment!.shieldId!) : 'Shield' }} Equipped</strong>
         </span>
       </div>
@@ -25,13 +25,13 @@
   @for (slot of weaponSlots; track slot.key) {
     @if (slot.key === 'Primary' && actor().equipment?.primarySlot; as weaponList) {
       @for (weapon of weaponList; track weapon.weaponId) {
-        <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
-          <div class="flex align-items-center gap-2">
-            <i class="pi pi-bolt text-primary"></i>
-            <span class="text-sm">
+        <p-card class="eq-card" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+          <div class="eq-row">
+            <i class="pi pi-bolt eq-icon"></i>
+            <span class="eq-text">
               <strong>{{ slot.label }}:</strong>
               {{ getWeaponName(weapon.weaponId) }}{{ formatModifiers(weapon.modifiers) }}
-              @if (weapon.isProficient) { <span class="text-xs text-color-secondary ml-1">(Proficient)</span> }
+              @if (weapon.isProficient) { <span class="eq-proficient">(Proficient)</span> }
             </span>
           </div>
         </p-card>
@@ -39,13 +39,13 @@
     }
     @if (slot.key === 'Secondary' && actor().equipment?.secondarySlot; as weaponList) {
       @for (weapon of weaponList; track weapon.weaponId) {
-        <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
-          <div class="flex align-items-center gap-2">
-            <i class="pi pi-bolt text-primary"></i>
-            <span class="text-sm">
+        <p-card class="eq-card" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+          <div class="eq-row">
+            <i class="pi pi-bolt eq-icon"></i>
+            <span class="eq-text">
               <strong>{{ slot.label }}:</strong>
               {{ getWeaponName(weapon.weaponId) }}{{ formatModifiers(weapon.modifiers) }}
-              @if (weapon.isProficient) { <span class="text-xs text-color-secondary ml-1">(Proficient)</span> }
+              @if (weapon.isProficient) { <span class="eq-proficient">(Proficient)</span> }
             </span>
           </div>
         </p-card>
@@ -53,13 +53,13 @@
     }
     @if (slot.key === 'Ranged' && actor().equipment?.rangedSlot; as weaponList) {
       @for (weapon of weaponList; track weapon.weaponId) {
-        <p-card class="w-full" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
-          <div class="flex align-items-center gap-2">
-            <i class="pi pi-bolt text-primary"></i>
-            <span class="text-sm">
+        <p-card class="eq-card" [dt]="{ bodyPadding: '0.4rem', contentPadding: '0' }">
+          <div class="eq-row">
+            <i class="pi pi-bolt eq-icon"></i>
+            <span class="eq-text">
               <strong>{{ slot.label }}:</strong>
               {{ getWeaponName(weapon.weaponId) }}{{ formatModifiers(weapon.modifiers) }}
-              @if (weapon.isProficient) { <span class="text-xs text-color-secondary ml-1">(Proficient)</span> }
+              @if (weapon.isProficient) { <span class="eq-proficient">(Proficient)</span> }
             </span>
           </div>
         </p-card>

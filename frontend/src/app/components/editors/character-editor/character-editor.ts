@@ -1,5 +1,4 @@
 import { Component, effect, OnInit, inject, signal, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
@@ -12,7 +11,6 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { MessageModule } from 'primeng/message';
 import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
-import { FluidModule } from 'primeng/fluid';
 import { BaseEditorDirective } from '../base-editor.directive';
 import { Class, Race, Ability, CasterType, DragonbornColor, DamageType, ResistanceType, AbilityScores, Weapon, Armor, WeaponSlot, Equipment, Actor, EquipmentConfig } from '../../../models';
 import { CustomActorType } from '../../../services/custom-content.service';
@@ -25,7 +23,6 @@ import {MapperService} from '../../../services/mapper.service';
 @Component({
   selector: 'app-character-editor',
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     DialogModule,
     ButtonModule,
@@ -37,11 +34,11 @@ import {MapperService} from '../../../services/mapper.service';
     MessageModule,
     TooltipModule,
     TabsModule,
-    FluidModule,
     AbilityScoreEditorComponent,
     SpellcastingEditorComponent
   ],
   templateUrl: './character-editor.html',
+  styleUrl: './character-editor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CharacterEditorComponent extends BaseEditorDirective<Actor> implements OnInit {

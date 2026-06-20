@@ -8,25 +8,25 @@
   [draggable]="false"
   [resizable]="false"
 >
-  <form [formGroup]="spellForm" (ngSubmit)="onSave()" class="p-fluid">
+  <form [formGroup]="spellForm" (ngSubmit)="onSave()">
     <p-fluid>
       <!-- Error Message -->
       @if (error()) {
-        <p-message severity="error" [text]="error()!" class="mb-3"></p-message>
+        <p-message severity="error" [text]="error()!" class="se-error"></p-message>
       }
 
-      <div class="flex flex-column gap-3 mt-2">
+      <div class="se-body">
         <!-- Name -->
-        <div class="field">
-          <label for="name" class="font-bold block mb-1">Spell Name</label>
+        <div class="se-field">
+          <label for="name" class="se-label">Spell Name</label>
           <input pInputText id="name" formControlName="name" placeholder="e.g. Blue Fireball"
                  [class.p-invalid]="spellForm.get('name')?.invalid && spellForm.get('name')?.touched"
                  [pTooltip]="spellForm.get('name')?.invalid && spellForm.get('name')?.touched ? 'Name is required' : ''" />
         </div>
 
         <!-- Description -->
-        <div class="field">
-          <label for="description" class="font-bold block mb-1">Description</label>
+        <div class="se-field">
+          <label for="description" class="se-label">Description</label>
           <textarea
             pTextarea
             id="description"
@@ -38,10 +38,10 @@
           ></textarea>
         </div>
 
-        <div class="grid">
+        <div class="se-grid3">
           <!-- Level -->
-          <div class="col-6 md:col-4">
-            <label for="level" class="font-bold block mb-1">Level</label>
+          <div class="se-field">
+            <label for="level" class="se-label">Level</label>
             <p-inputNumber
               id="level"
               formControlName="level"
@@ -55,8 +55,8 @@
           </div>
 
           <!-- Spell Type -->
-          <div class="col-6 md:col-4">
-            <label for="spellType" class="font-bold block mb-1">Type</label>
+          <div class="se-field">
+            <label for="spellType" class="se-label">Type</label>
             <p-select
               id="spellType"
               formControlName="spellType"
@@ -67,8 +67,8 @@
           </div>
 
           <!-- Casting Time -->
-          <div class="col-6 md:col-4">
-            <label for="castingTime" class="font-bold block mb-1">Casting Time</label>
+          <div class="se-field">
+            <label for="castingTime" class="se-label">Casting Time</label>
             <p-select
               id="castingTime"
               formControlName="castingTime"
@@ -80,39 +80,39 @@
         </div>
 
         <!-- Toggles -->
-        <div class="flex flex-column gap-2 p-2 border-1 surface-border border-round">
-          <div class="flex flex-wrap gap-3">
-            <div class="flex align-items-center gap-2">
+        <div class="se-panel">
+          <div class="se-checks">
+            <div class="se-check">
               <p-checkbox formControlName="isConcentration" [binary]="true" inputId="isConcentration"></p-checkbox>
-              <label for="isConcentration" class="text-sm">Concentration</label>
+              <label for="isConcentration" class="se-check-label">Concentration</label>
             </div>
-            <div class="flex align-items-center gap-2">
+            <div class="se-check">
               <p-checkbox formControlName="isRitual" [binary]="true" inputId="isRitual"></p-checkbox>
-              <label for="isRitual" class="text-sm">Ritual</label>
+              <label for="isRitual" class="se-check-label">Ritual</label>
             </div>
-            <div class="flex align-items-center gap-2">
+            <div class="se-check">
               <p-checkbox formControlName="isAOE" [binary]="true" inputId="isAOE"></p-checkbox>
-              <label for="isAOE" class="text-sm">AOE</label>
+              <label for="isAOE" class="se-check-label">AOE</label>
             </div>
-            <div class="flex align-items-center gap-2">
+            <div class="se-check">
               <p-checkbox formControlName="isTouch" [binary]="true" inputId="isTouch"></p-checkbox>
-              <label for="isTouch" class="text-sm">Touch</label>
+              <label for="isTouch" class="se-check-label">Touch</label>
             </div>
-            <div class="flex align-items-center gap-2">
+            <div class="se-check">
               <p-checkbox formControlName="hasDC" [binary]="true" inputId="hasDC"></p-checkbox>
-              <label for="hasDC" class="text-sm">Has Save DC</label>
+              <label for="hasDC" class="se-check-label">Has Save DC</label>
             </div>
-            <div class="flex align-items-center gap-2">
+            <div class="se-check">
               <p-checkbox formControlName="isAutoHit" [binary]="true" inputId="isAutoHit"></p-checkbox>
-              <label for="isAutoHit" class="text-sm">Auto-Hit</label>
+              <label for="isAutoHit" class="se-check-label">Auto-Hit</label>
             </div>
           </div>
 
           <!-- Save DC Details -->
           @if (spellForm.get('hasDC')?.value) {
-            <div formGroupName="spellDC" class="grid mt-2 border-top-1 pt-2 surface-border">
-              <div class="col-6">
-                <label for="dcAbility" class="text-xs font-bold block mb-1">Save Ability</label>
+            <div formGroupName="spellDC" class="se-dc">
+              <div class="se-field">
+                <label for="dcAbility" class="se-label-sm">Save Ability</label>
                 <p-select
                   id="dcAbility"
                   formControlName="ability"
@@ -122,8 +122,8 @@
                   appendTo="body"
                 ></p-select>
               </div>
-              <div class="col-6">
-                <label for="dcSuccess" class="text-xs font-bold block mb-1">On Success</label>
+              <div class="se-field">
+                <label for="dcSuccess" class="se-label-sm">On Success</label>
                 <p-select
                   id="dcSuccess"
                   formControlName="onSuccess"
@@ -138,10 +138,10 @@
         </div>
 
         <!-- Scaling Formulas Section -->
-        <div class="mt-3 p-3 border-1 surface-border border-round">
-          <div class="flex justify-content-between align-items-center mb-3">
-            <span class="font-bold">Scaling / Damage Formulas</span>
-            <div class="flex align-items-center gap-2">
+        <div class="se-section">
+          <div class="se-section-head">
+            <span class="se-section-title">Scaling / Damage Formulas</span>
+            <div class="se-section-actions">
               <p-selectbutton
                 [options]="levelTypes"
                 formControlName="levelType"
@@ -157,11 +157,11 @@
             </div>
           </div>
 
-          <div formArrayName="formulas" class="flex flex-column gap-2 mt-2">
+          <div formArrayName="formulas" class="se-formulas">
             @for (f of formulas.controls; track $index; let i = $index) {
-              <div [formGroupName]="i" class="grid align-items-end p-2 border-round surface-50 border-1 surface-border">
-                <div class="col-2">
-                  <label class="text-xs font-bold block mb-1">Level</label>
+              <div [formGroupName]="i" class="se-formula">
+                <div class="se-f-level">
+                  <label class="se-label-sm">Level</label>
                   <p-inputNumber
                     formControlName="castLevel"
                     [min]="1"
@@ -171,12 +171,12 @@
                     [pTooltip]="f.get('castLevel')?.errors?.['duplicate'] ? 'Conflict: Duplicate level' : ''"
                   ></p-inputNumber>
                 </div>
-                <div class="col-2">
-                  <label class="text-xs font-bold block mb-1">Dice Count</label>
+                <div class="se-f-dice">
+                  <label class="se-label-sm">Dice Count</label>
                   <p-inputNumber formControlName="numberOfDice" [min]="0" size="small"></p-inputNumber>
                 </div>
-                <div class="col-2">
-                  <label class="text-xs font-bold block mb-1">Die</label>
+                <div class="se-f-die">
+                  <label class="se-label-sm">Die</label>
                   <p-select
                     formControlName="die"
                     [options]="diceOptions"
@@ -185,12 +185,12 @@
                     appendTo="body"
                   ></p-select>
                 </div>
-                <div class="col-2">
-                  <label class="text-xs font-bold block mb-1">Mod</label>
+                <div class="se-f-mod">
+                  <label class="se-label-sm">Mod</label>
                   <p-inputNumber formControlName="amountToAdd" size="small"></p-inputNumber>
                 </div>
-                <div class="col-3">
-                  <label class="text-xs font-bold block mb-1">Type</label>
+                <div class="se-f-type">
+                  <label class="se-label-sm">Type</label>
                   <p-select
                     formControlName="damageType"
                     [options]="damageTypes"
@@ -199,7 +199,7 @@
                     appendTo="body"
                   ></p-select>
                 </div>
-                <div class="col-1 flex justify-content-end">
+                <div class="se-f-remove">
                   <p-button
                     icon="pi pi-times"
                     severity="danger"
@@ -209,7 +209,7 @@
                 </div>
               </div>
             } @empty {
-              <div class="p-3 text-center border-round border-dashed surface-border text-500 italic">
+              <div class="se-empty">
                 No formulas added yet. Click "Add Formula" to scale your spell.
               </div>
             }
@@ -219,7 +219,7 @@
     </p-fluid>
 
     <!-- Footer Buttons -->
-    <div class="flex justify-content-end gap-2 mt-4">
+    <div class="se-footer">
       <p-button
         label="Cancel"
         [text]="true"

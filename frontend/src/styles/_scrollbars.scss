@@ -1,0 +1,26 @@
+// Thin, theme-aware scrollbars (Firefox + WebKit). `@use`d from styles.scss.
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--p-surface-500) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--p-surface-500);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+
+  &:hover {
+    background: var(--p-primary-color);
+  }
+}

@@ -1,0 +1,36 @@
+@use 'layout' as l;
+
+:host {
+  display: block;
+}
+
+.eq-list {
+  @include l.stack(1);
+  width: 100%;
+  margin-top: l.space(2);
+}
+
+.eq-card {
+  display: block;
+  width: 100%;
+}
+
+.eq-row {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.eq-icon {
+  color: var(--p-primary-color);
+}
+
+.eq-text {
+  font-size: 0.875rem;
+}
+
+.eq-proficient {
+  margin-left: l.space(1);
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}

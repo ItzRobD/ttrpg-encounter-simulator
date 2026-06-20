@@ -27,11 +27,10 @@ interface SpellGroup {
 
 @Component({
   selector: 'app-actor-spellcasting',
-  standalone: true,
-  imports: [CardModule, TooltipModule],
+  imports: [TooltipModule],
   templateUrl: './actor-spellcasting.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './actor-spellcasting.component.css',
+  styleUrl: './actor-spellcasting.component.scss',
 })
 export class ActorSpellcasting {
   public readonly spellcasting = input<SpellcastingInput | undefined>(undefined);

@@ -1,0 +1,110 @@
+@use 'layout' as l;
+
+:host {
+  display: block;
+}
+
+.equip-card {
+  display: block;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-lg);
+}
+
+.ec-body {
+  @include l.stack(3);
+}
+
+.ec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: l.space(2);
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+
+.ec-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.ec-header-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ec-name {
+  font-family: var(--font-display-sub);
+  font-size: 1.45rem;
+  font-weight: 600;
+}
+
+.ec-kind {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.ec-meta {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.ec-section {
+  @include l.stack(3);
+}
+
+.ec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ec-stats {
+  display: flex;
+  align-items: flex-end;
+  gap: l.space(5);
+}
+
+.ec-field {
+  @include l.stack(1);
+
+  &.end {
+    align-items: flex-end;
+  }
+}
+
+.ec-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.ec-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+
+  &.sm {
+    font-size: 0.875rem;
+    font-weight: 400;
+  }
+}
+
+.ec-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: l.space(1);
+}
+
+.ec-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: l.space(2);
+}
+
+.ec-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  font-style: italic;
+  color: var(--p-text-muted-color);
+}

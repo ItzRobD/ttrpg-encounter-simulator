@@ -1,0 +1,137 @@
+@use 'layout' as l;
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.sr-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sr-grow {
+  flex: 1;
+}
+
+.sr-tabs-head {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: l.space(2);
+}
+
+.sr-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sr-perf {
+  padding: 0 l.space(3);
+  font-size: 0.75rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--p-text-muted-color);
+}
+
+.sr-enc-row {
+  display: flex;
+  align-items: center;
+  margin-top: l.space(2);
+  padding: 0 l.space(1);
+}
+
+.sr-tree {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: var(--p-content-background);
+}
+
+.sr-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &.is-active {
+    background: color-mix(in srgb, var(--p-primary-color) 18%, transparent);
+  }
+}
+
+.sr-row-icon {
+  margin-right: l.space(2);
+  color: var(--p-primary-color);
+
+  &.c-red { color: var(--p-red-500); }
+  &.c-blue { color: var(--p-blue-500); }
+}
+
+.sr-strong {
+  font-weight: 700;
+}
+
+.sr-actor {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.sr-detail {
+  font-size: 0.875rem;
+  color: var(--p-text-color);
+}
+
+.sr-scrubber {
+  margin-top: l.space(4);
+  padding-top: l.space(4);
+  border-top: 1px solid var(--p-content-border-color);
+  background: var(--p-content-background);
+}
+
+.sr-slider-row {
+  display: flex;
+  align-items: center;
+  gap: l.space(3);
+  margin-bottom: l.space(2);
+  padding: 0 l.space(2);
+}
+
+.sr-tick {
+  font-size: 0.75rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--p-text-muted-color);
+}
+
+.sr-step-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 l.space(2);
+}
+
+.sr-step {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.sr-step-num {
+  color: var(--p-primary-color);
+}
+
+.sr-muted {
+  color: var(--p-text-muted-color);
+}
+
+.sr-active {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--p-text-muted-color);
+}
+
+:host ::ng-deep .small-tabs .p-tablist-tab {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+:host ::ng-deep .small-tabs .p-tablist-content {
+  border-bottom: 1px solid var(--p-content-border-color);
+}

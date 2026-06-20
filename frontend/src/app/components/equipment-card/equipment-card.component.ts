@@ -1,5 +1,4 @@
 import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { Weapon, Armor, DiceType, EquipmentItem } from '../../models';
 import { formatDice, formatModifier, getEquipmentDetail } from '../../shared/utils/dnd-utils';
@@ -7,11 +6,10 @@ import { TagModule } from 'primeng/tag';
 
 @Component({
   selector: 'app-equipment-card',
-  standalone: true,
-  imports: [CardModule, CommonModule, TagModule],
-  templateUrl: './equipment-card.html',
+  imports: [CardModule, TagModule],
+  templateUrl: './equipment-card.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './equipment-card.css',
+  styleUrl: './equipment-card.component.scss',
 })
 export class EquipmentCard {
   public readonly item = input.required<Weapon | Armor | any>();

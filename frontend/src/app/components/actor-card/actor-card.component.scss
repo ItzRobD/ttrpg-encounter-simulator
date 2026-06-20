@@ -1,0 +1,147 @@
+@use 'breakpoints' as bp;
+@use 'layout' as l;
+
+:host {
+  display: block;
+}
+
+.actor-card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-lg);
+}
+
+.ac-delete {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  z-index: 100;
+}
+
+:host ::ng-deep .ac-delete-btn {
+  width: 2rem;
+  height: 2rem;
+  color: var(--p-text-muted-color);
+  background: color-mix(in srgb, var(--p-text-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--p-text-color) 20%, transparent);
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    color: #fff;
+    background: color-mix(in srgb, var(--p-red-500) 70%, transparent);
+    border-color: var(--p-red-500);
+  }
+}
+
+// ── Header ──
+.ac-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: l.space(2);
+  width: 100%;
+
+  @include bp.above(bp.$bp-sm) {
+    flex-direction: row;
+  }
+}
+
+.ac-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  @include bp.above(bp.$bp-sm) {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+.ac-name {
+  font-family: var(--font-display-sub);
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.ac-sub {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.ac-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: l.space(1);
+  margin-top: l.space(1);
+
+  @include bp.above(bp.$bp-sm) {
+    justify-content: flex-start;
+  }
+}
+
+.ac-vitals {
+  display: flex;
+  align-items: center;
+  gap: l.space(3);
+}
+
+.ac-hp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: l.space(1);
+  min-width: 100px;
+}
+
+.ac-hp-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--p-text-muted-color);
+}
+
+.ac-hp-bar {
+  width: 100%;
+}
+
+.ac-defense {
+  display: flex;
+  flex-direction: column;
+}
+
+.ac-ac {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ac-init {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--p-primary-color);
+}
+
+// ── Inner panel headers (label + preview list) ──
+.ap-head {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  align-items: center;
+  gap: l.space(2);
+  width: 100%;
+}
+
+.ap-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.ap-list {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--p-text-color);
+}

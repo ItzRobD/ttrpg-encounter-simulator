@@ -1,6 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
@@ -20,9 +20,8 @@ import { SimulationStatsComponent } from '../../components/simulation-stats/simu
 
 @Component({
   selector: 'app-simulator-shell',
-  standalone: true,
   imports: [
-    CommonModule,
+    DecimalPipe,
     ButtonModule,
     TooltipModule,
     MessageModule,
@@ -36,21 +35,7 @@ import { SimulationStatsComponent } from '../../components/simulation-stats/simu
     SimulationStatsComponent
   ],
   templateUrl: './simulator-shell.html',
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-
-      .combatants-panel {
-        transition: all 0.3s ease-in-out;
-      }
-
-      .stats-panel {
-         transition: all 0.3s ease-in-out;
-      }
-    `,
-  ],
+  styleUrl: './simulator-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SimulatorShell {
@@ -66,16 +51,6 @@ export class SimulatorShell {
   public readonly isCharacterSelectorVisible = signal(false);
   public readonly isMonsterSelectorVisible = signal(false);
 
-  private readonly _timelineDebug = effect(() => {
-    this.timelineService.projectedState();
-  });
-
-  private readonly _logCombatants = effect(() => {
-    const combatants = this.combatantService.combatants();
-    console.log(`[SimulatorShell] Current combatants:`, combatants.map(c => ({ name: c.name, instanceId: c.instanceId })));
-  });
-
-  // Use BreakpointObserver with custom query from environment
   public readonly isXL = toSignal(
     this.breakpointObserver
       .observe(`(min-width: ${this.layout.breakpointXL})`)

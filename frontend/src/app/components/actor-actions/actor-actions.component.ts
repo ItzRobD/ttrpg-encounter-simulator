@@ -5,11 +5,10 @@ import { formatMonsterAction, formatMultiattack } from '../../shared/utils/dnd-u
 
 @Component({
   selector: 'app-actor-actions',
-  standalone: true,
   imports: [CardModule],
   templateUrl: './actor-actions.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './actor-actions.component.css',
+  styleUrl: './actor-actions.component.scss',
 })
 export class ActorActions {
   public readonly actor = input.required<Actor>();

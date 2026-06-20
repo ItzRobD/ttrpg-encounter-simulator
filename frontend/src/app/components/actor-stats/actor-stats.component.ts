@@ -13,11 +13,10 @@ import {
 
 @Component({
   selector: 'app-actor-stats',
-  standalone: true,
   imports: [TitleCasePipe],
   templateUrl: './actor-stats.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './actor-stats.component.css',
+  styleUrl: './actor-stats.component.scss',
 })
 export class ActorStats {
   public readonly actor = input.required<Actor>();

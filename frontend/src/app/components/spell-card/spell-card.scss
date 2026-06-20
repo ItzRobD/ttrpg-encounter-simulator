@@ -1,0 +1,132 @@
+@use 'layout' as l;
+
+:host {
+  display: block;
+}
+
+.spell-card {
+  display: block;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-lg);
+}
+
+.sp-body {
+  @include l.stack(3);
+}
+
+.sp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: l.space(2);
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+
+.sp-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-header-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.sp-name {
+  font-family: var(--font-display-sub);
+  font-size: 1.45rem;
+  font-weight: 600;
+}
+
+.sp-sub {
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.sp-cast {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.sp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: l.space(1);
+}
+
+.sp-field {
+  @include l.stack(1);
+}
+
+.sp-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.sp-desc {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--p-text-color);
+}
+
+.sp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: l.space(3);
+}
+
+.sp-value {
+  font-size: 0.875rem;
+
+  &.autohit {
+    font-weight: 600;
+    color: var(--p-green-500);
+  }
+}
+
+.sp-meta {
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}
+
+.sp-scaling {
+  padding-top: l.space(2);
+  border-top: 1px solid var(--p-content-border-color);
+}
+
+.sp-formulas {
+  @include l.stack(2);
+}
+
+.sp-formula {
+  @include l.stack(2);
+  padding: l.space(2);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 4%, transparent);
+}
+
+.sp-formula-level {
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.sp-formula-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sp-formula-val {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.sp-formula-dice {
+  font-weight: 600;
+  color: var(--p-primary-color);
+}

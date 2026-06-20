@@ -1,7 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input, model, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
 import { SharedTable } from '../shared-table/shared-table.component';
 import { CombatantService } from '../../services/combatant.service';
 import { MessageService } from 'primeng/api';
@@ -12,21 +10,14 @@ import { CharacterService } from '../../services/character.service';
 
 @Component({
   selector: 'app-actor-selector-dialog',
-  standalone: true,
   imports: [
-    CommonModule,
     DialogModule,
-    ButtonModule,
     SharedTable,
     ToastModule
   ],
   providers: [MessageService],
   templateUrl: './actor-selector-dialog.component.html',
-  styles: `
-    :host ::ng-deep .p-dialog-content {
-      padding: 0;
-    }
-  `,
+  styleUrl: './actor-selector-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ActorSelectorDialog {

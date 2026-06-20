@@ -1,0 +1,337 @@
+@use 'breakpoints' as bp;
+@use 'layout' as l;
+
+.me-error {
+  display: block;
+  margin-bottom: l.space(3);
+}
+
+.me-tab {
+  @include l.stack(3);
+  margin-top: l.space(3);
+}
+
+.me-tab-lg {
+  @include l.stack(4);
+  margin-top: l.space(3);
+}
+
+.me-tab-plain {
+  margin-top: l.space(3);
+}
+
+.me-field {
+  @include l.stack(1);
+}
+
+.me-label {
+  display: block;
+  margin-bottom: l.space(1);
+  font-weight: 700;
+}
+
+.me-label-sm {
+  display: block;
+  margin-bottom: l.space(1);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.me-label-xs {
+  display: block;
+  margin-bottom: l.space(1);
+  font-size: 0.75rem;
+}
+
+// ── Grids ──
+.me-grid2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: l.space(3);
+
+  @include bp.above(bp.$bp-md) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.me-grid4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: l.space(3);
+
+  @include bp.above(bp.$bp-md) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+// ── HP row ──
+.me-hp-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: l.space(3);
+}
+
+.me-hp-total {
+  flex: 1 1 14rem;
+}
+
+.me-hp-small {
+  flex: 1 1 6rem;
+}
+
+.me-hp-box {
+  padding: l.space(2);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 5%, transparent);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+// ── Section headers / lists ──
+.me-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: l.space(2);
+  margin-bottom: l.space(3);
+
+  &.me-head-spaced {
+    margin-top: l.space(4);
+  }
+}
+
+.me-head-title {
+  margin: 0;
+}
+
+.me-list {
+  @include l.stack(2);
+}
+
+.me-list3 {
+  @include l.stack(3);
+}
+
+.me-empty {
+  padding: l.space(4);
+  border: 1px dashed var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  text-align: center;
+  font-style: italic;
+  color: var(--p-text-muted-color);
+}
+
+// Resistance rows: bordered card with an inline trash (matches the action cards;
+// no corner-X that reads as a dialog close).
+.me-res {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: l.space(3);
+  padding: l.space(2);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 4%, transparent);
+}
+
+.me-section {
+  @include l.stack(2);
+}
+
+.me-section-title {
+  padding-bottom: l.space(1);
+  border-bottom: 1px solid var(--p-content-border-color);
+  font-size: 0.875rem;
+  font-weight: 700;
+
+  &.block {
+    display: block;
+    margin-bottom: l.space(2);
+  }
+}
+
+// ── Checkbox groups ──
+.me-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: l.space(3);
+}
+
+.me-check {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.me-check-label {
+  font-size: 0.875rem;
+
+  &.bold {
+    font-weight: 700;
+  }
+
+  &.bold-xs {
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+}
+
+// ── Numeric label/input rows ──
+.me-num-list {
+  @include l.stack(2);
+}
+
+.me-num-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.me-num-label {
+  font-size: 0.875rem;
+}
+
+// ── Burst/death cards ──
+.me-card {
+  padding: l.space(2);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 3%, transparent);
+}
+
+.me-card-title {
+  margin-bottom: l.space(2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.me-kv {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.me-kv-label {
+  font-size: 0.75rem;
+}
+
+// ── Action / legendary-action cards ──
+.me-action {
+  position: relative;
+  padding: l.space(3);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--p-text-color) 10%, transparent);
+}
+
+.me-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+}
+
+.me-action-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: l.space(3);
+}
+
+.me-af-name {
+  flex: 1 1 16rem;
+}
+
+.me-af-sm {
+  flex: 1 1 8rem;
+}
+
+.me-af-full {
+  flex: 1 1 100%;
+}
+
+.me-subsection {
+  margin-top: l.space(3);
+}
+
+.me-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: l.space(2);
+}
+
+.me-subhead-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+// ── Damage-block / DC rows ──
+.me-block {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: l.space(2);
+  padding: l.space(2);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 4%, transparent);
+}
+
+.me-bk {
+  flex: 1 1 6rem;
+
+  &.wide {
+    flex: 1 1 9rem;
+  }
+}
+
+.me-dc-box {
+  margin-top: l.space(3);
+  padding: l.space(2);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 6%, transparent);
+}
+
+.me-dc-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: l.space(2);
+  margin-top: l.space(2);
+}
+
+// ── Spellcasting toggles ──
+.me-toggle-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: l.space(3);
+  margin-bottom: l.space(3);
+  padding: l.space(3);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 3%, transparent);
+}
+
+.me-note {
+  font-style: italic;
+  color: var(--p-text-muted-color);
+}
+
+// ── Footer ──
+.me-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: l.space(4);
+}
+
+.me-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: l.space(2);
+}

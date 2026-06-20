@@ -1,0 +1,69 @@
+@use 'layout' as l;
+
+.tbl-error {
+  margin-bottom: l.space(3);
+}
+
+.cell-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tbl-name {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.tbl-icons {
+  display: flex;
+  gap: l.space(1);
+
+  &.end {
+    justify-content: flex-end;
+  }
+}
+
+.tbl-ico {
+  font-size: 0.75rem;
+
+  &.c-yellow { color: var(--p-yellow-500); }
+  &.c-blue { color: var(--p-blue-500); }
+  &.c-cyan { color: var(--p-cyan-500); }
+  &.c-orange { color: var(--p-orange-500); }
+  &.c-purple { color: var(--p-purple-500); }
+  &.c-red { color: var(--p-red-500); }
+}
+
+.property-icon,
+.custom-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  font-size: 0.6rem;
+  font-weight: 700;
+  cursor: help;
+}
+
+.custom-badge {
+  color: var(--p-primary-contrast-color);
+  background: var(--p-primary-color);
+  border: 1px solid var(--p-primary-color);
+}
+
+@each $name in ('blue', 'green', 'red', 'orange', 'purple', 'cyan') {
+  .property-icon.prop-#{$name} {
+    color: var(--p-#{$name}-600);
+    background: color-mix(in srgb, var(--p-#{$name}-500) 20%, transparent);
+  }
+}
+
+.tbl-empty {
+  padding: l.space(4);
+  text-align: center;
+  color: var(--p-text-muted-color);
+}

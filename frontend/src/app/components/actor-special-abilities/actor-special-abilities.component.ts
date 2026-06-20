@@ -1,12 +1,12 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { Actor } from '../../models';
 
 @Component({
   selector: 'app-actor-special-abilities',
-  standalone: true,
   imports: [],
   templateUrl: './actor-special-abilities.component.html',
-  styleUrl: './actor-special-abilities.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './actor-special-abilities.component.scss',
 })
 export class ActorSpecialAbilities {
   public readonly actor = input.required<Actor>();

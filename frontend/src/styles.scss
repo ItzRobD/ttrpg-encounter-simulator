@@ -1,0 +1,46 @@
+// Global styles. Layout vocabulary lives in src/styles/_breakpoints.scss +
+// _layout.scss and is `@use`d by components. `@use` must precede `@import`.
+
+@use 'scrollbars';
+
+@import "primeicons/primeicons.css";
+
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; padding: 0; }
+}
+
+// color-scheme follows our .app-dark toggle (not the OS) so native UI (scrollbars,
+// form controls, focus rings) matches the app theme.
+:root      { --app-canvas: #f7f7f8; color-scheme: light; }
+.app-dark  { --app-canvas: #050507; color-scheme: dark; }
+
+// Display faces — Cinzel (Roman-inscriptional caps) for page + section headers;
+// Cormorant Garamond (refined serif) for sub-headers and entity names. The pair
+// gives one bold stat-block statement with calmer supporting type.
+:root {
+  --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+  --font-display-sub: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+}
+
+// Modal + drawer titles share the display face so dialogs match the page headers.
+.p-dialog-title, .p-drawer-title {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+html, body { min-height: 100vh; }
+body {
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  // System fonts that exist on Linux (no -apple-system / Segoe-only stack).
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans",
+               Cantarell, Ubuntu, Arial, sans-serif, "Apple Color Emoji",
+               "Segoe UI Emoji", "Segoe UI Symbol";
+  background: var(--app-canvas);
+  color: var(--p-text-color);
+}
+
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+input, button, textarea, select { font: inherit; }
+p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }

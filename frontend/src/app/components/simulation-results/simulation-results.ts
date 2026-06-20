@@ -7,7 +7,7 @@ import {SimulationStateService} from '../../services/simulation-state.service';
 import {TreeTableModule} from 'primeng/treetable';
 import {SliderModule} from 'primeng/slider';
 import {FormsModule} from '@angular/forms';
-import {CommonModule, TitleCasePipe} from '@angular/common';
+import {DecimalPipe, TitleCasePipe} from '@angular/common';
 import {ButtonModule} from 'primeng/button';
 import {TooltipModule} from 'primeng/tooltip';
 import {DiceType, EventType, SimulationEvent} from '../../models';
@@ -18,9 +18,9 @@ import {CombatantService} from '../../services/combatant.service';
 
 @Component({
   selector: 'app-simulation-results',
-  standalone: true,
   imports: [
-    CommonModule,
+    DecimalPipe,
+    TitleCasePipe,
     FormsModule,
     Tab,
     Tabs,
@@ -34,7 +34,7 @@ import {CombatantService} from '../../services/combatant.service';
   providers: [TitleCasePipe],
   templateUrl: './simulation-results.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './simulation-results.css',
+  styleUrl: './simulation-results.scss',
 })
 export class SimulationResults {
   public readonly simulationService = inject(SimulationService);

@@ -1,45 +1,33 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { InputTextModule } from 'primeng/inputtext';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
+import { TabsModule } from 'primeng/tabs';
 import { ConfirmationService, MessageService } from 'primeng/api';
+import { LibraryPage } from '../../components/library-page/library-page';
 import { SharedTable } from '../../components/shared-table/shared-table.component';
 import { MonsterService } from '../../services/monster.service';
 import { ActorCard } from '../../components/actor-card/actor-card.component';
 import { MonsterEditorComponent } from '../../components/editors/monster-editor/monster-editor';
-import { Actor, ActorSummary } from '../../models';
+import { Actor } from '../../models';
 import { CombatantService } from '../../services/combatant.service';
-
-import { TabsModule } from 'primeng/tabs';
 
 @Component({
   selector: 'app-bestiary-shell',
   imports: [
     ButtonModule,
     TooltipModule,
-    IconFieldModule,
-    InputIconModule,
-    InputTextModule,
     ConfirmDialogModule,
+    ToastModule,
+    TabsModule,
+    LibraryPage,
     SharedTable,
     ActorCard,
     MonsterEditorComponent,
-    ToastModule,
-    TabsModule
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './bestiary-shell.html',
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-    `,
-  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BestiaryShell implements OnInit {
@@ -82,15 +70,6 @@ export class BestiaryShell implements OnInit {
         this.monsterService.deleteMonster(monster.id).subscribe();
       }
     });
-  }
-
-  onSearch(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.searchTerm.set(target.value);
-  }
-
-  onClearSearch(): void {
-    this.searchTerm.set('');
   }
 
   onAddToSimulator(monster: Actor): void {

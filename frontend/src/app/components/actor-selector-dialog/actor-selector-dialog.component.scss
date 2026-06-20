@@ -1,0 +1,9 @@
+@use 'layout' as l;
+
+:host ::ng-deep .p-dialog-content {
+  padding: 0;
+}
+
+.dialog-body {
+  padding: l.space(4);
+}

@@ -1,14 +1,13 @@
 <div [formGroup]="group()" class="ability-grid">
   @for (ability of abilities; track ability.key) {
     <div class="ability-card">
-      <div class="flex align-items-center gap-1">
+      <div class="ability-head">
         <div class="ability-label">{{ ability.short }}</div>
         <i
           class="prof-toggle pi"
           [class.pi-star-fill]="isProficient(ability.key)"
-          [class.text-primary]="isProficient(ability.key)"
           [class.pi-star]="!isProficient(ability.key)"
-          [class.text-400]="!isProficient(ability.key)"
+          [class.on]="isProficient(ability.key)"
           (click)="toggleProficiency(ability.key)"
           [pTooltip]="isProficient(ability.key) ? 'Proficient' : 'Not Proficient'"
         ></i>
@@ -20,7 +19,6 @@
           [min]="1"
           [max]="30"
           [showButtons]="true"
-          class="w-full"
         ></p-inputNumber>
       </div>
 

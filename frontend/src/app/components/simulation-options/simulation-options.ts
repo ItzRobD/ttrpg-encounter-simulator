@@ -1,5 +1,4 @@
 import { Component, inject, input, output, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DrawerModule } from 'primeng/drawer';
 import { ButtonModule } from 'primeng/button';
@@ -14,9 +13,7 @@ import {environment} from '../../../environments/environment';
 
 @Component({
   selector: 'app-simulation-options',
-  standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     DrawerModule,
     ButtonModule,
@@ -31,7 +28,7 @@ import {environment} from '../../../environments/environment';
   ],
   templateUrl: './simulation-options.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './simulation-options.css'
+  styleUrl: './simulation-options.scss'
 })
 export class SimulationOptionsComponent {
   private readonly simulationService = inject(SimulationService);

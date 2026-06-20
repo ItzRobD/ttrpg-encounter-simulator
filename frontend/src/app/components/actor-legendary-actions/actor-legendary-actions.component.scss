@@ -1,0 +1,32 @@
+@use 'layout' as l;
+
+:host {
+  display: block;
+}
+
+.la-wrap {
+  @include l.stack(1);
+  margin-top: l.space(2);
+  padding: l.space(1);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+}
+
+.la-card {
+  display: block;
+  width: 100%;
+}
+
+.la-row {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.la-icon {
+  color: var(--p-primary-color);
+}
+
+.la-text {
+  font-size: 0.875rem;
+}

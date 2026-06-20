@@ -1,111 +1,45 @@
-<div class="surface-card p-2 md:p-5 border-round shadow-2">
-  <div class="flex flex-column md:flex-row justify-content-between align-items-center mb-4 gap-3">
-    <h1 class="text-2xl md:text-3xl font-bold m-0 text-center md:text-left">Equipment</h1>
-    <div class="flex gap-2 w-full md:w-auto">
-      <p-button
-        label="Import Item"
-        icon="pi pi-download"
-        severity="secondary"
-        class="flex-grow-1 md:flex-grow-0"
-      ></p-button>
-      <p-button
-        label="Create Item"
-        icon="pi pi-plus"
-        severity="primary"
-        class="flex-grow-1 md:flex-grow-0"
-        (onClick)="onCreateItem()"
-      ></p-button>
-    </div>
-  </div>
+<app-library-page
+  title="Equipment"
+  description="Browse and manage weapons and armor for your characters."
+  listTitle="Items"
+  detailTitle="Item Details"
+  emptyMessage="Select an item from the list to view its details."
+  [hasSelection]="!!equipmentService.selectedEquipment()"
+  [search]="searchTerm()"
+  (searchChange)="searchTerm.set($event)"
+>
+  <ng-container actions>
+    <p-button label="Import Item" icon="pi pi-download" severity="secondary"></p-button>
+    <p-button label="Create Item" icon="pi pi-plus" severity="primary" (onClick)="onCreateItem()"></p-button>
+  </ng-container>
 
-  <p class="text-700 line-height-3 hidden md:block">
-    Browse and manage weapons and armor for your characters.
-  </p>
+  <p-tabs tabs [value]="activeTab()" (valueChange)="onTabChange($event)">
+    <p-tablist>
+      <p-tab value="all">All</p-tab>
+      <p-tab value="armor">Armor</p-tab>
+      <p-tab value="weapons">Weapons</p-tab>
+    </p-tablist>
+  </p-tabs>
 
-  <div class="flex flex-column md:flex-row mt-4 md:mt-6 gap-3 overflow-hidden">
-    <!-- Equipment List Column -->
-    <div class="w-full md:w-5 lg:w-7 flex-shrink-0">
-      <div class="flex flex-column gap-4 border-1 surface-border border-round p-3 h-full overflow-hidden">
-        <div class="flex justify-content-between align-items-center">
-          <h3 class="text-xl font-semibold m-0 white-space-nowrap">
-            Items
-          </h3>
-          <div class="flex gap-2">
-            <p-iconfield iconPosition="left" class="w-full md:w-12rem lg:w-15rem">
-              <p-inputicon class="pi pi-search"></p-inputicon>
-              <input
-                type="text"
-                pInputText
-                placeholder="Search..."
-                class="w-full p-inputtext-sm"
-                [value]="searchTerm()"
-                (input)="onSearch($event)"
-              />
-              @if (searchTerm()) {
-                <p-inputicon
-                  class="pi pi-times cursor-pointer"
-                  (click)="onClearSearch()"
-                ></p-inputicon>
-              }
-            </p-iconfield>
-          </div>
-        </div>
+  <app-shared-table
+    list
+    mode="equipment"
+    [searchTerm]="searchTerm()"
+    [categoryFilter]="activeTab()"
+  ></app-shared-table>
 
-        <div class="flex flex-column gap-2 flex-1 overflow-auto">
-          <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)">
-            <p-tablist>
-              <p-tab value="all">All</p-tab>
-              <p-tab value="armor">Armor</p-tab>
-              <p-tab value="weapons">Weapons</p-tab>
-            </p-tablist>
-          </p-tabs>
-          <!-- Equipment Table -->
-          <app-shared-table
-            mode="equipment"
-            [searchTerm]="searchTerm()"
-            [categoryFilter]="activeTab()"
-          ></app-shared-table>
-        </div>
-      </div>
-    </div>
+  <ng-container detailActions>
+    @if (equipmentService.selectedEquipment(); as item) {
+      <p-button icon="pi pi-pencil" [text]="true" pTooltip="Edit Item" (onClick)="onEditItem(item)"></p-button>
+      <p-button icon="pi pi-trash" severity="danger" [text]="true" pTooltip="Delete Item" (onClick)="onDeleteItem(item)"></p-button>
+    }
+  </ng-container>
 
-    <!-- Equipment Detail Column -->
-    <div class="flex-1 min-w-0">
-      <div class="p-2 md:p-4 border-1 surface-border border-round h-full min-h-20rem">
-        <div class="flex justify-content-between align-items-center mb-4 border-bottom-1 surface-border pb-3">
-          <h3 class="text-xl font-semibold m-0">Item Details</h3>
-          @if (equipmentService.selectedEquipment(); as item) {
-            <div class="flex gap-2">
-              <p-button
-                icon="pi pi-pencil"
-                [text]="true"
-                pTooltip="Edit Item"
-                (onClick)="onEditItem(item)"
-              ></p-button>
-              <p-button
-                icon="pi pi-trash"
-                severity="danger"
-                [text]="true"
-                pTooltip="Delete Item"
-                (onClick)="onDeleteItem(item)"
-              ></p-button>
-            </div>
-          }
-        </div>
+  <ng-container detail>
+    @if (equipmentService.selectedEquipment(); as item) {
+      <app-equipment-card [item]="item"></app-equipment-card>
+    }
+  </ng-container>
+</app-library-page>
 
-        <div class="flex flex-column gap-3">
-          @if (equipmentService.selectedEquipment(); as item) {
-            <app-equipment-card [item]="item"></app-equipment-card>
-          } @else {
-            <p class="text-600 italic">Select an item from the list to view its details.</p>
-          }
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<app-equipment-editor
-  [(visible)]="isEditorVisible"
-  [itemToEdit]="itemToEdit()"
-></app-equipment-editor>
+<app-equipment-editor [(visible)]="isEditorVisible" [itemToEdit]="itemToEdit()"></app-equipment-editor>

@@ -1,43 +1,37 @@
-<p-card class="p-fluid border-1 surface-border">
-  <div class="flex flex-column gap-3">
-    <!-- Header -->
-    <div class="flex justify-content-between align-items-center border-bottom-1 surface-border pb-2">
-      <div class="flex flex-column">
-        <span class="text-xl font-bold">{{ item().name || 'Unnamed Spell' }}</span>
-        <span class="text-sm text-500">
-          {{ levelDisplay() }} {{ item().levelType | titlecase }}
-        </span>
+<p-card class="spell-card">
+  <div class="sp-body">
+    <div class="sp-header">
+      <div class="sp-title">
+        <span class="sp-name">{{ item().name || 'Unnamed Spell' }}</span>
+        <span class="sp-sub">{{ levelDisplay() }} {{ item().levelType | titlecase }}</span>
       </div>
-      <div class="flex flex-column align-items-end">
-        <span class="text-xs font-bold uppercase text-600">Casting Time</span>
-        <span class="text-sm font-semibold">{{ item().castingTime | titlecase }}</span>
+      <div class="sp-header-side">
+        <span class="sp-label">Casting Time</span>
+        <span class="sp-cast">{{ item().castingTime | titlecase }}</span>
       </div>
     </div>
 
-    <!-- Tags (Concentration, Ritual) -->
     @if (spellTags().length > 0) {
-      <div class="flex flex-wrap gap-1">
+      <div class="sp-tags">
         @for (tag of spellTags(); track tag.label) {
           <p-tag [value]="tag.label" [severity]="tag.severity" [dt]="{ fontSize: '0.7rem' }"></p-tag>
         }
       </div>
     }
 
-    <!-- Description -->
-    <div class="flex flex-column gap-1">
-      <span class="text-xs font-bold uppercase text-600">Description</span>
-      <p class="text-sm m-0 line-height-3 text-700" [innerHTML]="item().description"></p>
+    <div class="sp-field">
+      <span class="sp-label">Description</span>
+      <p class="sp-desc" [innerHTML]="item().description"></p>
     </div>
 
-    <!-- Spell Details -->
-    <div class="grid mt-1">
-      <div class="col-6 flex flex-column gap-1">
-        <span class="text-xs font-bold uppercase text-600">Type</span>
-        <span class="text-sm">{{ item().spellType | titlecase }}</span>
+    <div class="sp-grid">
+      <div class="sp-field">
+        <span class="sp-label">Type</span>
+        <span class="sp-value">{{ item().spellType | titlecase }}</span>
       </div>
-      <div class="col-6 flex flex-column gap-1">
-        <span class="text-xs font-bold uppercase text-600">Range/Area</span>
-        <span class="text-sm">
+      <div class="sp-field">
+        <span class="sp-label">Range/Area</span>
+        <span class="sp-value">
           @if (item().isAOE) {
             AOE
           } @else if (item().isTouch) {
@@ -48,57 +42,54 @@
         </span>
       </div>
       @if (item().hasDC && item().spellDC.ability) {
-        <div class="col-6 flex flex-column gap-1">
-          <span class="text-xs font-bold uppercase text-600">Save DC</span>
-          <span class="text-sm">
+        <div class="sp-field">
+          <span class="sp-label">Save DC</span>
+          <span class="sp-value">
             {{ item().spellDC.ability | titlecase }}
-            <span class="text-500 text-xs">
+            <span class="sp-meta">
               ({{ (item().spellDC.onSuccess === 'half' ? 'Half damage' : (item().spellDC.onSuccess === 'none' ? 'No damage' : (item().spellDC.onSuccess || ''))) | titlecase }} on success)
             </span>
           </span>
         </div>
       }
       @if (item().isAutoHit) {
-        <div class="col-6 flex flex-column gap-1">
-          <span class="text-xs font-bold uppercase text-600">Hit</span>
-          <span class="text-sm text-success font-semibold">Auto-Hit</span>
+        <div class="sp-field">
+          <span class="sp-label">Hit</span>
+          <span class="sp-value autohit">Auto-Hit</span>
         </div>
       }
     </div>
 
-    <!-- Formulas (Detailed display) -->
     @if (item().spellType !== 'other') {
-    @if (sortedFormulas(); as formulas) {
-      @if (formulas.length > 0) {
-        <div class="flex flex-column gap-1 border-top-1 surface-border pt-2">
-          <span class="text-xs font-bold uppercase text-600">Scaling</span>
-          <div class="flex flex-column gap-2 mt-1">
-            @for (item of formulas; track item.level) {
-              <div class="flex flex-column p-2 border-round surface-50 text-sm gap-2">
-                <span class="font-bold">Level {{ item.level }}</span>
-                @for (formula of item.formulas; track $index) {
-                  <div class="flex align-items-center justify-content-between">
-                    <div class="flex flex-column">
-                      <span class="text-xs text-500">{{ formula.damageType | titlecase }}</span>
+      @if (sortedFormulas(); as formulas) {
+        @if (formulas.length > 0) {
+          <div class="sp-field sp-scaling">
+            <span class="sp-label">Scaling</span>
+            <div class="sp-formulas">
+              @for (item of formulas; track item.level) {
+                <div class="sp-formula">
+                  <span class="sp-formula-level">Level {{ item.level }}</span>
+                  @for (formula of item.formulas; track $index) {
+                    <div class="sp-formula-row">
+                      <span class="sp-meta">{{ formula.damageType | titlecase }}</span>
+                      <div class="sp-formula-val">
+                        <span class="sp-formula-dice">
+                          @if (formula.numberOfDice > 0 && formula.die > 0) {
+                            {{ formula.numberOfDice }}d{{ formula.die }}{{ formula.amountToAdd ? (formula.amountToAdd > 0 ? '+' : '') + formula.amountToAdd : '' }}
+                          } @else {
+                            {{ formula.amountToAdd || '??' }}
+                          }
+                        </span>
+                        <span class="sp-meta">Avg: {{ formula.averageValue }}</span>
+                      </div>
                     </div>
-                    <div class="flex flex-column align-items-end">
-                      <span class="font-semibold text-primary">
-                        @if (formula.numberOfDice > 0 && formula.die > 0) {
-                        {{ formula.numberOfDice }}d{{ formula.die }}{{ formula.amountToAdd ? (formula.amountToAdd > 0 ? '+' : '') + formula.amountToAdd : '' }}
-                        } @else {
-                          {{ formula.amountToAdd || '??' }}
-                        }
-                      </span>
-                      <span class="text-xs text-600">Avg: {{ formula.averageValue }}</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
+                  }
+                </div>
+              }
+            </div>
           </div>
-        </div>
+        }
       }
-    }
     }
   </div>
 </p-card>

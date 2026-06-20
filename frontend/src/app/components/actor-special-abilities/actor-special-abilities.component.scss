@@ -1,0 +1,40 @@
+@use 'layout' as l;
+
+:host {
+  display: block;
+}
+
+.sa-list {
+  @include l.stack(2);
+  margin-top: l.space(2);
+}
+
+.sa-item {
+  @include l.stack(1);
+  padding: l.space(2);
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: color-mix(in srgb, var(--p-text-color) 3%, transparent);
+}
+
+.sa-head {
+  display: flex;
+  align-items: center;
+  gap: l.space(2);
+}
+
+.sa-icon {
+  font-size: 0.7rem;
+  color: var(--p-primary-color);
+}
+
+.sa-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sa-desc {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+}

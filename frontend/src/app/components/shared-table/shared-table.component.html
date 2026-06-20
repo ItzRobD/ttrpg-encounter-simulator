@@ -1,6 +1,6 @@
 @if (activeService().error()) {
-  <div class="mb-3">
-    <p-message severity="error" [text]="activeService().error()!" styleClass="w-full"></p-message>
+  <div class="tbl-error">
+    <p-message severity="error" [text]="activeService().error()!"></p-message>
   </div>
 }
 
@@ -143,56 +143,56 @@
           ></p-button>
         </td>
       }
-      <td class="white-space-nowrap overflow-hidden text-overflow-ellipsis">
-        <div class="flex align-items-center gap-2">
+      <td class="cell-ellipsis">
+        <div class="tbl-name">
           <span>{{ item.name | titlecase }}</span>
           @if (item.isCustom) {
             <span class="custom-badge" pTooltip="Custom Content">C</span>
           }
           @if (!isMobile()) {
-            <div class="flex gap-1">
+            <div class="tbl-icons">
               @if (mode() === 'monster') {
                 @if (item.isLegendary) {
-                  <i class="pi pi-star-fill text-yellow-500 text-xs" pTooltip="Legendary"></i>
+                  <i class="pi pi-star-fill tbl-ico c-yellow" pTooltip="Legendary"></i>
                 }
                 @if (item.isSpellcaster) {
-                  <i class="pi pi-bolt text-blue-500 text-xs" pTooltip="Spellcaster"></i>
+                  <i class="pi pi-bolt tbl-ico c-blue" pTooltip="Spellcaster"></i>
                 }
                 @if (item.isInnateCaster) {
-                  <i class="pi pi-sparkles text-cyan-500 text-xs" pTooltip="Innate Caster"></i>
+                  <i class="pi pi-sparkles tbl-ico c-cyan" pTooltip="Innate Caster"></i>
                 }
               } @else if (mode() === 'spells') {
                 @if (item.isConcentration) {
-                  <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
+                  <i class="pi pi-stopwatch tbl-ico c-orange" pTooltip="Concentration"></i>
                 }
                 @if (item.isRitual) {
-                  <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
+                  <i class="pi pi-book tbl-ico c-blue" pTooltip="Ritual"></i>
                 }
                 @if (item.isAOE) {
-                  <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
+                  <i class="pi pi-users tbl-ico c-purple" pTooltip="AOE"></i>
                 }
                 @if (item.hasDC) {
-                  <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
+                  <i class="pi pi-shield tbl-ico c-red" pTooltip="Has Save DC"></i>
                 }
               } @else if (mode() === 'equipment' && item.type === 'Weapon' && item.properties) {
                 @let props = item.properties;
                 @if (props.isVersatile) {
-                  <span class="property-icon bg-blue-100 text-blue-700" pTooltip="Versatile">V</span>
+                  <span class="property-icon prop-blue" pTooltip="Versatile">V</span>
                 }
                 @if (props.isFinesse) {
-                  <span class="property-icon bg-green-100 text-green-700" pTooltip="Finesse">F</span>
+                  <span class="property-icon prop-green" pTooltip="Finesse">F</span>
                 }
                 @if (props.isHeavy) {
-                  <span class="property-icon bg-red-100 text-red-700" pTooltip="Heavy">H</span>
+                  <span class="property-icon prop-red" pTooltip="Heavy">H</span>
                 }
                 @if (props.isLight) {
-                  <span class="property-icon bg-orange-100 text-orange-700" pTooltip="Light">L</span>
+                  <span class="property-icon prop-orange" pTooltip="Light">L</span>
                 }
                 @if (props.isThrown) {
-                  <span class="property-icon bg-purple-100 text-purple-700" pTooltip="Thrown">T</span>
+                  <span class="property-icon prop-purple" pTooltip="Thrown">T</span>
                 }
                 @if (props.isRanged) {
-                  <span class="property-icon bg-cyan-100 text-cyan-700" pTooltip="Ranged">R</span>
+                  <span class="property-icon prop-cyan" pTooltip="Ranged">R</span>
                 }
               }
             </div>
@@ -201,8 +201,7 @@
       </td>
 
       @if (mode() === 'monster') {
-        <td
-          class="white-space-nowrap overflow-hidden text-overflow-ellipsis">
+        <td class="cell-ellipsis">
           {{ item.type.toLowerCase().includes('swarm') ? 'Swarm' : (item.type | titlecase) }}
         </td>
         @if (!isMobile()) {
@@ -226,49 +225,49 @@
 
       @if (isMobile()) {
         <td>
-          <div class="flex gap-1 justify-content-end">
+          <div class="tbl-icons end">
             @if (mode() === 'monster' || mode() === 'character') {
               @if (item.isLegendary) {
-                <i class="pi pi-star-fill text-yellow-500 text-xs" pTooltip="Legendary"></i>
+                <i class="pi pi-star-fill tbl-ico c-yellow" pTooltip="Legendary"></i>
               }
               @if (item.isSpellcaster) {
-                <i class="pi pi-bolt text-blue-500 text-xs" pTooltip="Spellcaster"></i>
+                <i class="pi pi-bolt tbl-ico c-blue" pTooltip="Spellcaster"></i>
               }
               @if (item.isInnateCaster) {
-                <i class="pi pi-sparkles text-cyan-500 text-xs" pTooltip="Innate Caster"></i>
+                <i class="pi pi-sparkles tbl-ico c-cyan" pTooltip="Innate Caster"></i>
               }
             } @else if (mode() === 'spells') {
               @if (item.isConcentration) {
-                <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
+                <i class="pi pi-stopwatch tbl-ico c-orange" pTooltip="Concentration"></i>
               }
               @if (item.isRitual) {
-                <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
+                <i class="pi pi-book tbl-ico c-blue" pTooltip="Ritual"></i>
               }
               @if (item.isAOE) {
-                <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
+                <i class="pi pi-users tbl-ico c-purple" pTooltip="AOE"></i>
               }
               @if (item.hasDC) {
-                <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
+                <i class="pi pi-shield tbl-ico c-red" pTooltip="Has Save DC"></i>
               }
             } @else if (mode() === 'equipment' && item.type === 'Weapon' && item.properties) {
               @let props = item.properties;
               @if (props.isVersatile) {
-                <span class="property-icon bg-blue-100 text-blue-700" pTooltip="Versatile">V</span>
+                <span class="property-icon prop-blue" pTooltip="Versatile">V</span>
               }
               @if (props.isFinesse) {
-                <span class="property-icon bg-green-100 text-green-700" pTooltip="Finesse">F</span>
+                <span class="property-icon prop-green" pTooltip="Finesse">F</span>
               }
               @if (props.isHeavy) {
-                <span class="property-icon bg-red-100 text-red-700" pTooltip="Heavy">H</span>
+                <span class="property-icon prop-red" pTooltip="Heavy">H</span>
               }
               @if (props.isLight) {
-                <span class="property-icon bg-orange-100 text-orange-700" pTooltip="Light">L</span>
+                <span class="property-icon prop-orange" pTooltip="Light">L</span>
               }
               @if (props.isThrown) {
-                <span class="property-icon bg-purple-100 text-purple-700" pTooltip="Thrown">T</span>
+                <span class="property-icon prop-purple" pTooltip="Thrown">T</span>
               }
               @if (props.isRanged) {
-                <span class="property-icon bg-cyan-100 text-cyan-700" pTooltip="Ranged">R</span>
+                <span class="property-icon prop-cyan" pTooltip="Ranged">R</span>
               }
             }
           </div>
@@ -278,7 +277,7 @@
   </ng-template>
   <ng-template pTemplate="emptymessage">
     <tr>
-      <td [attr.colspan]="isMobile() ? (mode() === 'monster' ? 5 : (mode() === 'character' ? 5 : (mode() === 'spells' ? 3 : 3))) : (mode() === 'monster' ? 6 : (mode() === 'character' ? 5 : (mode() === 'spells' ? 3 : 3)))" class="text-center p-4 text-600">
+      <td [attr.colspan]="isMobile() ? (mode() === 'monster' ? 5 : (mode() === 'character' ? 5 : (mode() === 'spells' ? 3 : 3))) : (mode() === 'monster' ? 6 : (mode() === 'character' ? 5 : (mode() === 'spells' ? 3 : 3)))" class="tbl-empty">
         No {{ mode() === 'monster' || mode() === 'character' || mode() === 'spells' ? mode() + (mode() === 'spells' ? '' : 's') : 'items' }} found.
       </td>
     </tr>

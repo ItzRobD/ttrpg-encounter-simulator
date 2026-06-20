@@ -1,5 +1,4 @@
 import { Component, input, OnInit, inject, OnChanges, SimpleChanges, signal, ChangeDetectionStrategy, computed, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormGroup, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -13,8 +12,9 @@ import { SpellsService } from '../../../services/spells.service';
 
 @Component({
   selector: 'app-spellcasting-editor',
-  imports: [CommonModule, ReactiveFormsModule, SelectModule, InputNumberModule, CheckboxModule, ButtonModule, FormsModule, TooltipModule],
+  imports: [ReactiveFormsModule, SelectModule, InputNumberModule, CheckboxModule, ButtonModule, FormsModule, TooltipModule],
   templateUrl: './spellcasting-editor.html',
+  styleUrl: './spellcasting-editor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SpellcastingEditorComponent implements OnInit, OnChanges {

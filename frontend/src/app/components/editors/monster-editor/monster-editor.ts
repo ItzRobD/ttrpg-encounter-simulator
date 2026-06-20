@@ -1,5 +1,4 @@
 import { Component, effect, OnInit, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
@@ -14,7 +13,6 @@ import { MessageModule } from 'primeng/message';
 import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
 import { FluidModule } from 'primeng/fluid';
-import { AccordionModule } from 'primeng/accordion';
 import { BaseEditorDirective } from '../base-editor.directive';
 import { MonsterSize, MonsterType, DiceType, DamageType, CasterType, Ability, ResistanceType, Actor, Action, DamageComponent, Conditions, ActorState, DamageResistances } from '../../../models';
 import { CustomActorType } from '../../../services/custom-content.service';
@@ -61,7 +59,6 @@ interface EditableMonster {
 @Component({
   selector: 'app-monster-editor',
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     DialogModule,
     ButtonModule,
@@ -75,11 +72,11 @@ interface EditableMonster {
     TooltipModule,
     TabsModule,
     FluidModule,
-    AccordionModule,
     AbilityScoreEditorComponent,
     SpellcastingEditorComponent
   ],
   templateUrl: './monster-editor.html',
+  styleUrl: './monster-editor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MonsterEditorComponent extends BaseEditorDirective<Actor> implements OnInit {

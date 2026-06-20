@@ -1,69 +1,27 @@
 @if (environmentName === 'dev' || environmentName === 'local') {
-  <div class="env-banner"></div>
-  <div class="env-tab">
-    {{ environmentName | titlecase }}
-  </div>
+  <div class="env-bar"></div>
+  <div class="env-tab">{{ environmentName | titlecase }}</div>
 }
 
-<div class="layout-wrapper flex flex-column md:flex-row min-h-screen">
+<div class="layout" [class.nav-collapsed]="isSidebarCollapsed()" [class.nav-autoslide]="autoSlideSidebar()">
   <p-drawer [(visible)]="visible" header="D&D Simulator">
-    <div class="flex flex-column gap-2">
-      <a
-        routerLink="/"
-        routerLinkActive="font-bold"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors"
-        (click)="visible = false"
-      >
-        <i class="pi pi-bolt mr-2"></i>Simulator
-      </a>
-      <a
-        routerLink="/characters"
-        routerLinkActive="font-bold"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors"
-        (click)="visible = false"
-      >
-        <i class="pi pi-users mr-2"></i>Characters
-      </a>
-      <a
-        routerLink="/bestiary"
-        routerLinkActive="font-bold"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors"
-        (click)="visible = false"
-      >
-        <i class="pi pi-book mr-2"></i>Bestiary
-      </a>
-      <a
-        routerLink="/equipment"
-        routerLinkActive="font-bold"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors"
-        (click)="visible = false"
-      >
-        <i class="pi pi-shield mr-2"></i>Equipment
-      </a>
-      <a
-        routerLink="/spells"
-        routerLinkActive="font-bold"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors"
-        (click)="visible = false"
-      >
-        <i class="pi pi-bolt mr-2"></i>Spells
-      </a>
-      <a
-        routerLink="/history"
-        routerLinkActive="font-bold"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors"
-        (click)="visible = false"
-      >
-        <i class="pi pi-history mr-2"></i>History
-      </a>
-    </div>
+    <nav class="drawer-nav">
+      @for (item of navItems; track item.route) {
+        <a
+          class="nav-link"
+          [routerLink]="item.route"
+          [routerLinkActiveOptions]="{ exact: !!item.exact }"
+          routerLinkActive="is-active"
+          (click)="visible = false"
+        >
+          <i [class]="item.icon"></i><span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+    </nav>
   </p-drawer>
-  <aside
-    class="sidebar hidden md:flex flex-column surface-card border-right-1 surface-border"
-    [class.sidebar-mini]="autoSlideSidebar() && isSidebarCollapsed()"
-    [style.width]="isSidebarCollapsed() ? (autoSlideSidebar() ? '60px' : '60px') : '12rem'"
-  >
-    <div class="h-4rem p-3 border-bottom-1 surface-border flex align-items-center overflow-hidden">
+
+  <aside class="sidebar">
+    <div class="sidebar-head">
       <p-button
         [icon]="isSidebarCollapsed() ? 'pi pi-chevron-right' : 'pi pi-chevron-left'"
         (onClick)="toggleSidebar()"
@@ -71,101 +29,91 @@
         severity="secondary"
         size="small"
         [pTooltip]="isSidebarCollapsed() ? 'Expand Sidebar' : 'Collapse Sidebar'"
+        tooltipPosition="right"
       ></p-button>
-      <span class="text-xl font-bold ml-2 white-space-nowrap" [class.hidden]="isSidebarCollapsed()">D&D Sim</span>
+      <span class="brand">D&D Sim</span>
     </div>
-    <nav class="flex-1 p-2 flex flex-column gap-2 overflow-x-hidden">
-      <a
-        routerLink="/"
-        [routerLinkActiveOptions]="{ exact: true }"
-        routerLinkActive="surface-200"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline flex align-items-center"
-        [pTooltip]="isSidebarCollapsed() ? 'Simulator' : ''"
-        tooltipPosition="right"
-      >
-        <i class="pi pi-bolt"></i>
-        <span class="ml-2 white-space-nowrap" [class.hidden]="isSidebarCollapsed()">Simulator</span>
-      </a>
-      <a
-        routerLink="/characters"
-        routerLinkActive="surface-200"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline flex align-items-center"
-        [pTooltip]="isSidebarCollapsed() ? 'Characters' : ''"
-        tooltipPosition="right"
-      >
-        <i class="pi pi-users"></i>
-        <span class="ml-2 white-space-nowrap" [class.hidden]="isSidebarCollapsed()">Characters</span>
-      </a>
-      <a
-        routerLink="/bestiary"
-        routerLinkActive="surface-200"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline flex align-items-center"
-        [pTooltip]="isSidebarCollapsed() ? 'Bestiary' : ''"
-        tooltipPosition="right"
-      >
-        <i class="pi pi-book"></i>
-        <span class="ml-2 white-space-nowrap" [class.hidden]="isSidebarCollapsed()">Bestiary</span>
-      </a>
-      <a
-        routerLink="/equipment"
-        routerLinkActive="surface-200"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline flex align-items-center"
-        [pTooltip]="isSidebarCollapsed() ? 'Equipment' : ''"
-        tooltipPosition="right"
-      >
-        <i class="pi pi-shield"></i>
-        <span class="ml-2 white-space-nowrap" [class.hidden]="isSidebarCollapsed()">Equipment</span>
-      </a>
-      <a
-        routerLink="/spells"
-        routerLinkActive="surface-200"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline flex align-items-center"
-        [pTooltip]="isSidebarCollapsed() ? 'Spells' : ''"
-        tooltipPosition="right"
-      >
-        <i class="pi pi-bolt"></i>
-        <span class="ml-2 white-space-nowrap" [class.hidden]="isSidebarCollapsed()">Spells</span>
-      </a>
-      <a
-        routerLink="/history"
-        routerLinkActive="surface-200"
-        class="p-3 text-900 border-round hover:surface-100 transition-colors no-underline flex align-items-center"
-        [pTooltip]="isSidebarCollapsed() ? 'History' : ''"
-        tooltipPosition="right"
-      >
-        <i class="pi pi-history"></i>
-        <span class="ml-2 white-space-nowrap" [class.hidden]="isSidebarCollapsed()">History</span>
-      </a>
 
-      <!-- Auto-slide Toggle Bottom -->
-      <div class="mt-auto pt-3 border-top-1 surface-border overflow-hidden">
-        <div class="flex align-items-center justify-content-between px-2">
-          <span class="text-xs text-500 white-space-nowrap" [class.hidden]="isSidebarCollapsed()">Auto-slide</span>
-          <p-button
-            [icon]="autoSlideSidebar() ? 'pi pi-eye' : 'pi pi-eye-slash'"
-            [text]="true"
-            severity="secondary"
-            size="small"
-            (onClick)="toggleAutoSlide()"
-            [pTooltip]="autoSlideSidebar() ? 'Disable Auto-slide' : 'Enable Auto-slide'"
-            tooltipPosition="right"
-          ></p-button>
-        </div>
+    <nav class="sidebar-nav">
+      @for (item of navItems; track item.route) {
+        <a
+          class="nav-link"
+          [routerLink]="item.route"
+          [routerLinkActiveOptions]="{ exact: !!item.exact }"
+          routerLinkActive="is-active"
+          [pTooltip]="isSidebarCollapsed() ? item.label : ''"
+          tooltipPosition="right"
+        >
+          <i [class]="item.icon"></i><span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+
+      <div class="sidebar-foot">
+        <span class="nav-label foot-label">Auto-slide</span>
+        <p-button
+          [icon]="autoSlideSidebar() ? 'pi pi-eye' : 'pi pi-eye-slash'"
+          [text]="true"
+          severity="secondary"
+          size="small"
+          (onClick)="toggleAutoSlide()"
+          [pTooltip]="autoSlideSidebar() ? 'Disable Auto-slide' : 'Enable Auto-slide'"
+          tooltipPosition="right"
+        ></p-button>
       </div>
     </nav>
   </aside>
-  <div class="flex-1 flex flex-column">
-    <header class="h-4rem surface-card border-bottom-1 surface-border flex align-items-center px-4">
+
+  <div class="content">
+    <header class="topbar">
       <p-button
+        class="nav-toggle-mobile"
         icon="pi pi-bars"
         (click)="visible = true"
-        class="md:hidden mr-3"
         [text]="true"
+        severity="secondary"
+        aria-label="Open navigation"
       ></p-button>
-      <span class="text-lg font-medium md:hidden">D&D Sim</span>
+      <span class="brand-mobile">D&D Sim</span>
+
+      <div class="topbar-actions">
+        <p-button
+          [icon]="theme.isDark() ? 'pi pi-moon' : 'pi pi-sun'"
+          [text]="true"
+          severity="secondary"
+          (onClick)="theme.toggleMode()"
+          [attr.aria-pressed]="theme.isDark()"
+          [pTooltip]="theme.isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
+          tooltipPosition="bottom"
+          aria-label="Toggle dark mode"
+        ></p-button>
+        <p-button
+          icon="pi pi-palette"
+          [text]="true"
+          severity="secondary"
+          (onClick)="themePanel.toggle($event)"
+          pTooltip="Dragon theme"
+          tooltipPosition="bottom"
+          aria-label="Choose dragon theme"
+        ></p-button>
+        <p-popover #themePanel>
+          <app-theme-switcher />
+          <div class="theme-popover-foot">
+            <p-button
+              label="Preview"
+              icon="pi pi-eye"
+              [text]="true"
+              size="small"
+              (onClick)="themePanel.hide(); themePreviewVisible.set(true)"
+            ></p-button>
+          </div>
+        </p-popover>
+      </div>
     </header>
-    <main class="p-2 md:p-4 flex-1 overflow-x-hidden surface-ground">
+
+    <main class="page">
       <router-outlet></router-outlet>
     </main>
   </div>
 </div>
+
+<app-theme-preview-dialog [(visible)]="themePreviewVisible" />

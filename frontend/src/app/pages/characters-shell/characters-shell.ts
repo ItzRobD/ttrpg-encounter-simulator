@@ -1,14 +1,12 @@
 import { Component, inject, OnInit, signal, ChangeDetectionStrategy} from '@angular/core';
-import {SharedTable} from "../../components/shared-table/shared-table.component";
 import {Button} from "primeng/button";
-import {ActorCard} from "../../components/actor-card/actor-card.component";
-import {IconField} from "primeng/iconfield";
-import {InputIcon} from "primeng/inputicon";
-import {InputText} from "primeng/inputtext";
 import {Tooltip} from "primeng/tooltip";
-import {ConfirmationService, MessageService} from 'primeng/api';
 import {ConfirmDialogModule} from 'primeng/confirmdialog';
 import {ToastModule} from 'primeng/toast';
+import {ConfirmationService, MessageService} from 'primeng/api';
+import {LibraryPage} from '../../components/library-page/library-page';
+import {SharedTable} from "../../components/shared-table/shared-table.component";
+import {ActorCard} from "../../components/actor-card/actor-card.component";
 import {CharacterService} from '../../services/character.service';
 import { Actor, ActorSummary } from '../../models';
 import {CharacterEditorComponent} from '../../components/editors/character-editor/character-editor';
@@ -17,26 +15,17 @@ import {CombatantService} from '../../services/combatant.service';
 @Component({
   selector: 'app-characters-shell',
   imports: [
-      SharedTable,
       Button,
-      ActorCard,
-      IconField,
-      InputIcon,
-      InputText,
       Tooltip,
       ConfirmDialogModule,
+      ToastModule,
+      LibraryPage,
+      SharedTable,
+      ActorCard,
       CharacterEditorComponent,
-      ToastModule
   ],
   providers: [ConfirmationService, MessageService],
   templateUrl: './characters-shell.html',
-  styles: [
-    `
-      :host {
-        display: block;
-      }
-    `,
-  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CharactersShell implements OnInit {
@@ -51,15 +40,6 @@ export class CharactersShell implements OnInit {
 
   ngOnInit(): void {
     this.characterService.getSummaries().subscribe();
-  }
-
-  onSearch(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.searchTerm.set(target.value);
-  }
-
-  onClearSearch(): void {
-    this.searchTerm.set('');
   }
 
   onCreateCharacter(): void {

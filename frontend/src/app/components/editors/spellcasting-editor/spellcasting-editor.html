@@ -1,57 +1,51 @@
-<div [formGroup]="group()" class="flex flex-column gap-3">
-  <div class="grid">
-    <div class="col-12 md:col-6">
-      <label class="font-bold block mb-1">Ability</label>
+<div [formGroup]="group()" class="sce-form">
+  <div class="sce-row2">
+    <div class="sce-field">
+      <label class="sce-label">Ability</label>
       <p-select
         formControlName="ability"
         [options]="abilities"
         optionLabel="label"
         optionValue="value"
         appendTo="body"
-        class="w-full"
       ></p-select>
     </div>
-    <div class="col-12 md:col-6">
-      <label class="font-bold block mb-1">Caster Level</label>
+    <div class="sce-field">
+      <label class="sce-label">Caster Level</label>
       <p-inputNumber
         formControlName="casterLevel"
         [min]="1"
         [max]="20"
         [showButtons]="true"
-        class="w-full"
       ></p-inputNumber>
     </div>
   </div>
 
-  <div class="grid">
-    <div class="col-6">
-      <label class="font-bold block mb-1">Save DC</label>
-      <div class="p-2 border-1 surface-border border-round bg-surface-100 font-bold text-center">
-        {{ group().get('spellSaveDC')?.value }}
-      </div>
+  <div class="sce-row2">
+    <div class="sce-field">
+      <label class="sce-label">Save DC</label>
+      <div class="sce-stat">{{ group().get('spellSaveDC')?.value }}</div>
     </div>
-    <div class="col-6">
-      <label class="font-bold block mb-1">Attack Bonus</label>
-      <div class="p-2 border-1 surface-border border-round bg-surface-100 font-bold text-center">
+    <div class="sce-field">
+      <label class="sce-label">Attack Bonus</label>
+      <div class="sce-stat">
         {{ group().get('spellAttackBonus')?.value >= 0 ? '+' : '' }}{{ group().get('spellAttackBonus')?.value }}
       </div>
     </div>
   </div>
 
   @if (slotLevels().length > 0) {
-    <div class="field mt-2">
-      <label class="font-bold block mb-2">Spell Slots</label>
-      <div formGroupName="spellSlots" class="grid p-2 border-1 surface-border border-round bg-surface-50">
+    <div class="sce-field">
+      <label class="sce-label">Spell Slots</label>
+      <div formGroupName="spellSlots" class="sce-slots">
         @for (level of slotLevels(); track level) {
-          <div [formGroupName]="level" class="col-4 md:col-3 flex flex-column gap-1 mb-2">
-            <span class="text-xs font-semibold">Lvl {{ level }}</span>
+          <div [formGroupName]="level" class="sce-slot">
+            <span class="sce-slot-label">Lvl {{ level }}</span>
             <p-inputNumber
               formControlName="max"
               [min]="0"
               [max]="10"
               [showButtons]="false"
-              class="w-full"
-              styleClass="w-full"
               placeholder="0"
             ></p-inputNumber>
           </div>
@@ -61,9 +55,9 @@
   }
 
   <!-- Spell Selection Section -->
-  <div class="field mt-3">
-    <label class="font-bold block mb-1">Add Spell</label>
-    <div class="flex gap-2">
+  <div class="sce-field">
+    <label class="sce-label">Add Spell</label>
+    <div class="sce-add-row">
       <p-select
         [options]="availableSummaries()"
         [(ngModel)]="selectedSummary"
@@ -73,29 +67,29 @@
         filterPlaceholder="Search for a spell..."
         placeholder="Select a spell to add"
         appendTo="body"
-        class="flex-grow-1"
+        class="sce-grow"
         [disabled]="loadingSpells()"
       >
         <ng-template let-spell #item>
-          <div class="flex justify-content-between align-items-center w-full">
-            <div class="flex align-items-center gap-2">
+          <div class="sce-opt">
+            <div class="sce-opt-main">
               <span>{{ spell.name }}</span>
-              <div class="flex gap-1">
+              <div class="sce-icons">
                 @if (spell.isConcentration) {
-                  <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
+                  <i class="pi pi-stopwatch sce-ico c-orange" pTooltip="Concentration"></i>
                 }
                 @if (spell.isRitual) {
-                  <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
+                  <i class="pi pi-book sce-ico c-blue" pTooltip="Ritual"></i>
                 }
                 @if (spell.isAOE) {
-                  <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
+                  <i class="pi pi-users sce-ico c-purple" pTooltip="AOE"></i>
                 }
                 @if (spell.hasDC) {
-                  <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
+                  <i class="pi pi-shield sce-ico c-red" pTooltip="Has Save DC"></i>
                 }
               </div>
             </div>
-            <span class="text-xs text-500">Lvl {{ spell.level }}</span>
+            <span class="sce-muted">Lvl {{ spell.level }}</span>
           </div>
         </ng-template>
       </p-select>
@@ -109,45 +103,43 @@
   </div>
 
   <!-- Selected Spells List -->
-  <div class="field mt-3">
-    <label class="font-bold block mb-2">Selected Spells ({{ spells.length }})</label>
-    <div class="border-1 surface-border border-round bg-surface-50 overflow-hidden">
+  <div class="sce-field">
+    <label class="sce-label">Selected Spells ({{ spells.length }})</label>
+    <div class="sce-list">
       @if (spells.length === 0) {
-        <div class="p-4 text-center text-600 italic">No spells selected.</div>
+        <div class="sce-empty">No spells selected.</div>
       } @else {
-        <div class="flex flex-column">
-          @for (spell of spells; track spell.id; let i = $index) {
-            <div class="flex justify-content-between align-items-center p-2 border-bottom-1 surface-border last:border-bottom-none">
-              <div class="flex flex-column">
-                <div class="flex align-items-center gap-2">
-                  <span class="font-semibold">{{ spell.name }}</span>
-                  <div class="flex gap-1">
-                    @if (spell.isConcentration) {
-                      <i class="pi pi-stopwatch text-orange-500 text-xs" pTooltip="Concentration"></i>
-                    }
-                    @if (spell.isRitual) {
-                      <i class="pi pi-book text-blue-500 text-xs" pTooltip="Ritual"></i>
-                    }
-                    @if (spell.isAOE) {
-                      <i class="pi pi-users text-purple-500 text-xs" pTooltip="AOE"></i>
-                    }
-                    @if (spell.hasDC) {
-                      <i class="pi pi-shield text-red-500 text-xs" pTooltip="Has Save DC"></i>
-                    }
-                  </div>
+        @for (spell of spells; track spell.id; let i = $index) {
+          <div class="sce-item">
+            <div class="sce-item-info">
+              <div class="sce-item-name">
+                <span class="sce-item-title">{{ spell.name }}</span>
+                <div class="sce-icons">
+                  @if (spell.isConcentration) {
+                    <i class="pi pi-stopwatch sce-ico c-orange" pTooltip="Concentration"></i>
+                  }
+                  @if (spell.isRitual) {
+                    <i class="pi pi-book sce-ico c-blue" pTooltip="Ritual"></i>
+                  }
+                  @if (spell.isAOE) {
+                    <i class="pi pi-users sce-ico c-purple" pTooltip="AOE"></i>
+                  }
+                  @if (spell.hasDC) {
+                    <i class="pi pi-shield sce-ico c-red" pTooltip="Has Save DC"></i>
+                  }
                 </div>
-                <span class="text-xs text-600">Level {{ spell.level }} | {{ spell.castingTime }}</span>
               </div>
-              <p-button
-                icon="pi pi-trash"
-                severity="danger"
-                [text]="true"
-                size="small"
-                (onClick)="removeSpell(i)"
-              ></p-button>
+              <span class="sce-muted">Level {{ spell.level }} | {{ spell.castingTime }}</span>
             </div>
-          }
-        </div>
+            <p-button
+              icon="pi pi-trash"
+              severity="danger"
+              [text]="true"
+              size="small"
+              (onClick)="removeSpell(i)"
+            ></p-button>
+          </div>
+        }
       }
     </div>
   </div>

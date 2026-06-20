@@ -18,7 +18,6 @@ import {
   getModifier,
 } from '../../shared/utils/dnd-utils';
 import { TitleCasePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ActorStats } from '../actor-stats/actor-stats.component';
 import { ActorSpecialAbilities } from '../actor-special-abilities/actor-special-abilities.component';
 import { ActorActions } from '../actor-actions/actor-actions.component';
@@ -30,7 +29,6 @@ import { EquipmentService } from '../../services/equipment.service';
 
 @Component({
   selector: 'app-actor-card',
-  standalone: true,
   imports: [
     CardModule,
     Tag,
@@ -41,7 +39,6 @@ import { EquipmentService } from '../../services/equipment.service';
     TitleCasePipe,
     ButtonModule,
     ProgressBarModule,
-    FormsModule,
     ActorStats,
     ActorSpecialAbilities,
     ActorActions,
@@ -52,7 +49,7 @@ import { EquipmentService } from '../../services/equipment.service';
   ],
   templateUrl: './actor-card.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './actor-card.component.css',
+  styleUrl: './actor-card.component.scss',
 })
 export class ActorCard {
   private readonly equipmentService = inject(EquipmentService);
@@ -177,10 +174,6 @@ export class ActorCard {
     // Safety check for 100% case explicitly
     if (percent >= 99.9) {
         color = '#22c55e';
-    }
-
-    if (this.actor().name.includes('Henry') || this.actor().name.includes('Acolyte')) {
-        // console.log(`[ActorCard] Color check for ${this.actor().name}: ${percent.toFixed(1)}% -> ${color}`);
     }
 
     return { percent, tempPercent, color };

@@ -16,7 +16,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageModule } from 'primeng/message';
 import { ButtonModule } from 'primeng/button';
 import { MonsterService } from '../../services/monster.service';
-import { CommonModule } from '@angular/common';
+import { TitleCasePipe } from '@angular/common';
 import { CharacterService } from '../../services/character.service';
 import { EquipmentService } from '../../services/equipment.service';
 import { CrFormatPipe } from '../../pipes/cr-format.pipe';
@@ -45,9 +45,9 @@ type SupportedService =
 
 @Component({
   selector: 'app-shared-table',
-  imports: [TableModule, TooltipModule, MessageModule, CommonModule, CrFormatPipe, ButtonModule],
+  imports: [TableModule, TooltipModule, MessageModule, TitleCasePipe, CrFormatPipe, ButtonModule],
   templateUrl: './shared-table.component.html',
-  styleUrl: './shared-table.component.css',
+  styleUrl: './shared-table.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SharedTable {

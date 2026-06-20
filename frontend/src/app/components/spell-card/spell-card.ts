@@ -1,16 +1,15 @@
 import { Component, input, computed, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule, TitleCasePipe } from '@angular/common';
+import { TitleCasePipe } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
 import { Spell, SpellFormula } from '../../models';
 
 @Component({
   selector: 'app-spell-card',
-  standalone: true,
-  imports: [CardModule, TitleCasePipe, CommonModule, TagModule],
+  imports: [CardModule, TitleCasePipe, TagModule],
   templateUrl: './spell-card.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './spell-card.css',
+  styleUrl: './spell-card.scss',
 })
 export class SpellCard {
   public readonly item = input.required<Spell>();

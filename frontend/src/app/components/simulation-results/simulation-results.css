@@ -1,8 +1,0 @@
-.small-tabs :host ::ng-deep .p-tablist-tab {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-}
-
-.small-tabs :host ::ng-deep .p-tablist-content {
-    border-bottom: 1px solid var(--surface-border);
-}

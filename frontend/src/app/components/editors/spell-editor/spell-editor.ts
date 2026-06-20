@@ -1,5 +1,4 @@
 import { Component, effect, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
@@ -20,9 +19,7 @@ import { FluidModule } from 'primeng/fluid';
 
 @Component({
   selector: 'app-spell-editor',
-  standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     DialogModule,
     ButtonModule,
@@ -39,6 +36,7 @@ import { FluidModule } from 'primeng/fluid';
     TooltipModule
   ],
   templateUrl: './spell-editor.html',
+  styleUrl: './spell-editor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SpellEditorComponent extends BaseEditorDirective<Spell> implements OnInit {

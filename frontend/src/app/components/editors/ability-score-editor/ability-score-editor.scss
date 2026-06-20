@@ -1,0 +1,93 @@
+@use 'breakpoints' as bp;
+
+.ability-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.25rem;
+
+  @include bp.below(bp.$bp-md) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @include bp.below(bp.$bp-sm) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.ability-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.25rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md);
+  background: var(--p-content-background);
+  text-align: center;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: var(--p-primary-color);
+  }
+}
+
+.ability-head {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ability-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color);
+}
+
+.prof-toggle {
+  cursor: pointer;
+  font-size: 0.65rem;
+  color: var(--p-text-muted-color);
+  transition: transform 0.1s;
+
+  &.on {
+    color: var(--p-primary-color);
+  }
+
+  &:hover {
+    transform: scale(1.2);
+  }
+}
+
+.score-input-container {
+  width: 100%;
+}
+
+.mod-text {
+  margin-top: -0.25rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--p-primary-color);
+}
+
+:host ::ng-deep .p-inputnumber {
+  width: 100%;
+}
+
+:host ::ng-deep .p-inputnumber-input {
+  display: block;
+  width: 100%;
+  height: 2rem;
+  margin: 0 auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+
+:host ::ng-deep .p-inputnumber-input:focus {
+  box-shadow: none;
+}

@@ -1,5 +1,4 @@
 import { Component, effect, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
@@ -47,7 +46,6 @@ interface ArmorFormValue {
 @Component({
   selector: 'app-equipment-editor',
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     DialogModule,
     ButtonModule,
@@ -62,6 +60,7 @@ interface ArmorFormValue {
     FluidModule
   ],
   templateUrl: './equipment-editor.html',
+  styleUrl: './equipment-editor.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EquipmentEditorComponent extends BaseEditorDirective<EquipmentItem> implements OnInit {
@@ -125,13 +124,14 @@ export class EquipmentEditorComponent extends BaseEditorDirective<EquipmentItem>
     effect(() => {
       const item = this.itemToEdit();
       if (item) {
-        if ('die' in item) {
+        // Armor is the only variant with an `ac` field; everything else is a weapon.
+        if ('ac' in item) {
+          this.activeTab.set('armor');
+          this.armorForm.patchValue(item as unknown as Partial<ArmorFormValue>);
+        } else {
           this.activeTab.set('weapon');
           // Boundary: external EquipmentItem patched into the (differently-shaped) form.
           this.weaponForm.patchValue(item as unknown as Partial<WeaponFormValue>);
-        } else {
-          this.activeTab.set('armor');
-          this.armorForm.patchValue(item as unknown as Partial<ArmorFormValue>);
         }
       } else {
         this.resetForms();
